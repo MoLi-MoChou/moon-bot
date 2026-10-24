@@ -259,5 +259,5 @@ TS 现状盘点（2026-10-24 实测）：core 源码侧仅剩 `index.js`（70 �
 
 - **关键侦察**：桌面应用 app/ui 已是独立 React 壳（vite 构建，815 行 + 直接复用 core/src/client 组件；primitives.js 已用 react-markdown+remark-gfm 自实现 MarkdownText、FishLogo 置空）——窗口宿主已存在，无需重建 DSH web 壳。窗口协议已定：POST api/bot（RPC）+ GET api/bot/feed（SSE，重连以 hello 对齐），两条路由本就由 host 模块经 connection.fetch 注册（feed.ts），Fastify 只需捕获转发。宿主 ctx.get 服务面可枚举（约 19 个），且 fakeContext 证明缺省可降级。
 - **Fastify 服务已落地**（src/service/，commit dddcf1a）：ServiceContext（fakeContext 的生产版：真实事件扇出、路由捕获、effect 释放；方法为绑定箭头属性——host 模块会裸取 ctx.on；inject 对存在的服务即刻交付、不存在的永不到来）；server.ts 服务两条路由 + /healthz + 密码门（timing-safe 比较、按址限速 5 次/10 分钟、HMAC 签名 httpOnly cookie、loopback 可免密、非 loopback 无密码拒启）。test/service.test.ts 三项全绿（state over HTTP、feed hello、auth 全链路）。
-- **工具注册表全量对齐**（commit a16bf24）：剩余 9 个（groups/memory/secrets/browser 模块）迁 rt.registerTool，25/25 双路对齐（dsh-only 与 registry-only 皆空）。registerDshTool 对需要活 agent 的工具（group_relay 的轮次排空）在 ToolContext 里透传。**阶段 2 的工具注册表项至此收口**。
+- **工具注册表全量对齐**（commit a16bf24）：剩余 9 个（groups/memory/secrets/browser 模块）迁 rt.registerTool，26/26 双路对齐（dsh-only 与 registry-only 皆空）。registerDshTool 对需要活 agent 的工具（group_relay 的轮次排空）在 ToolContext 里透传。**阶段 2 的工具注册表项至此收口**。
 - 待续：服务接引擎桥（resolveAgent → engineAgentOf）与平台服务补齐（attachments/approval 优先）；app/ui 构建产物由服务托管（静态目录已支持）；Electron 主进程改载服务地址；Dockerfile；app .mjs→.ts。

@@ -5,10 +5,12 @@
 import type { EngineContentBlock } from '../events.ts'
 import type { EngineSessionConfig } from '../runtime.ts'
 
-/** A model as the engine may call it: an OpenAI-compatible endpoint and a key. */
+/** A model as the engine may call it: a wire protocol, an endpoint, and a key. */
 export interface ResolvedModel {
   readonly id: string
   readonly baseUrl: string
+  /** The wire protocol; OpenAI-compatible endpoints are the default. */
+  readonly api?: 'openai-completions' | 'anthropic-messages' | undefined
   readonly apiKey?: string | undefined
   readonly effort?: string | undefined
   readonly contextWindow?: number | undefined

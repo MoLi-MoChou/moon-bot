@@ -8,9 +8,9 @@ import type { EngineContentBlock, EngineEvent, EngineStopReason } from '../event
 import type { EngineSessionConfig } from '../runtime.ts'
 import type { EngineServices, ResolvedModel, StoredMessage, ToolDefinition } from './services.ts'
 
-/** A pi Model for any OpenAI-compatible endpoint. `input` is required: image checks read it. */
-export const piModelOf = (resolved: ResolvedModel): Model<'openai-completions'> => ({
-  id: resolved.id, name: resolved.id, api: 'openai-completions', provider: 'moon', baseUrl: resolved.baseUrl,
+/** A pi Model for any endpoint the engine speaks; `input` is required: image checks read it. */
+export const piModelOf = (resolved: ResolvedModel): Model<'openai-completions' | 'anthropic-messages'> => ({
+  id: resolved.id, name: resolved.id, api: resolved.api ?? 'openai-completions', provider: 'moon', baseUrl: resolved.baseUrl,
   input: ['text'], reasoning: false,
   contextWindow: resolved.contextWindow ?? 128000, maxTokens: resolved.maxTokens ?? 8192,
   cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
@@ -88,9 +88,11 @@ export interface AdapterOptions {
  */
 export async function buildAgent(options: AdapterOptions): Promise<Agent> {
   const { sessionId, services, config, basePrompt, frozenPrompt, dynamicPrompt, history, resolved, callbacks } = options
-  const { streamSimple } = await import('@earendil-works/pi-ai/api/openai-completions')
-  // The Agent's streamFn is generic over every Api; this engine only ever builds
-  // openai-completions models, so the one runtime-checked cast is here, once.
+  // The wire protocol picks the stream; the one runtime-checked cast is here, once,
+  // because the Agent's streamFn is generic over every Api.
+  const { streamSimple } = resolved.api === 'anthropic-messages'
+    ? await import('@earendil-works/pi-ai/api/anthropic-messages')
+    : await import('@earendil-works/pi-ai/api/openai-completions')
   const streamFn = streamSimple as unknown as import('@earendil-works/pi-agent-core').StreamFn
   const names = new Set(services.toolsFor(sessionId))
   const offered = (config?.tools === undefined ? [...names] : config.tools.filter(name => names.has(name)))

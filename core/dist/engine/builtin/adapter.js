@@ -4,7 +4,7 @@ import { createInitialSystemMessage, toToolDeclaration } from "@earendil-works/p
 const piModelOf = (resolved) => ({
   id: resolved.id,
   name: resolved.id,
-  api: "openai-completions",
+  api: resolved.api ?? "openai-completions",
   provider: "moon",
   baseUrl: resolved.baseUrl,
   input: ["text"],
@@ -55,7 +55,7 @@ const contentOfPi = (message) => message.content.flatMap((block) => {
 });
 async function buildAgent(options) {
   const { sessionId, services, config, basePrompt, frozenPrompt, dynamicPrompt, history, resolved, callbacks } = options;
-  const { streamSimple } = await import("@earendil-works/pi-ai/api/openai-completions");
+  const { streamSimple } = resolved.api === "anthropic-messages" ? await import("@earendil-works/pi-ai/api/anthropic-messages") : await import("@earendil-works/pi-ai/api/openai-completions");
   const streamFn = streamSimple;
   const names = new Set(services.toolsFor(sessionId));
   const offered = (config?.tools === void 0 ? [...names] : config.tools.filter((name) => names.has(name))).map((name) => services.definitions.find((definition) => definition.name === name)).filter((definition) => definition !== void 0);

@@ -2,11 +2,11 @@
 // and how its events map to the EngineEvent vocabulary. Everything kernel-specific lives
 // here, so the runtime module stays orchestration only (plan §四: 内置引擎 pi 内核接入).
 import { Agent, type AgentEvent, type AgentMessage, type AgentTool } from '@earendil-works/pi-agent-core'
-import type { Model } from '@earendil-works/pi-ai'
+import { createInitialSystemMessage, toToolDeclaration, type Model } from '@earendil-works/pi-ai'
 import type typebox from 'typebox'
 import type { EngineContentBlock, EngineEvent, EngineStopReason } from '../events.ts'
 import type { EngineSessionConfig } from '../runtime.ts'
-import type { EngineServices, ResolvedModel, ToolDefinition } from './services.ts'
+import type { EngineServices, ResolvedModel, StoredMessage, ToolDefinition } from './services.ts'
 
 /** A pi Model for any OpenAI-compatible endpoint. `input` is required: image checks read it. */
 export const piModelOf = (resolved: ResolvedModel): Model<'openai-completions'> => ({
@@ -74,6 +74,8 @@ export interface AdapterOptions {
   readonly basePrompt: string
   readonly frozenPrompt: string
   readonly dynamicPrompt: string | undefined
+  /** The session's stored transcript; raw kernel messages replay verbatim. */
+  readonly history: readonly StoredMessage[]
   readonly resolved: ResolvedModel
   readonly callbacks: AdapterCallbacks
 }
@@ -85,7 +87,7 @@ export interface AdapterOptions {
  * passes the gate before it runs.
  */
 export async function buildAgent(options: AdapterOptions): Promise<Agent> {
-  const { sessionId, services, config, basePrompt, frozenPrompt, dynamicPrompt, resolved, callbacks } = options
+  const { sessionId, services, config, basePrompt, frozenPrompt, dynamicPrompt, history, resolved, callbacks } = options
   const { streamSimple } = await import('@earendil-works/pi-ai/api/openai-completions')
   // The Agent's streamFn is generic over every Api; this engine only ever builds
   // openai-completions models, so the one runtime-checked cast is here, once.
@@ -94,12 +96,30 @@ export async function buildAgent(options: AdapterOptions): Promise<Agent> {
   const offered = (config?.tools === undefined ? [...names] : config.tools.filter(name => names.has(name)))
     .map(name => services.definitions.find(definition => definition.name === name))
     .filter((definition): definition is ToolDefinition => definition !== undefined)
+  const piTools = offered.map(definition => piToolOf(definition, sessionId))
   const system = frozenPrompt === '' ? basePrompt : `${basePrompt}\n\n${frozenPrompt}`
+  // The transcript replays as the kernel wrote it (raw), or as rebuilt user content;
+  // system entries never replay — the prompt above is the one leading message.
+  const replayed = history.flatMap((message): AgentMessage[] => {
+    if (message.role === 'system') return []
+    if (message.raw !== null && message.raw !== undefined) return [message.raw as AgentMessage]
+    if (message.role === 'user') {
+      return [{
+        role: 'user',
+        content: message.content.map(block => ({ type: 'text' as const, text: block.type === 'text' ? block.text : JSON.stringify(block) })),
+        timestamp: message.at,
+      }]
+    }
+    return []
+  })
   const agent = new Agent({
     initialState: {
       systemPrompt: system,
       model: piModelOf(resolved),
-      tools: offered.map(definition => piToolOf(definition, sessionId)),
+      tools: piTools,
+      // When a transcript replays, the agent does not build the leading system message,
+      // so ours carries the tool declarations exactly as its own would.
+      ...(replayed.length > 0 ? { messages: [createInitialSystemMessage(system, piTools.map(toToolDeclaration)) as AgentMessage, ...replayed] } : {}),
     },
     streamFn,
     getApiKey: () => resolved.apiKey ?? '',

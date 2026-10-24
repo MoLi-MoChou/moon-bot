@@ -9,12 +9,13 @@ export interface StoredRow {
   readonly content: readonly unknown[]
   readonly stopReason: unknown
   readonly turn: unknown
+  readonly raw: unknown
   readonly createdAt: number
 }
 
 /** The slice of the SQLite sessions module the transcript needs. */
 export interface SessionsLike {
-  appendMessage(input: { readonly sessionId: string; readonly role: StoredMessage['role']; readonly content: readonly unknown[]; readonly stopReason?: unknown; readonly turn?: unknown }): unknown
+  appendMessage(input: { readonly sessionId: string; readonly role: StoredMessage['role']; readonly content: readonly unknown[]; readonly stopReason?: unknown; readonly turn?: unknown; readonly raw?: unknown }): unknown
   page(sessionId: string, limit: number): readonly StoredRow[]
 }
 
@@ -25,6 +26,7 @@ export const sqliteTranscriptOf = (sessions: SessionsLike): TranscriptStore => (
       content: row.content as StoredMessage['content'],
       ...(typeof row.stopReason === 'string' && row.stopReason !== '' ? { stopReason: row.stopReason } : {}),
       ...(typeof row.turn === 'number' ? { turn: row.turn } : {}),
+      ...(row.raw !== null && row.raw !== undefined ? { raw: row.raw } : {}),
       at: row.createdAt,
     }))
   },
@@ -35,6 +37,7 @@ export const sqliteTranscriptOf = (sessions: SessionsLike): TranscriptStore => (
       content: message.content,
       ...(message.stopReason !== undefined ? { stopReason: message.stopReason } : {}),
       ...(message.turn !== undefined ? { turn: message.turn } : {}),
+      ...(message.raw !== undefined ? { raw: message.raw } : {}),
     })
   },
 })

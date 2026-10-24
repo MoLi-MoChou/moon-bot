@@ -8,10 +8,11 @@ const MessageRow = z.object({
   sessionId: z.string(),
   seq: z.number().int().nonnegative(),
   turn: z.number().int().nullable(),
-  role: z.enum(["user", "assistant", "system"]),
+  role: z.enum(["user", "assistant", "system", "toolResult"]),
   content: z.array(ContentBlock).readonly(),
   source: z.record(z.unknown()).nullable().readonly(),
   stopReason: z.unknown().nullable(),
+  raw: z.unknown().nullable(),
   createdAt: z.number().int()
 }).readonly();
 const SessionRow = z.object({
@@ -80,8 +81,8 @@ class Sessions {
       const row = this.db.prepare("SELECT COALESCE(MAX(seq), -1) + 1 AS next FROM messages WHERE session_id = ?").get(input.sessionId);
       const seq = Number(row.next);
       const result = this.db.prepare(`
-        INSERT INTO messages (session_id, seq, turn, role, content, source, stop_reason, created_at)
-        VALUES (@sessionId, @seq, @turn, @role, @content, @source, @stopReason, @at)
+        INSERT INTO messages (session_id, seq, turn, role, content, source, stop_reason, raw, created_at)
+        VALUES (@sessionId, @seq, @turn, @role, @content, @source, @stopReason, @raw, @at)
       `).run({
         sessionId: input.sessionId,
         seq,
@@ -90,6 +91,7 @@ class Sessions {
         content: JSON.stringify(input.content),
         source: input.source === void 0 ? null : JSON.stringify(input.source),
         stopReason: input.stopReason === void 0 ? null : JSON.stringify(input.stopReason),
+        raw: input.raw === void 0 ? null : JSON.stringify(input.raw),
         at
       });
       return MessageRow.parse({
@@ -101,6 +103,7 @@ class Sessions {
         content: input.content,
         source: input.source ?? null,
         stopReason: input.stopReason ?? null,
+        raw: input.raw ?? null,
         createdAt: at
       });
     });
@@ -118,6 +121,7 @@ class Sessions {
       content: parse(String(row.content), [], z.array(ContentBlock)),
       source: row.source === null ? null : parse(String(row.source), {}, z.record(z.unknown())),
       stopReason: row.stop_reason === null ? null : parse(String(row.stop_reason), null, z.unknown()),
+      raw: row.raw === null || row.raw === void 0 ? null : parse(String(row.raw), null, z.unknown()),
       createdAt: row.created_at
     }));
   }

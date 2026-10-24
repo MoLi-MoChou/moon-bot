@@ -87,10 +87,11 @@ class BuiltinRuntime {
         collect({ type: "turn/end", turn, reason: { kind: "error", error: { code: "NO-MODEL", message: `no model for session ${input.sessionId}` } } });
         return;
       }
-      const [base, frozen, dynamic] = await Promise.all([
+      const [base, frozen, dynamic, history] = await Promise.all([
         services.prompt.base(input.sessionId),
         services.prompt.frozen(input.sessionId),
-        services.prompt.dynamic?.(input.sessionId) ?? Promise.resolve(void 0)
+        services.prompt.dynamic?.(input.sessionId) ?? Promise.resolve(void 0),
+        services.transcript.history(input.sessionId)
       ]);
       const agent = await buildAgent({
         sessionId: input.sessionId,
@@ -99,6 +100,7 @@ class BuiltinRuntime {
         basePrompt: base,
         frozenPrompt: frozen,
         dynamicPrompt: dynamic,
+        history,
         resolved,
         callbacks: { onEvent: collect }
       });
@@ -110,12 +112,13 @@ class BuiltinRuntime {
         await agent.prompt([{ role: "user", content: blocks, timestamp: Date.now() }]);
       } finally {
         for (const message of agent.state.messages.slice(before)) {
-          if (message.role !== "assistant") continue;
+          if (message.role !== "assistant" && message.role !== "toolResult") continue;
           await services.transcript.append(input.sessionId, {
             role: message.role,
             content: contentOfPi(message),
             turn,
-            ..."stopReason" in message ? { stopReason: String(message.stopReason ?? "") } : {},
+            ...message.role === "assistant" && "stopReason" in message ? { stopReason: String(message.stopReason ?? "") } : {},
+            raw: message,
             at: Date.now()
           });
         }

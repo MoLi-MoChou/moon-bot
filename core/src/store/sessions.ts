@@ -18,10 +18,11 @@ export const MessageRow = z.object({
   sessionId: z.string(),
   seq: z.number().int().nonnegative(),
   turn: z.number().int().nullable(),
-  role: z.enum(['user', 'assistant', 'system']),
+  role: z.enum(['user', 'assistant', 'system', 'toolResult']),
   content: z.array(ContentBlock).readonly(),
   source: z.record(z.unknown()).nullable().readonly(),
   stopReason: z.unknown().nullable(),
+  raw: z.unknown().nullable(),
   createdAt: z.number().int(),
 }).readonly()
 export type MessageRow = z.infer<typeof MessageRow>
@@ -47,6 +48,8 @@ export interface AppendMessage {
   readonly source?: Readonly<Record<string, unknown>> | undefined
   readonly turn?: number | undefined
   readonly stopReason?: unknown
+  /** The kernel message as stored JSON, for verbatim replay. */
+  readonly raw?: unknown
 }
 
 const now = (): number => Date.now()
@@ -99,16 +102,18 @@ export class Sessions {
       const row = this.db.prepare('SELECT COALESCE(MAX(seq), -1) + 1 AS next FROM messages WHERE session_id = ?').get(input.sessionId) as { next: number }
       const seq = Number(row.next)
       const result = this.db.prepare(`
-        INSERT INTO messages (session_id, seq, turn, role, content, source, stop_reason, created_at)
-        VALUES (@sessionId, @seq, @turn, @role, @content, @source, @stopReason, @at)
+        INSERT INTO messages (session_id, seq, turn, role, content, source, stop_reason, raw, created_at)
+        VALUES (@sessionId, @seq, @turn, @role, @content, @source, @stopReason, @raw, @at)
       `).run({
         sessionId: input.sessionId, seq, turn: input.turn ?? null, role: input.role,
         content: JSON.stringify(input.content), source: input.source === undefined ? null : JSON.stringify(input.source),
-        stopReason: input.stopReason === undefined ? null : JSON.stringify(input.stopReason), at,
+        stopReason: input.stopReason === undefined ? null : JSON.stringify(input.stopReason),
+        raw: input.raw === undefined ? null : JSON.stringify(input.raw), at,
       })
       return MessageRow.parse({
         id: Number(result.lastInsertRowid), sessionId: input.sessionId, seq, turn: input.turn ?? null,
-        role: input.role, content: input.content, source: input.source ?? null, stopReason: input.stopReason ?? null, createdAt: at,
+        role: input.role, content: input.content, source: input.source ?? null, stopReason: input.stopReason ?? null,
+        raw: input.raw ?? null, createdAt: at,
       })
     })
     return insert()
@@ -122,6 +127,7 @@ export class Sessions {
       content: parse(String(row.content), [], z.array(ContentBlock)),
       source: row.source === null ? null : parse(String(row.source), {}, z.record(z.unknown())),
       stopReason: row.stop_reason === null ? null : parse(String(row.stop_reason), null, z.unknown()),
+      raw: row.raw === null || row.raw === undefined ? null : parse(String(row.raw), null, z.unknown()),
       createdAt: row.created_at,
     }))
   }

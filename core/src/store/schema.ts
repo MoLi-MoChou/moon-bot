@@ -91,7 +91,14 @@ CREATE TRIGGER memory_au AFTER UPDATE OF text ON memory_index BEGIN
 END;
 `
 
-export const MIGRATIONS: readonly Migration[] = [{ name: 'v1 standalone store', sql: V1 }]
+// v2 — the engine replays a session's transcript through the kernel's own message
+// format; the structured columns stay the queryable projection of it.
+const V2 = 'ALTER TABLE messages ADD COLUMN raw TEXT;'
+
+export const MIGRATIONS: readonly Migration[] = [
+  { name: 'v1 standalone store', sql: V1 },
+  { name: 'v2 raw kernel messages', sql: V2 },
+]
 
 /** The type the table modules see: a better-sqlite3 connection. */
 export type SqliteDatabase = import('better-sqlite3').Database

@@ -2,6 +2,8 @@
 // in groups.js; the cards land in the Bot's own chat.
 import { randomUUID } from 'node:crypto'
 import { defineTool, type ToolRunContext } from '@deepseek-ai/dsh-tools'
+import { z } from 'zod'
+import type { ToolContext } from '../../engine/registry.ts'
 import type { HostRuntime, StoredBot } from '../runtime.ts'
 import { absoluteLinks } from '../links.ts'
 import { mentionSpans } from '../../shared/mentions.ts'
@@ -60,7 +62,7 @@ export function installChatTools(rt: HostRuntime, shared: ToolShared): void {
   const { ctx, state } = rt
   const t = shared.rt
 
-  ctx.tools.register(defineTool({
+  shared.register({
     name: 'create_group',
     description: 'Main Bot only. Create a group chat with the user and some Bots. You join it as its admin unless you name another member.',
     parameters: {
@@ -70,10 +72,17 @@ export function installChatTools(rt: HostRuntime, shared: ToolShared): void {
       admin: { type: 'string', description: 'Member who leads the group; defaults to you' },
       mode: MODE_PARAM,
     },
-    output,
-    async execute(args: CreateGroupArgs, exec: ToolRunContext): Promise<string> {
+    // The schema is the engine path's validation; unknown fields pass, as the executor reads.
+    schema: z.object({
+      members: z.array(z.string()),
+      name: z.string().optional(),
+      notice: z.string().optional(),
+      admin: z.string().optional(),
+      mode: z.string().optional(),
+    }).passthrough(),
+    async execute(args: CreateGroupArgs, context: ToolContext): Promise<string> {
       await t.load()
-      const self = t.selfOf(exec.agent?.id)
+      const self = t.selfOf(context.sessionId)
       if (!t.isMain(self)) return 'Only a Main Bot can create group chats. Ask a Main Bot instead.'
       const { bots, unknown } = shared.resolveBots(args.members)
       if (unknown.length > 0) return `No Bot named ${unknown.join(', ')}. Team: ${shared.teamNames()}`
@@ -87,7 +96,7 @@ export function installChatTools(rt: HostRuntime, shared: ToolShared): void {
         return `Could not create the group: ${errorMessage(error)}`
       }
     },
-  }))
+  })
 
   ctx.tools.register(defineTool({
     name: 'update_group',

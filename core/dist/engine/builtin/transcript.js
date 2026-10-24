@@ -6,6 +6,7 @@ const sqliteTranscriptOf = (sessions) => ({
       content: row.content,
       ...typeof row.stopReason === "string" && row.stopReason !== "" ? { stopReason: row.stopReason } : {},
       ...typeof row.turn === "number" ? { turn: row.turn } : {},
+      ...row.raw !== null && row.raw !== void 0 ? { raw: row.raw } : {},
       at: row.createdAt
     }));
   },
@@ -15,7 +16,8 @@ const sqliteTranscriptOf = (sessions) => ({
       role: message.role,
       content: message.content,
       ...message.stopReason !== void 0 ? { stopReason: message.stopReason } : {},
-      ...message.turn !== void 0 ? { turn: message.turn } : {}
+      ...message.turn !== void 0 ? { turn: message.turn } : {},
+      ...message.raw !== void 0 ? { raw: message.raw } : {}
     });
   }
 });

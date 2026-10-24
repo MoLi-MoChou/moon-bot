@@ -2,6 +2,8 @@
 // the runtime methods the still-JS host modules install, and the small readers the tools
 // use on the team (the caller, the visible groups, hand-off bodies).
 import type { ToolRunContext } from '@deepseek-ai/dsh-tools'
+import { ToolRegistry, type ToolEntry } from '../../engine/registry.ts'
+import { registerDshTool } from './dsh.ts'
 import type { CapabilityStatus } from '../capabilities-mount.ts'
 import type {
   Agent,
@@ -162,6 +164,7 @@ interface MessageBlock {
 
 export interface ToolShared {
   readonly rt: ToolsRuntime
+  register(entry: ToolEntry): void
   readonly state: StoredState
   readonly calledInPosts: Map<string | undefined, CalledInPosts>
   callerBot(exec: ToolRunContext): StoredBot | undefined
@@ -195,9 +198,9 @@ export const errorMessage = (error: unknown): string => (error instanceof Error 
 
 export const stringOf = (value: unknown): string | undefined => (typeof value === 'string' ? value : undefined)
 
-export function createShared(host: HostRuntime): ToolShared {
+export function createShared(host: HostRuntime, registry: ToolRegistry = new ToolRegistry()): ToolShared {
   const rt = host as ToolsRuntime
-  const { state } = rt
+  const { state, ctx } = rt
 
   const callerBot = (exec: ToolRunContext): StoredBot | undefined => rt.botOf(rt.selfOf(exec.agent?.id))
   const callerRoom = (exec: ToolRunContext): { readonly fromRoomId?: string } => {
@@ -298,7 +301,6 @@ export function createShared(host: HostRuntime): ToolShared {
 
   // The Bots each Session's post_to_group called by name in its current turn, so that
   // turn does not also send them the same work in their own chats.
-  const calledInPosts = new Map<string | undefined, CalledInPosts>()
   const turnOf = (exec: ToolRunContext): unknown => liveEntry(exec.agent?.id)?.turn
 
   const hiddenTurn = (sessionId: string): boolean => {
@@ -337,7 +339,10 @@ export function createShared(host: HostRuntime): ToolShared {
   }
 
   return {
-    rt, state, calledInPosts,
+    rt, state, calledInPosts: new Map<string | undefined, CalledInPosts>(),
+    register: (entry: ToolEntry): void => {
+      registry.register(entry); registerDshTool(ctx, entry, rt)
+    },
     callerBot, callerRoom, roomOfCaller, roomLine, visibleRooms, activeSessions, whereOf,
     unreadRequest, bodyOf, refuse, worksOf, tooLong, callInGroup, turnOf, hiddenTurn, workFrom, liveEntry,
     nameList, resolveBots, teamNames, groupNames, pickRoom,

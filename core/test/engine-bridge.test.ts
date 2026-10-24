@@ -14,6 +14,8 @@ import { BuiltinRuntime } from '../src/engine/builtin/runtime.ts'
 import { engineAgentOf, type BridgeAgent } from '../src/engine/builtin/bridge.ts'
 import type { EngineEvent } from '../src/engine/events.ts'
 import type { EngineServices } from '../src/engine/builtin/services.ts'
+import { openStore } from '../src/store/db.ts'
+import { sqliteTranscriptOf } from '../src/engine/builtin/transcript.ts'
 
 // A scripted OpenAI-compatible endpoint: replies in order, no key needed.
 const openaiMock = () => {
@@ -65,12 +67,15 @@ test('a group round completes through the engine: delivery, turn events, group r
   t.after(() => void mock.close())
   const home = mkdtempSync(join(tmpdir(), 'ds-bot-bridge-'))
   writeFileSync(join(home, 'state.json'), JSON.stringify(seed()))
+  const store = openStore(home)
+  t.after(() => store.close())
+  store.sessions.upsertSession({ id: 'gb', kind: 'group', ownerId: 'r1' })
 
   const services: EngineServices = {
     models: { resolve: async () => ({ id: 'mock-1', baseUrl: `http://127.0.0.1:${port}/v1`, apiKey: 'sk' }) },
     prompt: { base: async () => 'You are Moon Bot.', frozen: async () => '' },
     gate: { check: async () => ({ kind: 'allow' }) },
-    transcript: { async history() { return [] }, async append() {} },
+    transcript: sqliteTranscriptOf(store.sessions),
     toolsFor: () => [],
     definitions: [],
   }
@@ -118,6 +123,10 @@ test('a group round completes through the engine: delivery, turn events, group r
   const triggerText = (trigger?.content ?? []).map(block => block.type === 'text' ? String((block as { text?: unknown }).text ?? '') : '').join('')
   assert.match(triggerText, /^\[Group chat "Ops"/)
   assert.equal(trigger?.source?.role, 'room')
+
+  // The group turn is in SQLite: the trigger and the engine's answer.
+  const rows = store.sessions.page('gb', 10)
+  assert.match(JSON.stringify(rows), /The plan is drafted/)
 
   await ctx.dispose()
   rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 })

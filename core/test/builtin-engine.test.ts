@@ -13,6 +13,7 @@ import type { TurnInput } from '../src/engine/runtime.ts'
 import { BuiltinRuntime } from '../src/engine/builtin/runtime.ts'
 import type { EngineServices, GateDecision, ToolDefinition } from '../src/engine/builtin/services.ts'
 import { openStore } from '../src/store/db.ts'
+import { sqliteTranscriptOf } from '../src/engine/builtin/transcript.ts'
 
 const openaiMock = () => {
   const requests: { url: string, auth: string | undefined, body: { system?: unknown, messages?: { role: string, content: unknown }[] } }[] = []
@@ -102,7 +103,7 @@ test('a turn runs in-process with a gated tool and lands in the transcript', asy
   // The transcript holds the trigger, both steps, and the tool ran through the gate.
   assert.deepEqual(saw, ['note'])
   const rows = store.sessions.page('b1', 10)
-  assert.deepEqual(rows.map(row => [row.role, row.turn]), [['user', 1], ['assistant', 1], ['assistant', 1]])
+  assert.deepEqual(rows.map(row => [row.role, row.turn]), [['user', 1], ['assistant', 1], ['toolResult', 1], ['assistant', 1]])
   const text = JSON.stringify(rows)
   assert.match(text, /One moment\./)
   assert.match(text, /Noted\./)
@@ -218,4 +219,52 @@ test('a model resolution failure ends the turn with an error, not a hang', async
   const end = collected.at(-1)
   assert.equal(end?.type, 'turn/end')
   assert.equal(end?.type === 'turn/end' ? end.reason.kind : '', 'error')
+})
+
+
+test('the second turn replays the first: history, tools, and the raw kernel messages', async (t) => {
+  const mock = openaiMock()
+  const { port } = await mock.listen()
+  t.after(() => void mock.close())
+  const home = mkdtempSync(join(tmpdir(), 'ds-bot-engine-'))
+  t.after(() => rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }))
+  const store = openStore(home)
+  t.after(() => store.close())
+  store.sessions.upsertSession({ id: 'b1', kind: 'bot', ownerId: 'bot-1' })
+  const transcript = sqliteTranscriptOf(store.sessions)
+  const note: ToolDefinition = {
+    name: 'note', description: 'write a note',
+    parameters: { type: 'object', properties: {}, required: [] },
+    execute: async () => ({ content: [{ type: 'text', text: 'noted' }] }),
+  }
+  const services: EngineServices = {
+    models: { resolve: async () => ({ id: 'mock-1', baseUrl: `http://127.0.0.1:${port}/v1`, apiKey: 'sk' }) },
+    prompt: { base: async () => 'You are Moon Bot.', frozen: async () => '' },
+    gate: { check: async () => ({ kind: 'allow' }) },
+    transcript,
+    toolsFor: () => ['note'],
+    definitions: [note],
+  }
+  const engine = new BuiltinRuntime({ services, emit: () => {} })
+
+  // First turn: a tool call, then the answer.
+  mock.reply({ content: 'One moment.' }, call(0, 'k1', 'note'))
+  mock.reply({ content: 'The note is written.' })
+  for await (const event of engine.runTurn({ sessionId: 'b1', message: { content: [{ type: 'text', text: 'take a note about the launch' }] } })) void event
+
+  // Second turn on the same session: the request must carry the whole first turn.
+  mock.reply({ content: 'As noted, the launch is ready.' })
+  for await (const event of engine.runTurn({ sessionId: 'b1', message: { content: [{ type: 'text', text: 'what did you note?' }] } })) void event
+
+  const second = mock.requests.at(-1)?.body.messages ?? []
+  const wire = JSON.stringify(second)
+  assert.match(wire, /take a note about the launch/, 'the first trigger replays')
+  assert.match(wire, /The note is written\./, 'the first answer replays')
+  assert.match(wire, /noted/, 'the tool result replays')
+  assert.ok(second.some(message => message.role === 'system'), 'the system prompt leads')
+  assert.match(JSON.stringify(mock.requests.at(-1)?.body.tools ?? []), /note/, 'the tools are offered again')
+
+  // The store holds the raw kernel messages for verbatim replay.
+  const raws = store.sessions.page('b1', 10).filter(row => row.raw !== null && row.raw !== undefined)
+  assert.ok(raws.length >= 3, 'assistant steps and tool results kept raw')
 })

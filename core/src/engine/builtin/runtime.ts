@@ -123,15 +123,16 @@ export class BuiltinRuntime implements AgentRuntime {
         collect({ type: 'turn/end', turn, reason: { kind: 'error', error: { code: 'NO-MODEL', message: `no model for session ${input.sessionId}` } } })
         return
       }
-      const [base, frozen, dynamic] = await Promise.all([
+      const [base, frozen, dynamic, history] = await Promise.all([
         services.prompt.base(input.sessionId),
         services.prompt.frozen(input.sessionId),
         services.prompt.dynamic?.(input.sessionId) ?? Promise.resolve(undefined),
+        services.transcript.history(input.sessionId),
       ])
       const agent = await buildAgent({
         sessionId: input.sessionId, services, config: input.config,
         basePrompt: base, frozenPrompt: frozen, dynamicPrompt: dynamic,
-        resolved, callbacks: { onEvent: collect },
+        history, resolved, callbacks: { onEvent: collect },
       })
       state.agent = agent
       await services.transcript.append(input.sessionId, { role: 'user', content: input.message.content, turn, at: Date.now() })
@@ -142,15 +143,17 @@ export class BuiltinRuntime implements AgentRuntime {
         const blocks = input.message.content.map(block => ({ type: 'text' as const, text: block.type === 'text' ? block.text : JSON.stringify(block) }))
         await agent.prompt([{ role: 'user', content: blocks, timestamp: Date.now() }])
       } finally {
-        // Whatever the run's fate, what was said is the transcript now.
+        // Whatever the run's fate, what was said is the transcript now. Each kernel
+        // message is kept raw as well, so the next turn replays it verbatim.
         for (const message of agent.state.messages.slice(before)) {
           // The trigger itself was stored before the run; pi echoes it as a user message.
-          if (message.role !== 'assistant') continue
+          if (message.role !== 'assistant' && message.role !== 'toolResult') continue
           await services.transcript.append(input.sessionId, {
             role: message.role,
             content: contentOfPi(message as { content: readonly unknown[] }),
             turn,
-            ...('stopReason' in message ? { stopReason: String((message as { stopReason?: unknown }).stopReason ?? '') } : {}),
+            ...(message.role === 'assistant' && 'stopReason' in message ? { stopReason: String((message as { stopReason?: unknown }).stopReason ?? '') } : {}),
+            raw: message,
             at: Date.now(),
           })
         }

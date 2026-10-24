@@ -3,6 +3,7 @@
 // in `tools/` by area.
 import type { Agent, Disposer, ToolExecution } from './dsh-types.js'
 import type { HostRuntime } from './runtime.ts'
+import { ToolRegistry } from '../engine/registry.ts'
 import { LEAN_HIDDEN_TOOLS } from '../shared/lean.ts'
 import {
   BLOCKING_QUESTION_TOOL, GOAL_REFUSAL, HIDDEN_TOOLS, createShared,
@@ -40,7 +41,11 @@ interface GoalEvent {
 
 export function install(rt: HostRuntime): void {
   const { ctx } = rt
-  const shared: ToolShared = createShared(rt)
+  // The Zod registry: every tool registers here; while DSH runs, its registration is
+  // derived from the same entry (tools/dsh.ts), so both paths run the same code.
+  const registry = new ToolRegistry()
+  const shared: ToolShared = createShared(rt, registry)
+  Object.assign(rt, { toolRegistry: registry })
 
   const hiddenTools = new WeakSet<Agent>()
   const hideBotUnusedTools = (agent: Agent | undefined): void => {

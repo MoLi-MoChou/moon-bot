@@ -79,10 +79,12 @@ export interface TranscriptStore {
 }
 
 export interface StoredMessage {
-  readonly role: 'user' | 'assistant' | 'system'
+  readonly role: 'user' | 'assistant' | 'system' | 'toolResult'
   readonly content: readonly EngineContentBlock[]
   readonly stopReason?: string | undefined
   readonly turn?: number | undefined
+  /** The kernel message as stored JSON, replayed verbatim on the next turn. */
+  readonly raw?: unknown
   readonly at: number
 }
 

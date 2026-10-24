@@ -81,7 +81,11 @@ CREATE TRIGGER memory_au AFTER UPDATE OF text ON memory_index BEGIN
   INSERT INTO memory_fts(rowid, text) VALUES (new.id, new.text);
 END;
 `;
-const MIGRATIONS = [{ name: "v1 standalone store", sql: V1 }];
+const V2 = "ALTER TABLE messages ADD COLUMN raw TEXT;";
+const MIGRATIONS = [
+  { name: "v1 standalone store", sql: V1 },
+  { name: "v2 raw kernel messages", sql: V2 }
+];
 export {
   MIGRATIONS
 };

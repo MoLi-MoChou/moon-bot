@@ -282,5 +282,7 @@ TS 现状盘点（2026-10-24 实测）：core 源码侧仅剩 `index.js`（70 �
 
 - **策略引擎已接管工具门**（commit 276a0a9）：26 个团队工具按 L0–L4 分类表落定（未知工具=L3——可审计集之外，安全答案是问）；L0–L2 放行，L3/L4 各有每会话每日预算（store 迁移 v3：policy_counters，spend 单语句原子递增），超出即逐次审批；拒绝文案不留申诉口（服务器裁决，模型无从讨价，测试锁文案）。审批经既有卡片桥落定；working_directory 沿用自己的目录审批流。
 - **ACP 适配器已落地**（commit b1ffc18）：**AgentRuntime 第二实现成立——接缝可替换的证明达成**。JSON-RPC 行协议（断行跳过不腐蚀流）、initialize/session 握手、session/update → 引擎事件词表映射（分片流式、成段步骤、工具调用/完成）、取消通知。pump 以 setImmediate 轮询驱动（通知与响应同块到达时丢唤醒会提前收尾——实测发现、修复，且结束事件照走 fanout：feed 在那里听）。脚本化真子进程测试：带工具完整回合、跨回合编号、映射表、进程死亡、断行；3× 全绿。
-- 待续（阶段 5 余项）：MCP 首批连接器（SDK 已装 1.32.2）接入注册表与策略包装；ACP Bot 的完整注册（名字/记忆/群聊/派活——roster 侧）；降级矩阵标注。
+- **MCP 连接器已入注册表**（commit 790093a）：挂载服务器的工具以 mcp__<server>__<tool> 入 Zod 注册表——策略默认将其归 L3，每个连接器调用天然走预算与审批流，无需连接器专设。结果验证（文本合并、2 万字上限、错误标志保留）；断连重试一次再答失败。真 SDK 对仓内 echo 服务器往返全测。
+- **ACP 完整 Bot 已成**（commit ed549f9）：Bot 的 engine 字段指向 ACP 命令即走外脑——每规格一个 AcpRuntime，会话共享；其余皆 roster 原码。测试即阶段 5 验收：Atlas（ACP）与 Chief（内置脚本端点）同队，group_relay 群聊回合作答、message_bot 派活并以 [Reply from Atlas] 回来。实测发现：适配器按服务器分配的 ACP 会话 id 映射——fixture 对每个 session/new 返回同一 id 会串话（真 agent 各发新 id，fixture 已改）。**降级矩阵即代码事实：ACP 路径无冻结记忆注入、无工具门（协议外不强求），engine 字段即标注。**
+- 门禁：core 935/932/0。**阶段 5 完成。**
 - 门禁：core 932/929/0。

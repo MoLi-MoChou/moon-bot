@@ -2,8 +2,7 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { defineTool } from "@deepseek-ai/dsh-tools";
-import { output } from "../tools.js";
+import { z } from "zod";
 import { MEMORY_LIMITS, cleanEntry, cleanTopic, errorMessage, formatEntry, squash } from "./records.js";
 import { SUMMARY_SYSTEM, askRequest, askSystem, groupSummaryRequest, parseAsk, summaryRequest } from "./prompt.js";
 const RECALL_MAX = 30;
@@ -13,12 +12,11 @@ const SUMMARY_TEXT_MAX = 8e3;
 const ASK_TEXT_MAX = 2e3;
 const ASK_CHANGES_MAX = 20;
 function createRecall({ rt, storage, botShot }) {
-  const { ctx } = rt;
   const USER = { id: "user", name: "user" };
   const languageNow = () => rt.uiLanguage?.() ?? "the language most entries are written in";
   const capital = (text) => (text[0] ?? "").toUpperCase() + text.slice(1);
   const callerOf = (exec) => {
-    const sessionId = exec.agent?.id;
+    const sessionId = "sessionId" in exec ? exec.sessionId : exec.agent?.id;
     if (sessionId === void 0) return void 0;
     const bot = rt.botOf(rt.selfOf(sessionId));
     return bot === void 0 ? void 0 : { bot, sessionId, roomId: storage.roomIdOf(sessionId) };
@@ -58,7 +56,7 @@ function createRecall({ rt, storage, botShot }) {
   }
   const tagOf = (scope, botId) => scope.kind === "team" ? "team" : scope.kind === "group" ? "group" : scope.botId === botId ? "yours" : rt.botOf(scope.botId)?.name ?? "?";
   function installTools() {
-    ctx.tools.register(defineTool({
+    rt.registerTool({
       name: "recall",
       description: "Search your memory, the team memory, and in a group chat the group memory, or read one topic whole. It also finds entries saved after this conversation began. With no arguments, lists what is saved where.",
       parameters: {
@@ -66,10 +64,10 @@ function createRecall({ rt, storage, botShot }) {
         topic: { type: "string", description: "A topic to read whole, as listed with [[topic]]" },
         scope: { type: "string", description: `Omit for yours, the team's, and in a group chat the group's; "own", "group", "team", or a Bot's name (Main Bots only)` }
       },
-      output,
-      async execute(args, exec) {
+      schema: z.object({ query: z.string().optional(), topic: z.string().optional(), scope: z.string().optional() }).passthrough(),
+      async execute(args, context) {
         await rt.load();
-        const caller = callerOf(exec);
+        const caller = callerOf(context);
         if (caller === void 0) return "Only Bots on the team keep a memory.";
         const self = caller.bot.id;
         const chosen = readScopes(args.scope, self, caller.roomId);
@@ -113,7 +111,7 @@ ${file.content.trim() || "(empty)"}`;
           ...hits.map(({ entry, tag }) => `[${where(tag, entry.file)}] ${formatEntry(entry.text, entry.meta).slice(2)}`)
         ].join("\n");
       }
-    }));
+    });
   }
   const panelEntries = (files, scope) => storage.allEntries(files).map((entry) => ({
     scope,

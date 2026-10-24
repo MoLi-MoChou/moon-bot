@@ -29,6 +29,9 @@ export function registerDshTool(ctx: DshToolContext, entry: ToolEntry, rt: HostR
         sessionId,
         callId: exec.callId ?? '',
         ...(exec.agent?.session !== undefined ? { session: exec.agent.session } : {}),
+        // The live agent rides along for the tools that hand it on (group_relay's round
+        // drains its inbox); the registry context itself stays agent-free.
+        ...(exec.agent !== undefined ? { agent: exec.agent } : {}),
         ...(exec.signal !== undefined ? { signal: exec.signal } : {}),
         ...(exec.concludeTurn !== undefined ? { concludeTurn: () => exec.concludeTurn?.() } : {}),
       }

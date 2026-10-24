@@ -6,11 +6,12 @@
 // and posts), the rounds in `groups/rounds.ts`, the shared text rules in
 // `groups/notice.ts`, and the shapes they all use in `groups/types.ts`.
 import { randomUUID } from 'node:crypto'
+import { z } from 'zod'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
-import { defineTool, type ToolRunContext } from '@deepseek-ai/dsh-tools'
 import { SOURCE_KIND, TEXT_KEPT } from './constants.ts'
 import { headOf } from './text.ts'
 import type { Agent } from './dsh-types.js'
+import type { ToolContext } from '../engine/registry.ts'
 import type { StoredBot, TurnInfo } from './runtime.ts'
 import { failureLine, failureSay, fileLine, lineText, mentionsIn, transcript } from './groups/notice.ts'
 import type {
@@ -25,14 +26,23 @@ export type {
   RoomLine, RoomPost, RoomReference, RoomTurnResult, RoomWaiter, SlotStatus, StartedTurn,
 } from './groups/types.ts'
 
-interface GroupToolRunContext extends ToolRunContext {
+/** The relay's context: the live agent of the group Session, whose inbox the round
+ *  drains, rides a ToolContext where DSH provides one (tools/dsh.ts). */
+interface RelayContext extends ToolContext {
   readonly agent?: Agent
 }
 
-const OUTPUT = {
-  schema: { type: 'string' },
-  render: (_args: unknown, value: unknown): { readonly type: string; readonly text: string }[] => [{ type: 'text', text: String(value) }],
+interface ReadOwnChatArgs {
+  readonly query?: unknown
+  readonly around?: unknown
+  readonly part?: unknown
 }
+
+interface ReadGroupChatArgs {
+  readonly group?: unknown
+  readonly seq?: unknown
+}
+
 const GROUP_REF = { type: 'string', required: true, description: 'Exact group chat name from list_bots' }
 const ROOM_READ_MAX = 30
 
@@ -102,14 +112,14 @@ export function install(rt: GroupRuntime): void {
   }
   rt.greetRoom = greetRoom
 
-  ctx.tools.register(defineTool({
+  rt.registerTool({
     name: 'group_relay',
     description: 'Group chat relay only. Deliver the latest user message to the Bots in this group chat, one at a time, and collect their replies.',
     parameters: {},
-    output: OUTPUT,
-    async execute(_args: Readonly<Record<string, unknown>>, exec: GroupToolRunContext): Promise<string> {
+    schema: z.object({}).passthrough(),
+    async execute(_args: Readonly<Record<string, unknown>>, context: RelayContext): Promise<string> {
       await rt.load()
-      const room = rt.roomOf(exec.agent?.id)
+      const room = rt.roomOf(context.sessionId)
       if (room === undefined) return JSON.stringify({ error: 'Not a group chat' })
       ensureRoomLog(room)
       // Everything queued since the last relay is posted in order, so messages that the
@@ -181,14 +191,14 @@ export function install(rt: GroupRuntime): void {
         round.replies.push({ kind, botId: post.botId, name, color: bot?.color, time: Date.now() })
       }
       if (posts.some(post => post.resumed || post.stopped || post.done)) await rt.save()
-      const signal = exec.signal ?? new AbortController().signal
-      rt.roomProgress.set(exec.callId, round)
+      const signal = context.signal ?? new AbortController().signal
+      rt.roomProgress.set(context.callId, round)
       try {
-        await rounds.runRound(room, round, signal, exec.agent)
+        await rounds.runRound(room, round, signal, context.agent)
       } catch (error) {
         rt.warn('ds-bot: group round in %s stopped: %s', room.name, error)
       } finally {
-        rt.roomProgress.delete(exec.callId)
+        rt.roomProgress.delete(context.callId)
       }
       if (signal.aborted) {
         for (const turn of round.started) void rt.stopRoomTurn?.(room.sessions?.[turn.botId] ?? turn.sessionId, turn.exchangeId)
@@ -197,13 +207,13 @@ export function install(rt: GroupRuntime): void {
       for (const post of posts) {
         if (post.reportBack && rt.botOf(post.botId)) void reportRound(room, post, round)
       }
-      exec.concludeTurn?.()
+      context.concludeTurn?.()
       return JSON.stringify({ replies: round.replies, passed: round.passed, ...(round.failed.length > 0 ? { failed: round.failed } : {}) })
     },
-  }))
+  })
 
   // Private context enters a group only through this tool, and the group sees each use.
-  ctx.tools.register(defineTool({
+  rt.registerTool({
     name: 'read_own_chat',
     description: 'Read or search your own chat with the user, across all its parts, including earlier parts that left your working context. Each line starts with its anchor, such as [part 2 #1234 · 10-08 14:22]; long messages are cut. Pass the anchor as around to read that message in full, with what was said just before and after it. In a group chat the group sees that you looked, so share only what the group needs.',
     parameters: {
@@ -211,12 +221,14 @@ export function install(rt: GroupRuntime): void {
       around: { type: 'string', description: 'An anchor from an earlier result, such as "part 2 #1234": shows that message in full and the messages just before and after it' },
       part: { type: 'integer', description: 'Number of an earlier part: shows the handoff note you wrote when it ended' },
     },
-    output: OUTPUT,
-    async execute(args: Readonly<Record<string, unknown>>, exec: GroupToolRunContext): Promise<string> {
+    schema: z.object({
+      query: z.string().optional(), around: z.string().optional(), part: z.number().int().optional(),
+    }).passthrough(),
+    async execute(args: ReadOwnChatArgs, context: ToolContext): Promise<string> {
       await rt.load()
-      const id = exec.agent?.id
-      const owner = id === undefined ? undefined : rt.groupOwners.get(id)
-      const botId = owner?.botId ?? (id === undefined ? undefined : rt.chatOwners.get(id))
+      const id = context.sessionId
+      const owner = rt.groupOwners.get(id)
+      const botId = owner?.botId ?? rt.chatOwners.get(id)
       if (botId === undefined) return 'Only Bots on the team can use read_own_chat.'
       const member = rt.botOf(botId)
       const room = rt.roomOf(owner?.roomId)
@@ -256,19 +268,19 @@ export function install(rt: GroupRuntime): void {
       const heading = every ? `messages mentioning "${query}"` : `no message has all of "${query}"; messages with the most of these words`
       return `Your own chat, ${heading} (oldest first):\n${lines.join('\n')}${partsNote}`
     },
-  }))
+  })
 
-  ctx.tools.register(defineTool({
+  rt.registerTool({
     name: 'read_group_chat',
     description: 'Read the latest messages of a group chat, including what you said there. You speak in groups from separate conversations, so your own chat does not show them. Main Bots may read any group; others the groups they are in.',
     parameters: {
       group: GROUP_REF,
       seq: { type: 'integer', description: 'Read one message whole: the seq that a cut message names' },
     },
-    output: OUTPUT,
-    async execute(args, exec): Promise<string> {
+    schema: z.object({ group: z.string(), seq: z.number().int().optional() }).passthrough(),
+    async execute(args: ReadGroupChatArgs, context: ToolContext): Promise<string> {
       await rt.load()
-      const self = rt.selfOf(exec.agent?.id)
+      const self = rt.selfOf(context.sessionId)
       if (rt.botOf(self) === undefined) return 'Only Bots on the team can read group chats.'
       const picked = rt.pickRoom(args.group, self)
       if ('error' in picked) return picked.error
@@ -287,7 +299,7 @@ export function install(rt: GroupRuntime): void {
       const lines = room.log.slice(-ROOM_READ_MAX)
       return lines.length === 0 ? `"${room.name}" has no messages yet.` : `Latest in "${room.name}" (oldest first):\n${transcript(lines, short)}`
     },
-  }))
+  })
 
   // The step-line effect and the relay listener are registered after the tools, as
   // they were before, so the plugin's registration order stays fixed.

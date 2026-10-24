@@ -4,6 +4,7 @@
 // Types only: nothing here runs. They sit beside memory.ts, as runtime.d.ts does for
 // the host, so the five modules under memory/ stay logic files under the size gate.
 import type { ToolRunContext } from '@deepseek-ai/dsh-tools'
+import type { ToolContext } from '../engine/registry.ts'
 import type { HostConfig, HostRuntime, StoredBot, StoredRoom } from './runtime.ts'
 import type { MemoryActor, MemoryFile, MemoryScope, TaggedEntry } from './memory/records.ts'
 import type { AskResult, Caller, MemoryView } from './memory/recall.ts'
@@ -311,7 +312,7 @@ export interface RecallDeps {
 }
 
 export interface RecallService {
-  callerOf(exec: ToolRunContext): Caller | undefined
+  callerOf(exec: ToolRunContext | ToolContext): Caller | undefined
   sourceOf(sessionId: string): Promise<string>
   metaFor(caller: Caller, scope: MemoryScope): Promise<Record<string, string>>
   installTools(): void

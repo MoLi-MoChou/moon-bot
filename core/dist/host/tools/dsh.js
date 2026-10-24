@@ -15,6 +15,9 @@ function registerDshTool(ctx, entry, rt, toolOutput = output) {
         sessionId,
         callId: exec.callId ?? "",
         ...exec.agent?.session !== void 0 ? { session: exec.agent.session } : {},
+        // The live agent rides along for the tools that hand it on (group_relay's round
+        // drains its inbox); the registry context itself stays agent-free.
+        ...exec.agent !== void 0 ? { agent: exec.agent } : {},
         ...exec.signal !== void 0 ? { signal: exec.signal } : {},
         ...exec.concludeTurn !== void 0 ? { concludeTurn: () => exec.concludeTurn?.() } : {}
       };

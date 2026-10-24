@@ -5,6 +5,7 @@
 // functions. This interface holds the slice today's TypeScript modules need; it grows a
 // batch at a time as the rest of `src/host` moves over. Nothing here runs: types only.
 import type { Agent, AttachmentRef, DshContext, SessionEvent } from './dsh-types.js'
+import type { ToolEntry } from '../engine/registry.ts'
 import type { UsageView, UsageViewOptions } from './usage/view.ts'
 import type { SecretRequest, SecretView } from './secrets/store.ts'
 import type { ChildProcess } from 'node:child_process'
@@ -373,6 +374,8 @@ export interface HostRuntime {
   // --- provided by capabilities.ts and tools.ts
   ensureCapabilities(sessionId: string): Promise<unknown>
   hideBotUnusedTools(agent: Agent): void
+  /** One tool on both paths at once: the Zod registry entry and its DSH derivation. */
+  registerTool(entry: ToolEntry): void
 
   // --- provided by parts.ts and folders.ts
   displayItems(sessionId: string, events: readonly SessionEvent[]): readonly unknown[]

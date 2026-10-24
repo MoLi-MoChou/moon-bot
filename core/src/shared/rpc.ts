@@ -142,6 +142,11 @@ export interface BotChannelRpcMap {
   'duplicate-bot': { request: { id: string }; response: BotView }
   'set-prefs': { request: { theme?: string | null; accent?: string | null; motion?: string | null }; response: Record<string, unknown> }
 
+  // Engines (plan §四): which runtime runs each Bot's turns — the built-in one, or an
+  // ACP agent registered as a Bot. The list reads; `engine-set` moves one Bot.
+  engines: { request: Record<string, never>; response: { readonly engines: readonly { readonly id: string; readonly label: string; readonly kind: string }[]; readonly of: Readonly<Record<string, string>> } }
+  'engine-set': { request: { botId: string; engine: string }; response: { readonly of: Readonly<Record<string, string>> } }
+
   // Conversations
   chat: { request: { botId: string; cursor?: ChatCursor }; response: ChatPage }
   earlier: { request: { sessionId: string; cursor?: ChatCursor }; response: ChatPage & { startedAt: number | null } }

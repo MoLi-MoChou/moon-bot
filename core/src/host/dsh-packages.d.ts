@@ -82,3 +82,14 @@ declare module '@deepseek-ai/dsh-llm' {
     readonly source?: LlmMessageSource
   }): LlmUserMessage
 }
+
+declare module '@deepseek-ai/dsh-web' {
+  // Structural, like the entries above: only what web-search.ts imports. `WebError` is
+  // constructed with a message, a machine-routable `code`, and optional ErrorOptions; it
+  // reads as a plain Error whose `code` says which seam failed.
+  export class WebError extends Error {
+    /** Stable failure class (e.g. `WEB_SEARCH_UNAVAILABLE`); route on this, never by parsing `message`. */
+    readonly code: string
+    constructor(message: string, code: string, options?: ErrorOptions)
+  }
+}

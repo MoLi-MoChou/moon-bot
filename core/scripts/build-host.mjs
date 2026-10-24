@@ -17,7 +17,7 @@ import { build } from 'esbuild'
 
 const PLUGIN = dirname(dirname(fileURLToPath(import.meta.url)))
 const OUT = join(PLUGIN, 'dist')
-const LAYERS = ['host', 'shared', 'engine', 'store']
+const LAYERS = ['host', 'shared', 'engine', 'store', 'web-search']
 // Source files at src/ root: emitted to dist/ root, with a generated re-export shim at
 // the package root so `main`/`exports` keep naming plain .js files.
 const ROOT_ENTRIES = ['index.ts', 'web-search.ts']

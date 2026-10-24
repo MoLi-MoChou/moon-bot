@@ -269,3 +269,11 @@ TS 现状盘点（2026-10-24 实测）：core 源码侧仅剩 `index.js`（70 �
 - **附件与审批服务已落地**（commit 0e48d8a、0fabb4c）：FileAttachments（<home>/attachments/ 内容寻址+索引）；审批桥——gate 的 pending 决策携带结算 Promise，适配器扣住工具调用直到卡片作答（群聊照旧从群里答；私聊请求交回 next=卡片 Promise，DSH 形状行为原样，own-chat 测试原文全绿）。审批卡经 approval-answer RPC 落定。阶段 5 风险分级接管此席前，目录变更为首个问询点。
 - 待续（阶段 3 收尾）：app 的 16 个 .mjs → .ts；Electron 打包的 ABI 处理验证。**阶段 3 核心目标（服务+桌面自持）已达成。**侦察结论：HostProcess 走 IPC（子进程发 {type:'ready',url}，shutdown 收敛，ELECTRON_RUN_AS_NODE=1 运行）——需要一个 app/src/service-host.mjs 子进程壳（起 startService、IPC 报 ready、应答 shutdown），core 包加 "./service" 导出指向 dist/service/server.js，app 依赖加 moon-bot-core: file:../core；UI 目录用打包内的 ui/dist。**关键风险**：better-sqlite3 的 prebuilt 是 Node ABI，ELECTRON_RUN_AS_NODE 的内嵌 Node 是 Electron ABI——打包时必须 electron-rebuild（electron-builder 可做）或验证 ABI 兼容；旧 DSH 主机无原生模块所以没遇过。另：app .mjs→.ts；平台服务补齐（attachments/approval）。
 - 门禁：916 / 913 过 / 0 红。
+
+## 十四、阶段 4 进行记录（2026-10-25 起）
+
+- **主动浮现已落地**（commit e61f1ef）：检索排序 = BM25 归一 + 时效 + 置信度，过期（valid_until）剔除；词条 OR 连接（召回而非否证——整句不必句句皆中）；memory-sync 按目录 mtime 懒同步 Markdown→索引（confidence/until/from 元数据随行）；引擎动态段携带本回合触发词，浮现代价上界（top 4、每条 200 字、整段 1200 字），稳定前缀不动。端到端测试：按 remember 工具的写法落一条记忆，下一请求的动态段自动浮现。
+- **调度持久化已落地**（commit 6ac851e）：五种触发（at/间隔/每日/每周/cron）入 tasks 表，croner 按时区算 next_run_at，20 秒轮询（非内存定时器）——重启从 next_run_at 恢复、一次性任务发完即 done、间隔任务自发顺延；触发以 schedule source 投递到会话；pause 挂起。nextRunOf 算术与触发/顺延/重启行为全测。
+- **app 已全面 TypeScript**（同 commit）：17 个 .mjs 全迁（含仍在用的 profile.ts），严格 tsconfig 对齐 core；主进程经 esbuild 打包 dist-main/main.cjs（CJS 无 import.meta——构建以 __filename 垫片，否则 here/INSTALL_ANCHOR 静默断掉）；service-host/host 保持源码直跑（已验证可启动）。app 测试 84/83/0/1 与迁移前一致。
+- 待续（阶段 4 余项）：行动闭环（验证→跟进→通知策略）在真实工作流上的端到端；冲突/纠错经 supersede 链的 UI 通路（存储已备）；token 成本监控进 usage。随后阶段 5。
+- 门禁：core 923/920/0；app typecheck 0、双构建绿、84/83/0。

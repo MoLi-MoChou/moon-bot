@@ -24,6 +24,8 @@ import { ServiceApproval } from './approval.ts'
 import { MemorySync } from './memory-sync.ts'
 import { TaskScheduler } from './scheduler.ts'
 import { PolicyEngine } from '../engine/policy.ts'
+import { AcpRuntime } from '../engine/acp/runtime.ts'
+import type { AgentRuntime } from '../engine/runtime.ts'
 import type { StandaloneLlm } from './llm.ts'
 
 /** The host runtime's own shape, as the wiring reads it. */
@@ -187,13 +189,40 @@ export function wireService(options: WireOptions): WiredService {
   const engine = new BuiltinRuntime({ services, emit: emitEvent })
 
   const agents = new Map<string, ReturnType<typeof engineAgentOf>>()
+  // An ACP Bot runs its turns in an external agent; one runtime per engine spec,
+  // shared by every session on it. Everything else about being a Bot — the name, the
+  // memory, the group chats, the work — is the roster's, unchanged.
+  const acpRuntimes = new Map<string, AcpRuntime>()
+  const runtimeOf = (sessionId: string): AgentRuntime => {
+    const bot = runtime.botOf(runtime.selfOf(sessionId)) as { engine?: unknown } | undefined
+    const engineSpec = bot?.engine
+    if (engineSpec !== null && typeof engineSpec === 'object' && (engineSpec as { kind?: unknown }).kind === 'acp') {
+      const spec = engineSpec as { command?: unknown, args?: readonly string[] | undefined, key?: unknown }
+      const command = typeof spec.command === 'string' ? spec.command : ''
+      if (command !== '') {
+        const key = typeof spec.key === 'string' ? spec.key : command
+        let acp = acpRuntimes.get(key)
+        if (acp === undefined) {
+          acp = new AcpRuntime({
+            command,
+            ...(Array.isArray(spec.args) ? { args: spec.args } : {}),
+            emit: emitEvent,
+          })
+          acpRuntimes.set(key, acp)
+        }
+        return acp
+      }
+    }
+    return engine
+  }
+
   const agentOf = (sessionId: string): unknown => {
     let agent = agents.get(sessionId)
     if (agent === undefined) {
       store.sessions.upsertSession({ id: sessionId, kind: 'bot', ownerId: runtime.selfOf(sessionId) ?? sessionId })
       // The part pager reads the agent session's seq as "the next one"; the store knows.
       agents.set(sessionId, agent = engineAgentOf(sessionId, {
-        runtime: engine,
+        runtime: runtimeOf(sessionId),
         emitEvent,
         seqOf: () => store.sessions.countMessages(sessionId) + 1,
       }))
@@ -247,6 +276,7 @@ ${task.prompt}` }],
     context, runtime, store, engine, agentOf, emitEvent,
     close: async () => {
       await engine.stop()
+      for (const acp of acpRuntimes.values()) await acp.stop().catch(() => {})
       await context.dispose()
       store.close()
     },

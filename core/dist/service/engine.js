@@ -15,6 +15,7 @@ import { ServiceApproval } from "./approval.js";
 import { MemorySync } from "./memory-sync.js";
 import { TaskScheduler } from "./scheduler.js";
 import { PolicyEngine } from "../engine/policy.js";
+import { AcpRuntime } from "../engine/acp/runtime.js";
 const EXCLUDED_TOOLS = /* @__PURE__ */ new Set([...HIDDEN_TOOLS, ...LEAN_HIDDEN_TOOLS]);
 const memoryScopesOf = (runtime, sessionId) => {
   const botId = runtime.selfOf(sessionId);
@@ -127,12 +128,35 @@ function wireService(options) {
   };
   const engine = new BuiltinRuntime({ services, emit: emitEvent });
   const agents = /* @__PURE__ */ new Map();
+  const acpRuntimes = /* @__PURE__ */ new Map();
+  const runtimeOf = (sessionId) => {
+    const bot = runtime.botOf(runtime.selfOf(sessionId));
+    const engineSpec = bot?.engine;
+    if (engineSpec !== null && typeof engineSpec === "object" && engineSpec.kind === "acp") {
+      const spec = engineSpec;
+      const command = typeof spec.command === "string" ? spec.command : "";
+      if (command !== "") {
+        const key = typeof spec.key === "string" ? spec.key : command;
+        let acp = acpRuntimes.get(key);
+        if (acp === void 0) {
+          acp = new AcpRuntime({
+            command,
+            ...Array.isArray(spec.args) ? { args: spec.args } : {},
+            emit: emitEvent
+          });
+          acpRuntimes.set(key, acp);
+        }
+        return acp;
+      }
+    }
+    return engine;
+  };
   const agentOf = (sessionId) => {
     let agent = agents.get(sessionId);
     if (agent === void 0) {
       store.sessions.upsertSession({ id: sessionId, kind: "bot", ownerId: runtime.selfOf(sessionId) ?? sessionId });
       agents.set(sessionId, agent = engineAgentOf(sessionId, {
-        runtime: engine,
+        runtime: runtimeOf(sessionId),
         emitEvent,
         seqOf: () => store.sessions.countMessages(sessionId) + 1
       }));
@@ -183,6 +207,8 @@ ${task.prompt}` }],
     emitEvent,
     close: async () => {
       await engine.stop();
+      for (const acp of acpRuntimes.values()) await acp.stop().catch(() => {
+      });
       await context.dispose();
       store.close();
     }

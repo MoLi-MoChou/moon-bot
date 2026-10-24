@@ -137,7 +137,7 @@ export class BuiltinRuntime implements AgentRuntime {
         history, resolved, callbacks: { onEvent: collect },
       })
       state.agent = agent
-      await services.transcript.append(input.sessionId, { role: 'user', content: input.message.content, turn, at: Date.now() })
+      await services.transcript.append(input.sessionId, { role: 'user', content: input.message.content, turn, ...(input.message.source !== undefined ? { source: input.message.source } : {}), at: Date.now() })
       const before = agent.state.messages.length
       try {
         // One user message carries the turn's trigger; text blocks stay text, other

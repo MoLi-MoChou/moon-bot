@@ -9,7 +9,7 @@ const ownPrimitives = {
   name: 'ds-bot-primitives',
   enforce: 'pre',
   resolveId(source, importer) {
-    return source === './dsh-primitives.js' && importer?.replaceAll('\\', '/').includes('/core/src/client/') ? primitives : null
+    return source === './dsh-primitives.ts' && importer?.replaceAll('\\', '/').includes('/core/src/client/') ? primitives : null
   },
 }
 

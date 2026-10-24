@@ -14,7 +14,7 @@ export interface DeliveredMessage {
 }
 
 export interface BridgeAgent {
-  readonly session: { readonly id: string }
+  readonly session: { readonly id: string, readonly seq?: number }
   /** Every message that was pushed to this session, in order (the audit surface). */
   readonly calls: DeliveredMessage[]
   readonly inbox: { nextStep: unknown[], nextTurn: unknown[], remove(message: unknown): boolean }
@@ -30,6 +30,8 @@ export interface BridgeOptions {
   readonly emitEvent: (sessionId: string, event: EngineEvent) => void
   /** A hook the host can use to observe settle (unused by the bridge itself). */
   onSettled?(sessionId: string): void
+  /** The session's next sequence number, for the pagers that read agent.session.seq. */
+  seqOf?(): number
 }
 
 export function engineAgentOf(sessionId: string, options: BridgeOptions): BridgeAgent {
@@ -54,7 +56,7 @@ export function engineAgentOf(sessionId: string, options: BridgeOptions): Bridge
     })()
   }
   return {
-    session: { id: sessionId },
+    session: { id: sessionId, get seq() { return options.seqOf?.() ?? 0 } },
     calls,
     inbox: { nextStep: [], nextTurn: [], remove: () => false },
     followup: start,

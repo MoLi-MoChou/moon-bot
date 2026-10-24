@@ -5,6 +5,20 @@
 // the host modules already tolerate (the whole suite runs on less than this).
 import type { Disposer } from '../host/dsh-types.js'
 
+/** A history page request, as the host's pagers ask it. */
+export interface PageRequest {
+  readonly address: { readonly kind: string, readonly sessionId: string }
+  readonly throughSeq?: number | undefined
+  readonly beforeSeq?: number | undefined
+  readonly maxMessages?: number | undefined
+}
+
+/** A history page answer: session events with their sequence numbers. */
+export interface PageAnswer {
+  readonly records: readonly { readonly seq: number, readonly event: { readonly type: string, readonly time?: number, readonly data?: unknown } }[]
+  readonly hasMore: boolean
+}
+
 /**
  * The standalone host context: the surface the host modules install on, shaped like the
  * test fakeContext (a plain object cast at the composition site) rather than the full
@@ -39,6 +53,7 @@ export class ServiceContext {
   private readonly sections = new Map<string, unknown>()
   private readonly services: Readonly<Record<string, unknown>>
   private agentOf: ServiceContextOptions['resolveAgent']
+  private pageImpl: ((input: PageRequest) => Promise<PageAnswer>) | undefined
 
   constructor(options: ServiceContextOptions = {}) {
     this.services = options.services ?? {}
@@ -117,6 +132,11 @@ export class ServiceContext {
     this.agentOf = resolver
   }
 
+  /** A store-backed history page, installed by the wiring (empty until then). */
+  pageWith(page: (input: PageRequest) => Promise<PageAnswer>): void {
+    this.pageImpl = page
+  }
+
   readonly sessionController = {
     create: async (): Promise<{ sessionId: string }> => ({ sessionId: `s${Math.random().toString(36).slice(2, 10)}` }),
     resolveAgent: async (sessionId: string): Promise<{ agent: unknown }> => {
@@ -125,6 +145,10 @@ export class ServiceContext {
       return { agent }
     },
     selectModel: async (): Promise<void> => {},
+    page: async (input: PageRequest): Promise<PageAnswer> => {
+      if (this.pageImpl === undefined) return { records: [], hasMore: false }
+      return this.pageImpl(input)
+    },
     // A user message into a session: DSH queued it in the inbox; the standalone engine
     // takes it as the turn's trigger, with the user source the route expects.
     prompt: async (input: { readonly sessionId: string, readonly content: readonly unknown[], readonly mode?: string }, signal?: AbortSignal): Promise<void> => {

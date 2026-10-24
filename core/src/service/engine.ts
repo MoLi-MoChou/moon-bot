@@ -110,12 +110,44 @@ export function wireService(options: WireOptions): WiredService {
     let agent = agents.get(sessionId)
     if (agent === undefined) {
       store.sessions.upsertSession({ id: sessionId, kind: 'bot', ownerId: runtime.selfOf(sessionId) ?? sessionId })
-      agents.set(sessionId, agent = engineAgentOf(sessionId, { runtime: engine, emitEvent }))
+      // The part pager reads the agent session's seq as "the next one"; the store knows.
+      agents.set(sessionId, agent = engineAgentOf(sessionId, {
+        runtime: engine,
+        emitEvent,
+        seqOf: () => store.sessions.countMessages(sessionId) + 1,
+      }))
     }
     return agent
   }
 
   context.resolveAgentWith(agentOf)
+
+  // A history page from the store: each row becomes the session event the chat's
+  // pagers read (user and assistant messages; tool results are live-view only).
+  context.pageWith(async input => {
+    const sessionId = input.address.sessionId
+    const limit = Math.max(1, input.maxMessages ?? 60) + 1
+    const rows = store.sessions.pageBetween(sessionId, {
+      ...(input.throughSeq !== undefined ? { throughSeq: input.throughSeq } : {}),
+      ...(input.beforeSeq !== undefined ? { beforeSeq: input.beforeSeq } : {}),
+      limit,
+    })
+    const max = Math.max(1, input.maxMessages ?? 60)
+    const hasMore = rows.length > max
+    const shown = hasMore ? rows.slice(0, max) : rows
+    return {
+      records: shown.flatMap((row): { seq: number, event: { type: string, time: number, data: unknown } }[] => {
+        if (row.role === 'user') {
+          return [{ seq: row.seq, event: { type: 'user/message', time: row.createdAt, data: { content: row.content, source: row.source } } }]
+        }
+        if (row.role === 'assistant') {
+          return [{ seq: row.seq, event: { type: 'assistant/message', time: row.createdAt, data: { message: { content: row.content }, turn: row.turn ?? undefined } } }]
+        }
+        return []
+      }),
+      hasMore,
+    }
+  })
 
   return {
     context, runtime, store, engine, agentOf, emitEvent,

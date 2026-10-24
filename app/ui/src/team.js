@@ -2,17 +2,17 @@
 // engine's `state` endpoint and live feed. The views also read a few Session facts that
 // DSH keeps for them in the plugin; here the window keeps those as well.
 import { useRef, useSyncExternalStore } from 'react'
-import { call } from '../../../core/src/client/api.js'
-import { workPhrase } from '../../../core/src/client/cells.js'
-import { language, t } from '../../../core/src/client/i18n.js'
-import { toolState } from '../../../core/src/client/mark.js'
-import { noteLeft, setUnread, sharedMap, toggleReaction } from '../../../core/src/client/shared-map.js'
-import { createSource, EMPTY_ROSTER, indexRoster } from '../../../core/src/client/sources.js'
-import { STORAGE, migrateStorage } from '../../../core/src/client/storage.js'
-import { teamActions } from '../../../core/src/client/team-actions.js'
-import { currentPart } from '../../../core/src/client/text.js'
-import { registry } from '../../../core/src/client/themes.js'
-import { retryNotice, showReconnectNotice } from '../../../core/src/client/reconnect.js'
+import { call } from '../../../core/src/client/api.ts'
+import { workPhrase } from '../../../core/src/client/cells.ts'
+import { language, t } from '../../../core/src/client/i18n.ts'
+import { toolState } from '../../../core/src/client/mark.tsx'
+import { noteLeft, setUnread, sharedMap, toggleReaction } from '../../../core/src/client/shared-map.ts'
+import { createSource, EMPTY_ROSTER, indexRoster } from '../../../core/src/client/sources.ts'
+import { STORAGE, migrateStorage } from '../../../core/src/client/storage.ts'
+import { teamActions } from '../../../core/src/client/team-actions.ts'
+import { currentPart } from '../../../core/src/client/text.ts'
+import { registry } from '../../../core/src/client/themes.ts'
+import { retryNotice, showReconnectNotice } from '../../../core/src/client/reconnect.ts'
 import { openFeed } from './api.js'
 
 // Memory news and connector states change without a notice on the feed.

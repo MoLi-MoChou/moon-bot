@@ -3,7 +3,7 @@
 // password gate holds until the cookie arrives. A loopback service without a password
 // stays open, as the old web mode ruled.
 import assert from 'node:assert/strict'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -87,6 +87,28 @@ test('with a password, the gate holds until the cookie arrives', async (t) => {
     body: JSON.stringify({ endpoint: 'state', payload: {} }),
   })).json()
   assert.equal(state.ok, true)
+})
+
+test('the built UI is served beside the channel when a directory is given', async (t) => {
+  const home = mkdtempSync(join(tmpdir(), 'ds-bot-service-'))
+  writeFileSync(join(home, 'state.json'), JSON.stringify(seed()))
+  const ui = mkdtempSync(join(tmpdir(), 'ds-bot-ui-'))
+  writeFileSync(join(ui, 'index.html'), '<!doctype html><html><body><div id="root"></div><script src="./assets/app.js"></script></body></html>')
+  mkdirSync(join(ui, 'assets'), { recursive: true })
+  writeFileSync(join(ui, 'assets', 'app.js'), 'window.booted = true')
+  const service = await startService({ home, uiDir: ui })
+  t.after(async () => {
+    await service.close()
+    rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 })
+    rmSync(ui, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 })
+  })
+  const page = await fetch(`${service.url}/`)
+  assert.equal(page.status, 200)
+  const html = await page.text()
+  assert.match(html, /<div id="root">/)
+  const js = await fetch(`${service.url}/assets/app.js`)
+  assert.equal(js.status, 200)
+  assert.equal(await js.text(), 'window.booted = true')
 })
 
 test('a non-loopback bind without a password refuses to start', async () => {

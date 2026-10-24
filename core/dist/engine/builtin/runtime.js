@@ -106,7 +106,7 @@ class BuiltinRuntime {
         callbacks: { onEvent: collect }
       });
       state.agent = agent;
-      await services.transcript.append(input.sessionId, { role: "user", content: input.message.content, turn, at: Date.now() });
+      await services.transcript.append(input.sessionId, { role: "user", content: input.message.content, turn, ...input.message.source !== void 0 ? { source: input.message.source } : {}, at: Date.now() });
       const before = agent.state.messages.length;
       try {
         const blocks = input.message.content.map((block) => ({ type: "text", text: block.type === "text" ? block.text : JSON.stringify(block) }));

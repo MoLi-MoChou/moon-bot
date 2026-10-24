@@ -19,7 +19,9 @@ function engineAgentOf(sessionId, options) {
     })();
   };
   return {
-    session: { id: sessionId },
+    session: { id: sessionId, get seq() {
+      return options.seqOf?.() ?? 0;
+    } },
     calls,
     inbox: { nextStep: [], nextTurn: [], remove: () => false },
     followup: start,

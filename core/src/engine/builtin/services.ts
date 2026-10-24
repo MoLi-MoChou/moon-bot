@@ -85,6 +85,8 @@ export interface StoredMessage {
   readonly content: readonly EngineContentBlock[]
   readonly stopReason?: string | undefined
   readonly turn?: number | undefined
+  /** The delivery source, for user rows: what the chat's history view reads. */
+  readonly source?: Readonly<Record<string, unknown>> | undefined
   /** The kernel message as stored JSON, replayed verbatim on the next turn. */
   readonly raw?: unknown
   readonly at: number

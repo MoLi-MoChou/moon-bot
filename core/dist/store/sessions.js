@@ -125,6 +125,32 @@ class Sessions {
       createdAt: row.created_at
     }));
   }
+  /** Rows of a session between sequence bounds (both exclusive at the top), newest first. */
+  pageBetween(sessionId, bounds) {
+    const clauses = ["session_id = ?"];
+    const args = [sessionId];
+    if (bounds.throughSeq !== void 0) {
+      clauses.push("seq <= ?");
+      args.push(bounds.throughSeq);
+    }
+    if (bounds.beforeSeq !== void 0) {
+      clauses.push("seq < ?");
+      args.push(bounds.beforeSeq);
+    }
+    const rows = this.db.prepare(`SELECT * FROM messages WHERE ${clauses.join(" AND ")} ORDER BY seq DESC LIMIT ?`).all(...args, bounds.limit);
+    return rows.reverse().map((row) => MessageRow.parse({
+      id: row.id,
+      sessionId: row.session_id,
+      seq: row.seq,
+      turn: row.turn,
+      role: row.role,
+      content: parse(String(row.content), [], z.array(ContentBlock)),
+      source: row.source === null ? null : parse(String(row.source), {}, z.record(z.unknown())),
+      stopReason: row.stop_reason === null ? null : parse(String(row.stop_reason), null, z.unknown()),
+      raw: row.raw === null || row.raw === void 0 ? null : parse(String(row.raw), null, z.unknown()),
+      createdAt: row.created_at
+    }));
+  }
   countMessages(sessionId) {
     const row = this.db.prepare("SELECT COUNT(*) AS n FROM messages WHERE session_id = ?").get(sessionId);
     return Number(row.n);

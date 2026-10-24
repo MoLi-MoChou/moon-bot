@@ -1,4 +1,4 @@
-// The part of DSH's locale service that the plugin's copy (core/src/client/i18n.js)
+// The part of DSH's locale service that the plugin's copy (core/src/client/i18n.ts)
 // uses: it registers its dictionary and translates through a bound namespace.
 const fill = (text, params) => (params
   ? text.replace(/\{(\w+)\}/g, (match, name) => (name in params ? String(params[name]) : match))

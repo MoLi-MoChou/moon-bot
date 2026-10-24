@@ -17,6 +17,7 @@ const sqliteTranscriptOf = (sessions) => ({
       content: message.content,
       ...message.stopReason !== void 0 ? { stopReason: message.stopReason } : {},
       ...message.turn !== void 0 ? { turn: message.turn } : {},
+      ...message.source !== void 0 ? { source: message.source } : {},
       ...message.raw !== void 0 ? { raw: message.raw } : {}
     });
   }

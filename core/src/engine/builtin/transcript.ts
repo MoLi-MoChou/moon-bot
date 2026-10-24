@@ -37,6 +37,7 @@ export const sqliteTranscriptOf = (sessions: SessionsLike): TranscriptStore => (
       content: message.content,
       ...(message.stopReason !== undefined ? { stopReason: message.stopReason } : {}),
       ...(message.turn !== undefined ? { turn: message.turn } : {}),
+      ...(message.source !== undefined ? { source: message.source } : {}),
       ...(message.raw !== undefined ? { raw: message.raw } : {}),
     })
   },

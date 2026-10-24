@@ -132,6 +132,23 @@ export class Sessions {
     }))
   }
 
+  /** Rows of a session between sequence bounds (both exclusive at the top), newest first. */
+  pageBetween(sessionId: string, bounds: { readonly throughSeq?: number, readonly beforeSeq?: number, readonly limit: number }): MessageRow[] {
+    const clauses = ['session_id = ?']
+    const args: unknown[] = [sessionId]
+    if (bounds.throughSeq !== undefined) { clauses.push('seq <= ?'); args.push(bounds.throughSeq) }
+    if (bounds.beforeSeq !== undefined) { clauses.push('seq < ?'); args.push(bounds.beforeSeq) }
+    const rows = this.db.prepare(`SELECT * FROM messages WHERE ${clauses.join(' AND ')} ORDER BY seq DESC LIMIT ?`).all(...args, bounds.limit) as Record<string, unknown>[]
+    return rows.reverse().map(row => MessageRow.parse({
+      id: row.id, sessionId: row.session_id, seq: row.seq, turn: row.turn, role: row.role,
+      content: parse(String(row.content), [], z.array(ContentBlock)),
+      source: row.source === null ? null : parse(String(row.source), {}, z.record(z.unknown())),
+      stopReason: row.stop_reason === null ? null : parse(String(row.stop_reason), null, z.unknown()),
+      raw: row.raw === null || row.raw === undefined ? null : parse(String(row.raw), null, z.unknown()),
+      createdAt: row.created_at,
+    }))
+  }
+
   countMessages(sessionId: string): number {
     const row = this.db.prepare('SELECT COUNT(*) AS n FROM messages WHERE session_id = ?').get(sessionId) as { n: number }
     return Number(row.n)

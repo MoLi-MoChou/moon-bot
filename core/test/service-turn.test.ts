@@ -106,6 +106,13 @@ test('a message over HTTP runs its turn on the engine and answers on the feed', 
 
   const state = await call('state', {})
   assert.ok(state.ok)
+
+  // The chat's history pages from the store: the sent line and the answer.
+  const chat = await call('chat', { botId: 'a' })
+  assert.equal(chat.ok, true, JSON.stringify(chat))
+  const items = (chat.value?.items ?? []) as { kind: string, text?: string }[]
+  assert.ok(items.some(item => item.kind === 'user' && (item.text ?? '').includes('prepare the plan')), JSON.stringify(items))
+  assert.ok(items.some(item => item.kind === 'bot' && (item.text ?? '').includes('plan is ready')), JSON.stringify(items))
   feedAbort.abort()
   await reader.cancel().catch(() => {})
 })

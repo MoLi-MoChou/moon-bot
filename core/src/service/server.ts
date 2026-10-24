@@ -5,7 +5,7 @@
 // the built UI assets from a directory when one is given.
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
 import { existsSync } from 'node:fs'
-import { join } from 'node:path'
+import { isAbsolute, resolve } from 'node:path'
 import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify'
 import { wireService } from './engine.ts'
 import { FileCredentials } from './credentials.ts'
@@ -152,7 +152,7 @@ export async function startService(options: ServiceOptions): Promise<StandaloneS
 
   if (options.uiDir !== undefined && existsSync(options.uiDir)) {
     const { default: fastifyStatic } = await import('@fastify/static')
-    await app.register(fastifyStatic, { root: join(options.uiDir), prefix: '/' })
+    await app.register(fastifyStatic, { root: isAbsolute(options.uiDir) ? options.uiDir : resolve(options.uiDir), prefix: '/' })
   }
 
   const address = await app.listen({ host, port: options.port ?? 0 })

@@ -53,8 +53,8 @@
     "@deepseek-ai/dsh-util-time": "0.2.1-rc.2",
     "@deepseek-ai/dsh-util-workspace-path": "0.2.1-rc.2",
     "@deepseek-ai/dsh-workflow": "0.2.1-rc.2",
-    "moon-bot-core": "file:../core",
     "electron-updater": "6.8.10",
+    "moon-bot-core": "file:../core",
     "pnpm": "11.7.0",
     "tar": "7.5.22",
     "yaml": "2.9.1"

@@ -98,10 +98,12 @@ async function start() {
   const pnpm = join(app.getAppPath(), 'node_modules', 'pnpm', 'bin', 'pnpm.mjs')
   const profileDir = join(where.dataDir, 'profiles', PROFILE)
   mkdirSync(profileDir, { recursive: true })
+  // The window's Host is Moon Bot's own service: same ready/fatal/shutdown protocol,
+  // no DSH profile. The team data dir is its home; the workspace rides along as before.
   const newHost = () => new HostProcess({
-    entry: join(here, 'host.mjs'),
+    entry: join(here, 'service-host.mjs'),
     cwd: profileDir,
-    env: { ...process.env, ...engineEnv(), DSH_HOME: where.dataDir, DS_BOT_PORT: String(port), DS_BOT_APP: '1', DS_BOT_USER_DSH_HOME: userDshHome(), ...(where.workspace ? { DS_BOT_WORKSPACE: where.workspace } : {}) },
+    env: { ...process.env, ...engineEnv(), MOON_BOT_DATA: where.dataDir, MOON_BOT_WEB_PORT: String(port), ...(where.workspace ? { MOON_BOT_WORKSPACE: where.workspace } : {}) },
     pnpm,
     onFailure: fail,
   })

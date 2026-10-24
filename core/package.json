@@ -30,7 +30,8 @@
     ".": "./index.js",
     "./client": "./client.js",
     "./web-search": "./web-search.js",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./service": "./dist/service/server.js"
   },
   "files": [
     "index.js",
@@ -50,12 +51,6 @@
     "check": "sh dev/check.sh",
     "test:gate": "node scripts/test-gate.mjs",
     "build:host": "node scripts/build-host.mjs"
-  },
-  "peerDependencies": {
-    "@deepseek-ai/cordis": "*",
-    "@deepseek-ai/dsh-llm": "*",
-    "@deepseek-ai/dsh-tools": "*",
-    "@deepseek-ai/dsh-web": "*"
   },
   "dsh": {
     "client": {

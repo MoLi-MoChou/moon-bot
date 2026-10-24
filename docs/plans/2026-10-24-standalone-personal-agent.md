@@ -248,4 +248,5 @@ TS 现状盘点（2026-10-24 实测）：core 源码侧仅剩 `index.js`（70 �
 ## 十二、阶段 2 进行记录（2026-10-24 起）
 
 - **内置引擎核心已落地**（`src/engine/builtin/`，commit 9b339c1）：services（宿主注入的 ModelSource/PromptSource/ToolGate/TranscriptStore 四缝）、adapter（pi Agent 构造与事件映射、prompt 顺序 base+冻结+动态、beforeToolCall 过门）、runtime（每会话一次一回合、排队、steer 并入、cancel→aborted、全量落库）。`test/builtin-engine.test.ts` 五项全绿：门控工具回合、拒绝回给模型、双回合排队+steer、流中取消、无模型错误收尾。
-- 待办：宿主桥（engine 事件喂给 route 的 session/event、delivery 走 runTurn）→ 群聊回合对照；mock-llm 全量；工具注册表迁移四个工具模块。
+- **宿主桥已落地**（bridge.ts，commit 01032a7）：每会话一个 engine agent（followup 开回合、steer 并入运行中回合/空闲即开回合——DSH inbox 语义、cancel 中止、status 反映运行中）；engine 事件以 session/event 喂给既有 route。`test/engine-bridge.test.ts`：group_relay 群聊回合全链路经引擎跑通、message_bot 请求往返并记入 exchange。**对照锚成立：roster/groups/delivery/route 原代码 + 引擎事件源 = 群聊与请求闭环**，DSH 仍在位可随时对照。
+- 待办：工具注册表迁移（四个工具模块从 defineTool 到 Zod 注册表，经 ToolGate）；mock-llm 端到端全量（脚本化对话剧本过引擎）；bridge 的 transcript 接 SQLite（现测试用 no-op）。

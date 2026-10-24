@@ -38,7 +38,7 @@ export class ServiceContext {
   private readonly registeredTools = new Map<string, unknown>()
   private readonly sections = new Map<string, unknown>()
   private readonly services: Readonly<Record<string, unknown>>
-  private readonly agentOf: ServiceContextOptions['resolveAgent']
+  private agentOf: ServiceContextOptions['resolveAgent']
 
   constructor(options: ServiceContextOptions = {}) {
     this.services = options.services ?? {}
@@ -112,6 +112,11 @@ export class ServiceContext {
     resolveModelInfo: async (): Promise<Record<string, unknown>> => ({}),
   }
 
+  /** The engine-backed agent resolver, installed by the wiring once it exists. */
+  resolveAgentWith(resolver: (sessionId: string) => unknown): void {
+    this.agentOf = resolver
+  }
+
   readonly sessionController = {
     create: async (): Promise<{ sessionId: string }> => ({ sessionId: `s${Math.random().toString(36).slice(2, 10)}` }),
     resolveAgent: async (sessionId: string): Promise<{ agent: unknown }> => {
@@ -120,6 +125,16 @@ export class ServiceContext {
       return { agent }
     },
     selectModel: async (): Promise<void> => {},
+    // A user message into a session: DSH queued it in the inbox; the standalone engine
+    // takes it as the turn's trigger, with the user source the route expects.
+    prompt: async (input: { readonly sessionId: string, readonly content: readonly unknown[], readonly mode?: string }, signal?: AbortSignal): Promise<void> => {
+      if (this.agentOf === undefined) throw Object.assign(new Error('Session unavailable'), { code: 'bot/unavailable' })
+      const agent = await this.agentOf(input.sessionId) as { followup?(message: unknown): void, steer?(message: unknown): void }
+      const message = { content: input.content, source: { kind: 'user' } }
+      if (input.mode === 'steer') agent.steer?.(message)
+      else agent.followup?.(message)
+      void signal
+    },
   }
 
   readonly sessionTitle = { rename: async (): Promise<void> => {} }
@@ -129,6 +144,11 @@ export class ServiceContext {
     resolveByPath: async (): Promise<undefined> => undefined,
     create: async (path: string): Promise<{ id: string, path: string }> => ({ id: path, path }),
     archiveSession: async (): Promise<void> => {},
+  }
+
+  /** The registered prompt sections, in registration order. */
+  sectionsInOrder(): readonly unknown[] {
+    return [...this.sections.values()]
   }
 
   /** The captured fetch routes, keyed by path, for the service to serve. */

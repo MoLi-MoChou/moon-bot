@@ -124,7 +124,9 @@ export async function buildAgent(options: AdapterOptions): Promise<Agent> {
       ...(replayed.length > 0 ? { messages: [createInitialSystemMessage(system, piTools.map(toToolDeclaration)) as AgentMessage, ...replayed] } : {}),
     },
     streamFn,
-    getApiKey: () => resolved.apiKey ?? '',
+    // A keyless local endpoint still needs a non-empty key for the wire client; real
+    // endpoints bring their own.
+    getApiKey: () => resolved.apiKey ?? 'keyless',
     sessionId,
     // The dynamic segment is request-scoped: the stored transcript (and so the cached
     // prefix) never moves; what may change rides after it, once per request.

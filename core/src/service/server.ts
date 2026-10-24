@@ -7,9 +7,11 @@ import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify'
-import { createRuntime } from '../index.ts'
-import type { DshContext } from '../host/dsh-types.js'
-import { ServiceContext, type FetchRoute } from './context.ts'
+import { wireService } from './engine.ts'
+import { FileCredentials } from './credentials.ts'
+import { FileSettings } from './settings.ts'
+import { StandaloneLlm } from './llm.ts'
+import type { FetchRoute } from './context.ts'
 
 export interface ServiceOptions {
   /** The team home directory (state.json, store.sqlite3 live under it). */
@@ -53,9 +55,17 @@ export async function startService(options: ServiceOptions): Promise<StandaloneS
   const loopback = ['127.0.0.1', '::1', 'localhost'].includes(host)
   if (password === '' && !loopback) throw new Error('a non-loopback bind needs a password')
 
-  const context = new ServiceContext()
-  const runtime = createRuntime(context as unknown as DshContext, { home: options.home })
-  void runtime
+  // The full stack: host runtime + SQLite store + engine + bridge, with the
+  // standalone settings, credentials and provider routes under it.
+  const settings = new FileSettings(options.home)
+  const credentials = new FileCredentials(options.home)
+  const llm = new StandaloneLlm(settings, credentials)
+  const wired = wireService({
+    home: options.home,
+    llm,
+    services: { settings, credentials },
+  })
+  const context = wired.context
 
   const app = Fastify({ logger: options.logger === true })
   await app.register((await import('@fastify/cookie')).default)
@@ -117,8 +127,12 @@ export async function startService(options: ServiceOptions): Promise<StandaloneS
     })
   }
 
+  // Open feed sockets, closed when the service stops so close() cannot hang on them.
+  const feedSockets = new Set<{ destroy(): void }>()
   if (feedRoute !== undefined) {
-    app.get('/api/bot/feed', (_request, reply) => {
+    app.get('/api/bot/feed', (request, reply) => {
+      feedSockets.add(request.raw)
+      request.raw.on('close', () => { feedSockets.delete(request.raw) })
       void feedRoute.fetch(new Request('http://service/api/bot/feed'))
         .then(async response => {
           reply.raw.writeHead(200, { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-store', connection: 'keep-alive' })
@@ -145,8 +159,9 @@ export async function startService(options: ServiceOptions): Promise<StandaloneS
   return {
     url: address,
     close: async () => {
+      for (const socket of feedSockets) socket.destroy()
       await app.close()
-      await context.dispose()
+      await wired.close()
     },
   }
 }

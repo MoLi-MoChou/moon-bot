@@ -14,6 +14,7 @@ import { FileAttachments } from "./attachments.js";
 import { ServiceApproval } from "./approval.js";
 import { MemorySync } from "./memory-sync.js";
 import { TaskScheduler } from "./scheduler.js";
+import { PolicyEngine } from "../engine/policy.js";
 const EXCLUDED_TOOLS = /* @__PURE__ */ new Set([...HIDDEN_TOOLS, ...LEAN_HIDDEN_TOOLS]);
 const memoryScopesOf = (runtime, sessionId) => {
   const botId = runtime.selfOf(sessionId);
@@ -33,12 +34,6 @@ const surfacedMemories = (runtime, store, sync, sessionId, query) => {
     return [];
   }
 };
-const shouldAsk = (runtime, sessionId, tool, input) => {
-  void runtime;
-  void sessionId;
-  const wants = tool === "working_directory" && typeof input.cd === "string" && input.cd !== "";
-  return wants ? "change the working folder" : void 0;
-};
 function wireService(options) {
   const attachments = new FileAttachments(options.home);
   const context = new ServiceContext({
@@ -53,6 +48,7 @@ function wireService(options) {
   context.get = ((name) => name === "approval" ? approval : void 0);
   const runtime = createRuntime(context, { home: options.home });
   const store = openStore(options.home);
+  const policy = new PolicyEngine({ countersOf: async (sessionId, level, spend) => store.policy.spend(sessionId, level, spend) });
   const memorySync = new MemorySync(store, join(options.home, "memory"));
   memorySync.syncAll();
   const sections = () => context.sectionsInOrder();
@@ -92,13 +88,14 @@ function wireService(options) {
       }
     },
     prompt,
-    // The approval flow: a call the host would ask about holds on its card. The
-    // policy engine (phase 5) takes this seat with the risk levels; until then every
-    // call the host does not ask about runs.
+    // The policy engine (plan §阶段 5): L0–L2 run, L3 runs within its daily budget,
+    // L4 asks always; over budget asks too. The decision is the server's — the
+    // refusal never names an appeal, and no tool result carries an override.
     gate: {
-      check: async (sessionId, tool, input) => {
-        const asking = shouldAsk(runtime, sessionId, tool, input);
-        if (asking === void 0) return { kind: "allow" };
+      check: async (sessionId, tool) => {
+        const decision = await policy.decide(sessionId, tool);
+        if (decision.kind === "allow") return { kind: "allow" };
+        if (decision.kind === "deny") return { kind: "deny", reason: decision.reason };
         return new Promise((resolve) => {
           let settled;
           const settledPromise = new Promise((done) => {
@@ -108,7 +105,7 @@ function wireService(options) {
           void context.emit("approval/request", {
             agent: { id: sessionId, session: { id: sessionId } },
             toolName: tool,
-            reason: asking,
+            reason: decision.reason,
             signal: void 0
           }, () => approval.card().then((outcome) => {
             settled?.(outcome === "allowed-once" || outcome === "allowed" ? "allow" : "deny");

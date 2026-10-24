@@ -82,9 +82,19 @@ CREATE TRIGGER memory_au AFTER UPDATE OF text ON memory_index BEGIN
 END;
 `;
 const V2 = "ALTER TABLE messages ADD COLUMN raw TEXT;";
+const V3 = `
+CREATE TABLE policy_counters (
+  day INTEGER NOT NULL,            -- UTC day, floor(epoch / 86400000)
+  session_id TEXT NOT NULL,
+  level INTEGER NOT NULL,          -- 3 or 4
+  count INTEGER NOT NULL DEFAULT 0,
+  UNIQUE(day, session_id, level)
+);
+`;
 const MIGRATIONS = [
   { name: "v1 standalone store", sql: V1 },
-  { name: "v2 raw kernel messages", sql: V2 }
+  { name: "v2 raw kernel messages", sql: V2 },
+  { name: "v3 policy counters", sql: V3 }
 ];
 export {
   MIGRATIONS

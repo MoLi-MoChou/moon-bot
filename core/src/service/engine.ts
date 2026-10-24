@@ -23,6 +23,7 @@ import { FileAttachments } from './attachments.ts'
 import { ServiceApproval } from './approval.ts'
 import { MemorySync } from './memory-sync.ts'
 import { TaskScheduler } from './scheduler.ts'
+import { PolicyEngine } from '../engine/policy.ts'
 import type { StandaloneLlm } from './llm.ts'
 
 /** The host runtime's own shape, as the wiring reads it. */
@@ -75,14 +76,6 @@ const surfacedMemories = (runtime: Runtime, store: Store, sync: MemorySync, sess
 }
 
 /** Wires the host runtime, the store, the engine and the bridge for one team home. */
-/** Which calls ask for approval before phase 5's risk levels land: folder changes. */
-const shouldAsk = (runtime: Runtime, sessionId: string, tool: string, input: Readonly<Record<string, unknown>>): string | undefined => {
-  void runtime
-  void sessionId
-  const wants = tool === 'working_directory' && typeof input.cd === 'string' && input.cd !== ''
-  return wants ? 'change the working folder' : undefined
-}
-
 export function wireService(options: WireOptions): WiredService {
   // The attachments store serves the host's file surfaces; a caller's own service of
   // the same name still wins.
@@ -98,6 +91,8 @@ export function wireService(options: WireOptions): WiredService {
   context.get = ((name: string) => name === 'approval' ? approval : undefined) as typeof context.get
   const runtime = createRuntime(context as unknown as DshContext, { home: options.home }) as unknown as Runtime
   const store = openStore(options.home)
+  // The policy engine over the store's ledger.
+  const policy = new PolicyEngine({ countersOf: async (sessionId, level, spend) => store.policy.spend(sessionId, level, spend) })
   // The memory mirror: Markdown stays the source of truth; the index syncs lazily.
   const memorySync = new MemorySync(store, join(options.home, 'memory'))
   memorySync.syncAll()
@@ -150,13 +145,14 @@ export function wireService(options: WireOptions): WiredService {
       },
     },
     prompt,
-    // The approval flow: a call the host would ask about holds on its card. The
-    // policy engine (phase 5) takes this seat with the risk levels; until then every
-    // call the host does not ask about runs.
+    // The policy engine (plan §阶段 5): L0–L2 run, L3 runs within its daily budget,
+    // L4 asks always; over budget asks too. The decision is the server's — the
+    // refusal never names an appeal, and no tool result carries an override.
     gate: {
-      check: async (sessionId, tool, input): Promise<import('../engine/builtin/services.ts').GateDecision> => {
-        const asking = shouldAsk(runtime, sessionId, tool, input)
-        if (asking === undefined) return { kind: 'allow' }
+      check: async (sessionId, tool): Promise<import('../engine/builtin/services.ts').GateDecision> => {
+        const decision = await policy.decide(sessionId, tool)
+        if (decision.kind === 'allow') return { kind: 'allow' }
+        if (decision.kind === 'deny') return { kind: 'deny', reason: decision.reason }
         return new Promise(resolve => {
           let settled: ((outcome: 'allow' | 'deny') => void) | undefined
           const settledPromise = new Promise<'allow' | 'deny'>(done => { settled = done })
@@ -164,7 +160,7 @@ export function wireService(options: WireOptions): WiredService {
           void context.emit('approval/request', {
             agent: { id: sessionId, session: { id: sessionId } },
             toolName: tool,
-            reason: asking,
+            reason: decision.reason,
             signal: undefined,
           }, () => approval.card().then((outcome: string) => {
             settled?.(outcome === 'allowed-once' || outcome === 'allowed' ? 'allow' : 'deny')

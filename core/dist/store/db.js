@@ -6,6 +6,7 @@ import { MIGRATIONS } from "./schema.js";
 import { Sessions } from "./sessions.js";
 import { Tasks } from "./tasks.js";
 import { MemoryIndex } from "./memory-index.js";
+import { PolicyCounters } from "./policy-counters.js";
 const userVersion = (db) => {
   const row = db.pragma("user_version", { simple: true });
   return typeof row === "number" ? row : 0;
@@ -32,6 +33,7 @@ function openStore(home, options = {}) {
     sessions: new Sessions(db),
     tasks: new Tasks(db),
     memory: new MemoryIndex(db),
+    policy: new PolicyCounters(db),
     close: () => db.close()
   };
 }

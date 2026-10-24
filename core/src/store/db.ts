@@ -13,12 +13,14 @@ import { MIGRATIONS } from './schema.ts'
 import { Sessions } from './sessions.ts'
 import { Tasks } from './tasks.ts'
 import { MemoryIndex } from './memory-index.ts'
+import { PolicyCounters } from './policy-counters.ts'
 
 export interface Store {
   readonly raw: Database.Database
   readonly sessions: Sessions
   readonly tasks: Tasks
   readonly memory: MemoryIndex
+  readonly policy: PolicyCounters
   close(): void
 }
 
@@ -51,6 +53,7 @@ export function openStore(home: string, options: { readonly file?: string; reado
     sessions: new Sessions(db),
     tasks: new Tasks(db),
     memory: new MemoryIndex(db),
+    policy: new PolicyCounters(db),
     close: () => db.close(),
   }
 }

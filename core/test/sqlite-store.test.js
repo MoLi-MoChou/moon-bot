@@ -20,10 +20,10 @@ test('the schema opens with user_version at the migration count, and reopens har
   const home = mkdtempSync(join(tmpdir(), 'ds-bot-store-'))
   t.after(() => rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }))
   const first = openStore(home)
-  assert.equal(first.raw.pragma('user_version', { simple: true }), 2)
+  assert.equal(first.raw.pragma('user_version', { simple: true }), 3)
   first.close()
   const second = openStore(home)
-  assert.equal(second.raw.pragma('user_version', { simple: true }), 2)
+  assert.equal(second.raw.pragma('user_version', { simple: true }), 3)
   second.close()
 })
 

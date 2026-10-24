@@ -95,9 +95,21 @@ END;
 // format; the structured columns stay the queryable projection of it.
 const V2 = 'ALTER TABLE messages ADD COLUMN raw TEXT;'
 
+// v3 — the policy ledger: one counter per session and risk level per UTC day.
+const V3 = `
+CREATE TABLE policy_counters (
+  day INTEGER NOT NULL,            -- UTC day, floor(epoch / 86400000)
+  session_id TEXT NOT NULL,
+  level INTEGER NOT NULL,          -- 3 or 4
+  count INTEGER NOT NULL DEFAULT 0,
+  UNIQUE(day, session_id, level)
+);
+`
+
 export const MIGRATIONS: readonly Migration[] = [
   { name: 'v1 standalone store', sql: V1 },
   { name: 'v2 raw kernel messages', sql: V2 },
+  { name: 'v3 policy counters', sql: V3 },
 ]
 
 /** The type the table modules see: a better-sqlite3 connection. */

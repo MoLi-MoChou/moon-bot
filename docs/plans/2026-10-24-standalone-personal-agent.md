@@ -234,3 +234,18 @@ TS 现状盘点（2026-10-24 实测）：core 源码侧仅剩 `index.js`（70 �
 - **cordis.patch.yml 用途查明**：把 moon-bot-core 挂进 DSH profile（bot + web-search-auto 两个 mount），覆盖 web 搜索提供方配置（searchProvider: auto），并以 lean 形态关闭 DSH 自带的 Automation 入口/调度器/调度工具/产品遥测/会话日志上传。阶段 3 服务自建后整文件随 DSH 移除清单删除。
 - **最终依赖清单**（引入阶段见 §二）：`@earendil-works/pi-agent-core`、`@earendil-works/pi-ai`（已引入）；zod（已有）；better-sqlite3、Fastify、@fastify/websocket、@fastify/static、croner、@modelcontextprotocol/sdk、react-markdown、remark-gfm、rehype-highlight（阶段 1–5 按需引入，各自引入时登记 NOTICE）；`@openuidev/react-ui` 系实现时再核 API 与许可证（阶段 6）。
 - 门禁：`npm test` 894 项 / 891 过 / 0 红；`npm run lint`（含 350 行门禁）过；`npm run typecheck` 0 错。
+
+## 十一、阶段 1 验收记录（2026-10-24，feat/standalone-personal-agent）
+
+- **AgentRuntime 定稿**（`src/engine/runtime.ts`）：`start/stop/runTurn(→AsyncIterable<EngineEvent>)/steer/cancelTurn`。`steer` 为第五个成员：DSH inbox 的「插话进运行中回合」语义必须有落点（pi 的 steer 队列），文档即接口。会话配置按回合携带（model/effort/systemPrompt/工具名单），引擎不留配置状态。
+- **事件协议**（`src/engine/events.ts`）：与 session/event 同词表的封闭集合（turn/start、user/message、assistant/stream 增量、assistant/message、tool/call、tool/result、turn/end + EngineStopReason）；`engineEventOf` 从未类型载荷读回。流式增量专给阶段 3 客户端流，router 不依赖。
+- **SQLite schema**（`src/store/`，better-sqlite3@12 + FTS5 trigram，迁移表 user_version）：sessions/messages（会话内 seq 递增）、tasks（next_run_at + 独占认领）、memory_index（scope 整体重建、supersede 链、置信度/有效期列；FTS 走 ≥3 字符词条、更短的中文词走子串过滤）。行全部 Zod 建模。测试 `test/sqlite-store.test.js`。
+- **shared/rpc 增补**：`engines`（列出各 Bot 的引擎）与 `engine-set`（迁移某 Bot 到另一引擎）。
+- **core TS 收尾**：`index.js→src/index.ts`（根 index.js 为生成再导出）、`web-search.js→src/web-search.ts`（拆 config/engines/host/native/provider/readers/source 七模块，全 strict 类型，30 测全过）、`dev/mock-llm.mjs→.ts`、`scripts/build-client.mjs→.ts`。构建：build-host 新增 engine/store/web-search 层与根 shim（index.js、web-search.js 均生成物，--check 覆盖）。CI test.yml 同步。**core 源码已无手写 .js/.mjs（vendored 与 client.js 除外）**；新测试起用 .ts（engine-contract）。
+- **门禁**：`check-gates` 认识 engine/store 层（client 不得引二者；engine 不得引 host/client；store 只可引 shared 与自身）。测试 glob 增 `*.test.ts`。
+- 门禁数字：`npm test` 907 / 904 过 / 0 红；typecheck 0；lint 过。
+
+## 十二、阶段 2 进行记录（2026-10-24 起）
+
+- **内置引擎核心已落地**（`src/engine/builtin/`，commit 9b339c1）：services（宿主注入的 ModelSource/PromptSource/ToolGate/TranscriptStore 四缝）、adapter（pi Agent 构造与事件映射、prompt 顺序 base+冻结+动态、beforeToolCall 过门）、runtime（每会话一次一回合、排队、steer 并入、cancel→aborted、全量落库）。`test/builtin-engine.test.ts` 五项全绿：门控工具回合、拒绝回给模型、双回合排队+steer、流中取消、无模型错误收尾。
+- 待办：宿主桥（engine 事件喂给 route 的 session/event、delivery 走 runTurn）→ 群聊回合对照；mock-llm 全量；工具注册表迁移四个工具模块。

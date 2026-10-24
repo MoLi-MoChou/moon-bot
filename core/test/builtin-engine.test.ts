@@ -268,3 +268,56 @@ test('the second turn replays the first: history, tools, and the raw kernel mess
   const raws = store.sessions.page('b1', 10).filter(row => row.raw !== null && row.raw !== undefined)
   assert.ok(raws.length >= 3, 'assistant steps and tool results kept raw')
 })
+
+test('a pending gate holds the call until its approval settles', async (t) => {
+  const mock = openaiMock()
+  const { port } = await mock.listen()
+  t.after(() => void mock.close())
+  let settle: ((outcome: 'allow' | 'deny') => void) | undefined
+  const gate: EngineServices['gate'] = {
+    check: async (_session, tool) => {
+      if (tool !== 'note') return { kind: 'allow' }
+      const settled = new Promise<'allow' | 'deny'>(done => { settle = done })
+      return { kind: 'pending', approvalId: 'ap-1', settled }
+    },
+    resolve: undefined,
+  }
+  const note: ToolDefinition = {
+    name: 'note', description: 'note', parameters: { type: 'object', properties: {}, required: [] },
+    execute: async () => ({ content: [{ type: 'text', text: 'ran after approval' }] }),
+  }
+  const services: EngineServices = {
+    models: { resolve: async () => ({ id: 'mock-1', baseUrl: `http://127.0.0.1:${port}/v1`, apiKey: 'sk' }) },
+    prompt: { base: async () => 'base', frozen: async () => '' },
+    gate,
+    transcript: { async history() { return [] }, async append() {} },
+    toolsFor: () => ['note'],
+    definitions: [note],
+  }
+  const engine = new BuiltinRuntime({ services, emit: () => {} })
+  mock.reply(call(0, 'k1', 'note'))
+  mock.reply({ content: 'Done.' })
+  const collected: EngineEvent[] = []
+  const run = (async () => { for await (const event of engine.runTurn({ sessionId: 's', message: { content: [{ type: 'text', text: 'note' }] } })) collected.push(event) })()
+  // The call is held: no tool result yet.
+  await new Promise(resolve => setTimeout(resolve, 120))
+  assert.ok(!collected.some(event => event.type === 'tool/result'), 'still waiting for the approval')
+  settle?.('allow')
+  await run
+  const kinds = collected.map(event => event.type)
+  assert.ok(kinds.includes('tool/result'), 'the tool ran after the approval')
+  const second: EngineEvent[] = []
+  mock.reply(call(0, 'k2', 'note'))
+  mock.reply({ content: 'No then.' })
+  const gate2: EngineServices['gate'] = {
+    check: async (_s, tool) => {
+      if (tool !== 'note') return { kind: 'allow' }
+      return { kind: 'pending', approvalId: 'ap-2', settled: Promise.resolve('deny') }
+    },
+    resolve: undefined,
+  }
+  const engine2 = new BuiltinRuntime({ services: { ...services, gate: gate2 }, emit: () => {} })
+  for await (const event of engine2.runTurn({ sessionId: 's2', message: { content: [{ type: 'text', text: 'note' }] } })) second.push(event)
+  const refused = mock.requests.at(-1)?.body.messages?.find(message => String(message.content).includes('not given'))
+  assert.ok(refused, 'the refusal reached the model')
+})

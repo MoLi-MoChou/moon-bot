@@ -54,11 +54,15 @@ export interface ToolOutcome {
   readonly structured?: unknown
 }
 
-/** One gate decision: run, refuse, or wait for an approval that may never come. */
+/**
+ * One gate decision: run, refuse, or wait for an approval. A pending decision carries
+ * the approval's id (for the views) and the promise that settles it — the engine holds
+ * the call until it does.
+ */
 export type GateDecision =
   | { readonly kind: 'allow' }
   | { readonly kind: 'deny'; readonly reason: string }
-  | { readonly kind: 'pending'; readonly approvalId: string }
+  | { readonly kind: 'pending'; readonly approvalId: string; readonly settled: Promise<'allow' | 'deny'> }
 
 /**
  * The tool gate: the permissions/approvals flow moved from DSH's tool execution into

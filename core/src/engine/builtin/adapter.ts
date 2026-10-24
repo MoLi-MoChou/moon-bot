@@ -137,7 +137,8 @@ export async function buildAgent(options: AdapterOptions): Promise<Agent> {
       const decision = await services.gate.check(sessionId, context.toolCall.name, (context.args ?? {}) as Readonly<Record<string, unknown>>)
       if (decision.kind === 'allow') return undefined
       if (decision.kind === 'deny') return { block: true, reason: decision.reason }
-      return { block: true, reason: `waiting for approval ${decision.approvalId} was withdrawn` }
+      // The call holds until the approval settles; a rejection names why.
+      return decision.settled.then(outcome => outcome === 'allow' ? undefined : { block: true, reason: 'the approval for this call was not given' })
     },
   })
   agent.subscribe((event: AgentEvent) => {

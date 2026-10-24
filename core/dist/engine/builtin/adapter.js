@@ -96,7 +96,7 @@ ${frozenPrompt}`;
       const decision = await services.gate.check(sessionId, context.toolCall.name, context.args ?? {});
       if (decision.kind === "allow") return void 0;
       if (decision.kind === "deny") return { block: true, reason: decision.reason };
-      return { block: true, reason: `waiting for approval ${decision.approvalId} was withdrawn` };
+      return decision.settled.then((outcome) => outcome === "allow" ? void 0 : { block: true, reason: "the approval for this call was not given" });
     }
   });
   agent.subscribe((event) => {

@@ -5,6 +5,7 @@
 // host modules registered (the frozen memory section among them), and the transcript
 // from the store. Tool definitions resolve through the registry per turn, so a
 // capability mounted later is served without rewiring.
+import { randomUUID } from 'node:crypto'
 import { createRuntime } from '../index.ts'
 import type { DshContext, PromptSection } from '../host/dsh-types.js'
 import { BuiltinRuntime } from '../engine/builtin/runtime.ts'
@@ -18,6 +19,7 @@ import { LEAN_HIDDEN_TOOLS } from '../shared/lean.ts'
 import { openStore, type Store } from '../store/db.ts'
 import { ServiceContext } from './context.ts'
 import { FileAttachments } from './attachments.ts'
+import { ServiceApproval } from './approval.ts'
 import type { StandaloneLlm } from './llm.ts'
 
 /** The host runtime's own shape, as the wiring reads it. */
@@ -46,6 +48,14 @@ export interface WireOptions {
 const EXCLUDED_TOOLS = new Set<string>([...HIDDEN_TOOLS, ...LEAN_HIDDEN_TOOLS])
 
 /** Wires the host runtime, the store, the engine and the bridge for one team home. */
+/** Which calls ask for approval before phase 5's risk levels land: folder changes. */
+const shouldAsk = (runtime: Runtime, sessionId: string, tool: string, input: Readonly<Record<string, unknown>>): string | undefined => {
+  void runtime
+  void sessionId
+  const wants = tool === 'working_directory' && typeof input.cd === 'string' && input.cd !== ''
+  return wants ? 'change the working folder' : undefined
+}
+
 export function wireService(options: WireOptions): WiredService {
   // The attachments store serves the host's file surfaces; a caller's own service of
   // the same name still wins.
@@ -56,6 +66,9 @@ export function wireService(options: WireOptions): WiredService {
       attachments,
     },
   })
+  // The approval bridge needs the context's emit; it goes on after the construction.
+  const approval = new ServiceApproval((request, next) => { context.emit('approval/request', request, next) })
+  context.get = ((name: string) => name === 'approval' ? approval : undefined) as typeof context.get
   const runtime = createRuntime(context as unknown as DshContext, { home: options.home }) as unknown as Runtime
   const store = openStore(options.home)
 
@@ -96,8 +109,30 @@ export function wireService(options: WireOptions): WiredService {
       },
     },
     prompt,
-    // The policy engine (phase 5) takes this seat; until then every call runs.
-    gate: { check: async () => ({ kind: 'allow' }) },
+    // The approval flow: a call the host would ask about holds on its card. The
+    // policy engine (phase 5) takes this seat with the risk levels; until then every
+    // call the host does not ask about runs.
+    gate: {
+      check: async (sessionId, tool, input): Promise<import('../engine/builtin/services.ts').GateDecision> => {
+        const asking = shouldAsk(runtime, sessionId, tool, input)
+        if (asking === undefined) return { kind: 'allow' }
+        return new Promise(resolve => {
+          let settled: ((outcome: 'allow' | 'deny') => void) | undefined
+          const settledPromise = new Promise<'allow' | 'deny'>(done => { settled = done })
+          const id = randomUUID()
+          void context.emit('approval/request', {
+            agent: { id: sessionId, session: { id: sessionId } },
+            toolName: tool,
+            reason: asking,
+            signal: undefined,
+          }, () => approval.card().then((outcome: string) => {
+            settled?.(outcome === 'allowed-once' || outcome === 'allowed' ? 'allow' : 'deny')
+            return outcome
+          }))
+          resolve({ kind: 'pending', approvalId: id, settled: settledPromise })
+        })
+      },
+    },
     transcript: sqliteTranscriptOf(store.sessions as unknown as Parameters<typeof sqliteTranscriptOf>[0]),
     toolsFor,
     definitions: [],

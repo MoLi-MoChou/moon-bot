@@ -164,10 +164,10 @@ export function eventToEngine(event: AgentEvent): EngineEvent | undefined {
 }
 
 /** The turn/end event for a finished run, from the last assistant message pi produced. */
-export const endEventOf = (turn: number, last: { stopReason?: string | undefined; errorMessage?: string | undefined; usages?: unknown } | undefined): EngineEvent => {
+export const endEventOf = (turn: number, last: { stopReason?: string | undefined; errorMessage?: string | undefined; usages?: unknown } | undefined, abortReason?: string | undefined): EngineEvent => {
   if (last === undefined) return { type: 'turn/end', turn, reason: { kind: 'completed' } }
   const kind = stopReasonOf(last.stopReason)
-  if (kind === 'aborted') return { type: 'turn/end', turn, reason: { kind: 'aborted' } }
+  if (kind === 'aborted') return { type: 'turn/end', turn, reason: { kind: 'aborted', ...(abortReason !== undefined ? { reason: abortReason } : {}) } }
   if (kind === 'error') return { type: 'turn/end', turn, reason: { kind: 'error', error: { message: last.errorMessage ?? 'the model call failed' } } }
   return { type: 'turn/end', turn, reason: { kind: 'completed' } }
 }

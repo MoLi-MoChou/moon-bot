@@ -119,10 +119,10 @@ function eventToEngine(event) {
       return void 0;
   }
 }
-const endEventOf = (turn, last) => {
+const endEventOf = (turn, last, abortReason) => {
   if (last === void 0) return { type: "turn/end", turn, reason: { kind: "completed" } };
   const kind = stopReasonOf(last.stopReason);
-  if (kind === "aborted") return { type: "turn/end", turn, reason: { kind: "aborted" } };
+  if (kind === "aborted") return { type: "turn/end", turn, reason: { kind: "aborted", ...abortReason !== void 0 ? { reason: abortReason } : {} } };
   if (kind === "error") return { type: "turn/end", turn, reason: { kind: "error", error: { message: last.errorMessage ?? "the model call failed" } } };
   return { type: "turn/end", turn, reason: { kind: "completed" } };
 };

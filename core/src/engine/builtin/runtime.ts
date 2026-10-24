@@ -20,6 +20,7 @@ interface SessionState {
   running: boolean
   readonly queue: Waiter[]
   agent?: Agent | undefined
+  cancelReason?: CancelReason | undefined
 }
 
 export interface BuiltinOptions {
@@ -63,9 +64,10 @@ export class BuiltinRuntime implements AgentRuntime {
     return true
   }
 
-  async cancelTurn(sessionId: string, _reason: CancelReason = 'user'): Promise<void> {
+  async cancelTurn(sessionId: string, reason: CancelReason = 'user'): Promise<void> {
     const state = this.sessions.get(sessionId)
     if (state === undefined || !state.running) return
+    state.cancelReason = reason
     state.agent?.abort()
   }
 
@@ -159,12 +161,13 @@ export class BuiltinRuntime implements AgentRuntime {
         }
       }
       const last = [...agent.state.messages].reverse().find(message => message.role === 'assistant') as { stopReason?: string | undefined; errorMessage?: string | undefined } | undefined
-      collect(endEventOf(turn, last))
+      collect(endEventOf(turn, last, state.cancelReason))
     } catch (error) {
       collect({ type: 'turn/end', turn, reason: { kind: 'error', error: { message: error instanceof Error ? error.message : String(error) } } })
     } finally {
       state.running = false
       state.agent = undefined
+      state.cancelReason = undefined
     }
   }
 }

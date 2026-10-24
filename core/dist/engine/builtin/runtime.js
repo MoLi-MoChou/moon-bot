@@ -29,9 +29,10 @@ class BuiltinRuntime {
     this.options.emit(sessionId, { type: "user/message", content: message.content, source: message.source });
     return true;
   }
-  async cancelTurn(sessionId, _reason = "user") {
+  async cancelTurn(sessionId, reason = "user") {
     const state = this.sessions.get(sessionId);
     if (state === void 0 || !state.running) return;
+    state.cancelReason = reason;
     state.agent?.abort();
   }
   stateOf(sessionId) {
@@ -124,12 +125,13 @@ class BuiltinRuntime {
         }
       }
       const last = [...agent.state.messages].reverse().find((message) => message.role === "assistant");
-      collect(endEventOf(turn, last));
+      collect(endEventOf(turn, last, state.cancelReason));
     } catch (error) {
       collect({ type: "turn/end", turn, reason: { kind: "error", error: { message: error instanceof Error ? error.message : String(error) } } });
     } finally {
       state.running = false;
       state.agent = void 0;
+      state.cancelReason = void 0;
     }
   }
 }

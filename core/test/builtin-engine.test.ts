@@ -195,7 +195,7 @@ test('a cancel mid-stream ends the turn as aborted, and the turn count survives'
   await run
   const end = collected.at(-1)
   assert.equal(end?.type, 'turn/end')
-  assert.deepEqual(end?.type === 'turn/end' ? end.reason : undefined, { kind: 'aborted' })
+  assert.deepEqual(end?.type === 'turn/end' ? end.reason : undefined, { kind: 'aborted', reason: 'user' })
   // The next turn on the same session still runs, numbered after the aborted one.
   mock.reply({ content: 'fine' })
   const again: EngineEvent[] = []

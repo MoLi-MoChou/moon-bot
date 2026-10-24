@@ -214,7 +214,7 @@ function boundaryViolation(layer, file, specifier) {
   if (layer === 'client' && (target === 'host' || target === 'engine' || target === 'store')) return `client may not import ${target}`
   if (layer === 'host' && target === 'client') return 'host may not import client'
   if (layer === 'engine' && (target === 'host' || target === 'client')) return `engine may not import ${target}`
-  if (layer === 'store' && target !== undefined && target !== 'shared') return 'store may import only shared and its own files'
+  if (layer === 'store' && target !== undefined && target !== 'shared' && target !== 'store') return 'store may import only shared and its own files'
   if (layer !== 'shared') return undefined
   if (specifier === 'zod' || specifier.startsWith('zod/')) return undefined
   if (target === 'shared') return undefined

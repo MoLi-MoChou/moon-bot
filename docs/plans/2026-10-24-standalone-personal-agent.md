@@ -254,3 +254,10 @@ TS 现状盘点（2026-10-24 实测）：core 源码侧仅剩 `index.js`（70 �
 - **工具注册表（四个工具模块平移完成）**（commit 7b16685）：chat/team/capability 三模块 17 个工具全部经 shared.register 入 Zod 注册表（schema 校验为引擎路径真值；参数描述图原样保留），defineTool 只剩 tools/dsh.ts 的派生处。执行器换 ToolContext；folders/shared 助手随之适配。待续：memory/secrets/groups 模块的 8 个工具（remember/forget/recall/list_secrets/request_secret/group_relay/read_group_chat/read_own_chat）入注册表。
 - 阶段 3 侦察结论：client.js 平台面仅 3 个模块（react、react-dom、@deepseek-ai/dsh-client-ui-primitives——即 MarkdownText 与 FishLogo 两个组件，后者随 DSH Agent 功能删除，前者按计划自研）；web.mjs 是 DSH 前的密码代理（口令→launch token→DSH cookie，含限速），Fastify 服务将平移该 auth；api/bot 通道可经捕获的 route 复用（与测试同法）。Fastify/@fastify/websocket/@fastify/static 已装（5.12.7/11.3.4/10.1.7）。
 - 门禁：`npm test` 912 / 909 过 / 0 红；typecheck 0；lint 过。
+
+## 十三、阶段 3 进行记录（2026-10-24/25 起）
+
+- **关键侦察**：桌面应用 app/ui 已是独立 React 壳（vite 构建，815 行 + 直接复用 core/src/client 组件；primitives.js 已用 react-markdown+remark-gfm 自实现 MarkdownText、FishLogo 置空）——窗口宿主已存在，无需重建 DSH web 壳。窗口协议已定：POST api/bot（RPC）+ GET api/bot/feed（SSE，重连以 hello 对齐），两条路由本就由 host 模块经 connection.fetch 注册（feed.ts），Fastify 只需捕获转发。宿主 ctx.get 服务面可枚举（约 19 个），且 fakeContext 证明缺省可降级。
+- **Fastify 服务已落地**（src/service/，commit dddcf1a）：ServiceContext（fakeContext 的生产版：真实事件扇出、路由捕获、effect 释放；方法为绑定箭头属性——host 模块会裸取 ctx.on；inject 对存在的服务即刻交付、不存在的永不到来）；server.ts 服务两条路由 + /healthz + 密码门（timing-safe 比较、按址限速 5 次/10 分钟、HMAC 签名 httpOnly cookie、loopback 可免密、非 loopback 无密码拒启）。test/service.test.ts 三项全绿（state over HTTP、feed hello、auth 全链路）。
+- **工具注册表全量对齐**（commit a16bf24）：剩余 9 个（groups/memory/secrets/browser 模块）迁 rt.registerTool，25/25 双路对齐（dsh-only 与 registry-only 皆空）。registerDshTool 对需要活 agent 的工具（group_relay 的轮次排空）在 ToolContext 里透传。**阶段 2 的工具注册表项至此收口**。
+- 待续：服务接引擎桥（resolveAgent → engineAgentOf）与平台服务补齐（attachments/approval 优先）；app/ui 构建产物由服务托管（静态目录已支持）；Electron 主进程改载服务地址；Dockerfile；app .mjs→.ts。

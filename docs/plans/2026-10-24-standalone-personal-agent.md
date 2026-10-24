@@ -277,3 +277,10 @@ TS 现状盘点（2026-10-24 实测）：core 源码侧仅剩 `index.js`（70 �
 - **app 已全面 TypeScript**（同 commit）：17 个 .mjs 全迁（含仍在用的 profile.ts），严格 tsconfig 对齐 core；主进程经 esbuild 打包 dist-main/main.cjs（CJS 无 import.meta——构建以 __filename 垫片，否则 here/INSTALL_ANCHOR 静默断掉）；service-host/host 保持源码直跑（已验证可启动）。app 测试 84/83/0/1 与迁移前一致。
 - 待续（阶段 4 余项）：行动闭环（验证→跟进→通知策略）在真实工作流上的端到端；冲突/纠错经 supersede 链的 UI 通路（存储已备）；token 成本监控进 usage。随后阶段 5。
 - 门禁：core 923/920/0；app typecheck 0、双构建绿、84/83/0。
+
+## 十五、阶段 5 进行记录（2026-10-25 起）
+
+- **策略引擎已接管工具门**（commit 276a0a9）：26 个团队工具按 L0–L4 分类表落定（未知工具=L3——可审计集之外，安全答案是问）；L0–L2 放行，L3/L4 各有每会话每日预算（store 迁移 v3：policy_counters，spend 单语句原子递增），超出即逐次审批；拒绝文案不留申诉口（服务器裁决，模型无从讨价，测试锁文案）。审批经既有卡片桥落定；working_directory 沿用自己的目录审批流。
+- **ACP 适配器已落地**（commit b1ffc18）：**AgentRuntime 第二实现成立——接缝可替换的证明达成**。JSON-RPC 行协议（断行跳过不腐蚀流）、initialize/session 握手、session/update → 引擎事件词表映射（分片流式、成段步骤、工具调用/完成）、取消通知。pump 以 setImmediate 轮询驱动（通知与响应同块到达时丢唤醒会提前收尾——实测发现、修复，且结束事件照走 fanout：feed 在那里听）。脚本化真子进程测试：带工具完整回合、跨回合编号、映射表、进程死亡、断行；3× 全绿。
+- 待续（阶段 5 余项）：MCP 首批连接器（SDK 已装 1.32.2）接入注册表与策略包装；ACP Bot 的完整注册（名字/记忆/群聊/派活——roster 侧）；降级矩阵标注。
+- 门禁：core 932/929/0。

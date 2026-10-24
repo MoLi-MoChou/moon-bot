@@ -3,7 +3,7 @@
 // against the scripted endpoint and the answer arrives on the SSE feed.
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -115,4 +115,44 @@ test('a message over HTTP runs its turn on the engine and answers on the feed', 
   assert.ok(items.some(item => item.kind === 'bot' && (item.text ?? '').includes('plan is ready')), JSON.stringify(items))
   feedAbort.abort()
   await reader.cancel().catch(() => {})
+})
+
+test('a relevant memory surfaces itself into the next request, unprompted', async (t) => {
+  const mock = openaiMock()
+  const { port } = await mock.listen()
+  t.after(() => void mock.close())
+  const home = mkdtempSync(join(tmpdir(), 'ds-bot-mem-'))
+  t.after(() => rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }))
+  writeFileSync(join(home, 'state.json'), JSON.stringify({
+    version: 1,
+    mainBotIds: ['a'],
+    bots: { a: { id: 'a', name: 'Chief', role: 'Boss', sessionId: 'a', model: 'custom/mock-1', createdAt: 1 } },
+    rooms: {}, agents: {}, exchanges: [], exchangeTurns: {}, questions: {}, prefs: {}, revision: 0,
+  }))
+  // The Bot's own memory, as the remember tool would have written it.
+  mkdirSync(join(home, 'memory', 'bots', 'a'), { recursive: true })
+  writeFileSync(join(home, 'memory', 'bots', 'a', 'MEMORY.md'), '# Memory\n\n## Notes\n\n- the launch checklist lives in ops/launch.md and needs the sign-off first\n')
+  const settings = new FileSettings(home)
+  await settings.mutate(PI_AI_NS, [{ op: 'set', path: ['providers', 'custom'], value: {
+    api: 'openai-completions', baseURL: `http://127.0.0.1:${port}/v1`, models: [{ id: 'mock-1' }],
+  } }])
+
+  mock.reply('On it — I will follow the checklist.')
+  const service = await startService({ home })
+  t.after(() => service.close())
+  const call = async (endpoint: string, payload: Record<string, unknown>): Promise<any> =>
+    (await fetch(`${service.url}/api/bot`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ endpoint, payload }) })).json()
+
+  await call('send', { sessionId: 'a', text: 'prepare the launch checklist' })
+  const until = Date.now() + 15000
+  while (Date.now() < until && mock.requests.length === 0) await new Promise(resolve => setTimeout(resolve, 25))
+
+  // The request carried the surfaced memory in its dynamic segment — after the frozen
+  // one, so the stable prefix the memory section froze never moved.
+  const wire = JSON.stringify(mock.requests[0]?.body.messages ?? [])
+  assert.match(wire, /From memory/, 'the segment rode along')
+  assert.match(wire, /ops\/launch\.md/, 'the relevant entry surfaced')
+  const systemAt = wire.indexOf('From memory')
+  const frozenAt = wire.lastIndexOf('You are')
+  assert.ok(systemAt > frozenAt, 'the dynamic segment follows the system base')
 })

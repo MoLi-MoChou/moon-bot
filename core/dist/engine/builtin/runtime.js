@@ -88,10 +88,11 @@ class BuiltinRuntime {
         collect({ type: "turn/end", turn, reason: { kind: "error", error: { code: "NO-MODEL", message: `no model for session ${input.sessionId}` } } });
         return;
       }
+      const triggerText = input.message.content.map((block) => block.type === "text" ? block.text : "").filter((text) => text !== "").join(" ");
       const [base, frozen, dynamic, history] = await Promise.all([
         services.prompt.base(input.sessionId),
         services.prompt.frozen(input.sessionId),
-        services.prompt.dynamic?.(input.sessionId) ?? Promise.resolve(void 0),
+        services.prompt.dynamic?.(input.sessionId, triggerText) ?? Promise.resolve(void 0),
         services.transcript.history(input.sessionId)
       ]);
       const agent = await buildAgent({

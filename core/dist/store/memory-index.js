@@ -14,6 +14,8 @@ const MemoryIndexRow = z.object({
   updatedAt: z.number().int(),
   active: z.boolean()
 }).readonly();
+const DAY_MS = 24 * 60 * 60 * 1e3;
+const DEFAULT_WEIGHTS = { perDay: 0.01, confidence: 0.5 };
 const now = () => Date.now();
 const rowOf = (row) => MemoryIndexRow.parse({
   id: Number(row.id),
@@ -70,12 +72,15 @@ class MemoryIndex {
    * form a trigram, so they filter by substring over the live rows instead. The row
    * sets are the same; only the ranking of a mixed query coarsens to recency.
    */
-  search(scope, query, limit = 20) {
+  search(scope, query, limit = 20, weights = DEFAULT_WEIGHTS) {
     const scopes = Array.isArray(scope) ? scope : [scope];
     if (scopes.length === 0) return [];
     const terms = query.split(/\s+/).filter(Boolean);
     if (terms.length === 0) return [];
     const places = scopes.map(() => "?").join(", ");
+    const now2 = Date.now();
+    const keep = (rows2) => rows2.filter(({ row }) => row.validUntil === null || row.validUntil > now2).sort((left, right) => left.score - right.score).slice(0, limit);
+    const agePenalty = (row) => Math.max(0, (now2 - row.updatedAt) / DAY_MS) * weights.perDay;
     if (terms.every((term) => term.length >= 3)) {
       try {
         const rows2 = this.db.prepare(`
@@ -83,23 +88,27 @@ class MemoryIndex {
           JOIN memory_fts f ON f.rowid = m.id
           WHERE m.scope IN (${places}) AND m.active = 1 AND memory_fts MATCH ?
           ORDER BY f.rank ASC LIMIT ?
-        `).all(...scopes, this.ftsQuery(terms), limit);
-        return rows2.map((row) => ({ row: rowOf(row), rank: Number(row.rank) }));
+        `).all(...scopes, this.ftsQuery(terms), limit * 2);
+        const ranked = rows2.map((row) => ({ row: rowOf(row), relevance: Number(row.rank) }));
+        const best = Math.min(...ranked.map((entry) => entry.relevance).filter(Number.isFinite), 1);
+        return keep(ranked.map(({ row, relevance }) => ({ row, score: relevance / best + agePenalty(row) - row.confidence * weights.confidence })));
       } catch {
         return [];
       }
     }
-    const likes = terms.map(() => "text LIKE ?").join(" AND ");
+    const likes = terms.map(() => "text LIKE ?").join(" OR ");
     const rows = this.db.prepare(`
       SELECT * FROM memory_index WHERE scope IN (${places}) AND active = 1 AND ${likes}
       ORDER BY updated_at DESC LIMIT ?
-    `).all(...scopes, ...terms.map((term) => `%${term}%`), limit);
-    return rows.map((row) => ({ row: rowOf(row), rank: 0 }));
+    `).all(...scopes, ...terms.map((term) => `%${term}%`), limit * 2);
+    return keep(rows.map((row) => ({ row: rowOf(row), score: agePenalty(rowOf(row)) - rowOf(row).confidence * weights.confidence })));
   }
-  // AND the terms; each term itself may be a phrase FTS5 quotes. Keeps user words like
-  // `deploy 失败` from being read as columns or operators.
+  // OR the terms — recall, not refutation: a whole sentence must not need every word
+  // of itself present to find what it is about. Each term is a quoted phrase, so user
+  // words like `deploy 失败` are never read as columns or operators; the ranking picks
+  // the entries that match the most.
   ftsQuery(terms) {
-    return terms.map((term) => `"${term.replaceAll('"', '""')}"`).join(" AND ");
+    return terms.map((term) => `"${term.replaceAll('"', '""')}"`).join(" OR ");
   }
   live(scope) {
     const rows = this.db.prepare("SELECT * FROM memory_index WHERE scope = ? AND active = 1 ORDER BY created_at ASC").all(scope);
@@ -111,6 +120,7 @@ class MemoryIndex {
   }
 }
 export {
+  DEFAULT_WEIGHTS,
   MemoryIndex,
   MemoryIndexRow
 };

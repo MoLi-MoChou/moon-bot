@@ -35,9 +35,21 @@ export interface IndexEntry {
 
 export interface Scored {
   readonly row: MemoryIndexRow
-  /** FTS5's rank; smaller is better. Freshness and confidence fold in at phase 4. */
-  readonly rank: number
+  /** The combined score; smaller is better. */
+  readonly score: number
 }
+
+/** How a search weighs what it finds (plan §阶段 4): relevance first, then freshness. */
+export interface RankWeights {
+  /** The weight of one day of age, subtracted from a normalized relevance. */
+  readonly perDay: number
+  /** The weight of confidence, added linearly. */
+  readonly confidence: number
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000
+
+export const DEFAULT_WEIGHTS: RankWeights = { perDay: 0.01, confidence: 0.5 }
 
 const now = (): number => Date.now()
 
@@ -86,12 +98,19 @@ export class MemoryIndex {
    * form a trigram, so they filter by substring over the live rows instead. The row
    * sets are the same; only the ranking of a mixed query coarsens to recency.
    */
-  search(scope: string | readonly string[], query: string, limit = 20): Scored[] {
+  search(scope: string | readonly string[], query: string, limit = 20, weights: RankWeights = DEFAULT_WEIGHTS): Scored[] {
     const scopes = Array.isArray(scope) ? scope : [scope]
     if (scopes.length === 0) return []
     const terms = query.split(/\s+/).filter(Boolean)
     if (terms.length === 0) return []
     const places = scopes.map(() => '?').join(', ')
+    const now = Date.now()
+    const keep = (rows: readonly { row: MemoryIndexRow, score: number }[]): Scored[] => rows
+      .filter(({ row }) => row.validUntil === null || row.validUntil > now)
+      .sort((left, right) => left.score - right.score)
+      .slice(0, limit)
+    const agePenalty = (row: MemoryIndexRow): number =>
+      Math.max(0, (now - row.updatedAt) / DAY_MS) * weights.perDay
     if (terms.every(term => term.length >= 3)) {
       try {
         const rows = this.db.prepare(`
@@ -99,25 +118,31 @@ export class MemoryIndex {
           JOIN memory_fts f ON f.rowid = m.id
           WHERE m.scope IN (${places}) AND m.active = 1 AND memory_fts MATCH ?
           ORDER BY f.rank ASC LIMIT ?
-        `).all(...scopes, this.ftsQuery(terms), limit) as Record<string, unknown>[]
-        return rows.map(row => ({ row: rowOf(row), rank: Number(row.rank) }))
+        `).all(...scopes, this.ftsQuery(terms), limit * 2) as Record<string, unknown>[]
+        // BM25's rank grows with relevance, so lower is better; normalize by the best
+        // hit so freshness and confidence compete on one scale.
+        const ranked = rows.map(row => ({ row: rowOf(row), relevance: Number(row.rank) }))
+        const best = Math.min(...ranked.map(entry => entry.relevance).filter(Number.isFinite), 1)
+        return keep(ranked.map(({ row, relevance }) => ({ row, score: relevance / best + agePenalty(row) - row.confidence * weights.confidence })))
       } catch {
         // A query FTS5 cannot parse is an empty answer, not a broken index.
         return []
       }
     }
-    const likes = terms.map(() => 'text LIKE ?').join(' AND ')
+    const likes = terms.map(() => 'text LIKE ?').join(' OR ')
     const rows = this.db.prepare(`
       SELECT * FROM memory_index WHERE scope IN (${places}) AND active = 1 AND ${likes}
       ORDER BY updated_at DESC LIMIT ?
-    `).all(...scopes, ...terms.map(term => `%${term}%`), limit) as Record<string, unknown>[]
-    return rows.map(row => ({ row: rowOf(row), rank: 0 }))
+    `).all(...scopes, ...terms.map(term => `%${term}%`), limit * 2) as Record<string, unknown>[]
+    return keep(rows.map(row => ({ row: rowOf(row), score: agePenalty(rowOf(row)) - rowOf(row).confidence * weights.confidence })))
   }
 
-  // AND the terms; each term itself may be a phrase FTS5 quotes. Keeps user words like
-  // `deploy 失败` from being read as columns or operators.
+  // OR the terms — recall, not refutation: a whole sentence must not need every word
+  // of itself present to find what it is about. Each term is a quoted phrase, so user
+  // words like `deploy 失败` are never read as columns or operators; the ranking picks
+  // the entries that match the most.
   private ftsQuery(terms: readonly string[]): string {
-    return terms.map(term => `"${term.replaceAll('"', '""')}"`).join(' AND ')
+    return terms.map(term => `"${term.replaceAll('"', '""')}"`).join(' OR ')
   }
 
   live(scope: string): MemoryIndexRow[] {

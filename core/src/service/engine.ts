@@ -6,6 +6,7 @@
 // from the store. Tool definitions resolve through the registry per turn, so a
 // capability mounted later is served without rewiring.
 import { randomUUID } from 'node:crypto'
+import { join } from 'node:path'
 import { createRuntime } from '../index.ts'
 import type { DshContext, PromptSection } from '../host/dsh-types.js'
 import { BuiltinRuntime } from '../engine/builtin/runtime.ts'
@@ -20,6 +21,7 @@ import { openStore, type Store } from '../store/db.ts'
 import { ServiceContext } from './context.ts'
 import { FileAttachments } from './attachments.ts'
 import { ServiceApproval } from './approval.ts'
+import { MemorySync } from './memory-sync.ts'
 import type { StandaloneLlm } from './llm.ts'
 
 /** The host runtime's own shape, as the wiring reads it. */
@@ -47,6 +49,30 @@ export interface WireOptions {
 
 const EXCLUDED_TOOLS = new Set<string>([...HIDDEN_TOOLS, ...LEAN_HIDDEN_TOOLS])
 
+/** The memory scopes a session may read: its Bot's own, the team's, and its group's. */
+const memoryScopesOf = (runtime: Runtime, sessionId: string): readonly string[] => {
+  const botId = runtime.selfOf(sessionId)
+  if (botId === undefined) return ['team']
+  const groups = (runtime as unknown as { groupOwners: Map<string, { roomId: string }> }).groupOwners
+  const past = (runtime as unknown as { pastOwners: Map<string, { roomId?: string }> }).pastOwners
+  const roomId = groups.get(sessionId)?.roomId ?? past.get(sessionId)?.roomId
+  return [`bot:${botId}`, 'team', ...(roomId !== undefined ? [`group:${roomId}`] : [])]
+}
+
+/** What the index surfaces for this turn's words: ranked, bounded, prose-only. */
+const surfacedMemories = (runtime: Runtime, store: Store, sync: MemorySync, sessionId: string, query: string | undefined): readonly string[] => {
+  const text = (query ?? '').replace(/[\[\]{}()#>*`|]/g, ' ').trim()
+  if (text.length < 4) return []
+  try {
+    sync.syncChanged(memoryScopesOf(runtime, sessionId))
+    return store.memory.search(memoryScopesOf(runtime, sessionId), text, 4)
+      .filter(({ row }) => row.text.trim() !== '')
+      .map(({ row }) => row.text.length > 200 ? `${row.text.slice(0, 200)}…` : row.text)
+  } catch {
+    return []
+  }
+}
+
 /** Wires the host runtime, the store, the engine and the bridge for one team home. */
 /** Which calls ask for approval before phase 5's risk levels land: folder changes. */
 const shouldAsk = (runtime: Runtime, sessionId: string, tool: string, input: Readonly<Record<string, unknown>>): string | undefined => {
@@ -71,6 +97,9 @@ export function wireService(options: WireOptions): WiredService {
   context.get = ((name: string) => name === 'approval' ? approval : undefined) as typeof context.get
   const runtime = createRuntime(context as unknown as DshContext, { home: options.home }) as unknown as Runtime
   const store = openStore(options.home)
+  // The memory mirror: Markdown stays the source of truth; the index syncs lazily.
+  const memorySync = new MemorySync(store, join(options.home, 'memory'))
+  memorySync.syncAll()
 
   // The prompt as the engine reads it: every registered section in order, the frozen
   // memory section kept apart so the stable prefix stays byte-stable.
@@ -85,6 +114,17 @@ export function wireService(options: WireOptions): WiredService {
       .filter(section => section.name === 'bot-memory')
       .map(section => section.text({ agent: { id: sessionId } }))
       .join('\n\n'),
+    // The dynamic segment rides after the frozen one, per request, so the stable
+    // prefix never moves: the clock, plus what the memory index surfaces for this
+    // turn's own words (plan §阶段 4's proactive recall), kept small.
+    dynamic: async (sessionId, query): Promise<string | undefined> => {
+      const lines: string[] = [`Current time: ${new Date().toISOString()}`]
+      const hits = surfacedMemories(runtime, store, memorySync, sessionId, query)
+      if (hits.length > 0) lines.push('## From memory (found for this message)', ...hits.map(text => `- ${text}`))
+      const text = lines.join('\n')
+      // Bounded on purpose: the dynamic segment is paid every turn.
+      return text.length > 1200 ? `${text.slice(0, 1200)}…` : text
+    },
   }
 
   const toolsFor = (): readonly string[] => runtime.toolRegistry.names().filter(name => !EXCLUDED_TOOLS.has(name))

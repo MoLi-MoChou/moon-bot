@@ -27,8 +27,11 @@ export interface PromptSource {
   base(sessionId: string): Promise<string>
   /** The frozen memory segment: byte-stable within a session part, so the prefix caches. */
   frozen(sessionId: string): Promise<string>
-  /** The dynamic segment: per-turn context (time, live state); may change every turn. */
-  dynamic?(sessionId: string): Promise<string | undefined>
+  /**
+   * The dynamic segment: per-turn context (time, live state) plus what the memory
+   * index surfaces for this turn's trigger; may change every turn.
+   */
+  dynamic?(sessionId: string, query?: string | undefined): Promise<string | undefined>
 }
 
 /** A tool the registry serves: Zod schema in, text/content out. */

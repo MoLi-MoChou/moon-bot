@@ -37,7 +37,7 @@ jobs:
       - name: Install DSH ${{ matrix.dsh }}
         run: npm run harness -- --no-save "@deepseek-ai/dsh@${{ matrix.dsh }}"
       - run: npm test
-      - run: node scripts/build-client.mjs --check
+      - run: node scripts/build-client.ts --check
       - run: npm run lint
 
   scan:

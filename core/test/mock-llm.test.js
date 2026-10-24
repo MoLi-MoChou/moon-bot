@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
 
-const MOCK = fileURLToPath(new URL('../dev/mock-llm.mjs', import.meta.url))
+const MOCK = fileURLToPath(new URL('../dev/mock-llm.ts', import.meta.url))
 
 // One Anthropic-shaped request, its SSE reply folded into { text, tools }.
 async function call(url, messages, names = ['list_bots']) {

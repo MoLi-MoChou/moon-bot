@@ -1,5 +1,5 @@
 #!/bin/sh
-# Mock test bench: the scripted mock model (dev/mock-llm.mjs) plus a dsh web whose profile
+# Mock test bench: the scripted mock model (dev/mock-llm.ts) plus a dsh web whose profile
 # links the plugin to this checkout, so edits need no reinstall (host code needs a restart;
 # src/client needs `npm run build` and a page reload).
 #
@@ -89,7 +89,7 @@ start() {
     rm -f "$HOME_DIR/mock.pid"
     (cd "$PLUGIN" && MOCK_PORT="$MOCK_PORT" MOCK_DELAY_MS="${MOCK_DELAY_MS:-300}" MOCK_LOG="$HOME_DIR/mock.jsonl" \
       exec setsid sh -c 'set -eu; echo $$ >"$1"; shift; exec "$@"' sh "$HOME_DIR/mock.pid" \
-      node dev/mock-llm.mjs "$HOME_DIR") </dev/null >"$HOME_DIR/mock.out" 2>&1 &
+      node dev/mock-llm.ts "$HOME_DIR") </dev/null >"$HOME_DIR/mock.out" 2>&1 &
     # The mock writes its own pid just before it starts; wait for the file so a
     # status or stop right after start does not miss a mock still coming up.
     i=0

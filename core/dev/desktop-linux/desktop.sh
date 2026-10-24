@@ -118,7 +118,7 @@ DISPLAY_NUM=$DISPLAY_NUM
 EOF
   if ! alive desktop-mock; then
     (cd "$PLUGIN" && MOCK_PORT="$MOCK_PORT" MOCK_DELAY_MS="${MOCK_DELAY_MS:-300}" MOCK_LOG="$HOME_DIR/desktop-mock.jsonl" \
-      setsid node dev/mock-llm.mjs </dev/null >"$HOME_DIR/desktop-mock.log" 2>&1 & echo $! >"$HOME_DIR/desktop-mock.pid")
+      setsid node dev/mock-llm.ts </dev/null >"$HOME_DIR/desktop-mock.log" 2>&1 & echo $! >"$HOME_DIR/desktop-mock.pid")
   fi
   if ! alive desktop-cookie; then
     (setsid node "$HERE/cookie-page.mjs" "$COOKIE_PORT" </dev/null >"$HOME_DIR/desktop-cookie.log" 2>&1 & echo $! >"$HOME_DIR/desktop-cookie.pid")

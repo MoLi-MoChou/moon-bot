@@ -39,7 +39,7 @@ test('tsconfig keeps the migration gates on, and lets the existing JS stay as it
 })
 
 test('the client build accepts a TSX/TS entry and still writes the same client.js', () => {
-  const script = read('scripts/build-client.mjs')
+  const script = read('scripts/build-client.ts')
   assert.match(script, /src\/client\/index\.tsx/)
   assert.match(script, /src\/client\/index\.ts/)
   assert.match(script, /join\(PLUGIN, 'tsconfig\.json'\)/)
@@ -49,7 +49,7 @@ test('the client build accepts a TSX/TS entry and still writes the same client.j
   assert.ok(!platform[1].includes('jsx'), 'no jsx runtime is a platform module')
   assert.match(script, /jsx: 'transform'/)
   assert.match(script, /jsxFactory: 'h'/)
-  assert.match(script, /node scripts\/build-client\.mjs --check/)
+  assert.match(script, /node scripts\/build-client\.ts --check/)
 })
 
 test('the shared contract layer exists and names the endpoints both ends share', async () => {

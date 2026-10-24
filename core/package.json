@@ -42,9 +42,9 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "node scripts/build-client.mjs && node scripts/build-host.mjs",
+    "build": "node scripts/build-client.ts && node scripts/build-host.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "node --import ./test/harness-resolve.mjs --test \"test/*.test.js\"",
+    "test": "node --import ./test/harness-resolve.mjs --test \"test/*.test.js\" \"test/*.test.ts\"",
     "lint": "node scripts/lint.mjs",
     "harness": "npm install --prefix dev/harness --legacy-peer-deps=false --no-package-lock --no-fund --no-audit",
     "check": "sh dev/check.sh",
@@ -66,6 +66,7 @@
     }
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.20.5",
     "@types/react": "^19.3.0",
     "esbuild": "0.28.2",
@@ -75,6 +76,7 @@
   "dependencies": {
     "@earendil-works/pi-agent-core": "^1.4.0",
     "@earendil-works/pi-ai": "^1.4.0",
+    "better-sqlite3": "^12.11.1",
     "zod": "^3.25.76"
   }
 }

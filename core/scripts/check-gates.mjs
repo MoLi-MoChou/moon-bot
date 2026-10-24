@@ -28,7 +28,7 @@ import ts from 'typescript'
 
 const MAX_LINES = 350
 const SOURCE_EXTENSIONS = new Set(['.js', '.ts', '.tsx'])
-const LAYERS = new Set(['shared', 'client', 'host'])
+const LAYERS = new Set(['shared', 'client', 'host', 'engine', 'store'])
 
 // Exempt by design. The globs are relative to the root (normally core/).
 const LINE_EXEMPTIONS = [
@@ -211,8 +211,10 @@ function targetLayer(file, specifier) {
 
 function boundaryViolation(layer, file, specifier) {
   const target = targetLayer(file, specifier)
-  if (layer === 'client' && target === 'host') return 'client may not import host'
+  if (layer === 'client' && (target === 'host' || target === 'engine' || target === 'store')) return `client may not import ${target}`
   if (layer === 'host' && target === 'client') return 'host may not import client'
+  if (layer === 'engine' && (target === 'host' || target === 'client')) return `engine may not import ${target}`
+  if (layer === 'store' && target !== undefined && target !== 'shared') return 'store may import only shared and its own files'
   if (layer !== 'shared') return undefined
   if (specifier === 'zod' || specifier.startsWith('zod/')) return undefined
   if (target === 'shared') return undefined

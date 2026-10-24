@@ -84,7 +84,7 @@ need_ports() {
 }
 
 step_unit() { cd "$PLUGIN" && npm test; }
-step_build() { cd "$PLUGIN" && node scripts/build-client.mjs --check && node scripts/build-host.mjs --check; }
+step_build() { cd "$PLUGIN" && node scripts/build-client.ts --check && node scripts/build-host.mjs --check; }
 step_lint() { cd "$PLUGIN" && npm run lint; }
 step_smoke() {
   cd "$PLUGIN" || return 1

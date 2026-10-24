@@ -1,7 +1,7 @@
 // Builds client.js, the browser half, from the modules in src/client.
 //
-//   node scripts/build-client.mjs           writes client.js
-//   node scripts/build-client.mjs --check   exits 1 when client.js differs from a fresh build
+//   node scripts/build-client.ts           writes client.js
+//   node scripts/build-client.ts --check   exits 1 when client.js differs from a fresh build
 //
 // client.js is committed, so `link:` and git installs need no build step. dsh loads it as
 // a classic script; the wrapper mirrors packages/client/tsdown.client.ts in
@@ -49,7 +49,7 @@ export async function bundleClient() {
   })
   if (result.warnings.length > 0) throw new Error(`esbuild warnings:\n${result.warnings.map(warning => warning.text).join('\n')}`)
   return [
-    '// Generated from src/client by `npm run build` (scripts/build-client.mjs). Do not edit by hand.',
+    '// Generated from src/client by `npm run build` (scripts/build-client.ts). Do not edit by hand.',
     'window.__ModuleLoader__.load({',
     '  id: \'moon-bot-core\',',
     '  factory: (require) => {',

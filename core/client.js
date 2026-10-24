@@ -1,4 +1,4 @@
-// Generated from src/client by `npm run build` (scripts/build-client.mjs). Do not edit by hand.
+// Generated from src/client by `npm run build` (scripts/build-client.ts). Do not edit by hand.
 window.__ModuleLoader__.load({
   id: 'moon-bot-core',
   factory: (require) => {

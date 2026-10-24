@@ -1,6 +1,6 @@
 // Scripted Anthropic-Messages-compatible mock that drives the Bot team flows
 // (Main Bot setup, create_bot, message_bot round trips, group chat relay, questions)
-// without a real model. Usage: node dev/mock-llm.mjs, then point DEEPSEEK_BASE_URL at it.
+// without a real model. Usage: node dev/mock-llm.ts, then point DEEPSEEK_BASE_URL at it.
 //
 // Group turns read only the "This round so far" section of the prompt, so counting goes
 // wrong if the round and older messages are not kept apart. Usage is estimated from the

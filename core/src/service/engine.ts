@@ -17,6 +17,7 @@ import { HIDDEN_TOOLS } from '../host/tools/shared.ts'
 import { LEAN_HIDDEN_TOOLS } from '../shared/lean.ts'
 import { openStore, type Store } from '../store/db.ts'
 import { ServiceContext } from './context.ts'
+import { FileAttachments } from './attachments.ts'
 import type { StandaloneLlm } from './llm.ts'
 
 /** The host runtime's own shape, as the wiring reads it. */
@@ -46,7 +47,15 @@ const EXCLUDED_TOOLS = new Set<string>([...HIDDEN_TOOLS, ...LEAN_HIDDEN_TOOLS])
 
 /** Wires the host runtime, the store, the engine and the bridge for one team home. */
 export function wireService(options: WireOptions): WiredService {
-  const context = new ServiceContext(options.services === undefined ? {} : { services: options.services })
+  // The attachments store serves the host's file surfaces; a caller's own service of
+  // the same name still wins.
+  const attachments = new FileAttachments(options.home)
+  const context = new ServiceContext({
+    services: {
+      ...(options.services === undefined ? {} : options.services),
+      attachments,
+    },
+  })
   const runtime = createRuntime(context as unknown as DshContext, { home: options.home }) as unknown as Runtime
   const store = openStore(options.home)
 

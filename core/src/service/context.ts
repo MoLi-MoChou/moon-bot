@@ -34,7 +34,7 @@ export interface FetchRoute {
 
 export interface ServiceContextOptions {
   /** Service implementations by name, for the ctx.get surface (attachments, approval…). */
-  readonly services?: Readonly<Record<string, unknown>>
+  readonly services?: Readonly<Record<string, unknown>> | undefined
   /** The engine-backed agents, for sessionController.resolveAgent. */
   readonly resolveAgent?: (sessionId: string) => Promise<unknown> | unknown
 }

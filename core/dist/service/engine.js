@@ -8,9 +8,16 @@ import { HIDDEN_TOOLS } from "../host/tools/shared.js";
 import { LEAN_HIDDEN_TOOLS } from "../shared/lean.js";
 import { openStore } from "../store/db.js";
 import { ServiceContext } from "./context.js";
+import { FileAttachments } from "./attachments.js";
 const EXCLUDED_TOOLS = /* @__PURE__ */ new Set([...HIDDEN_TOOLS, ...LEAN_HIDDEN_TOOLS]);
 function wireService(options) {
-  const context = new ServiceContext(options.services === void 0 ? {} : { services: options.services });
+  const attachments = new FileAttachments(options.home);
+  const context = new ServiceContext({
+    services: {
+      ...options.services === void 0 ? {} : options.services,
+      attachments
+    }
+  });
   const runtime = createRuntime(context, { home: options.home });
   const store = openStore(options.home);
   const sections = () => context.sectionsInOrder();

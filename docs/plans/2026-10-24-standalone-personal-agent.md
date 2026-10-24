@@ -224,3 +224,13 @@ TS 现状盘点（2026-10-24 实测）：core 源码侧仅剩 `index.js`（70 �
 
 - 2026-10-24：初稿（整合产品计划书、审计修正、选型与四项产品决策）。
 - 2026-10-24：补充「全面 TypeScript」决策：core 与 app 的源码、入口、测试全部迁 TS，typecheck 升为 CI 门禁。
+
+## 十、阶段 0 验收记录（2026-10-24，分支 feat/standalone-personal-agent）
+
+- **Pi 原型验收：5/5 通过**（`core/test/pi-proto.test.js`，对本地 OpenAI 兼容端点，无真实密钥）。
+  ① 自定义 base URL + key 经 `openai-completions` API 驱动 agent（Authorization 头、路径、model 均验）；② `beforeToolCall` 拦截：放行/拒绝（block+reason）/挂起（await 审批门）三态齐备，被拒调用以错误结果回到模型；③ system prompt 基底+冻结记忆段顺序稳定，`transformContext` 注入动态段不落盘、不破坏稳定前缀；④ `abort()` 流中取消（部分内容保留在 transcript，stopReason=aborted），`followUp+continue()` 从同一 transcript 恢复；pi 的 LLM 转换会把未完成的 aborted 回复留在 transcript 但不送上线——引擎适配层按需补写；⑤ 事件五类（agent_start/message_end/tool_execution_start/tool_execution_end/agent_end）一一映射到现有 session/event 词表（turn/start、assistant/message、tool/call、tool/result、turn/end）。
+- **包名修正**：npm 上的 `pi-agent-core`/`pi-ai` 是占位包；真实包为 **`@earendil-works/pi-agent-core@1.4.0` + `@earendil-works/pi-ai@1.4.0`**（MIT，活跃维护，`pi-mono` 后继）。已入 core 依赖并登记 NOTICE。备胎结论无需启用：主判据全过。
+- **行为固化测试**：`core/test/loop-boundaries.test.js` 冻结 loop 边界契约（孤儿工具调用不卡死下一回合、事件重放不重复记账/不重复通知、流中断以 aborted 收尾且已说内容交回发送方、未开口的 aborted 给"was stopped"行）。既有 886 项测试（follow-through、bot-messages、rounds 等）继续作为整体回归网。
+- **cordis.patch.yml 用途查明**：把 moon-bot-core 挂进 DSH profile（bot + web-search-auto 两个 mount），覆盖 web 搜索提供方配置（searchProvider: auto），并以 lean 形态关闭 DSH 自带的 Automation 入口/调度器/调度工具/产品遥测/会话日志上传。阶段 3 服务自建后整文件随 DSH 移除清单删除。
+- **最终依赖清单**（引入阶段见 §二）：`@earendil-works/pi-agent-core`、`@earendil-works/pi-ai`（已引入）；zod（已有）；better-sqlite3、Fastify、@fastify/websocket、@fastify/static、croner、@modelcontextprotocol/sdk、react-markdown、remark-gfm、rehype-highlight（阶段 1–5 按需引入，各自引入时登记 NOTICE）；`@openuidev/react-ui` 系实现时再核 API 与许可证（阶段 6）。
+- 门禁：`npm test` 894 项 / 891 过 / 0 红；`npm run lint`（含 350 行门禁）过；`npm run typecheck` 0 错。

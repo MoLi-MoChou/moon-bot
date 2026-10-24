@@ -22,7 +22,7 @@ function page(window) {
     useRef: current => ({ current }),
     useLayoutEffect: () => {},
   }
-  const module = { exports: {} }
+  const module = { exports: {} as { FeedbackPage: (props: Record<string, unknown>) => unknown } }
   runInNewContext(bundle.outputFiles[0].text, {
     module, exports: module.exports, window, URL, URLSearchParams, setTimeout, clearTimeout,
     navigator: { clipboard: { writeText: () => Promise.resolve() } },
@@ -61,7 +61,7 @@ test('on the Desktop, "Report on GitHub" hands the issue address to the system b
 })
 
 test('in a browser, the window reserved in the click gets the issue address', async () => {
-  const reserved = { location: { href: '' } }
+  const reserved: { location: { href: string }, opener?: unknown } = { location: { href: '' } }
   const window = { open: () => reserved }
   const { notes, report } = page(window)
   await report()

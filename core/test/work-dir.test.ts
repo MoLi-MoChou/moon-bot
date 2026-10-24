@@ -30,7 +30,7 @@ const TEAM = {
 // starts in the team workspace unless it is made with a cwd. `services` are what
 // ctx.get finds, such as the sandbox policy and approvals.
 // `locked`: another dsh holds the team, so this one only shows it.
-async function start({ services = {}, workspaces = [], llm, team: saved = TEAM, locked = false } = {}) {
+async function start({ services = {}, workspaces = [], llm, team: saved = TEAM, locked = false }: { services?: Record<string, unknown>, workspaces?: unknown[], llm?: Record<string, unknown>, team?: Record<string, unknown>, locked?: boolean } = {}) {
   // The native realpath, as fs/promises uses: on Windows the JS one keeps 8.3 short names.
   const root = realpathSync.native(mkdtempSync(join(tmpdir(), 'ds-bot-work-dir-')))
   const dsh = join(root, 'dsh')
@@ -66,7 +66,7 @@ async function start({ services = {}, workspaces = [], llm, team: saved = TEAM, 
     }
     return agents.get(sessionId)
   }
-  const registry = new Map([['w1', { id: 'w1', path: team, title: 'DS Bot' }], ...workspaces.map(workspace => [workspace.id, workspace])])
+  const registry = new Map<string, { id: string, path: string, title?: string }>([['w1', { id: 'w1', path: team, title: 'DS Bot' }], ...workspaces.map((workspace): [string, { id: string, path: string, title?: string }] => [workspace.id, workspace])])
   Object.assign(ctx, {
     llm: llm ?? { listProviders: () => [], listModels: async () => [], resolveModelInfo: async () => ({}) },
     workspaceRegistry: {
@@ -145,7 +145,7 @@ const approvalServices = (outcome, { policy = 'on-request', mode = 'workspace-wr
   return {
     requests,
     services: {
-      sandboxPolicy: { resolve: ({ session } = {}) => ({ mode: modes[session?.id] ?? mode }) },
+      sandboxPolicy: { resolve: ({ session }: { session?: { id?: string } } = {}) => ({ mode: modes[session?.id] ?? mode }) },
       approval: {
         request: async (request) => {
           requests.push(request)
@@ -444,7 +444,7 @@ test('a Bot the Main Bot creates runs on its creator\'s model unless one is name
     },
   })
   t.after(env.stop)
-  const made = name => Object.values(env.state().bots).find(bot => bot.name === name)
+  const made = name => Object.values(env.state().bots as Record<string, { name: string, model?: string }>).find(bot => bot.name === name)
   assert.equal(await env.tool('create_bot', { name: 'Editor', role: 'Edit', instructions: 'Edit' }, 'a'), 'Created Editor. It is greeting the user now.')
   assert.equal(made('Editor').model, 'deepseek/v4')
   assert.equal(await env.tool('create_bot', { name: 'Tester', role: 'Test', instructions: 'Test', model: 'official/pro' }, 'a'), 'Created Tester. It is greeting the user now.')
@@ -772,7 +772,7 @@ test('Sessions that are not a Bot\'s keep DSH\'s own working_directory', async (
   t.after(stop)
   assert.deepEqual(await changeDirectory(ctx, service, agentOf('x'), project), { result: { isError: false, value: { cwd: project } }, ran: true })
   assert.equal(requests.length, 0)
-  assert.deepEqual(Object.values(state().bots).map(bot => bot.workDir), [undefined, undefined])
+  assert.deepEqual(Object.values(state().bots as Record<string, { workDir?: string }>).map(bot => bot.workDir), [undefined, undefined])
 })
 
 test('while another dsh has the team open, a Bot cannot leave its working folder', async (t) => {

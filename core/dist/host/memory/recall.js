@@ -16,7 +16,9 @@ function createRecall({ rt, storage, botShot }) {
   const languageNow = () => rt.uiLanguage?.() ?? "the language most entries are written in";
   const capital = (text) => (text[0] ?? "").toUpperCase() + text.slice(1);
   const callerOf = (exec) => {
-    const sessionId = "sessionId" in exec ? exec.sessionId : exec.agent?.id;
+    const agentView = exec.agent;
+    const fromContext = "sessionId" in exec ? exec.sessionId : void 0;
+    const sessionId = typeof fromContext === "string" ? fromContext : agentView !== null && agentView !== void 0 && typeof agentView.id === "string" ? agentView.id : void 0;
     if (sessionId === void 0) return void 0;
     const bot = rt.botOf(rt.selfOf(sessionId));
     return bot === void 0 ? void 0 : { bot, sessionId, roomId: storage.roomIdOf(sessionId) };

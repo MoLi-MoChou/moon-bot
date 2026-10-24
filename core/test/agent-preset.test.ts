@@ -22,7 +22,7 @@ const TEAM = {
   questions: {},
 }
 
-function start({ presets } = {}) {
+function start({ presets }: { presets?: readonly unknown[] } = {}) {
   const home = mkdtempSync(join(tmpdir(), 'ds-bot-agent-preset-'))
   writeFileSync(join(home, 'state.json'), JSON.stringify(TEAM))
   const services = presets === undefined ? {} : { agentPresets: { list: async () => presets } }

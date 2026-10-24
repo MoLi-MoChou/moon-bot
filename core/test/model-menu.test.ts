@@ -9,7 +9,11 @@ const bundle = await build({
   bundle: true, format: 'cjs', platform: 'node', write: false,
   external: ['react', 'react-dom', '@deepseek-ai/dsh-client-ui-primitives'],
 })
-const module = { exports: {} }
+const module = { exports: {} as {
+  groupModels: (models: { ref: string, [key: string]: unknown }[]) => Map<string, { ref: string, [key: string]: unknown }[]>
+  ModelChoiceDock: (props: Record<string, unknown>) => unknown
+  effortRows: (options: { efforts: { id: string, name: string }[], defaultEffort?: string }) => { effort: string | undefined }[]
+} }
 runInNewContext(bundle.outputFiles[0].text, {
   module, exports: module.exports,
   require: name => {
@@ -34,7 +38,7 @@ function nodes(tree, match) {
 }
 
 // `harness`: the window has DSH's own settings to send the user to, as the plugin does.
-function dock(models, { model, ready = true, harness = true } = {}) {
+function dock(models, { model, ready = true, harness = true }: { model?: string, ready?: boolean, harness?: boolean } = {}) {
   const picked = []
   const bot = { id: 'chief', name: 'Chief', model }
   const roster = { ready, byId: { chief: bot }, models, defaultModel: models[0]?.ref }

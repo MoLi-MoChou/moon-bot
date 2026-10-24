@@ -91,7 +91,7 @@ const run = (host, sessionId, turn, message) => {
 }
 
 test('a tool call whose result never arrives leaves nothing stuck for the next turn', async (t) => {
-  const home = freshHome(t)
+  const home = freshHome()
   const host = withHost(t, home, await start(home))
   // The live view while the call runs: the Bot is doing that tool.
   run(host, 'b', 1, { content: [{ type: 'text', text: 'move the docs' }], source: { kind: 'user' } })
@@ -113,7 +113,7 @@ test('a tool call whose result never arrives leaves nothing stuck for the next t
 })
 
 test('replayed events charge nothing twice: a request turn is marked once, its failure noticed once', async (t) => {
-  const home = freshHome(t)
+  const home = freshHome()
   const host = withHost(t, home, await start(home))
   const readTurns = () => JSON.parse(readFileSync(join(home, 'state.json'), 'utf8')).exchangeTurns.b ?? []
   // A request from Chief opens a marked exchange turn on Writer.
@@ -136,7 +136,7 @@ test('replayed events charge nothing twice: a request turn is marked once, its f
 })
 
 test('a mid-turn stream interruption surfaces as an aborted end, and the waiting sender is told once', async (t) => {
-  const home = freshHome(t)
+  const home = freshHome()
   const host = withHost(t, home, await start(home))
   // Writer already said half of it when the stream is cut: what was said goes to the
   // sender as the answer, exactly once, and the half-said text is not lost.

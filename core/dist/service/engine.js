@@ -26,11 +26,11 @@ const memoryScopesOf = (runtime, sessionId) => {
   return [`bot:${botId}`, "team", ...roomId !== void 0 ? [`group:${roomId}`] : []];
 };
 const surfacedMemories = (runtime, store, sync, sessionId, query) => {
-  const text = (query ?? "").replace(/[\[\]{}()#>*`|]/g, " ").trim();
-  if (text.length < 4) return [];
+  const terms = (query ?? "").replace(/[\[\]{}()#>*`|]/g, " ").split(/\s+/).filter((term) => term.length >= 4);
+  if (terms.length === 0) return [];
   try {
     sync.syncChanged(memoryScopesOf(runtime, sessionId));
-    return store.memory.search(memoryScopesOf(runtime, sessionId), text, 4).filter(({ row }) => row.text.trim() !== "").map(({ row }) => row.text.length > 200 ? `${row.text.slice(0, 200)}\u2026` : row.text);
+    return store.memory.search(memoryScopesOf(runtime, sessionId), terms.join(" "), 4).filter(({ row }) => row.text.trim() !== "").map(({ row }) => row.text.length > 200 ? `${row.text.slice(0, 200)}\u2026` : row.text);
   } catch {
     return [];
   }

@@ -90,6 +90,7 @@ test('the engine runs the scripted mock model over the anthropic wire', async (t
   const kinds = second.map(event => event.type)
   assert.ok(kinds.includes('tool/call'), 'the script made a tool call')
   assert.ok(kinds.includes('tool/result'), 'the tool ran')
-  assert.deepEqual(second.at(-1)?.type === 'turn/end' ? second.at(-1).reason : undefined, { kind: 'completed' })
+  const last = second.at(-1)
+  assert.deepEqual(last?.type === 'turn/end' ? last.reason : undefined, { kind: 'completed' })
   assert.deepEqual(remembered, ['the launch is on Friday'])
 })

@@ -8,7 +8,7 @@ import { test } from 'node:test'
 import { DEFAULT_BUDGET, PolicyEngine, ruleOf } from '../src/engine/policy.ts'
 import { openStore } from '../src/store/db.ts'
 
-const fresh = (t: object, budget = DEFAULT_BUDGET) => {
+const fresh = (t: { after: (run: () => void) => void }, budget = DEFAULT_BUDGET) => {
   const home = mkdtempSync(join(tmpdir(), 'ds-bot-policy-'))
   t.after(() => rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }))
   const store = openStore(home)

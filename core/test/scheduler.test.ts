@@ -9,7 +9,7 @@ import { test } from 'node:test'
 import { TaskScheduler, nextRunOf } from '../src/service/scheduler.ts'
 import { openStore } from '../src/store/db.ts'
 
-const fresh = (t: object) => {
+const fresh = (t: { after: (run: () => void) => void }) => {
   const home = mkdtempSync(join(tmpdir(), 'ds-bot-sched-'))
   t.after(() => rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }))
   const store = openStore(home)

@@ -51,7 +51,11 @@ test('a registered tool serves DSH unchanged and the engine schema-validated', a
   // The engine path: the registry holds the same entry, schema-validated.
   const entry = rt.toolRegistry?.get('create_group')
   assert.ok(entry, 'the registry holds create_group')
-  const definition = rt.toolRegistry?.definitions(['create_group'])[0]
+  const definition = rt.toolRegistry?.definitions(['create_group'])[0] as unknown as {
+    readonly name: string
+    readonly parameters: { members?: unknown }
+    execute(args: Record<string, unknown>, exec: Record<string, unknown>): Promise<{ isError?: boolean, content: readonly { type: string, text?: string }[] }>
+  }
   assert.ok(definition, 'the registry serves a validated definition')
   assert.equal(definition.name, 'create_group')
   assert.match(JSON.stringify(definition.parameters.members), /Exact names of the other Bots/)

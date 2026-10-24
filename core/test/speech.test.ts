@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { base64Of, speechCatalog, transcribeWave, turnDetector, waveBytes } from '../src/client/speech.ts'
+import type { SpeechCatalogValue, SpeechService } from '../src/client/speech.ts'
 
 const catalog = (phase, extra = {}) => ({
   providers: [{ id: 'sensevoice', preparation: { phase } }],
@@ -8,7 +9,7 @@ const catalog = (phase, extra = {}) => ({
   maxAudioBytes: 1000,
   maxDurationSeconds: 30,
   ...extra,
-})
+}) as SpeechCatalogValue
 
 test('waveBytes writes a 16 kHz mono PCM16 WAV', () => {
   const bytes = waveBytes(new Float32Array([0, 1, -1, 2]))
@@ -31,25 +32,25 @@ test('base64Of matches Buffer for large input', () => {
 })
 
 test('speechCatalog is usable only when the selected provider is ready', async () => {
-  for (const [phase, usable] of [['ready', true], ['standby', true], ['waking', true], ['missing', false], ['preparing', false]]) {
-    const speech = { catalog: async () => ({ ok: true, value: catalog(phase) }) }
+  for (const [phase, usable] of [['ready', true], ['standby', true], ['waking', true], ['missing', false], ['preparing', false]] as [string, boolean][]) {
+    const speech = { catalog: async () => ({ ok: true, value: catalog(phase) }) } as SpeechService
     assert.equal((await speechCatalog(speech)).usable, usable, phase)
   }
-  await assert.rejects(speechCatalog({ catalog: async () => ({ ok: false, error: { message: 'down' } }) }), /down/)
+  await assert.rejects(speechCatalog({ catalog: async () => ({ ok: false, error: { message: 'down' } }) } as SpeechService), /down/)
 })
 
 test('transcribeWave sends the selection and returns trimmed text', async () => {
   let sent
-  const speech = { transcribe: async (request) => { sent = request; return { ok: true, value: { text: '  你好  ' } } } }
+  const speech = { transcribe: async (request) => { sent = request; return { ok: true, value: { text: '  你好  ' } } } } as SpeechService
   const text = await transcribeWave(speech, catalog('ready'), new Uint8Array([1, 2, 3]), new AbortController().signal)
   assert.equal(text, '你好')
   assert.deepEqual(sent, { audioBase64: 'AQID', providerId: 'sensevoice', language: 'auto' })
 })
 
 test('transcribeWave rejects audio over the limit and service failures', async () => {
-  const speech = { transcribe: async () => ({ ok: false, error: { message: 'busy' } }) }
-  await assert.rejects(transcribeWave(speech, catalog('ready'), new Uint8Array(1001)), error => error.kind === 'too-long')
-  await assert.rejects(transcribeWave(speech, catalog('ready'), new Uint8Array(10)), error => error.kind === 'service')
+  const speech = { transcribe: async () => ({ ok: false, error: { message: 'busy' } }) } as unknown as SpeechService
+  await assert.rejects(transcribeWave(speech, catalog('ready'), new Uint8Array(1001)), error => (error as { kind?: string }).kind === 'too-long')
+  await assert.rejects(transcribeWave(speech, catalog('ready'), new Uint8Array(10)), error => (error as { kind?: string }).kind === 'service')
 })
 
 test('turnDetector ends a turn after a pause that follows speech', () => {

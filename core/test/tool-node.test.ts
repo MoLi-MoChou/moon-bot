@@ -32,7 +32,7 @@ test('an empty name falls back to the call, and unreadable arguments read as abs
   const root = { kind: 'tool-result', name: '', call: { name: 'ask_user', argsRaw: '{"question":' } }
   assert.equal(toolName(root), 'ask_user')
   assert.equal(toolArgs(root).text('question'), undefined)
-  assert.equal(toolArgs({ kind: 'tool-result', call: null }).value('x'), undefined)
+  assert.equal(toolArgs({ kind: 'tool-result', call: null } as Parameters<typeof toolArgs>[0]).value('x'), undefined)
   assert.equal(toolArgs({ argsRaw: '[1]' }).value('0'), undefined)
 })
 

@@ -3,7 +3,7 @@
 //
 // Types only: nothing here runs. They sit beside memory.ts, as runtime.d.ts does for
 // the host, so the five modules under memory/ stay logic files under the size gate.
-import type { ToolRunContext } from '@deepseek-ai/dsh-tools'
+import type { ToolRunContext } from './dsh-types.js'
 import type { ToolContext } from '../engine/registry.ts'
 import type { HostConfig, HostRuntime, StoredBot, StoredRoom } from './runtime.ts'
 import type { MemoryActor, MemoryFile, MemoryScope, TaggedEntry } from './memory/records.ts'

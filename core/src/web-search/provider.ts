@@ -1,5 +1,11 @@
 // The `auto` search provider over injected effects, so tests run it without a host.
-import { WebError } from '@deepseek-ai/dsh-web'
+/** The web seam's error, as the callers read it: a name and a code. */
+export class WebError extends Error {
+  constructor(message: string, readonly code: string, options?: { readonly cause?: unknown }) {
+    super(message, options)
+    this.name = 'WebError'
+  }
+}
 import { resolveConfig } from './config.ts'
 import { ENGINES, type Engine } from './engines.ts'
 import { planNative, type Candidate, type Route } from './native.ts'

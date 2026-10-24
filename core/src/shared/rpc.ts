@@ -217,7 +217,6 @@ export interface BotChannelRpcMap {
   // Updates, diagnostics, browsers
   'update-check': { request: Record<string, never>; response: Record<string, unknown> }
   'update-install': { request: Record<string, never>; response: Record<string, unknown> }
-  'dsh-update-install': { request: Record<string, never>; response: Record<string, unknown> }
   'repo-stars': { request: Record<string, never>; response: Record<string, unknown> }
   'browser-wait': { request: Record<string, unknown>; response: Record<string, unknown> }
   'browser-result': { request: Record<string, unknown>; response: Record<string, unknown> }

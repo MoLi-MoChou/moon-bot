@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { install } from '../src/host/permissions.ts'
+import type { HostRuntime } from '../src/host/runtime.js'
 
 const PRESETS = { 'workspace-write': {}, 'danger-full-access': {} }
 const SESSION_ONLY = ['auto']
@@ -21,6 +22,10 @@ function runtime({ presets = true, auto = false, fail = false } = {}) {
     roomOf: () => undefined,
     resolveAgent: async sessionId => ({ session: sessionId }),
     warn() {},
+  } as unknown as HostRuntime & {
+    setPermission(bot: { id: string, permission?: string }, name: string): Promise<void>
+    applyPermission(bot: { id: string, permission?: string }, session: string): Promise<void>
+    permissionCatalog(): { options: { value: string, name: string }[] }
   }
   install(rt)
   return { rt, writes }
@@ -28,7 +33,7 @@ function runtime({ presets = true, auto = false, fail = false } = {}) {
 
 test('a Bot\'s preset is set on its chat and its group Sessions', async () => {
   const { rt, writes } = runtime()
-  const bot = { id: 'b1', name: 'Ada' }
+  const bot: { id: string, name?: string, permission?: string } = { id: 'b1', name: 'Ada' }
   await rt.setPermission(bot, 'danger-full-access')
   assert.equal(bot.permission, 'danger-full-access')
   assert.deepEqual(writes, ['b1-chat=danger-full-access', 'b1-group=danger-full-access'])
@@ -57,7 +62,7 @@ test('the catalog lists the presets DSH offers, or nothing without the presets s
 test('Auto review is not offered or kept as a Bot\'s preset', async () => {
   const { rt, writes } = runtime({ auto: true })
   assert.deepEqual(rt.permissionCatalog().options.map(option => option.value), ['workspace-write', 'danger-full-access'])
-  const bot = { id: 'b1' }
+  const bot: { id: string, permission?: string } = { id: 'b1' }
   await assert.rejects(rt.setPermission(bot, 'auto'), /one Session only/)
   assert.equal(bot.permission, undefined)
   assert.deepEqual(writes, [])

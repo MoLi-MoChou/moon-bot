@@ -9,7 +9,13 @@ const bundle = await build({
   bundle: true, format: 'cjs', platform: 'node', write: false,
   external: ['react', 'react-dom', '@deepseek-ai/dsh-client-ui-primitives'],
 })
-const module = { exports: {} }
+// The bundled module's exports, as this test drives them.
+interface Row {
+  type: unknown
+  props: Record<string, unknown> & { onToggle?: (event: unknown) => void }
+  children: Row[]
+}
+const module = { exports: {} as { ChatRows: (props: Record<string, unknown>) => unknown[], ThinkingRow: (props: Record<string, unknown>) => Row } }
 runInNewContext(bundle.outputFiles[0].text, {
   module, exports: module.exports, Intl, Date,
   require: (name) => {

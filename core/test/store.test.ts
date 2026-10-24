@@ -6,6 +6,7 @@ import { hostname, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { install } from '../src/host/store.ts'
+import type { HostRuntime } from '../src/host/runtime.js'
 
 function patch(method, replace) {
   const original = fsp[method]
@@ -27,7 +28,7 @@ function patchSync(method, replace) {
   }
 }
 
-function runtime(t, saved) {
+function runtime(t, saved = undefined) {
   const home = fs.mkdtempSync(join(tmpdir(), 'ds-bot-store-'))
   const statePath = join(home, 'state.json')
   if (saved !== undefined) fs.writeFileSync(statePath, typeof saved === 'string' ? saved : JSON.stringify(saved))
@@ -48,7 +49,7 @@ function runtime(t, saved) {
     autoRoomName: () => 'Room',
     retitleRoom: async () => {},
     warn: (...args) => warnings.push(args),
-  }
+  } as unknown as HostRuntime & { refresh(): Promise<unknown> }
   install(rt)
   const dispose = () => {
     disposed ??= Promise.all(disposers.splice(0).map(cleanup => cleanup()))

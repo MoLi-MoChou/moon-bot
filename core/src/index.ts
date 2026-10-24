@@ -35,7 +35,6 @@ import * as capabilities from './host/capabilities.ts'
 import * as schedules from './host/schedules.ts'
 import * as usage from './host/usage.ts'
 import * as update from './host/update.ts'
-import * as dshUpdate from './host/dsh-update.ts'
 import * as thinking from './host/thinking.ts'
 import * as channel from './host/channel.ts'
 import * as feed from './host/feed.ts'
@@ -50,7 +49,7 @@ export const inject = ['llm', 'tools', 'systemPrompt', 'sessionController', 'ses
 // the functions other modules call; they call them through `rt` at run time, never during
 // install. Listeners run and tools are listed in registration order, so this order holds:
 // usage meters model requests after every listener that rewrites them.
-const MODULES = [diagnostics, store, models, providers, permissions, turns, handoffs, delivery, roster, folders, agents, prompt, timeContext, tools, chatIndex, groups, approvals, resume, memory, parts, images, secrets, connectors, capabilities, schedules, browser, usage, update, dshUpdate, thinking, feed, workspaceFiles, channel]
+const MODULES = [diagnostics, store, models, providers, permissions, turns, handoffs, delivery, roster, folders, agents, prompt, timeContext, tools, chatIndex, groups, approvals, resume, memory, parts, images, secrets, connectors, capabilities, schedules, browser, usage, update, thinking, feed, workspaceFiles, channel]
 
 export function apply(ctx: DshContext, config: Record<string, unknown> = {}): void {
   createRuntime(ctx, config)

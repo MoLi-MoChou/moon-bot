@@ -61,7 +61,7 @@ test('thinkingOf caches only a closed turn', async () => {
       pages += 1
       for (const event of [...EVENTS].reverse()) yield event
     },
-  }
+  } as unknown as Parameters<typeof installThinking>[0] & { thinkingOf: (sessionId: string, turn: number) => Promise<number | undefined> }
   installThinking(rt)
   // Open turn: computed each call.
   assert.equal(await rt.thinkingOf('s', 1), 1000)
@@ -80,7 +80,7 @@ test('reading an older turn also answers the closed turns read on the way', asyn
     message(3, 1, [reasoningRun(9000, [3000], ['a', 'b'])]),
   ]
   let pages = 0
-  const rt = { eventsBackwards: async function* () { pages += 1; for (const event of [...events].reverse()) yield event } }
+  const rt = { eventsBackwards: async function* () { pages += 1; for (const event of [...events].reverse()) yield event } } as unknown as Parameters<typeof installThinking>[0] & { thinkingOf: (sessionId: string, turn: number) => Promise<number | undefined> }
   installThinking(rt)
   assert.equal(await rt.thinkingOf('s', 1), 1000)
   assert.equal(await rt.thinkingOf('s', 2), 2000)
@@ -89,9 +89,9 @@ test('reading an older turn also answers the closed turns read on the way', asyn
   assert.equal(pages, 2)
 })
 
-const EVENTS = [message(1, 1, [reasoningRun(1000, [400, 600], ['a', 'b', 'c'])])]
+const EVENTS: unknown[] = [message(1, 1, [reasoningRun(1000, [400, 600], ['a', 'b', 'c'])])]
 
-const api = (handlers = {}) => {
+const api = (handlers: { selfOf?: (id: string) => string | undefined, thinkingOf?: (sessionId: string, turn: number) => Promise<number | undefined> } = {}) => {
   let route
   const ctx = {
     logger: { warn() {}, info() {} },
@@ -132,7 +132,7 @@ const api = (handlers = {}) => {
     selfOf: id => handlers.selfOf?.(id),
     thinkingOf: handlers.thinkingOf ?? (async () => undefined),
     warn() {},
-  }
+  } as unknown as Parameters<typeof installChannel>[0]
   installChannel(rt)
   const post = async (endpoint, payload) => {
     const response = await route.fetch({ json: async () => ({ endpoint, payload }), signal: new AbortController().signal })

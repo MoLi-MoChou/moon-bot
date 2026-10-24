@@ -31,7 +31,7 @@ const team = () => ({
   whaleStored: true,
 })
 
-const secret = (name, value, scope = 'all') => ({ name, value, purpose: '', scope, requestedBy: null, createdAt: 1, updatedAt: 1 })
+const secret = (name: string, value: string, scope: string | readonly string[] = 'all') => ({ name, value, purpose: '', scope, requestedBy: null, createdAt: 1, updatedAt: 1 })
 
 // An Agent whose plugin() really starts the configured command, like the mounted MCP
 // client would, so the resolved args and env can be checked at the process boundary.
@@ -46,7 +46,7 @@ function spawningAgent(id, spawned) {
         if (typeof dispose === 'function') disposers.push(dispose)
       },
       plugin(plugin, config) {
-        const record = { plugin, config, sessionId: id, disposed: false }
+        const record: { plugin: unknown, config: { transport?: string, command?: string, args?: readonly string[], env?: Record<string, string> } | undefined, sessionId: string, disposed: boolean, output?: unknown } = { plugin, config, sessionId: id, disposed: false }
         spawned.push(record)
         if (config?.transport === 'stdio') {
           record.output = JSON.parse(execFileSync(config.command, config.args, {

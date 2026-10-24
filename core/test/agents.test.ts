@@ -66,7 +66,7 @@ function start(team, { config = {} } = {}) {
     return register(options)
   }
   apply(ctx, { home, ...config })
-  const call = async (endpoint, payload) => {
+  const call = async (endpoint, payload?) => {
     const response = await route.fetch(new Request('http://localhost/api/bot', { method: 'POST', body: JSON.stringify({ endpoint, payload }) }))
     return response.json()
   }

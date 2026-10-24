@@ -25,7 +25,7 @@ const team = () => ({
 
 // dsh keeps one Agent per Session and fires agent/created, waiting for its listeners,
 // the first time a Session resolves one. restrict() calls are recorded per Session.
-async function setup({ served = ['read', 'ask_user', QUESTION], goals } = {}) {
+async function setup({ served = ['read', 'ask_user', QUESTION], goals }: { served?: readonly string[], goals?: unknown } = {}) {
   const home = mkdtempSync(join(tmpdir(), 'ds-bot-blocking-question-'))
   writeFileSync(join(home, 'state.json'), JSON.stringify(team()))
   const ctx = fakeContext({ services: goals === undefined ? {} : { goals } })

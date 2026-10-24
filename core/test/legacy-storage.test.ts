@@ -9,7 +9,7 @@ const memoryStorage = (entries = {}) => {
     getItem: key => (map.has(key) ? map.get(key) : null),
     setItem: (key, value) => { map.set(key, String(value)) },
     removeItem: (key) => { map.delete(key) },
-  }
+  } as Storage & { map: Map<string, string> }
 }
 
 test('values saved under the dsh-bot keys move to the ds-bot keys', () => {
@@ -53,7 +53,7 @@ test('a value already under the current key is never overwritten', () => {
 
 test('every current key has its legacy keys, and unusable storage is no error', () => {
   for (const key of Object.values(STORAGE)) assert.ok(legacyKeys(key).length > 0, key)
-  const broken = { getItem: () => { throw new Error('denied') }, setItem() {}, removeItem() {} }
+  const broken = { getItem: () => { throw new Error('denied') }, setItem() {}, removeItem() {} } as unknown as Storage
   assert.doesNotThrow(() => migrateStorage(broken))
 })
 

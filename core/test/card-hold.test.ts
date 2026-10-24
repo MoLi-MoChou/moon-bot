@@ -40,8 +40,8 @@ const react = {
   useId: () => slot(() => ({ id: 'card-id' })).id,
   useEffect: effect, useLayoutEffect: effect,
 }
-const keys = new Set()
-const module = { exports: {} }
+const keys = new Set<(event: unknown) => void>()
+const module = { exports: {} as { useDockHold: (sessionId: string, kind: string, id: string, actions: unknown, inline: boolean) => unknown, PendingQuestion: (props: Record<string, unknown>) => unknown, SecretCard: (props: Record<string, unknown>) => unknown } }
 runInNewContext(outputFiles[0].text, {
   module, exports: module.exports,
   require: name => { assert.equal(name, 'react'); return react },
@@ -92,7 +92,7 @@ const deferred = () => {
 }
 const lease = () => {
   const source = createSource({})
-  const actions = teamActions({ heldCards: source })
+  const actions = teamActions({ heldCards: source } as unknown as Parameters<typeof teamActions>[0])
   const count = (sessionId, kind, id) => source.getSnapshot()[sessionId]?.[heldCardKey(kind, id)] ?? 0
   return { source, actions, count }
 }

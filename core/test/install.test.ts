@@ -6,7 +6,7 @@ import { test } from 'node:test'
 import { apply } from '../index.js'
 import { fakeContext } from './fake-ctx.js'
 
-function start(state, { config = {}, services } = {}) {
+function start(state = undefined, { config = {}, services }: { config?: Record<string, unknown>, services?: Record<string, unknown> } = {}) {
   const home = mkdtempSync(join(tmpdir(), 'ds-bot-install-'))
   if (state) writeFileSync(join(home, 'state.json'), JSON.stringify(state))
   const ctx = fakeContext({ services })
@@ -17,7 +17,7 @@ function start(state, { config = {}, services } = {}) {
     return register(options)
   }
   const applyResult = apply(ctx, { home, ...config })
-  const call = async (endpoint, payload) => {
+  const call = async (endpoint, payload?) => {
     const response = await route.fetch(new Request('http://localhost/api/bot', { method: 'POST', body: JSON.stringify({ endpoint, payload }) }))
     return response.json()
   }
@@ -107,7 +107,6 @@ test('apply registers listeners, tools, and effects in a fixed order', (t) => {
     'effect ds-bot: usage ledger',
     'on llm/stream',
     'effect ds-bot: update check',
-    'effect ds-bot: dsh update install',
     'on agent/status',
     'on session/event',
     'on agent/assistant-stream',

@@ -21,7 +21,13 @@ const react = {
   },
   useMemo: compute => compute(),
 }
-const module = { exports: {} }
+// The bundled module's exports, as this test drives them.
+interface FoldResult {
+  shown?: string
+  folded?: boolean
+  control: unknown
+}
+const module = { exports: {} as { FOLD_AT: unknown, FOLD_HUGE: unknown, foldPreview: (text: string, limit?: unknown, markdown?: boolean) => string | null, stripLongNote: (text: string) => string, useFold: (text: string, options?: unknown) => FoldResult } }
 runInNewContext(bundle.outputFiles[0].text, {
   module, exports: module.exports,
   require: (name) => {
@@ -30,7 +36,7 @@ runInNewContext(bundle.outputFiles[0].text, {
   },
 })
 const { FOLD_AT, FOLD_HUGE, foldPreview, stripLongNote, useFold } = module.exports
-const render = (text, options) => { at = 0; return useFold(text, options) }
+const render = (text, options?) => { at = 0; return useFold(text, options) }
 const fresh = () => { slots = [] }
 const buttons = node => (node === null || typeof node !== 'object' ? [] : [...(node.type === 'button' ? [node] : []), ...node.children.flatMap(buttons)])
 const words = node => (node === null || typeof node !== 'object' ? String(node ?? '') : node.children.map(words).join(''))

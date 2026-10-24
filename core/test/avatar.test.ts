@@ -46,13 +46,13 @@ test('a local image file is read, and a relative path starts in baseDir', async 
 
 test('a path starting with ~ expands to the home folder', async () => {
   await assert.rejects(readAvatar('~'), (error) => {
-    assert.match(error.message, /is not an image file/)
-    assert.ok(error.message.includes(homedir()), 'the expanded home path is shown')
+    assert.match((error as Error).message, /is not an image file/)
+    assert.ok((error as Error).message.includes(homedir()), 'the expanded home path is shown')
     return true
   })
   const missing = 'ds-bot-avatar-does-not-exist.png'
   await assert.rejects(readAvatar(`~/${missing}`), (error) => {
-    assert.ok(error.message.includes(join(homedir(), missing)))
+    assert.ok((error as Error).message.includes(join(homedir(), missing)))
     return true
   })
 })

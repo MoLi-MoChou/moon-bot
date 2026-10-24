@@ -44,7 +44,12 @@ async function drain(stream) {
 function start() {
   const home = mkdtempSync(join(tmpdir(), 'ds-bot-session-identity-'))
   writeFileSync(join(home, 'state.json'), JSON.stringify(TEAM))
-  const bench = { tokens: 0, compacted: 0, respond: () => '', requests: [] }
+  const bench = {
+    tokens: 0,
+    compacted: 0,
+    respond: (options?: { model?: string }) => '',
+    requests: [] as { model?: string, sessionId?: string, purpose?: string, messages?: { content: { type: string, text?: string }[] }[] }[],
+  }
   const compaction = {
     summarize() {},
     async compactIfNeeded() {

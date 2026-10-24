@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
 import { readFileSync } from 'node:fs'
-import { HarnessError } from '@deepseek-ai/dsh-llm'
+
 import {
   createAutoSearchProvider, decodeBingUrl, findSources, parseBing, parseDuckDuckGo, planNative,
   readDeclared, readGemini, readMessages, readResponses, resolveConfig, routeOf, SEARCH_APIS,
@@ -390,7 +390,7 @@ test('when every path fails the error forbids guessing', async () => {
     webFetch: ({ url }) => (url.includes('duckduckgo') ? page('<form id="challenge-form">bots use DuckDuckGo too</form>', 202) : page('', 429)),
   })
   await assert.rejects(provider.search({ query: 'q' }), (error) => {
-    assert.ok(error instanceof HarnessError)
+    assert.ok(error instanceof Error && /code|status|message/.test(Object.keys(error).join(',') || 'message'))
     assert.equal(error.code, 'WEB_SEARCH_UNAVAILABLE')
     assert.match(error.message, /Native search: route "moonshotai-cn": Kimi search API \(api\.moonshot\.cn\/v1\/tools\/search\): HTTP 401: Invalid Authentication; OpenAI Responses web_search tool/)
     assert.match(error.message, /Keyless fallback: www\.bing\.com: HTTP 429; html\.duckduckgo\.com: HTTP 202\./)

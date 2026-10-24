@@ -5,7 +5,6 @@
 //
 // defineTool loads lazily: the standalone service has no DSH install, and there the
 // registration is a plain pass-through anyway (the context's own collector).
-import { createRequire } from 'node:module'
 import type { ToolContext, ToolEntry, ToolOutcome } from '../../engine/registry.ts'
 import type { HostRuntime } from '../runtime.ts'
 import { output, type ToolOutput } from './shared.ts'
@@ -19,24 +18,18 @@ type ToolWrapper = <T extends Record<string, unknown>>(definition: T) => T
 // Synchronous on purpose: tools register during install, before any await. With a DSH
 // install its defineTool runs; without one (the standalone service) the definition
 // passes through, which the service's own collector takes as it is.
-const toolWrapper = (): ToolWrapper => {
-  try {
-    return (createRequire(import.meta.url)('@deepseek-ai/dsh-tools') as { defineTool: ToolWrapper }).defineTool
-  } catch {
-    // Without a DSH install: the definition passes through, with the parameter map
-    // folded into the schema shape every reader expects (properties + required).
-    return ((definition: Record<string, unknown>) => ({
-      ...definition,
-      parameters: {
-        type: 'object',
-        properties: definition.parameters,
-        required: Object.entries(definition.parameters as Readonly<Record<string, unknown>>)
-          .filter(([, parameter]) => (parameter as Readonly<Record<string, unknown>> | undefined)?.required === true)
-          .map(([name]) => name),
-      },
-    })) as unknown as ToolWrapper
-  }
-}
+// The one wrapper: the definition passes through with the parameter map folded into
+// the schema shape every reader expects (properties + required).
+const toolWrapper = (): ToolWrapper => ((definition: Record<string, unknown>) => ({
+  ...definition,
+  parameters: {
+    type: 'object',
+    properties: definition.parameters,
+    required: Object.entries(definition.parameters as Readonly<Record<string, unknown>>)
+      .filter(([, parameter]) => (parameter as Readonly<Record<string, unknown>> | undefined)?.required === true)
+      .map(([name]) => name),
+  },
+})) as unknown as ToolWrapper
 
 const asText = (outcome: ToolOutcome): string => outcome.content
   .flatMap(block => block.type === 'text' ? [block.text] : [])

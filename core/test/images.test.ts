@@ -25,7 +25,7 @@ test('offloadTargets selects live images from prior user and tool messages', () 
     surface: { nodes: [0, 1, 2, 3, 4] },
     eventAt: seq => events[seq],
     deriveEventMessage: event => messages.get(event),
-  }
+  } as Parameters<typeof offloadTargets>[0]
 
   assert.deepEqual(offloadTargets(session, 4), [
     { seq: 0, imageIndexes: [0, 2] },

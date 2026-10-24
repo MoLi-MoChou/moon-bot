@@ -14,9 +14,10 @@ import { BuiltinRuntime } from '../src/engine/builtin/runtime.ts'
 import type { EngineServices, GateDecision, ToolDefinition } from '../src/engine/builtin/services.ts'
 import { openStore } from '../src/store/db.ts'
 import { sqliteTranscriptOf } from '../src/engine/builtin/transcript.ts'
+import type { SessionsLike } from '../src/engine/builtin/transcript.ts'
 
 const openaiMock = () => {
-  const requests: { url: string, auth: string | undefined, body: { system?: unknown, messages?: { role: string, content: unknown }[] } }[] = []
+  const requests: { url: string, auth: string | undefined, body: { system?: unknown, messages?: { role: string, content: unknown }[], tools?: unknown } }[] = []
   let script: { tool_calls?: unknown[], content?: string, stall?: number }[][] = []
   const server = createServer((req: import('node:http').IncomingMessage, res: import('node:http').ServerResponse) => {
     const chunks: Buffer[] = []
@@ -231,7 +232,7 @@ test('the second turn replays the first: history, tools, and the raw kernel mess
   const store = openStore(home)
   t.after(() => store.close())
   store.sessions.upsertSession({ id: 'b1', kind: 'bot', ownerId: 'bot-1' })
-  const transcript = sqliteTranscriptOf(store.sessions)
+  const transcript = sqliteTranscriptOf(store.sessions as unknown as SessionsLike)
   const note: ToolDefinition = {
     name: 'note', description: 'write a note',
     parameters: { type: 'object', properties: {}, required: [] },

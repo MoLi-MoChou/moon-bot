@@ -37,7 +37,7 @@ test('historyEntry keeps answers, user and Bot messages, and skips setup', () =>
 
 test('termQuery matches long words with FTS5 and short ones with LIKE', () => {
   const sessions = ['s1', 's2']
-  assert.deepEqual(termQuery(['needle', 'a"b"c'], sessions, 20), {
+  assert.deepEqual(termQuery(['needle', 'a"b"c'], sessions, 20, undefined), {
     sql: 'SELECT text, session, seq, time, who FROM lines WHERE lines MATCH ? AND session IN (SELECT value FROM json_each(?)) ORDER BY rank LIMIT 20',
     args: ['"needle" "a""b""c"', '["s1","s2"]'],
   })

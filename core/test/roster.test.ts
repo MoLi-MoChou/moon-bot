@@ -10,7 +10,7 @@ import { apply } from '../index.js'
 import { fakeContext } from './fake-ctx.js'
 
 // Enough of the dsh services for the roster to make Sessions; kickoff messages are dropped.
-function start(team, { models = [], reasoning = {}, archiveError } = {}) {
+function start(team = undefined, { models = [], reasoning = {}, archiveError }: { models?: unknown[], reasoning?: Record<string, unknown>, archiveError?: Error } = {}) {
   const home = mkdtempSync(join(tmpdir(), 'ds-bot-roster-'))
   if (team !== undefined) writeFileSync(join(home, 'state.json'), JSON.stringify(team))
   const ctx = fakeContext()
@@ -498,7 +498,7 @@ test('a rolled-back Bot does not come back with a save queued before the rollbac
   assert.equal((await kept).ok, true)
   // The rollback queues a save after Kept's without waiting for it, and no later change may
   // be what drops Phantom, so wait for that save itself.
-  const names = () => Object.values(JSON.parse(readFileSync(statePath, 'utf8')).bots).map(bot => bot.name).sort()
+  const names = () => Object.values(JSON.parse(readFileSync(statePath, 'utf8')).bots as Record<string, { name: string }>).map(bot => bot.name).sort()
   await until(() => !names().includes('Phantom'))
   assert.deepEqual(names(), ['Chief', 'Kept', 'Warm'])
 })
@@ -526,7 +526,7 @@ test('a write that fails at save time archives the Session it made', async (t) =
   const team = (await call('state', {})).value
   assert.equal(team.bots.some(bot => bot.name === 'Phantom'), false)
   const saved = JSON.parse(readFileSync(join(home, 'state.json'), 'utf8'))
-  assert.equal(Object.values(saved.bots).some(bot => bot.name === 'Phantom'), false)
+  assert.equal(Object.values(saved.bots as Record<string, { name: string }>).some(bot => bot.name === 'Phantom'), false)
 })
 
 // 公开#178: "User" is how a group log names the user, so a Bot may not take it.

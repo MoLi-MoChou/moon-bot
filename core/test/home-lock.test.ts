@@ -69,14 +69,14 @@ test('a stale-lock recheck does not delete a new owner token', (t) => {
   utimesSync(path, old, old)
   const originalRead = fs.readFileSync
   let reads = 0
-  fs.readFileSync = (file, ...args) => {
+  fs.readFileSync = ((file, ...args) => {
     const contents = originalRead(file, ...args)
     if (file === path && ++reads === 3) {
       writeFileSync(path, JSON.stringify({ pid: 303, host: hostname(), token: 'new-owner' }))
       return originalRead(file, ...args)
     }
     return contents
-  }
+  }) as typeof fs.readFileSync
   syncBuiltinESMExports()
   const late = homeLock(path, { pid: 202, isAlive: pid => pid === 303 })
   t.after(() => {

@@ -92,7 +92,7 @@ test('tasks are created on the Bot’s current part, listed by Bot, and deleted'
     [{ kind: 'weekly', time: '09:00', weekdays: [] }, /at least one day/],
     [{ kind: 'daily', time: '9am' }, /time of day/],
     [{ kind: 'every', minutes: 0 }, /1 minute to 7 days/],
-  ]) {
+  ] as [Record<string, unknown>, RegExp][]) {
     const refused = await call('schedule-create', { target: 'm1', title: 'x', prompt: 'y', when })
     assert.match(refused.error.message, message)
   }

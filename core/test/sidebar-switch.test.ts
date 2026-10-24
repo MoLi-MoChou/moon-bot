@@ -29,7 +29,7 @@ const react = {
   useEffect() {}, useLayoutEffect: effect => layoutEffects?.push(effect), useState: initial => [typeof initial === 'function' ? initial() : initial, () => {}],
   useMemo: make => make(), useRef: current => renderRefs ? renderRefs[refIndex++] ??= { current } : { current }, useId: () => 'id',
 }
-const module = { exports: {} }
+const module = { exports: {} as { SHELL_CSS: string, SIDEBAR_CSS: string, TeamSidebar: (props: Record<string, unknown>) => unknown } }
 const viewport = { innerWidth: 1280 }
 runInNewContext(outputFiles[0].text, {
   module, exports: module.exports,
@@ -46,7 +46,7 @@ function navigationSidebar(wide, { shell = true } = {}) {
   const room = { id: 'room', name: 'Team', members: [], createdAt: 2 }
   const agent = { id: 'agent', sessions: ['session'], createdAt: 3 }
   const roster = { bots: [bot], rooms: [room], agents: [agent], byId: { writer: bot }, ready: true }
-  const actions = Object.fromEntries(['openSession', 'openAgent', 'openAgentSession', 'newAgentSession'].map(name => [name, id => { calls.push([name, id]); return id }]))
+  const actions = Object.fromEntries(['openSession', 'openAgent', 'openAgentSession', 'newAgentSession'].map(name => [name, id => { calls.push([name, id]); return id }])) as Record<string, (...args: unknown[]) => unknown>
   actions.toggleSidebar = () => { collapsed = !collapsed; calls.push(['toggleSidebar']) }
   const rows = []
   const walk = (node) => {

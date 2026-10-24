@@ -24,7 +24,6 @@ test('client.js registers a factory that exports apply and inject', () => {
   const platform = {
     'react': { createElement: () => null, Fragment: Symbol('Fragment'), useState: initial => [initial, () => {}], useEffect: () => {}, useMemo: make => make(), useRef: current => ({ current }) },
     'react-dom': { createPortal: node => node },
-    '@deepseek-ai/dsh-client-ui-primitives': { MarkdownText: () => null },
   }
   const exports = factory((specifier) => {
     requested.push(specifier)

@@ -7,6 +7,7 @@ import { test } from 'node:test'
 import { inflateRawSync } from 'node:zlib'
 import { install, isInside, mimeOf, readForDownload, zip } from '../src/host/workspace-files.ts'
 import { formatBytes, mediaKind, typeLabel } from '../src/client/files-panel.ts'
+import type { HostRuntime } from '../src/host/runtime.js'
 
 const folder = (t) => {
   const dir = mkdtempSync(join(tmpdir(), 'moon-files-'))
@@ -73,7 +74,10 @@ test('only files inside the team\'s folders are served, symlinks included', asyn
   writeFileSync(join(work, 'ok.txt'), 'ok')
   writeFileSync(outside, 'no')
   symlinkSync(outside, join(work, 'link.txt'))
-  const rt = { ctx: { workspaceRegistry: { list: () => [{ path: work }] } }, state: { bots: {}, rooms: {} } }
+  const rt = { ctx: { workspaceRegistry: { list: () => [{ path: work }] } }, state: { bots: {}, rooms: {} } } as unknown as Omit<HostRuntime, 'workspaceDownload' | 'workspaceDescribe'> & {
+    workspaceDownload(path: string): Promise<{ data: string }>
+    workspaceDescribe(path: string): Promise<{ size: number }>
+  }
   install(rt)
   assert.equal(Buffer.from((await rt.workspaceDownload(join(work, 'ok.txt'))).data, 'base64').toString(), 'ok')
   await assert.rejects(rt.workspaceDownload(outside), /Only files in the team/)

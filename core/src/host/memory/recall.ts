@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { z } from 'zod'
-import type { ToolRunContext } from '@deepseek-ai/dsh-tools'
+import type { ToolRunContext } from '../dsh-types.js'
 import type { ToolContext } from '../../engine/registry.ts'
 import type { StoredBot } from '../runtime.ts'
 import type { MemoryActor, MemoryFile, MemoryScope, ScopedEntry } from './records.ts'
@@ -80,8 +80,10 @@ export function createRecall({ rt, storage, botShot }: RecallDeps): RecallServic
   const languageNow = (): string => rt.uiLanguage?.() ?? 'the language most entries are written in'
   const capital = (text: string): string => (text[0] ?? '').toUpperCase() + text.slice(1)
 
-  const callerOf = (exec: ToolRunContext | ToolContext): Caller | undefined => {
-    const sessionId = 'sessionId' in exec ? exec.sessionId : exec.agent?.id
+  const callerOf = (exec: ToolContext | ToolRunContext): Caller | undefined => {
+    const agentView = (exec as { readonly agent?: { readonly id?: unknown } | undefined }).agent
+    const fromContext = 'sessionId' in exec ? exec.sessionId : undefined
+    const sessionId: string | undefined = typeof fromContext === 'string' ? fromContext : (agentView !== null && agentView !== undefined && typeof agentView.id === 'string' ? agentView.id : undefined)
     if (sessionId === undefined) return undefined
     const bot = rt.botOf(rt.selfOf(sessionId))
     return bot === undefined ? undefined : { bot, sessionId, roomId: storage.roomIdOf(sessionId) }

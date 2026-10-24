@@ -2,11 +2,12 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { listedOpener } from '../src/client/open-listed.ts'
 
-const store = (ids = []) => {
-  const listeners = new Set()
-  const snapshot = { byId: {} }
+interface ListedRow { id: string, retainedBy?: { mainView: number } }
+const store = (ids: string[] = []) => {
+  const listeners = new Set<() => void>()
+  const snapshot = { byId: {} as Record<string, ListedRow> }
   const notify = () => { for (const fn of listeners) fn() }
-  const put = (id, main) => { snapshot.byId[id] = main ? { id, retainedBy: { mainView: 1 } } : { id } }
+  const put = (id, main?) => { snapshot.byId[id] = main ? { id, retainedBy: { mainView: 1 } } : { id } }
   for (const id of ids) put(id)
   return {
     getSnapshot: () => snapshot,
@@ -16,7 +17,7 @@ const store = (ids = []) => {
   }
 }
 
-const mainViewOf = list => Object.values(list.getSnapshot().byId).find(row => (row?.retainedBy?.mainView ?? 0) > 0)?.id
+const mainViewOf = (list: { getSnapshot(): { byId: Record<string, ListedRow> } }) => Object.values(list.getSnapshot().byId).find(row => (row?.retainedBy?.mainView ?? 0) > 0)?.id
 
 const rig = (list) => {
   const opened = []

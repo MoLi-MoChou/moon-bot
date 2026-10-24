@@ -28,7 +28,6 @@ import * as capabilities from "./host/capabilities.js";
 import * as schedules from "./host/schedules.js";
 import * as usage from "./host/usage.js";
 import * as update from "./host/update.js";
-import * as dshUpdate from "./host/dsh-update.js";
 import * as thinking from "./host/thinking.js";
 import * as channel from "./host/channel.js";
 import * as feed from "./host/feed.js";
@@ -36,7 +35,7 @@ import * as workspaceFiles from "./host/workspace-files.js";
 import { COLORS } from "./host/constants.js";
 const name = "ds-bot";
 const inject = ["llm", "tools", "systemPrompt", "sessionController", "sessions", "sessionTitle", "workspaceRegistry", "connection"];
-const MODULES = [diagnostics, store, models, providers, permissions, turns, handoffs, delivery, roster, folders, agents, prompt, timeContext, tools, chatIndex, groups, approvals, resume, memory, parts, images, secrets, connectors, capabilities, schedules, browser, usage, update, dshUpdate, thinking, feed, workspaceFiles, channel];
+const MODULES = [diagnostics, store, models, providers, permissions, turns, handoffs, delivery, roster, folders, agents, prompt, timeContext, tools, chatIndex, groups, approvals, resume, memory, parts, images, secrets, connectors, capabilities, schedules, browser, usage, update, thinking, feed, workspaceFiles, channel];
 function apply(ctx, config = {}) {
   createRuntime(ctx, config);
 }

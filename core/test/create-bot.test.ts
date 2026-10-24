@@ -6,12 +6,12 @@ const models = [
   { ref: 'ollama/ds-flash', name: 'DS Flash', providerName: 'Ollama' },
   { ref: 'cloud/qwen-max', name: 'Qwen Max', providerName: 'Cloud' },
 ]
-
+// startModel reads only the models and the default; the roster's bots play no part here.
 test('the form starts on the DSH default model, else the first served one', () => {
-  assert.equal(startModel({ models, defaultModel: 'cloud/qwen-max' }), 'cloud/qwen-max')
-  assert.equal(startModel({ models, defaultModel: 'gone/model' }), 'ollama/ds-flash')
-  assert.equal(startModel({ models, defaultModel: null }), 'ollama/ds-flash')
-  assert.equal(startModel({ models: [], defaultModel: 'cloud/qwen-max' }), '')
+  assert.equal(startModel({ bots: [], models, defaultModel: 'cloud/qwen-max' }), 'cloud/qwen-max')
+  assert.equal(startModel({ bots: [], models, defaultModel: 'gone/model' }), 'ollama/ds-flash')
+  assert.equal(startModel({ bots: [], models, defaultModel: null }), 'ollama/ds-flash')
+  assert.equal(startModel({ bots: [], models: [], defaultModel: 'cloud/qwen-max' }), '')
 })
 
 test('the payload carries the look, the chosen model, and the brief', () => {

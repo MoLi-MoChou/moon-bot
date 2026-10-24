@@ -71,7 +71,7 @@ test('the shared contract layer exists and names the endpoints both ends share',
   const { validateView } = await import('../src/shared/views/validate.ts')
   for (const type of ['diff', 'diagram']) {
     const checked = validateView({ type, patch: '', source: '' })
-    assert.match(String(checked.error), new RegExp(`unknown component "${type}"`))
+    assert.match(checked.ok === false ? checked.error : '', new RegExp(`unknown component "${type}"`))
   }
 })
 

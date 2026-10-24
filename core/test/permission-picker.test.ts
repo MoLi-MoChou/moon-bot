@@ -46,7 +46,7 @@ const render = (component, props) => {
   } while (dirty)
   return tree
 }
-const module = { exports: {} }
+const module = { exports: {} as { PermissionPicker: (props: Record<string, unknown>) => unknown } }
 runInNewContext(outputFiles[0].text, {
   module, exports: module.exports,
   require: name => (name === 'react' ? react : {}),
@@ -77,7 +77,7 @@ const mountPicker = (initial, repick = false) => {
     }))
   }
   let tree
-  const rerender = (patch) => { props = { ...props, ...patch }; tree = render(PermissionPicker, props); return tree }
+  const rerender = (patch?) => { props = { ...props, ...patch }; tree = render(PermissionPicker, props); return tree }
   const picker = {
     requests, seen, rerender,
     press(value) { tree.props.children.find(button => button.props.title === value).props.onClick(); rerender() },

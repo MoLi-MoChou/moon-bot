@@ -7,11 +7,11 @@ import { build } from 'esbuild'
 const bundle = await build({
   entryPoints: [fileURLToPath(new URL('../src/client/cells.ts', import.meta.url))],
   bundle: true, format: 'cjs', platform: 'node', write: false,
-  external: ['react', 'react-dom', '@deepseek-ai/dsh-client-ui-primitives'],
+  external: ['react', 'react-dom'],
 })
 function MarkdownText() { return null }
 const effects = []
-const module = { exports: {} }
+const module = { exports: {} as { AssistantCell: (props: Record<string, unknown>) => unknown, TurnTailCell: (props: Record<string, unknown>) => unknown } }
 runInNewContext(bundle.outputFiles[0].text, {
   module, exports: module.exports,
   require: (name) => {
@@ -22,7 +22,6 @@ runInNewContext(bundle.outputFiles[0].text, {
         useLayoutEffect: () => {}, useMemo: make => make(), Fragment: 'fragment',
       },
       'react-dom': { createPortal: node => node },
-      '@deepseek-ai/dsh-client-ui-primitives': { MarkdownText },
     }
     if (!(name in platform)) throw new Error(`no platform module ${name}`)
     return platform[name]
@@ -45,7 +44,7 @@ const find = (node, match) => {
 
 const roster = { bots: [], byId: { b: { id: 'b', name: 'Writer' } }, roomsById: {}, exchangeTurns: {} }
 const finished = { turn: 3, status: 'closed', end: { time: 2_000 } }
-function cellProps({ closingSeq = 10, turn = finished } = {}) {
+function cellProps({ closingSeq = 10, turn = finished }: { closingSeq?: number, turn?: { turn: number, status: string, end?: { time: number } } } = {}) {
   const asked = []
   const links = { resolve: () => undefined }
   const props = {
@@ -66,7 +65,7 @@ function cellProps({ closingSeq = 10, turn = finished } = {}) {
   }
   return { props, asked, links }
 }
-const markdownOf = props => find(expand(AssistantCell(props), ['Bubbles', 'Bubble']), node => node.type === MarkdownText)
+const markdownOf = props => find(expand(AssistantCell(props), ['Bubbles', 'Bubble']), node => typeof node.type === 'function' && node.type.name === 'MarkdownText')
 
 test('a reply that closes its turn links the files the turn changed or delivered', () => {
   const { props, asked, links } = cellProps()

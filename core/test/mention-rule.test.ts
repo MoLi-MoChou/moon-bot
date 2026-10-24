@@ -79,8 +79,8 @@ test('the user bubble keeps the text around a mention, and a group only calls it
   assert.deepEqual(plain(mentionableBots(roster, 'r').map(bot => bot.id)), ['c', 'k'])
   assert.equal(mentionableBots(roster, 'a').length, 4)
   assert.equal(mentionableBots(roster, 'elsewhere').length, 0)
-  // Without DSH's text projection the plugin leaves the bubble to DSH.
-  assert.equal(canDrawUserMessages(), false)
+  // The standalone projection always draws, so the bubble is ours everywhere.
+  assert.equal(canDrawUserMessages(), true)
 })
 
 test('a Bot name is something "@" can call without a second reading', () => {

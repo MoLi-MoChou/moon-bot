@@ -142,10 +142,9 @@ function hostHandlers(rt) {
     },
     "update-check": async (body) => {
       const fresh = body.fresh === true;
-      return ok({ ...await rt.updateCheck({ fresh }), dsh: await rt.dshUpdateCheck?.({ fresh }) ?? null });
+      return ok(await rt.updateCheck({ fresh }));
     },
     "update-install": async () => ok(rt.updateStart()),
-    "dsh-update-install": async () => ok(rt.dshUpdateStart?.()),
     "repo-stars": async () => ok(await rt.repoStars()),
     // The Desktop window's long poll for read_browser, and its answers.
     "browser-wait": async (body) => {

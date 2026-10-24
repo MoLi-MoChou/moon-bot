@@ -106,7 +106,7 @@ async function start(t: { after: (run: () => Promise<void> | void) => void }): P
     return agent
   }
   void agentOf
-  await wired.runtime.load()
+  await (wired.runtime as unknown as { load(): Promise<unknown> }).load()
   const tool = (name: string, args: Record<string, unknown>, sessionId: string, exec: Record<string, unknown> = {}) =>
     ctx.registeredTools.get(name).execute(args, { agent: { id: sessionId }, ...exec }) as Promise<unknown>
   t.after(async () => {

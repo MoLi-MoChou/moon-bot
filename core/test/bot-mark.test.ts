@@ -10,7 +10,13 @@ const bundle = await build({
   bundle: true, format: 'cjs', platform: 'node', write: false, logLevel: 'silent',
   external: ['react', 'react-dom', '@deepseek-ai/dsh-client-ui-primitives'],
 })
-const module = { exports: {} }
+interface MarkNode { type: unknown, props: Record<string, unknown> & { onError?: () => void }, children: MarkNode[] }
+const module = { exports: {} as {
+  botState: (turn: boolean | undefined, wait: string | undefined, question: boolean) => string
+  BotAvatar: (props: Record<string, unknown>) => MarkNode
+  BotMark: (props: Record<string, unknown>) => MarkNode
+  SHELL_CSS: string
+} }
 // A test can queue the values the next useState calls return, and read what was set.
 const states = []
 const sets = []

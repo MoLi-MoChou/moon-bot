@@ -15,7 +15,7 @@ function start() {
     botOf: id => bots.get(id),
     roomOf: id => id === 'room' ? {} : undefined,
     isMain: id => id === 'main',
-  })
+  } as unknown as Parameters<typeof install>[0])
   const prompt = id => ctx.sections.get('bot-identity').text({ agent: { id } })
   return { ctx, prompt }
 }

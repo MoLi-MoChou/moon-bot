@@ -47,7 +47,7 @@ test('a fork does not count the calls it inherited from its parent', () => {
 const HOUR = 3_600_000
 const LONG_AGO = 1_000
 
-function start(home, { listedExtra, logsExtra, subagentsExtra } = {}) {
+function start(home = undefined, { listedExtra, logsExtra, subagentsExtra }: { listedExtra?: unknown[], logsExtra?: Record<string, unknown[]>, subagentsExtra?: Record<string, string> } = {}) {
   const fresh = home === undefined
   home ??= mkdtempSync(join(tmpdir(), 'ds-bot-usage-'))
   if (fresh) writeFileSync(join(home, 'state.json'), JSON.stringify({
@@ -74,13 +74,13 @@ function start(home, { listedExtra, logsExtra, subagentsExtra } = {}) {
     's-a1': [header('deepseek', 'v4-flash'), message(1, 0, usage(70, 7), HOUR)],
     ...logsExtra,
   }
-  for (const log of Object.values(logs)) log.forEach((event, seq) => { event.seq = seq })
+  for (const log of Object.values(logs) as { seq?: number }[][]) log.forEach((event, seq) => { event.seq = seq })
   // Child Session → the parent its header names, as DSH checks a page address.
   const subagents = { 's-sub': 's-b1', ...subagentsExtra }
   const pages = []
   const warnings = []
   const ctx = fakeContext()
-  ctx.logger.warn = (template, ...args) => warnings.push([template, ...args])
+  ctx.logger.warn = (template, ...args) => { warnings.push([template, ...args]) }
   ctx.sessionController = {
     list: async () => ({ items: [
       { sessionId: 's-x', projections: { kind: 'cached', asOfSeq: 1, values: {} } },

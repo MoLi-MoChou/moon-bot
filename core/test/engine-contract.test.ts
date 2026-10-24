@@ -40,8 +40,8 @@ test('a typed runtime runs a turn and its events parse back through engineEventO
 })
 
 test('a step that calls tools is told apart from one that only speaks', () => {
-  const speaking = { content: [{ type: 'text', text: 'All done.' }] }
-  const calling = { content: [{ type: 'text', text: 'One moment.' }, { type: 'tool-call', id: 'k1', name: 'read', arguments: '{}' }] }
+  const speaking = { content: [{ type: 'text' as const, text: 'All done.' }] }
+  const calling = { content: [{ type: 'text' as const, text: 'One moment.' }, { type: 'tool-call' as const, id: 'k1', name: 'read', arguments: '{}' }] }
   assert.equal(callsTools(speaking), false)
   assert.equal(callsTools(calling), true)
   assert.equal(textOfContent(calling.content), 'One moment.')

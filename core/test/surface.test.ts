@@ -20,7 +20,7 @@ test('the saved surface mode survives reloads and defaults to bot', () => {
     getItem: key => (store.has(key) ? store.get(key) : null),
     setItem: (key, value) => store.set(key, value),
     removeItem: key => store.delete(key),
-  }
+  } as unknown as Storage
   assert.equal(readMode(storage), 'bot')
   writeMode('agent', storage)
   assert.equal(readMode(storage), 'agent')
@@ -103,7 +103,7 @@ test('a group whose step throws takes back the steps before it, so Agent mode le
   const groups = surfaceGroups({
     shell: () => [mount('shell styles')],
     conversation: () => [mount('conversation css'), mount('HeaderPill'), mount('chat.node cells'), collide, mount('bot-plus')],
-  }, { onError: (group, error) => errors.push([group, error.message]) })
+  }, { onError: (group, error) => errors.push([group, (error as Error).message]) })
   groups.reconcile(groupsFor({ mode: 'bot' }))
   assert.deepEqual([...live], ['shell styles'])
   assert.deepEqual(errors.map(([group]) => group), ['conversation'])
@@ -136,5 +136,5 @@ test('a shadow goes below every entry of its cell, so a same-priority plugin doe
 })
 
 test('readMode falls back to bot when storage throws', () => {
-  assert.equal(readMode({ getItem: () => { throw new Error('denied') } }), 'bot')
+  assert.equal(readMode({ getItem: () => { throw new Error('denied') } } as unknown as Storage), 'bot')
 })

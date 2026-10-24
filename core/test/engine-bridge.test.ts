@@ -16,6 +16,7 @@ import type { EngineEvent } from '../src/engine/events.ts'
 import type { EngineServices } from '../src/engine/builtin/services.ts'
 import { openStore } from '../src/store/db.ts'
 import { sqliteTranscriptOf } from '../src/engine/builtin/transcript.ts'
+import type { SessionsLike } from '../src/engine/builtin/transcript.ts'
 
 // A scripted OpenAI-compatible endpoint: replies in order, no key needed.
 const openaiMock = () => {
@@ -75,7 +76,7 @@ test('a group round completes through the engine: delivery, turn events, group r
     models: { resolve: async () => ({ id: 'mock-1', baseUrl: `http://127.0.0.1:${port}/v1`, apiKey: 'sk' }) },
     prompt: { base: async () => 'You are Moon Bot.', frozen: async () => '' },
     gate: { check: async () => ({ kind: 'allow' }) },
-    transcript: sqliteTranscriptOf(store.sessions),
+    transcript: sqliteTranscriptOf(store.sessions as unknown as SessionsLike),
     toolsFor: () => [],
     definitions: [],
   }

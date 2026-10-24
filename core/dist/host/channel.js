@@ -4,7 +4,7 @@ import { errorCode, fail, failureCodeOf, messageOf, recordOf, stackOf } from "./
 import { hostHandlers } from "./channel/ops-host.js";
 import { teamHandlers } from "./channel/ops-team.js";
 const LANGUAGES = { zh: "Chinese (\u7B80\u4F53\u4E2D\u6587)", en: "English" };
-const READS = /* @__PURE__ */ new Set(["state", "models", "efforts", "providers", "provider-models", "earlier", "chat", "run-stats", "room-progress", "exchange", "exchange-text", "file-text", "usage", "schedules", "memory-view", "browser-wait", "browser-result", "diagnostics", "diagnostics-log", "diagnostics-clear", "update-check", "update-install", "dsh-update-install", "repo-stars", "approval-answer", "thinking", "workspace-download", "workspace-describe"]);
+const READS = /* @__PURE__ */ new Set(["state", "models", "efforts", "providers", "provider-models", "earlier", "chat", "run-stats", "room-progress", "exchange", "exchange-text", "file-text", "usage", "schedules", "memory-view", "browser-wait", "browser-result", "diagnostics", "diagnostics-log", "diagnostics-clear", "update-check", "update-install", "repo-stars", "approval-answer", "thinking", "workspace-download", "workspace-describe"]);
 function install(rt) {
   const { ctx } = rt;
   const locale = { value: void 0 };

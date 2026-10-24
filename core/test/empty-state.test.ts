@@ -32,8 +32,17 @@ const react = {
   useMemo: make => make(), useRef: current => ({ current }), useId: () => 'id',
 }
 
-function runBundle(domWindow = { innerWidth: 1280 }) {
-  const module = { exports: {} }
+// The bundled module's exports, as this test drives them: view components and helpers.
+interface ViewNode { type: unknown, props: Record<string, unknown> & { children?: unknown }, [key: string]: unknown }
+interface BundleExports {
+  EmptyState: (props: Record<string, unknown>) => unknown
+  welcomeCopy: (roster: unknown, id: string) => { title: string, hint: string } | null
+  TeamSidebar: (props: Record<string, unknown>) => unknown
+  CommandPalette: (props: Record<string, unknown>) => unknown
+  installFilesPanel: (deps: { call: (endpoint: string, payload?: unknown) => Promise<unknown>, onPickFolder: () => void }) => () => void
+}
+function runBundle(domWindow: { innerWidth: number, document?: unknown, MutationObserver?: unknown, [key: string]: unknown } = { innerWidth: 1280 }) {
+  const module = { exports: {} as BundleExports }
   runInNewContext(outputFiles[0].text, {
     module, exports: module.exports,
     require: name => (name === 'react' ? react : {}),

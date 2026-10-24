@@ -59,7 +59,7 @@ function rig(initial) {
     useEffect: (run, deps) => effect(effects, run, deps),
     useLayoutEffect: (run, deps) => effect(layouts, run, deps),
   }
-  const module = { exports: {} }
+  const module = { exports: {} as { ExchangeDialog: (props: unknown) => unknown } }
   runInNewContext(bundle.outputFiles[0].text, {
     module, exports: module.exports,
     require: name => (name === 'react' ? react : {}),

@@ -35,11 +35,11 @@ test('redaction replaces the longest value first, JSON-escaped forms too, and sk
   const redact = redactor([{ name: 'INNER', value: inner }, { name: 'LONG', value: long }, { name: 'SHORT', value: 'abc' }, { name: 'Q', value: quoted }])
   assert.equal(redact(`a ${long} b ${inner} c abc`), 'a [secret:LONG] b [secret:INNER] c abc')
   assert.equal(redact(JSON.stringify({ text: quoted })), '{"text":"[secret:Q]"}')
-  assert.equal(redact(42), 42)
+  assert.equal(redact(42 as unknown as string), 42)
   const value = { list: ['x', { text: `see ${long}` }], n: 1 }
   const out = redactDeep(value, redact)
   assert.deepEqual(out, { list: ['x', { text: 'see [secret:LONG]' }], n: 1 })
-  assert.equal(value.list[1].text, `see ${long}`)
+  assert.equal((value.list[1] as { text: string }).text, `see ${long}`)
   const clean = { list: ['x'] }
   assert.equal(redactDeep(clean, redact), clean)
 })

@@ -6,10 +6,10 @@ const npm = (verified, current = '0.2.0-rc.2') => ({ kind: 'npm', verified, curr
 const app = (verified, current = '0.2.0-rc.2') => ({ kind: 'app', verified, current })
 
 test('an npm DSH shows the row while the verified version differs from the running one', () => {
-  assert.equal(showsDshRow(npm('0.2.1-alpha.1')), true)
-  assert.equal(showsDshRow(npm('0.2.0-rc.2')), false)
-  assert.equal(showsDshRow(npm(null)), false)
-  assert.equal(showsDshRow({ ...npm('0.2.1-alpha.1'), current: null }), false)
+  assert.equal(showsDshRow(npm('0.2.1-alpha.1'), undefined), true)
+  assert.equal(showsDshRow(npm('0.2.0-rc.2'), undefined), false)
+  assert.equal(showsDshRow(npm(null), undefined), false)
+  assert.equal(showsDshRow({ ...npm('0.2.1-alpha.1'), current: null }, undefined), false)
 })
 
 test('a packaged app shows the row only when its own updater found the verified version', () => {

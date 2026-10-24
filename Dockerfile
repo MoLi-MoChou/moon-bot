@@ -1,33 +1,44 @@
-# Moon Bot web version: the same UI as the desktop app, served by the Node host in a
-# normal browser behind a password page (app/src/web.mjs).
+# Moon Bot standalone web version: the app's UI served by Moon Bot's own service
+# (core/src/service) in a normal browser behind a password page.
 #
 #   docker build -t moon-bot .
 #   docker run -d -p 8290:8290 -e MOON_BOT_PASSWORD=... -v moon-bot-data:/data moon-bot
+FROM node:22-bookworm-slim AS ui
+
+# The window's UI: the same React surface the desktop app loads, built by vite.
+WORKDIR /opt/moon-bot
+COPY app/package.json app/package-lock.json app/.npmrc app/
+COPY app/vite.config.js app/
+COPY app/ui/ app/ui/
+COPY core/src/client/ core/src/client/
+COPY core/tsconfig.json core/
+RUN cd app && npm ci --no-audit --no-fund && npm run build && rm -rf node_modules
+
 FROM node:22-bookworm-slim
 
-# bubblewrap confines the Bots' shell commands (DSH falls back to Landlock where a
-# container cannot use it); git, curl and python3 are there for the Bots to use.
+# bubblewrap confines the Bots' shell commands; git, curl and python3 are there for the
+# Bots to use.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends bubblewrap ca-certificates curl git python3 tini \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt/moon-bot
 COPY core/ core/
-# Host/shared ship as TypeScript sources; Node will not strip types under node_modules.
-# Emit plain JS into core/dist before the app installs moon-bot-core via file:../core.
-RUN cd core  && npm install --no-save --no-audit --no-fund --ignore-scripts esbuild@0.28.2  && node scripts/build-host.mjs  && rm -rf node_modules
-COPY app/package.json app/package-lock.json app/.npmrc app/
-COPY app/scripts/ app/scripts/
-COPY app/engine/ app/engine/
-# Electron, the window build and the packager are dev dependencies: not installed.
-RUN cd app && npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
-COPY app/src/ app/src/
-COPY app/assets/ app/assets/
+# Host/service ship as TypeScript sources; Node will not strip types under node_modules.
+# Emit plain JS into core/dist, then install the runtime deps (better-sqlite3 needs its
+# install script for the prebuilt binding).
+RUN cd core \
+ && npm install --no-save --no-audit --no-fund --ignore-scripts esbuild@0.28.2 typescript@5.9.3 @types/better-sqlite3 \
+ && node scripts/build-host.mjs \
+ && rm -rf node_modules \
+ && npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
+COPY --from=ui /opt/moon-bot/app/ui/dist/ app/ui/dist/
 COPY NOTICE LICENSE ./
 
 ENV NODE_ENV=production \
     MOON_BOT_DATA=/data \
     MOON_BOT_WORKSPACE=/data/workspace \
+    MOON_BOT_UI=/opt/moon-bot/app/ui/dist \
     MOON_BOT_WEB_HOST=0.0.0.0 \
     MOON_BOT_WEB_PORT=8290
 RUN mkdir -p /data/workspace && chown -R node:node /data
@@ -35,4 +46,4 @@ USER node
 VOLUME ["/data"]
 EXPOSE 8290
 ENTRYPOINT ["/usr/bin/tini", "--"]
-CMD ["node", "app/src/web.mjs"]
+CMD ["node", "core/dist/service/main.js"]

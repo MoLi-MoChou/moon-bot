@@ -1,7 +1,8 @@
 // Team tools: the roster, bot-to-bot messages and hand-offs, the Bot settings, and the
 // model list. Group rounds and reading chats are in groups.js.
 import { randomUUID } from 'node:crypto'
-import { defineTool, type ToolRunContext } from '@deepseek-ai/dsh-tools'
+import { z } from 'zod'
+import type { ToolContext } from '../../engine/registry.ts'
 import type { ToolExecution } from '../dsh-types.js'
 import type { HostRuntime, StoredBot } from '../runtime.ts'
 import { readAvatar } from '../avatar.ts'
@@ -11,7 +12,7 @@ import { unquote } from '../text.ts'
 import { within } from '../folders.ts'
 import {
   AVATAR_PARAM, WORK_DIR_PARAM, WORKING_DIRECTORY_TOOL,
-  errorMessage, isRecord, output, stringOf, type ToolShared,
+  errorMessage, isRecord, stringOf, type ToolShared,
 } from './shared.ts'
 
 interface MessageBotArgs {
@@ -54,24 +55,20 @@ interface ToolExecuteEvent extends ToolExecution {
   readonly arguments?: unknown
 }
 
-interface ToolRunResult {
-  readonly isError?: boolean
-}
-
-type ToolNext = () => Promise<ToolRunResult | undefined>
+type ToolNext = () => Promise<{ readonly isError?: boolean } | undefined>
 
 export function installTeamTools(rt: HostRuntime, shared: ToolShared): void {
   const { ctx, state } = rt
   const t = shared.rt
 
-  ctx.tools.register(defineTool({
+  shared.register({
     name: 'list_bots',
     description: 'List every Bot on the user\'s team with its role, what it does and what it is doing right now, and the group chats you can see.',
     parameters: {},
-    output,
-    async execute(_args: Readonly<Record<string, unknown>>, exec: ToolRunContext): Promise<string> {
+    schema: z.object({}).passthrough(),
+    async execute(_args: Readonly<Record<string, unknown>>, context: ToolContext): Promise<string> {
       await t.load()
-      const self = t.selfOf(exec.agent?.id)
+      const self = t.selfOf(context.sessionId)
       const lines = Object.values(state.bots).map(bot => {
         const model = bot.appliedModel ?? bot.model
         const tags = [bot.role, model ? `model ${model}` : '', bot.workDir ? `works in ${bot.workDir}` : '', t.isMain(bot.id) ? 'Main Bot' : '', bot.id === self ? 'you' : ''].filter(Boolean).join(', ')
@@ -89,9 +86,9 @@ export function installTeamTools(rt: HostRuntime, shared: ToolShared): void {
         ...rooms.map(room => shared.roomLine(room, self)),
       ].join('\n')
     },
-  }))
+  })
 
-  ctx.tools.register(defineTool({
+  shared.register({
     name: 'message_bot',
     description: 'Send a message to another Bot on the team. If that Bot is working, it reads your message at its next step and can change course, then answers once that work is done; if it is idle, it starts on it right away. Its reply arrives later as a new message to you; with reply_to "user" it answers the user in its own chat instead. In a group chat it reaches only members of that group, as writing "@Name" there does.',
     parameters: {
@@ -108,24 +105,26 @@ export function installTeamTools(rt: HostRuntime, shared: ToolShared): void {
         description: '"now" (default): a working Bot reads your message at its next step, between its current actions, and answers once its current work is done; use it for questions, information it needs, corrections and warnings. "queue": it reads your message only after its current work is done, as a separate task; use it only for a new task unrelated to what it is doing now. With reply_to "user" the message always queues.',
       },
     },
-    output,
-    async execute(args: MessageBotArgs, exec: ToolRunContext): Promise<string> {
+    schema: z.object({
+      to: z.string(), message: z.string(), reply_to: z.string().optional(), when: z.string().optional(),
+    }).passthrough(),
+    async execute(args: MessageBotArgs, context: ToolContext): Promise<string> {
       await t.load()
-      const sender = shared.callerBot(exec)
+      const sender = shared.callerBot(context)
       if (sender === undefined) return 'Only Bots on the team can use message_bot.'
       const target = t.findBot(args.to)
       if (target === undefined) return `No Bot named ${args.to}. Team: ${Object.values(state.bots).map(bot => bot.name).join(', ')}`
       if (target.id === sender.id) return 'You cannot message yourself.'
       if (String(args.message ?? '').trim() === '') return 'Write a message to send.'
-      const text = absoluteLinks(String(args.message), t.sessionFolder(exec.agent?.session ?? exec.agent))
-      const room = shared.roomOfCaller(exec)
-      if (room !== undefined) return shared.callInGroup(exec, room, sender, target, text.trim())
-      const posted = shared.calledInPosts.get(exec.agent?.id)
-      const postedIn = posted !== undefined && posted.turn === shared.turnOf(exec) ? posted.calls.get(target.id) : undefined
+      const text = absoluteLinks(String(args.message), t.sessionFolder(context.session ?? { id: context.sessionId }))
+      const room = shared.roomOfCaller(context)
+      if (room !== undefined) return shared.callInGroup(context, room, sender, target, text.trim())
+      const posted = shared.calledInPosts.get(context.sessionId)
+      const postedIn = posted !== undefined && posted.turn === shared.turnOf(context) ? posted.calls.get(target.id) : undefined
       if (postedIn !== undefined) shared.refuse(`Not sent: you called ${target.name} in "${postedIn}" in this turn, and it works on that there. Send each task one way only; to add to it, post in that group.`)
       // Whoever waits for this work gets the answer by itself; a message there only
       // sends the work round in a circle.
-      const works = shared.worksOf(exec)
+      const works = shared.worksOf(context)
       if (t.upstreamOf(works).has(target.id)) {
         shared.refuse(`Not sent: ${target.name} is waiting for the result of the work you are doing, and your answer reaches it by itself. Finish the work and end your turn; to ask ${target.name} something, end your turn with the question.`)
       }
@@ -176,19 +175,19 @@ export function installTeamTools(rt: HostRuntime, shared: ToolShared): void {
       const stop = t.isMain(sender.id) ? ' If it must not go on there, use stop_bot.' : ''
       return `${out} Your message does not reach its work in ${groups.map(shared.whereOf).join(' and ')}.${stop}`
     },
-  }))
+  })
 
-  ctx.tools.register(defineTool({
+  shared.register({
     name: 'stop_bot',
     description: 'Main Bot only. Stop another Bot\'s running turn immediately — when it must not finish a dangerous action and a message_bot warning is not enough. Its queued messages are dropped with the turn. It is then told why in a new turn, whose reply comes back to you.',
     parameters: {
       bot: { type: 'string', required: true, description: 'Exact Bot name from list_bots' },
       reason: { type: 'string', description: 'Why it was stopped; it reads this afterwards' },
     },
-    output,
-    async execute(args: StopBotArgs, exec: ToolRunContext): Promise<string> {
+    schema: z.object({ bot: z.string(), reason: z.string().optional() }).passthrough(),
+    async execute(args: StopBotArgs, context: ToolContext): Promise<string> {
       await t.load()
-      const sender = shared.callerBot(exec)
+      const sender = shared.callerBot(context)
       if (sender === undefined || !t.isMain(sender.id)) shared.refuse('Only a Main Bot can stop other Bots.')
       const target = t.findBot(args.bot)
       if (target === undefined) shared.refuse(`No Bot named ${args.bot}. Team: ${Object.values(state.bots).map(bot => bot.name).join(', ')}`)
@@ -200,12 +199,12 @@ export function installTeamTools(rt: HostRuntime, shared: ToolShared): void {
         agent.cancel({ kind: 'hook', reason: 'ds-bot/stopped' })
       }
       const why = String(args.reason ?? '').trim() || 'Stop what you are doing; the previous turn was ended on purpose. Acknowledge briefly.'
-      await t.deliver({ fromId: sender.id, toId: target.id, text: why, role: 'stopped', ...shared.callerRoom(exec) })
+      await t.deliver({ fromId: sender.id, toId: target.id, text: why, role: 'stopped', ...shared.callerRoom(context) })
       return `Stopped ${target.name} in ${running.map(shared.whereOf).join(' and ')}. It is told why in a new turn, whose reply comes back to you.`
     },
-  }))
+  })
 
-  ctx.tools.register(defineTool({
+  shared.register({
     name: 'create_bot',
     description: 'Main Bot only. Create a new Bot on the user\'s team. It appears in the sidebar and greets the user.',
     parameters: {
@@ -218,20 +217,24 @@ export function installTeamTools(rt: HostRuntime, shared: ToolShared): void {
       work_dir: WORK_DIR_PARAM,
       avatar: AVATAR_PARAM,
     },
-    output,
-    async execute(args: CreateBotArgs, exec: ToolRunContext): Promise<string> {
+    schema: z.object({
+      name: z.string(), role: z.string(), instructions: z.string(),
+      brief: z.string().optional(), model: z.string().optional(), effort: z.string().optional(),
+      work_dir: z.string().optional(), avatar: z.string().optional(),
+    }).passthrough(),
+    async execute(args: CreateBotArgs, context: ToolContext): Promise<string> {
       await t.load()
-      if (!t.isMain(t.selfOf(exec.agent?.id))) return 'Only the Main Bot can create Bots. Ask the Main Bot instead.'
+      if (!t.isMain(t.selfOf(context.sessionId))) return 'Only the Main Bot can create Bots. Ask the Main Bot instead.'
       let bot: StoredBot
       try {
-        const folder = t.sessionFolder(exec.agent?.session ?? exec.agent)
+        const folder = t.sessionFolder(context.session ?? { id: context.sessionId })
         const avatar = args.avatar ? await readAvatar(String(args.avatar), { ...(folder !== undefined ? { baseDir: folder } : {}), isData: t.inData }) : undefined
         const workDir = args.work_dir ? await t.cleanWorkDir(args.work_dir) : undefined
         const name = String(args.name ?? '').trim()
-        await t.approveFolder(exec, { path: workDir, who: { en: `the new Bot ${name}`, zh: `新 Bot ${name} ` } })
+        await t.approveFolder(context, { path: workDir, who: { en: `the new Bot ${name}`, zh: `新 Bot ${name} ` }, toolName: 'create_bot' })
         // Without a named model the new Bot takes its creator's: the DSH default may be
         // a provider that has no key, and then the new Bot fails on its first reply.
-        const creator = shared.callerBot(exec)
+        const creator = shared.callerBot(context)
         const served = creator?.model ? (await t.catalog()).some(entry => entry.ref === creator.model) : undefined
         const model = args.model || (served ? creator?.model : undefined)
         bot = await t.createBot({ ...args, avatar: avatar === undefined ? undefined : { image: avatar }, model, workDir, effort: args.effort, createdBy: creator?.id })
@@ -240,9 +243,9 @@ export function installTeamTools(rt: HostRuntime, shared: ToolShared): void {
         return `Could not create the Bot: ${errorMessage(error)}`
       }
     },
-  }))
+  })
 
-  ctx.tools.register(defineTool({
+  shared.register({
     name: 'update_bot',
     description: 'Change a Bot\'s name, role, color, profile picture, model, thinking level, working folder, or instructions. Every Bot may change itself; only a Main Bot may change another Bot.',
     parameters: {
@@ -256,10 +259,14 @@ export function installTeamTools(rt: HostRuntime, shared: ToolShared): void {
       effort: { type: 'string', description: 'Thinking level for the Bot\'s model, as list_models shows; an empty string returns to the model\'s default' },
       work_dir: { ...WORK_DIR_PARAM, description: `${WORK_DIR_PARAM.description}; an empty string returns it to the team workspace` },
     },
-    output,
-    async execute(args: UpdateBotArgs, exec: ToolRunContext): Promise<string> {
+    schema: z.object({
+      bot: z.string().optional(), name: z.string().optional(), role: z.string().optional(),
+      instructions: z.string().optional(), color: z.string().optional(), avatar: z.string().optional(),
+      model: z.string().optional(), effort: z.string().optional(), work_dir: z.string().optional(),
+    }).passthrough(),
+    async execute(args: UpdateBotArgs, context: ToolContext): Promise<string> {
       await t.load()
-      const self = t.selfOf(exec.agent?.id)
+      const self = t.selfOf(context.sessionId)
       const caller = t.botOf(self)
       if (caller === undefined) return 'Only Bots on the team can use update_bot.'
       const bot = args.bot ? t.findBot(args.bot) : caller
@@ -270,12 +277,12 @@ export function installTeamTools(rt: HostRuntime, shared: ToolShared): void {
         let image: string | null | undefined
         if (args.avatar !== undefined) {
           const input = typeof args.avatar === 'string' ? args.avatar.trim() : args.avatar
-          const folder = t.sessionFolder(exec.agent?.session ?? exec.agent)
+          const folder = t.sessionFolder(context.session ?? { id: context.sessionId })
           image = input === null || input === '' ? null : await readAvatar(String(input), { ...(folder !== undefined ? { baseDir: folder } : {}), isData: t.inData })
         }
         const moving = typeof args.work_dir === 'string'
         const workDir = moving ? await t.cleanWorkDir(args.work_dir) : undefined
-        if (moving && workDir !== bot.workDir) await t.approveFolder(exec, { path: workDir, sessions: t.sessionsOfBot(bot.id), who: { en: bot.name, zh: ` ${bot.name} ` } })
+        if (moving && workDir !== bot.workDir) await t.approveFolder(context, { path: workDir, sessions: t.sessionsOfBot(bot.id), who: { en: bot.name, zh: ` ${bot.name} ` }, toolName: 'update_bot' })
         // The photo rides on the Bot's other avatar fields, as the settings page's upload
         // does: setting one keeps a custom character, and clearing removes only the image.
         // They are read here, after the waits above, so a change made meanwhile stays.
@@ -288,7 +295,7 @@ export function installTeamTools(rt: HostRuntime, shared: ToolShared): void {
         return `Could not update the Bot: ${errorMessage(error)}`
       }
     },
-  }))
+  })
 
   // DSH's working_directory changes a Session's folder in place, and the next part starts in
   // the Bot's working folder again. A Bot that changes to a folder outside its working folder
@@ -300,10 +307,10 @@ export function installTeamTools(rt: HostRuntime, shared: ToolShared): void {
     const session = exec.agent?.session
     if (cd === '' || session === undefined) return next()
     await t.load()
-    const bot = shared.callerBot(exec)
+    const sessionId = exec.agent?.id ?? ''
+    const bot = shared.callerBot({ sessionId, callId: '' })
     if (bot === undefined) return next()
-    const sessionId = exec.agent?.id
-    const room = sessionId === undefined ? undefined : t.roomOf(t.groupOwners.get(sessionId)?.roomId)
+    const room = t.roomOf(t.groupOwners.get(sessionId)?.roomId)
     const home = t.workDirOf({ botId: bot.id, roomId: room?.id }) ?? t.teamFolder?.()
     const target = await t.folderAt(t.sessionFolder(session), cd)
     if (target === undefined || !(await t.isFolder(target)) || home === undefined || within(target, await t.real(home))) return next()
@@ -319,11 +326,11 @@ export function installTeamTools(rt: HostRuntime, shared: ToolShared): void {
     return result
   })
 
-  ctx.tools.register(defineTool({
+  shared.register({
     name: 'list_models',
     description: 'List the models a Bot can run on, as provider/model refs for create_bot and update_bot. A model in use also lists the thinking levels it serves.',
     parameters: {},
-    output,
+    schema: z.object({}).passthrough(),
     async execute(): Promise<string> {
       const models = await t.catalog({ fresh: true })
       if (models.length === 0) return 'No models are configured. Ask the user to add one in Settings → Models.'
@@ -336,5 +343,5 @@ export function installTeamTools(rt: HostRuntime, shared: ToolShared): void {
         return `- ${entry.ref}${entry.name !== entry.id ? ` (${entry.name})` : ''}${entry.input?.includes('image') ? ', reads images' : ''}${entry.ref === fallback ? ', default' : ''}${thinking}`
       }).join('\n')
     },
-  }))
+  })
 }

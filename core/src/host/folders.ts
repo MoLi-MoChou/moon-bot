@@ -1,6 +1,7 @@
 import type {
   AgentSession, ApprovalService, DirectoryPicker, SandboxPolicy, ToolExecution, WorkingDirectoryService,
 } from './dsh-types.js'
+import type { ToolContext } from '../engine/registry.ts'
 import type { HostRuntime } from './runtime.js'
 
 interface FolderBody {
@@ -16,6 +17,8 @@ interface ApproveFolderInput {
   readonly path?: string
   readonly sessions?: readonly string[]
   readonly who: FolderWho
+  /** The asking tool's name, where the exec is a tool context that carries none. */
+  readonly toolName?: string
 }
 
 // Working folders: where a Bot's Sessions run. A group's folder holds for every member
@@ -156,8 +159,11 @@ export function install(rt: HostRuntime): void {
   // A folder outside the team workspace widens where a Bot may write, so a Bot that
   // sets one for Bots whose writes are bounded by their folder asks the user first.
   // `sessions` are the Sessions that would work there; the default policy counts too,
-  // since the Sessions made there later start under it. Throws when it is not allowed.
-  async function approveFolder(exec: ToolExecution, { path, sessions = [], who }: ApproveFolderInput): Promise<void> {
+  // since the Sessions made there later start under it. `exec` is a DSH exec with the
+  // calling agent at hand, or a tool context, whose live agent is resolved then; the
+  // approval must be asked by that same agent, as it scopes the request. Throws when
+  // it is not allowed.
+  async function approveFolder(exec: ToolExecution | ToolContext, { path, sessions = [], who, toolName }: ApproveFolderInput): Promise<void> {
     const team = await realTeam()
     const policy = ctx.get<SandboxPolicy>('sandboxPolicy')
     if (path === undefined || (team !== undefined && within(path, team)) || policy === undefined) return
@@ -165,12 +171,15 @@ export function install(rt: HostRuntime): void {
     const modes = [policy.resolve(), ...agents.map(agent => policy.resolve({ session: agent.session }))].map(entry => entry.mode)
     if (!modes.includes('workspace-write')) return
     const approval = ctx.get<ApprovalService>('approval')
-    const agent = exec.agent
+    const agent = 'agent' in exec && exec.agent !== undefined ? exec.agent
+      : 'sessionId' in exec ? await rt.resolveAgent(exec.sessionId).catch(() => undefined)
+        : undefined
     if (approval === undefined || agent?.session === undefined) throw new Error(`Working in ${path} needs the user's approval, and there is no way to ask for it here, so nothing changed. The user can make this change in the settings.`)
+    const name = toolName ?? ('name' in exec ? exec.name : undefined)
     const outcome = await approval.request({
       agent,
-      ...(exec.name !== undefined ? { toolName: exec.name } : {}),
-      ...(exec.callId !== undefined ? { callId: exec.callId } : {}),
+      ...(name !== undefined ? { toolName: name } : {}),
+      ...(exec.callId !== undefined && exec.callId !== '' ? { callId: exec.callId } : {}),
       reason: `Let ${who.en} work in ${path}? Files there can then be changed.`,
       displayReason: { en: `Let ${who.en} work in ${path}? Files there can then be changed.`, zh: `允许${who.zh}在 ${path} 中工作吗？之后可以修改这个文件夹里的文件。` },
       ...(exec.signal ? { signal: exec.signal } : {}),

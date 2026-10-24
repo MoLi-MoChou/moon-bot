@@ -30,16 +30,12 @@ const stringOf = (value) => typeof value === "string" ? value : void 0;
 function createShared(host, registry = new ToolRegistry()) {
   const rt = host;
   const { state, ctx } = rt;
-  const callerBot = (exec) => rt.botOf(rt.selfOf(exec.agent?.id));
-  const callerRoom = (exec) => {
-    const sessionId = exec.agent?.id;
-    const roomId = sessionId === void 0 ? void 0 : rt.groupOwners.get(sessionId)?.roomId;
+  const callerBot = (context) => rt.botOf(rt.selfOf(context.sessionId));
+  const callerRoom = (context) => {
+    const roomId = rt.groupOwners.get(context.sessionId)?.roomId;
     return roomId ? { fromRoomId: roomId } : {};
   };
-  const roomOfCaller = (exec) => {
-    const sessionId = exec.agent?.id;
-    return sessionId === void 0 ? void 0 : rt.roomOf(rt.groupOwners.get(sessionId)?.roomId);
-  };
+  const roomOfCaller = (context) => rt.roomOf(rt.groupOwners.get(context.sessionId)?.roomId);
   const roomLine = (room, self) => {
     const members = (room.members ?? []).map((id) => rt.botOf(id)).filter((bot) => bot !== void 0).map((bot) => `${bot.name}${bot.id === room.admin ? " (admin)" : ""}${bot.id === self ? " (you)" : ""}`);
     const parts = [
@@ -83,23 +79,21 @@ function createShared(host, registry = new ToolRegistry()) {
   const refuse = (message) => {
     throw new Error(message);
   };
-  const worksOf = (exec) => {
-    const turn = liveEntry(exec.agent?.id);
+  const worksOf = (context) => {
+    const turn = liveEntry(context.sessionId);
     return [rt.workOf(turn?.info), ...(turn?.joined ?? []).map((joined) => rt.workOf(joined.info))].filter((id) => id !== void 0);
   };
   const tooLong = (text) => `Not sent: the message has ${text.length} characters, more than ${MESSAGE_INLINE_MAX}, and this DeepSeek Harness cannot send it as a file. Write it to a file in your working folder and send its path instead.`;
-  const callInGroup = async (exec, room, sender, target, message) => {
+  const callInGroup = async (context, room, sender, target, message) => {
     if (!(room.members ?? []).includes(target.id)) {
       const add = rt.isMain(sender.id) || rt.isAdminOf(room, sender.id) ? ", or add it yourself with update_group first" : "";
       refuse(`Not sent: ${target.name} is not in "${room.name}", and work for this group stays in it. Ask the user to add ${target.name} to the group${add}.`);
     }
     const call = `@${target.name}`;
-    const sessionId = exec.agent?.id;
-    if (sessionId === void 0) return refuse("Not sent: only a Bot working in the group can call a member there.");
-    await rt.roomStepText(sessionId, rt.live.get(sessionId)?.info, message.startsWith(call) ? message : `${call} ${message}`, false);
+    await rt.roomStepText(context.sessionId, rt.live.get(context.sessionId)?.info, message.startsWith(call) ? message : `${call} ${message}`, false);
     return `Called ${target.name} in "${room.name}" with your message, as writing "${call}" there does: it works on it in the group, and you answer its result there. Nothing went to its own chat.`;
   };
-  const turnOf = (exec) => liveEntry(exec.agent?.id)?.turn;
+  const turnOf = (context) => liveEntry(context.sessionId)?.turn;
   const hiddenTurn = (sessionId) => {
     const turn = rt.live.get(sessionId)?.turn;
     return typeof turn === "number" && (state.exchangeTurns[sessionId] ?? []).includes(turn);

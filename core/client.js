@@ -2184,7 +2184,8 @@ function createSource(initial) {
       const resolved = typeof next === "function" ? next(value) : next;
       if (resolved === value) return;
       value = resolved;
-      for (const listener of [...listeners3]) listener();
+      const snapshot = [...listeners3];
+      for (const listener of snapshot) listener();
     }
   };
 }

@@ -79,8 +79,7 @@ export interface ApproveFolderOptions {
   readonly toolName?: string | undefined
 }
 
-/** What approveFolder asks with: a DSH exec that carries the calling agent, or a tool
- * context whose session names it. */
+/** What approveFolder asks with: a DSH exec that carries the calling agent, or a tool context. */
 export type ApproveFolderExec = ToolExecution | ToolContext
 
 export interface PostToRoomOptions {
@@ -302,7 +301,7 @@ export function createShared(host: HostRuntime, registry: ToolRegistry = new Too
 
   // The Bots each Session's post_to_group called by name in its current turn, so that
   // turn does not also send them the same work in their own chats.
-  const turnOf = (exec: ToolRunContext): unknown => liveEntry(exec.agent?.id)?.turn
+  const turnOf = (context: ToolContext): unknown => liveEntry(context.sessionId)?.turn
 
   const hiddenTurn = (sessionId: string): boolean => {
     const turn = rt.live.get(sessionId)?.turn

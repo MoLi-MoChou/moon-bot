@@ -65,11 +65,13 @@ const memoryScopesOf = (runtime: Runtime, sessionId: string): readonly string[] 
 
 /** What the index surfaces for this turn's words: ranked, bounded, prose-only. */
 const surfacedMemories = (runtime: Runtime, store: Store, sync: MemorySync, sessionId: string, query: string | undefined): readonly string[] => {
-  const text = (query ?? '').replace(/[\[\]{}()#>*`|]/g, ' ').trim()
-  if (text.length < 4) return []
+  // Words of real length only: a question made of grammar words ("what is the…")
+  // surfaces nothing, while a term that names the subject does.
+  const terms = (query ?? '').replace(/[\[\]{}()#>*`|]/g, ' ').split(/\s+/).filter(term => term.length >= 4)
+  if (terms.length === 0) return []
   try {
     sync.syncChanged(memoryScopesOf(runtime, sessionId))
-    return store.memory.search(memoryScopesOf(runtime, sessionId), text, 4)
+    return store.memory.search(memoryScopesOf(runtime, sessionId), terms.join(' '), 4)
       .filter(({ row }) => row.text.trim() !== '')
       .map(({ row }) => row.text.length > 200 ? `${row.text.slice(0, 200)}…` : row.text)
   } catch {

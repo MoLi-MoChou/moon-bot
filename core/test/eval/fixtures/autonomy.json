@@ -1,0 +1,8 @@
+{
+  "capability": "autonomy",
+  "checks": [
+    "L0 and L2 tools run without asking",
+    "an L4 tool asks every time once its daily budget is spent, and the refusal names no appeal",
+    "an unknown (connector) tool is L3 and runs within budget only"
+  ]
+}

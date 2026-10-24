@@ -1,0 +1,7 @@
+{
+  "capability": "memory-without-being-asked",
+  "checks": [
+    "a turn whose text overlaps a stored memory surfaces that memory with no recall command",
+    "an unrelated turn surfaces nothing"
+  ]
+}

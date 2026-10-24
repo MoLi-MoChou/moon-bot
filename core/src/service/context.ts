@@ -1,0 +1,145 @@
+// The standalone host context (plan §阶段 3): the surface the host modules install on,
+// without DSH. It is the production sibling of the test fakeContext — routes are
+// captured for the service to serve, listeners fan out for real, effects are disposed
+// on close — while services the standalone product does not ship yet stay absent, which
+// the host modules already tolerate (the whole suite runs on less than this).
+import type { Disposer } from '../host/dsh-types.js'
+
+/**
+ * The standalone host context: the surface the host modules install on, shaped like the
+ * test fakeContext (a plain object cast at the composition site) rather than the full
+ * DSH context type, which names services the standalone product does not ship.
+ */
+
+/** One registered fetch route, as the host modules register them. */
+export interface FetchRoute {
+  readonly path: string
+  readonly methods: readonly string[]
+  fetch(request: Request): Promise<Response>
+}
+
+export interface ServiceContextOptions {
+  /** Service implementations by name, for the ctx.get surface (attachments, approval…). */
+  readonly services?: Readonly<Record<string, unknown>>
+  /** The engine-backed agents, for sessionController.resolveAgent. */
+  readonly resolveAgent?: (sessionId: string) => Promise<unknown> | unknown
+}
+
+interface Listener {
+  readonly name: string
+  readonly run: (payload: unknown, second: unknown) => unknown
+}
+
+export class ServiceContext {
+  readonly logger = { info: () => {}, warn: () => {}, error: () => {} }
+  private readonly listeners = new Map<string, Listener[]>()
+  private readonly routes = new Map<string, FetchRoute>()
+  private readonly disposers: (() => void)[] = []
+  private readonly registeredTools = new Map<string, unknown>()
+  private readonly sections = new Map<string, unknown>()
+  private readonly services: Readonly<Record<string, unknown>>
+  private readonly agentOf: ServiceContextOptions['resolveAgent']
+
+  constructor(options: ServiceContextOptions = {}) {
+    this.services = options.services ?? {}
+    this.agentOf = options.resolveAgent
+  }
+
+  // Bound arrow properties: host modules extract these (const on = ctx.on), so they
+  // must not lose their receiver the way a class method would.
+  get = <T>(name: string): T | undefined => this.services[name] as T | undefined
+
+  on = (name: string, listener: (payload: unknown, second: unknown) => unknown, options?: { readonly prepend?: boolean }): Disposer => {
+    const entry = { name, run: listener }
+    const list = this.listeners.get(name) ?? []
+    this.listeners.set(name, options?.prepend === true ? [entry, ...list] : [...list, entry])
+    return () => { this.listeners.set(name, (this.listeners.get(name) ?? []).filter(item => item !== entry)) }
+  }
+
+  /** Fans an event out in registration order; middleware (with `next`) is not used here. */
+  emit = (name: string, payload: unknown, second?: unknown): void => {
+    for (const listener of this.listeners.get(name) ?? []) void listener.run(payload, second)
+  }
+
+  effect = (execute: () => void | Disposer, label?: string): void => {
+    const dispose = execute()
+    if (typeof dispose === 'function') this.disposers.push(dispose)
+    void label
+  }
+
+  /**
+   * DSH's late service injection. The standalone service has no sub-plugins: a named
+   * service that exists is handed over at once, one that does not never arrives — the
+   * calling module keeps its absent-service behavior (goals stay unblocked, and so on).
+   */
+  inject(names: readonly string[], inject: (scope: unknown) => void): void {
+    const first = names[0]
+    if (first === undefined) return
+    const service = this.services[first]
+    if (service !== undefined) inject({ [first]: service, effect: (execute: () => (() => void) | void) => { const dispose = execute(); if (typeof dispose === 'function') this.disposers.push(dispose) } })
+  }
+
+  readonly connection = {
+    fetch: {
+      register: (route: FetchRoute): (() => void) => {
+        this.routes.set(route.path, route)
+        return () => { this.routes.delete(route.path) }
+      },
+    },
+  }
+
+  readonly tools = {
+    register: (tool: unknown): (() => void) => {
+      const name = (tool as { name?: string }).name ?? ''
+      this.registeredTools.set(name, tool)
+      return () => { this.registeredTools.delete(name) }
+    },
+    guard: (): (() => void) => () => {},
+    schemas: (): readonly unknown[] => [],
+  }
+
+  readonly systemPrompt = {
+    section: (section: unknown): (() => void) => {
+      const name = (section as { name?: string }).name ?? ''
+      this.sections.set(name, section)
+      return () => { this.sections.delete(name) }
+    },
+  }
+
+  readonly llm = {
+    listProviders: (): readonly string[] => [],
+    listModels: async (): Promise<readonly unknown[]> => [],
+    resolveModelInfo: async (): Promise<Record<string, unknown>> => ({}),
+  }
+
+  readonly sessionController = {
+    create: async (): Promise<{ sessionId: string }> => ({ sessionId: `s${Math.random().toString(36).slice(2, 10)}` }),
+    resolveAgent: async (sessionId: string): Promise<{ agent: unknown }> => {
+      if (this.agentOf === undefined) throw Object.assign(new Error('Session unavailable'), { code: 'bot/unavailable' })
+      const agent = await this.agentOf(sessionId)
+      return { agent }
+    },
+    selectModel: async (): Promise<void> => {},
+  }
+
+  readonly sessionTitle = { rename: async (): Promise<void> => {} }
+  readonly sessions = { flush: async (): Promise<void> => {} }
+  readonly workspaceRegistry = {
+    get: (): undefined => undefined,
+    resolveByPath: async (): Promise<undefined> => undefined,
+    create: async (path: string): Promise<{ id: string, path: string }> => ({ id: path, path }),
+    archiveSession: async (): Promise<void> => {},
+  }
+
+  /** The captured fetch routes, keyed by path, for the service to serve. */
+  routeOf(path: string): FetchRoute | undefined {
+    return this.routes.get(path)
+  }
+
+  /** Runs every disposer, in reverse registration order. */
+  async dispose(): Promise<void> {
+    for (const dispose of this.disposers.splice(0).reverse()) {
+      try { dispose() } catch { /* a failing cleanup does not stop the others */ }
+    }
+  }
+}

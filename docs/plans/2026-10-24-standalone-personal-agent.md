@@ -286,3 +286,10 @@ TS 现状盘点（2026-10-24 实测）：core 源码侧仅剩 `index.js`（70 �
 - **ACP 完整 Bot 已成**（commit ed549f9）：Bot 的 engine 字段指向 ACP 命令即走外脑——每规格一个 AcpRuntime，会话共享；其余皆 roster 原码。测试即阶段 5 验收：Atlas（ACP）与 Chief（内置脚本端点）同队，group_relay 群聊回合作答、message_bot 派活并以 [Reply from Atlas] 回来。实测发现：适配器按服务器分配的 ACP 会话 id 映射——fixture 对每个 session/new 返回同一 id 会串话（真 agent 各发新 id，fixture 已改）。**降级矩阵即代码事实：ACP 路径无冻结记忆注入、无工具门（协议外不强求），engine 字段即标注。**
 - 门禁：core 935/932/0。**阶段 5 完成。**
 - 门禁：core 932/929/0。
+
+## 十六、阶段 6 进行记录（2026-10-25 起）
+
+- **五项能力评测集已立**（commit 3d0df3f）：`core/test/eval/fixtures/*.json` + `scripts/eval.ts`（`npm run eval`），对真实 wired 服务跑：记忆跨重启并主动可见、可删；相关性浮现只随主题（冻结快照按设计每回合随行）；调度暂停不出、到期跨重启恰好一次；连接器工作流断连重试并受 L3 策略；L0–L4 与预算、无申诉拒绝。**五项全 PASS**。顺带真修复：浮现检索丢弃 <4 字符词——纯语法词的提问不再误浮。
+- **测试全面 .ts**：107 个 .test.js 全部改名 .ts（测试 glob 收敛），tsconfig.test.json 宽松门禁落地；子代理分批清零其中类型错误（进行中，957→约 688）。
+- **DSH 移除第一遍已扫**（commit 4f933e8）：web-search 本地 WebError；client 原语独立版（app 构建仍以其 react-markdown 模块替换）；dsh-update 整特性删除（模块/通道/RPC/测试）；llm 类型入 dsh-types；工具派生恒用本地折参包装；speech 普通包名；诊断不再探测 DSH。**运行时剩余仅两处惰性 seam**（connectors/capabilities-mount 的 dsh-mcp-client，DSH 宿主能力路径）——自研 McpConnector 已在，改接线为独立一步。ambient declare-module 类型仍在 .d.ts。
+- 门禁：core 925/922/0；eval 五项 PASS。

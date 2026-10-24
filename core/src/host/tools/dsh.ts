@@ -5,6 +5,7 @@
 //
 // defineTool loads lazily: the standalone service has no DSH install, and there the
 // registration is a plain pass-through anyway (the context's own collector).
+import { createRequire } from 'node:module'
 import type { ToolContext, ToolEntry, ToolOutcome } from '../../engine/registry.ts'
 import type { HostRuntime } from '../runtime.ts'
 import { output, type ToolOutput } from './shared.ts'
@@ -15,14 +16,26 @@ export interface DshToolContext {
 
 type ToolWrapper = <T extends Record<string, unknown>>(definition: T) => T
 
-let wrapper: Promise<ToolWrapper> | undefined
-
-const toolWrapper = (): Promise<ToolWrapper> => {
-  wrapper ??= import('@deepseek-ai/dsh-tools')
-    .then(module => module.defineTool as ToolWrapper)
-    // Without a DSH install the registration takes the definition as it is.
-    .catch(() => ((definition: unknown) => definition) as unknown as ToolWrapper)
-  return wrapper
+// Synchronous on purpose: tools register during install, before any await. With a DSH
+// install its defineTool runs; without one (the standalone service) the definition
+// passes through, which the service's own collector takes as it is.
+const toolWrapper = (): ToolWrapper => {
+  try {
+    return (createRequire(import.meta.url)('@deepseek-ai/dsh-tools') as { defineTool: ToolWrapper }).defineTool
+  } catch {
+    // Without a DSH install: the definition passes through, with the parameter map
+    // folded into the schema shape every reader expects (properties + required).
+    return ((definition: Record<string, unknown>) => ({
+      ...definition,
+      parameters: {
+        type: 'object',
+        properties: definition.parameters,
+        required: Object.entries(definition.parameters as Readonly<Record<string, unknown>>)
+          .filter(([, parameter]) => (parameter as Readonly<Record<string, unknown>> | undefined)?.required === true)
+          .map(([name]) => name),
+      },
+    })) as unknown as ToolWrapper
+  }
 }
 
 const asText = (outcome: ToolOutcome): string => outcome.content
@@ -31,7 +44,8 @@ const asText = (outcome: ToolOutcome): string => outcome.content
 
 /** Registers one entry with DSH, adapting the ToolContext. */
 export function registerDshTool(ctx: DshToolContext, entry: ToolEntry, rt: HostRuntime, toolOutput: ToolOutput = output): void {
-  void toolWrapper().then(defineTool => {
+  {
+    const defineTool = toolWrapper()
     ctx.tools.register(defineTool({
       name: entry.name,
       description: entry.description,
@@ -56,5 +70,5 @@ export function registerDshTool(ctx: DshToolContext, entry: ToolEntry, rt: HostR
         return asText(outcome)
       },
     } as Record<string, unknown>))
-  }).catch(error => rt.warn('ds-bot: registering %s with DSH failed: %s', entry.name, error))
+  }
 }

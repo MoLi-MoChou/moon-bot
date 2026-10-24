@@ -2,7 +2,7 @@
 // that waits moves with it. The state tables live here, as does the rescue path for a
 // part whose requests keep failing. `parts-switch-move.ts` performs one move.
 import { randomUUID } from 'node:crypto'
-import { createUserMessage } from '@deepseek-ai/dsh-llm'
+import { createUserMessage } from './llm-bits.ts'
 import { SOURCE_KIND } from './constants.ts'
 import { RESUME_DELAY_MS } from './resume.ts'
 import { textOf } from './text.ts'

@@ -1,7 +1,7 @@
 // Moving one part on to a fresh Session: what the fresh part carries, the model it runs
 // on, the working folder it starts in, and the input the old part hands over. The switch
 // lifecycle and its state tables stay in `parts-switch.ts`, which owns this factory.
-import { createUserMessage } from '@deepseek-ai/dsh-llm'
+import { createUserMessage } from './llm-bits.ts'
 import type { LlmMessageSource, LlmTextBlock } from '@deepseek-ai/dsh-llm'
 import { REPLY_KIND, SOURCE_KIND } from './constants.ts'
 import { estimateTokens, splitRef } from './text.ts'

@@ -7,7 +7,7 @@
 // `groups/notice.ts`, and the shapes they all use in `groups/types.ts`.
 import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
-import { createUserMessage } from '@deepseek-ai/dsh-llm'
+import { createUserMessage } from './llm-bits.ts'
 import { SOURCE_KIND, TEXT_KEPT } from './constants.ts'
 import { headOf } from './text.ts'
 import type { Agent } from './dsh-types.js'

@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { mkdir, rename, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
-import { BlockAssembler } from "@deepseek-ai/dsh-llm";
+import { BlockAssembler } from "./llm-bits.js";
 import { splitRef } from "./text.js";
 import { MEMORY_LIMITS, cleanEntry, cleanTopic, errorMessage } from "./memory/records.js";
 import { createStorage } from "./memory/storage.js";

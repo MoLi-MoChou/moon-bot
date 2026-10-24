@@ -6,8 +6,8 @@
 // `parts.ts` owns when any of this runs; this module owns what is asked and what comes
 // back. The part reading lives in `parts-note-read.ts` and the note prompt in
 // `parts-note-text.ts`; the shapes are in `parts-note-types.d.ts`.
-import { BlockAssembler } from '@deepseek-ai/dsh-llm'
-import type { LlmStreamChunk } from '@deepseek-ai/dsh-llm'
+import { BlockAssembler } from './llm-bits.ts'
+import type { LlmStreamChunk } from './llm-bits.ts'
 import {
   CHECKPOINT_PROMPT, STEWARD_SYSTEM, checkpointCount, checkpointTail, checkpointTailNote, checkpointText,
   parseDecision, stewardRequest,

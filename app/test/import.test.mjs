@@ -6,7 +6,7 @@ import { homedir, tmpdir } from 'node:os'
 import { dirname, join, relative } from 'node:path'
 import { after, before, describe, test } from 'node:test'
 import { parse } from 'yaml'
-import { copySessions, findTeam, importTeam, newerSessions, sessionIdsOf, teamInUse, userDshHome } from '../src/import.mjs'
+import { copySessions, findTeam, importTeam, newerSessions, sessionIdsOf, teamInUse, userDshHome } from '../src/import.ts'
 
 const write = (path, text) => {
   mkdirSync(dirname(path), { recursive: true })

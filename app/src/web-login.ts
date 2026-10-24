@@ -1,10 +1,14 @@
 // The password page of web mode: one field, no scripts, in the Moon theme, light or dark
 // with the system. The Moon Bot tile comes from assets/icons (scripts/icon.py).
 import { readFileSync } from 'node:fs'
-const tile = name => `data:image/png;base64,${readFileSync(new URL(`../assets/icons/${name}.png`, import.meta.url)).toString('base64')}`
+
+const tile = (name: string): string => `data:image/png;base64,${readFileSync(new URL(`../assets/icons/${name}.png`, import.meta.url)).toString('base64')}`
 const LOGO = tile('moon-bot-96'), LOGO_DARK = tile('moon-bot-dark-96'), FAVICON = tile('moon-bot-32')
-const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
-export function loginPage({ error = false, wait = false } = {}) {
+
+const ESCAPES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }
+const esc = (s: string): string => String(s).replace(/[&<>"]/gu, c => ESCAPES[c] ?? c)
+
+export function loginPage({ error = false, wait = false }: { error?: boolean; wait?: boolean } = {}): string {
   const note = wait ? '尝试次数过多，请 10 分钟后再试。 Too many tries, wait 10 minutes.' : error ? '密码不对。 Wrong password.' : ''
   return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Moon Bot · 登录</title><link rel="icon" type="image/png" href="${FAVICON}"><style>

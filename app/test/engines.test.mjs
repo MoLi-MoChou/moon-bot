@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import * as tar from 'tar'
-import { ENGINES, REGISTRIES, engineReady, ensureEngine, tarballUrl } from '../src/engines.mjs'
+import { ENGINES, REGISTRIES, engineReady, ensureEngine, tarballUrl } from '../src/engines.ts'
 
 test('the engines are the versions and checksums the lockfile installs', () => {
   const lock = JSON.parse(readFileSync(new URL('../package-lock.json', import.meta.url), 'utf8'))

@@ -3,8 +3,8 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, readlink
 import { tmpdir } from 'node:os'
 import { dirname, join, parse } from 'node:path'
 import { test } from 'node:test'
-import { copyTree } from '../src/copy-tree.mjs'
-import { copyData, installFolder, moveProblem } from '../src/move-data.mjs'
+import { copyTree } from '../src/copy-tree.ts'
+import { copyData, installFolder, moveProblem } from '../src/move-data.ts'
 
 const write = (path, text) => {
   mkdirSync(dirname(path), { recursive: true })

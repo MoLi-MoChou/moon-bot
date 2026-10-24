@@ -4,10 +4,16 @@
 // sandbox, as most Electron AppImages do. The window only shows the app's own local page.
 import { readFileSync } from 'node:fs'
 
-const read = (path) => { try { return readFileSync(path, 'utf8').trim() } catch { return undefined } }
+const read = (path: string): string | undefined => { try { return readFileSync(path, 'utf8').trim() } catch { return undefined } }
 
-/** @returns {boolean} whether this process should pass --no-sandbox */
-export function needsNoSandbox({ platform = process.platform, env = process.env, readText = read } = {}) {
+export interface SandboxCheck {
+  readonly platform?: string | undefined
+  readonly env?: NodeJS.ProcessEnv | undefined
+  readonly readText?: ((path: string) => string | undefined) | undefined
+}
+
+/** @returns whether this process should pass --no-sandbox */
+export function needsNoSandbox({ platform = process.platform, env = process.env, readText = read }: SandboxCheck = {}): boolean {
   if (platform !== 'linux' || !env.APPIMAGE) return false
   if ([env.MOON_BOT_SANDBOX, env.MOCHOU_SANDBOX, env.DSH_BOT_SANDBOX].includes('1')) return false
   if (readText('/proc/sys/kernel/apparmor_restrict_unprivileged_userns') === '1') return true

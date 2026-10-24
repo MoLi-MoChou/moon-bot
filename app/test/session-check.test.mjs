@@ -5,9 +5,9 @@ import { dirname, join } from 'node:path'
 import { after, before, describe, test } from 'node:test'
 import { fileURLToPath } from 'node:url'
 import { zstdCompressSync } from 'node:zlib'
-import { HostProcess } from '../src/host-process.mjs'
-import { CHECK_PROFILE } from '../src/profile.mjs'
-import { unreadableSessions } from '../src/session-check.mjs'
+import { HostProcess } from '../src/host-process.ts'
+import { CHECK_PROFILE } from '../src/profile.ts'
+import { unreadableSessions } from '../src/session-check.ts'
 
 const named = (name, message) => Object.assign(new Error(message), { name })
 
@@ -53,7 +53,7 @@ describe('the first-run check', () => {
     mkdirSync(cwd, { recursive: true })
     const app = dirname(dirname(fileURLToPath(import.meta.url)))
     const check = new HostProcess({
-      entry: join(app, 'src', 'host.mjs'), cwd, env: { ...process.env, DSH_HOME: home, DS_BOT_CHECK: list },
+      entry: join(app, 'src', 'host.ts'), cwd, env: { ...process.env, DSH_HOME: home, DS_BOT_CHECK: list },
       pnpm: join(app, 'node_modules', 'pnpm', 'bin', 'pnpm.mjs'), onFailure: () => {},
     })
     try {

@@ -1,13 +1,52 @@
 // The first start: where the app keeps its data and the Bots' files, and whether it copies the
 // Bot team of the user's own DSH. The answers are kept in the app's own data.
 import { app, dialog } from 'electron'
+import type { MessageBoxOptions } from 'electron'
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { findTeam, newerSessions, teamInUse, userDshHome, within } from './import.mjs'
-import { installFolder } from './move-data.mjs'
+import { type ImportChoice, findTeam, newerSessions, teamInUse, userDshHome, within } from './import.ts'
+import { installFolder } from './move-data.ts'
 
-const TEXT = {
+export interface FirstRunText {
+  readonly welcome: string
+  readonly places: (data: string, workspace: string) => string
+  readonly start: string
+  readonly change: string
+  readonly pickData: string
+  readonly pickWorkspace: string
+  readonly dataInWorkspace: string
+  readonly workspaceInData: string
+  readonly inDsh: (home: string) => string
+  readonly inProgram: string
+  readonly pickMove: string
+  readonly moveDrive: string
+  readonly moveNested: string
+  readonly moveWorkspace: string
+  readonly moveNotEmpty: string
+  readonly moveConfirm: (to: string) => string
+  readonly moveDetail: (from: string) => string
+  readonly move: string
+  readonly cancel: string
+  readonly moving: string
+  readonly starting: string
+  readonly moveInUse: string
+  readonly moveFailed: (message: string) => string
+  readonly found: (bots: number, rooms: number) => string
+  readonly foundDetail: (home: string) => string
+  readonly copy: string
+  readonly skip: string
+  readonly inUse: string
+  readonly retry: string
+  readonly newer: (count: number) => string
+  readonly quit: string
+  readonly startEmpty: string
+  readonly whichModels: string
+  readonly failed: (message: string) => string
+  readonly notStarted: string
+}
+
+const TEXT: Readonly<Record<'en' | 'zh', FirstRunText>> = {
   en: {
     welcome: 'Welcome to Moon Bot',
     places: (data, workspace) => `Data: ${data}\nTeam workspace: ${workspace}`,
@@ -71,33 +110,33 @@ const TEXT = {
     notStarted: 'Moon Bot 没能启动。',
   },
 }
-export const localeText = table => (app.getLocale().toLowerCase().startsWith('zh') ? table.zh : table.en)
-export const text = () => localeText(TEXT)
+export const localeText = <T>(table: Readonly<Record<'zh' | 'en', T>>): T => (app.getLocale().toLowerCase().startsWith('zh') ? table.zh : table.en)
+export const text = (): FirstRunText => localeText(TEXT)
 
-const PROFILE_NAMES = { desktop: 'DSH Desktop', web: 'DSH Web' }
-const locationsFile = () => join(app.getPath('userData'), 'locations.json')
+const PROFILE_NAMES: Record<string, string> = { desktop: 'DSH Desktop', web: 'DSH Web' }
+const locationsFile = (): string => join(app.getPath('userData'), 'locations.json')
 
 // A quit request while a first-run dialog is open stops the first run right after that dialog.
 class Quit extends Error {}
 
-async function ask(options, signal) {
+async function ask(options: MessageBoxOptions, signal: AbortSignal): Promise<number> {
   const { response } = await dialog.showMessageBox({ title: 'Moon Bot', noLink: true, ...options, signal })
   // A quit that arrived while a synchronous macOS box was open gets to run first.
-  await new Promise(resolve => setImmediate(resolve))
+  await new Promise<void>(resolve => setImmediate(resolve))
   if (signal.aborted) throw new Quit()
   return response
 }
 
-async function pick(title, current, signal) {
+async function pick(title: string, current: string, signal: AbortSignal): Promise<string> {
   const { canceled, filePaths } = await dialog.showOpenDialog({ title, defaultPath: existsSync(current) ? current : dirname(current), properties: ['openDirectory', 'createDirectory', 'promptToCreate'] })
-  await new Promise(resolve => setImmediate(resolve))
+  await new Promise<void>(resolve => setImmediate(resolve))
   if (signal.aborted) throw new Quit()
-  return canceled ? current : filePaths[0]
+  return canceled || filePaths[0] === undefined ? current : filePaths[0]
 }
 
-export const programFolder = () => installFolder(app.getPath('exe'))
+export const programFolder = (): string => installFolder(app.getPath('exe'))
 
-function placeProblem(t, dataDir, workspace) {
+function placeProblem(t: FirstRunText, dataDir: string, workspace: string): string | undefined {
   const dsh = userDshHome()
   const program = programFolder()
   if (within(dataDir, workspace)) return t.dataInWorkspace
@@ -109,15 +148,18 @@ function placeProblem(t, dataDir, workspace) {
   return undefined
 }
 
-function hasTeam(dataDir) {
+function hasTeam(dataDir: string): boolean {
   try {
-    return Object.keys(JSON.parse(readFileSync(join(dataDir, 'bot', 'state.json'), 'utf8')).bots ?? {}).length > 0
+    const state: unknown = JSON.parse(readFileSync(join(dataDir, 'bot', 'state.json'), 'utf8'))
+    const bots = typeof state === 'object' && state !== null ? (state as { readonly bots?: unknown }).bots : undefined
+    const roster = typeof bots === 'object' && bots !== null ? bots : {}
+    return Object.keys(roster).length > 0
   } catch {
     return false
   }
 }
 
-async function offerImport(t, dataDir, signal) {
+async function offerImport(t: FirstRunText, dataDir: string, signal: AbortSignal): Promise<ImportChoice | { readonly quit: true } | undefined> {
   const from = userDshHome()
   let found
   try {
@@ -136,13 +178,18 @@ async function offerImport(t, dataDir, signal) {
     return undefined
   }
   const { profiles } = found
-  const profile = profiles.length < 2 ? profiles[0]?.name
-    : profiles[await ask({ type: 'question', message: t.whichModels, buttons: profiles.map(entry => PROFILE_NAMES[entry.name] ?? entry.name), defaultId: 0, cancelId: 0 }, signal)].name
-  return { from, profile }
+  const chosen = profiles.length < 2 ? profiles[0] : profiles[await ask({ type: 'question', message: t.whichModels, buttons: profiles.map(entry => PROFILE_NAMES[entry.name] ?? entry.name), defaultId: 0, cancelId: 0 }, signal)]
+  return { from, profile: chosen?.name }
+}
+
+/** The places the app keeps its data, as written by the first run. */
+export interface SavedPlaces {
+  readonly dataDir: string
+  readonly workspace?: string | undefined
 }
 
 /** Write the chosen places once the first run is finished; quitting before that asks again. */
-export function saveLocations({ dataDir, workspace }) {
+export function saveLocations({ dataDir, workspace }: SavedPlaces): void {
   const file = locationsFile()
   mkdirSync(dirname(file), { recursive: true })
   // A write that fails half way leaves the places that were there.
@@ -150,23 +197,24 @@ export function saveLocations({ dataDir, workspace }) {
   renameSync(`${file}.tmp`, file)
 }
 
+/** What the first run chose: the places, and the team to import; `quit` when the user left. */
+export type FirstRunResult = (SavedPlaces & { readonly import?: ImportChoice | undefined }) | { readonly quit: true }
+
 /**
  * Where the app keeps its data and the Bots' files, asked at the first start.
  * A run on throwaway folders (DS_BOT_HOME, for development and tests) asks nothing and copies nothing.
- * @returns {Promise<{ dataDir: string, workspace?: string, import?: { from: string, profile?: string }, quit?: true }>}
  */
-export async function chooseLocations(signal) {
-  if (process.env.DS_BOT_HOME) return { dataDir: process.env.DS_BOT_HOME, workspace: process.env.DS_BOT_WORKSPACE || undefined }
+export async function chooseLocations(signal: AbortSignal): Promise<FirstRunResult> {
+  const throwaway = process.env.DS_BOT_HOME
+  if (throwaway) return { dataDir: throwaway, workspace: process.env.DS_BOT_WORKSPACE || undefined }
   const file = locationsFile()
   // Before the Moon Bot rename the app was "Mochou" or "DSH Bot": their saved places still apply.
   const legacy = ['Mochou', 'DSH Bot'].map(name => join(app.getPath('appData'), name, 'locations.json')).find(path => existsSync(path))
   if (!existsSync(file) && legacy !== undefined) {
-    const saved = JSON.parse(readFileSync(legacy, 'utf8'))
-    return { dataDir: saved.dataDir, workspace: saved.workspace }
+    return JSON.parse(readFileSync(legacy, 'utf8')) as SavedPlaces
   }
   if (existsSync(file)) {
-    const saved = JSON.parse(readFileSync(file, 'utf8'))
-    return { dataDir: saved.dataDir, workspace: saved.workspace }
+    return JSON.parse(readFileSync(file, 'utf8')) as SavedPlaces
   }
   const t = text()
   // Moon Bot patch: its own data folder, apart from a DS Bot install.
@@ -186,8 +234,8 @@ export async function chooseLocations(signal) {
       await ask({ type: 'warning', message: problem, buttons: ['OK'] }, signal)
     }
     const imported = await offerImport(t, dataDir, signal)
-    if (imported?.quit) return { quit: true }
-    if (imported !== undefined) return { dataDir, workspace, import: imported }
+    if (imported !== undefined && 'quit' in imported) return { quit: true }
+    if (imported !== undefined && !('quit' in imported)) return { dataDir, workspace, import: imported }
   } catch (error) {
     if (error instanceof Quit) return { quit: true }
     throw error

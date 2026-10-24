@@ -4,7 +4,7 @@
 import { existsSync, readdirSync, statSync } from 'node:fs'
 import { mkdir, rename, rm, rmdir, writeFile } from 'node:fs/promises'
 import { basename, dirname, join, resolve } from 'node:path'
-import { copyTree, real, within } from './copy-tree.mjs'
+import { copyTree, real, within } from './copy-tree.ts'
 
 // The engine's lock on the team belongs to the old folder; the first-run copy and its check
 // leave their temporary folders only when they were cut short.
@@ -13,20 +13,28 @@ const LEFT_BEHIND = [/^bot[\\/]state\.lock$/u, /^\.import(-check)?-\d+$/u]
 const MARK = '.ds-bot-moving'
 
 /** The folder that an update or uninstall replaces: on macOS the whole .app bundle. */
-export function installFolder(exe, platform = process.platform) {
+export function installFolder(exe: string, platform: string = process.platform): string {
   if (platform === 'darwin') {
     for (let at = dirname(exe); dirname(at) !== at; at = dirname(at)) if (at.endsWith('.app')) return at
   }
   return dirname(exe)
 }
 
-/**
- * What keeps `to` from being the new data location, or undefined.
- * @param {{ from: string, to: string, workspace?: string, dshHome: string, program?: string }} places
- * @returns {'drive' | 'nested' | 'workspace' | 'dsh' | 'program' | 'notEmpty' | undefined}
- */
-export function moveProblem(places) {
-  const [from, to, dshHome] = [places.from, places.to, places.dshHome].map(real)
+export type MoveProblem = 'drive' | 'nested' | 'workspace' | 'dsh' | 'program' | 'notEmpty'
+
+export interface MovePlaces {
+  readonly from: string
+  readonly to: string
+  readonly workspace?: string | undefined
+  readonly dshHome: string
+  readonly program?: string | undefined
+}
+
+/** What keeps `to` from being the new data location, or undefined. */
+export function moveProblem(places: MovePlaces): MoveProblem | undefined {
+  const from = real(places.from)
+  const to = real(places.to)
+  const dshHome = real(places.dshHome)
   const workspace = places.workspace === undefined ? undefined : real(places.workspace)
   const program = places.program === undefined ? undefined : real(places.program)
   if (dirname(to) === to) return 'drive'
@@ -38,13 +46,12 @@ export function moveProblem(places) {
   return undefined
 }
 
-const escaped = text => text.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')
+const escaped = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')
 
 /**
  * Copy the data in `from` to `to`, an empty or new folder. The signal stops it between files.
- * @param {string} from @param {string} to @param {AbortSignal} [signal]
  */
-export async function copyData(from, to, signal) {
+export async function copyData(from: string, to: string, signal?: AbortSignal | undefined): Promise<void> {
   const parent = dirname(resolve(to))
   await mkdir(parent, { recursive: true })
   // A run that was killed can leave its staging folder behind.

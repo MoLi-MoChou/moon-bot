@@ -13,6 +13,7 @@ import { ServiceContext } from "./context.js";
 import { FileAttachments } from "./attachments.js";
 import { ServiceApproval } from "./approval.js";
 import { MemorySync } from "./memory-sync.js";
+import { TaskScheduler } from "./scheduler.js";
 const EXCLUDED_TOOLS = /* @__PURE__ */ new Set([...HIDDEN_TOOLS, ...LEAN_HIDDEN_TOOLS]);
 const memoryScopesOf = (runtime, sessionId) => {
   const botId = runtime.selfOf(sessionId);
@@ -141,6 +142,16 @@ function wireService(options) {
     }
     return agent;
   };
+  const scheduler = new TaskScheduler(store, (sessionId, task) => {
+    const agent = agentOf(sessionId);
+    agent?.followup?.({
+      content: [{ type: "text", text: task.prompt === "" ? task.title : `[${task.title}]
+${task.prompt}` }],
+      source: { kind: "schedule" }
+    });
+  });
+  context.get = ((name) => name === "approval" ? approval : name === "schedule" ? scheduler : void 0);
+  context.effect(() => scheduler.start(), "moon-bot: schedule poll");
   context.resolveAgentWith(agentOf);
   context.pageWith(async (input) => {
     const sessionId = input.address.sessionId;

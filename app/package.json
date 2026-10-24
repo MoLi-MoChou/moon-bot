@@ -7,9 +7,11 @@
   "author": "MoLi-MoChou",
   "license": "Apache-2.0",
   "type": "module",
-  "main": "src/main.mjs",
+  "main": "dist-main/main.cjs",
   "scripts": {
-    "build": "vite build",
+    "build": "vite build && node scripts/build-main.ts",
+    "build:main": "node scripts/build-main.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
     "start": "electron .",
     "pack": "electron-builder --dir --publish never",
     "dist": "electron-builder --publish never",
@@ -18,7 +20,7 @@
     "icon": "python3 scripts/icon.py",
     "test": "node --test \"test/*.test.mjs\"",
     "postinstall": "node scripts/patch-deps.mjs",
-    "web": "node src/web.mjs"
+    "web": "node src/web.ts"
   },
   "dependencies": {
     "@deepseek-ai/cordis-plugin-group": "1.0.5",
@@ -62,10 +64,12 @@
   "devDependencies": {
     "electron": "44.7.0",
     "electron-builder": "26.17.0",
+    "esbuild": "0.28.2",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-markdown": "10.1.0",
     "remark-gfm": "4.0.1",
+    "typescript": "^5.9.3",
     "vite": "8.3.4"
   },
   "overrides": {

@@ -22,6 +22,7 @@ import { ServiceContext } from './context.ts'
 import { FileAttachments } from './attachments.ts'
 import { ServiceApproval } from './approval.ts'
 import { MemorySync } from './memory-sync.ts'
+import { TaskScheduler } from './scheduler.ts'
 import type { StandaloneLlm } from './llm.ts'
 
 /** The host runtime's own shape, as the wiring reads it. */
@@ -203,6 +204,19 @@ export function wireService(options: WireOptions): WiredService {
     }
     return agent
   }
+
+  // The scheduler fires a task by delivering its prompt to its session with the
+  // schedule source the route knows; the poll keeps running across restarts.
+  const scheduler = new TaskScheduler(store, (sessionId, task) => {
+    const agent = agentOf(sessionId) as { followup?(message: unknown): void } | undefined
+    agent?.followup?.({
+      content: [{ type: 'text', text: task.prompt === '' ? task.title : `[${task.title}]
+${task.prompt}` }],
+      source: { kind: 'schedule' },
+    })
+  })
+  context.get = ((name: string) => name === 'approval' ? approval : name === 'schedule' ? scheduler : undefined) as typeof context.get
+  context.effect(() => scheduler.start(), 'moon-bot: schedule poll')
 
   context.resolveAgentWith(agentOf)
 

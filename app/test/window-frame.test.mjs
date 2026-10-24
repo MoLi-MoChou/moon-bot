@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { cssColor, micaAvailable, nativeThemeSource } from '../src/window-frame.mjs'
+import { cssColor, micaAvailable, nativeThemeSource } from '../src/window-frame.ts'
 
 test('Mica only on Windows 11 22H2 and later', () => {
   assert.equal(micaAvailable('win32', '10.0.22621'), true)

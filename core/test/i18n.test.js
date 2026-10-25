@@ -18,7 +18,7 @@ function fakeLocale(active) {
 test('every literal the client translates has a Chinese entry', () => {
   const dir = new URL('../src/client/', import.meta.url)
   const missing = []
-  for (const name of readdirSync(dir).filter(file => file.endsWith('.js'))) {
+  for (const name of readdirSync(dir).filter(file => /\.(tsx?|jsx?)$/.test(file) && file !== 'i18n.ts')) {
     const text = readFileSync(new URL(name, dir), 'utf8')
     for (const match of text.matchAll(/\bt\(\s*(['"])((?:\\.|(?!\1).)*)\1/g)) {
       const key = match[2].replace(/\\'/g, "'")

@@ -9,7 +9,9 @@ export const noteSignInAsked = (): void => { userAsked = true }
 
 const isPreviewNotice = (dialog: Element): boolean => {
   const text = dialog.textContent ?? ''
-  return /DeepSeek Harness/.test(text) && /0\.2/.test(text)
+  if (!/DeepSeek Harness/.test(text)) return false
+  // Version text changes across DSH builds; the Continue CTA marks the preview splash.
+  return Array.from(dialog.querySelectorAll('button')).some(node => /^(继续|Continue)$/u.test((node.textContent ?? '').trim()))
 }
 const signInRoot = (): Element | null => document.querySelector('[class*="_76YFJG_"]')
 

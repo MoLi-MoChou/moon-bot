@@ -1573,7 +1573,7 @@ var HOST_ERRORS = [
   [/^Error:\s*the user rejected(?: this (?:command|action|request))?\.?$/i, "你拒绝了这次操作，命令没有执行"],
   [/^the user rejected(?: this (?:command|action|request))?\.?$/i, "你拒绝了这次操作，命令没有执行"],
   [/^Model (.+) is not available\. Available: (.*)$/, "模型 $1 不可用。可用的：$2"],
-  [/^The API key for (.+) is set outside DS Bot and cannot be changed here$/, "$1 的 API key 是在 DS Bot 之外设置的，这里改不了"],
+  [/^The API key for (.+) is set outside DS Bot and cannot be changed here$/, "$1 的 API key 是在 Moon Bot 之外设置的，这里改不了"],
   [/^(.+) takes no API key here$/, "$1 不能在这里填 API key"],
   [/^(.+) is already set up$/, "$1 已经设置过了"],
   [/^DSH offers no provider (.+)$/, "DSH 没有服务商 $1"],
@@ -1599,7 +1599,7 @@ var HOST_ERRORS = [
   [/^Give the full path of the folder, not (.+)$/, "请填写文件夹的完整路径，而不是 $1"],
   [/^There is no folder at (.+)$/, "找不到文件夹 $1"],
   [/^(.+) is a file, not a folder$/, "$1 是文件，不是文件夹"],
-  [/^(.+) holds DeepSeek Harness data, so Bots cannot work there$/, "$1 里有 DeepSeek Harness 的数据，Bot 不能在这里工作"],
+  [/^(.+) holds DeepSeek Harness data, so Bots cannot work there$/, "$1 里有运行时（DSH）的数据，Bot 不能在这里工作"],
   // Memory changes the memory panel asked for; the whole message is matched.
   [/^This looks like a key, token, or password[\s\S]*$/, "看起来像密钥、令牌或密码，记忆不会保存这类内容"],
   [/^An entry holds at most (\d+) characters; this one has (\d+)\.[\s\S]*$/, "一条记忆最多 $1 个字符，这条有 $2 个"],
@@ -1679,7 +1679,7 @@ var ERROR_COPY = {
   "bot/read-only": { en: "This window can only look, not change.", zh: "这个窗口现在只能看，不能改。", hint: "Close the other dsh window that has this team open, then reload.", hintZh: "关掉另一个打开同一团队的 dsh 窗口，然后刷新。" },
   "bot/unavailable": { en: "That is not available here.", zh: "这项内容现在拿不到。", hint: "Try again in a moment.", hintZh: "稍后再试。" },
   "bot/browser-off": { en: "The Bot's browser is off.", zh: "Bot 的浏览器没有打开。", hint: "Turn it on in the settings, or let the Bot do it another way.", hintZh: "在设置里打开浏览器，或者让 Bot 换一种方式做。" },
-  "bot/internal": { en: "Moon Bot itself failed.", zh: "Moon Bot 内部出错了。", hint: "Restart DS Bot; if it keeps happening, send the diagnostics from Settings → Feedback.", hintZh: "重启 DS Bot；一直这样的话，到「设置 → 反馈」发诊断。" },
+  "bot/internal": { en: "Moon Bot itself failed.", zh: "Moon Bot 内部出错了。", hint: "Restart Moon Bot; if it keeps happening, send the diagnostics from Settings → Feedback.", hintZh: "重启 Moon Bot；一直这样的话，到「设置 → 反馈」发诊断。" },
   "bot/error": { en: "Something went wrong.", zh: "出了点问题。", hint: "Try again; send the diagnostics if it keeps happening.", hintZh: "再试一次；一直这样就发诊断。" }
 };
 var detailOf = (message) => {
@@ -1701,7 +1701,7 @@ function errorCopy(code, message) {
     if (reason !== "") return reason;
     return zh ? "出了点问题，请再试一次。" : "Something went wrong. Try again.";
   }
-  return [generic, reason, zh ? copy2.hintZh : copy2.hint].filter(Boolean).join(" ");
+  return [generic, reason, brand(zh ? copy2.hintZh : copy2.hint)].filter(Boolean).join(" ");
 }
 function language() {
   const active = service?.getLocale?.().active;
@@ -2830,7 +2830,7 @@ function AboutPage({ useUpdate, actions, run, Section, Row: Row3 }) {
       (0, import_react9.createElement)(Row3, { label: productName(), hint: botHint(update) }),
       // Runtime build id stays available but is not framed as a second product.
       dsh?.current ? (0, import_react9.createElement)(Row3, { label: t("Runtime"), hint: t("Version {version}", { version: dsh.current }) }) : null
-    ) : (0, import_react9.createElement)(Section, { key: "updates", title: t("Updates") }, appBridge() ? (0, import_react9.createElement)(AppUpdateRow, { Row: Row3, run }) : null, (0, import_react9.createElement)(EngineRow, { Row: Row3, run }), appBridge() ? null : (0, import_react9.createElement)(Row3, { label: "DS Bot", hint: botHint(update) }, botControl, update.available && update.notesUrl ? /* @__PURE__ */ (0, import_react9.createElement)("a", { ...linkProps(update.notesUrl) }, t("What's new")) : null), dsh?.current ? (0, import_react9.createElement)(Row3, { label: "DeepSeek Harness", hint: dshHint(dsh, dshShown) }, dshControl) : null),
+    ) : (0, import_react9.createElement)(Section, { key: "updates", title: t("Updates") }, appBridge() ? (0, import_react9.createElement)(AppUpdateRow, { Row: Row3, run }) : null, (0, import_react9.createElement)(EngineRow, { Row: Row3, run }), appBridge() ? null : (0, import_react9.createElement)(Row3, { label: productName(), hint: botHint(update) }, botControl, update.available && update.notesUrl ? /* @__PURE__ */ (0, import_react9.createElement)("a", { ...linkProps(update.notesUrl) }, t("What's new")) : null), dsh?.current ? (0, import_react9.createElement)(Row3, { label: t("Runtime"), hint: dshHint(dsh, dshShown) }, dshControl) : null),
     (0, import_react9.createElement)(
       Section,
       { key: "links", title: t("Links") },
@@ -3079,7 +3079,8 @@ var noteSignInAsked = () => {
 };
 var isPreviewNotice = (dialog) => {
   const text = dialog.textContent ?? "";
-  return /DeepSeek Harness/.test(text) && /0\.2/.test(text);
+  if (!/DeepSeek Harness/.test(text)) return false;
+  return Array.from(dialog.querySelectorAll("button")).some((node) => /^(继续|Continue)$/u.test((node.textContent ?? "").trim()));
 };
 var signInRoot = () => document.querySelector('[class*="_76YFJG_"]');
 function quietShellOnboarding({ windowMs = 2e4 } = {}) {

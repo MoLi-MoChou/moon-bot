@@ -1,4 +1,4 @@
-// Settings → About DS Bot: the version, updates for DS Bot and DSH, and the links to
+// Settings → About: the version, updates for Moon Bot and the runtime, and the links to
 // the repository. The sidebar's cloud button shows the same update state.
 import { createElement as h, useEffect, useState } from 'react';
 import { GitHubMark } from './connectors.js';
@@ -250,7 +250,7 @@ export function AboutPage({ useUpdate, actions, run, Section, Row }: {
         update.source === 'web' ? h(Section, { key: 'updates', title: t('Updates') }, h(Row, { label: productName(), hint: botHint(update) }), 
         // Runtime build id stays available but is not framed as a second product.
         dsh?.current ? h(Row, { label: t('Runtime'), hint: t('Version {version}', { version: dsh.current }) }) : null)
-            : h(Section, { key: 'updates', title: t('Updates') }, appBridge() ? h(AppUpdateRow, { Row, run }) : null, h(EngineRow, { Row, run }), appBridge() ? null : h(Row, { label: 'DS Bot', hint: botHint(update) }, botControl, update.available && update.notesUrl ? <a {...linkProps(update.notesUrl)}>{t("What's new")}</a> : null), dsh?.current ? h(Row, { label: 'DeepSeek Harness', hint: dshHint(dsh, dshShown) }, dshControl) : null),
+            : h(Section, { key: 'updates', title: t('Updates') }, appBridge() ? h(AppUpdateRow, { Row, run }) : null, h(EngineRow, { Row, run }), appBridge() ? null : h(Row, { label: productName(), hint: botHint(update) }, botControl, update.available && update.notesUrl ? <a {...linkProps(update.notesUrl)}>{t("What's new")}</a> : null), dsh?.current ? h(Row, { label: t('Runtime'), hint: dshHint(dsh, dshShown) }, dshControl) : null),
         h(Section, { key: 'links', title: t('Links') }, repo ? h(Row, { label: t('Source code'), hint: repo.replace(/^https:\/\//, '') }, <a {...linkProps(repo)}>{h(GitHubMark)}{t('Open')}</a>) : null, update.notesUrl ? h(Row, { label: t('Release notes') }, <a {...linkProps(update.notesUrl)}>{t('Open')}</a>) : null, 
         // Moon Bot patch: credit the project this app is built on.
         h(Row, { label: t('Based on DS Bot'), hint: 'github.com/Fei2411/DeepSeek-Bot · Apache-2.0' }, <a {...linkProps('https://github.com/Fei2411/DeepSeek-Bot')}>{h(GitHubMark)}{t('Open')}</a>), h(Row, { label: t('Report a problem') }, <button type='button' className='bt-soft bt-soft-sm' onClick={() => actions.openSettings('feedback')}>{t('Open')}</button>)),

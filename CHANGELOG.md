@@ -6,6 +6,12 @@ All notable changes to DS Bot are listed here. The format follows [Keep a Change
 
 ### Fixed
 
+- Restart notices and group resume lines name Moon Bot instead of DeepSeek Harness.
+- About (desktop path): update rows label Moon Bot and Runtime, matching the web About.
+- Error hints and a few host-error Chinese lines no longer say DS Bot / DeepSeek Harness when the UI brands Moon Bot.
+- DSH preview “Get started” dismiss no longer depends on a hardcoded 0.2 version string.
+- i18n completeness gate scans `.ts`/`.tsx` again after the TypeScript client migration.
+
 - Composer: Enter after finishing a CJK composition with Space is no longer swallowed on Chromium/Firefox (WebKit keeps a short stray-Enter window, after open-claude-ui).
 - Escape on the composer +, memory ⋯, model and folder menus goes through the same topmost-layer stack as other overlays (no second capture listener).
 - Long chats: offscreen message placeholder height raised so scrolling back up jumps less when rows paint.

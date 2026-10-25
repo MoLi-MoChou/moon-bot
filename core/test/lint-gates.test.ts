@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url'
 const PLUGIN = fileURLToPath(new URL('..', import.meta.url))
 const CHECK = join(PLUGIN, 'scripts', 'check-gates.mjs')
 const FIXTURES = join(PLUGIN, 'test', 'fixtures', 'gates')
-const OXLINT = join(PLUGIN, 'dev', 'harness', 'node_modules', 'oxlint', 'bin', 'oxlint')
+const OXLINT = join(PLUGIN, 'node_modules', 'oxlint', 'bin', 'oxlint')
 
 const runGates = fixture =>
   spawnSync(process.execPath, [CHECK, '--root', join(FIXTURES, fixture)], {
@@ -104,7 +104,7 @@ test('a clean fixture passes with the one-line success message', () => {
 })
 
 test('the any fixture is caught by the configured oxlint rule', t => {
-  if (!existsSync(OXLINT)) return t.skip('dev/harness oxlint is not installed')
+  if (!existsSync(OXLINT)) return t.skip('oxlint is not installed')
   // The real config ignores test fixtures so `npm run lint` stays green. Drop only that
   // ignore list for this direct probe; everything else, including the rule itself, is real.
   // The config keeps `//` notes (JSONC), so strip whole-line comments before parsing.

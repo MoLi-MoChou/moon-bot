@@ -12,7 +12,7 @@ import { ENGINES } from "./engines.js";
 import { planNative } from "./native.js";
 import { clip, isRecord, reasonOf, seconds, str } from "./source.js";
 const AUTO_PROVIDER_ID = "auto";
-const USER_AGENT = "deepseek-harness/0.0.1";
+const USER_AGENT = "moon-bot/0.1.0";
 const MINUTE = 6e4;
 const SKIP_FOR = {
   absent: 24 * 60 * MINUTE,
@@ -78,7 +78,7 @@ function createAutoSearchProvider(deps, config = {}) {
     try {
       response = await deps.fetch(candidate.url, {
         method: "POST",
-        // Credential-bearing requests never follow redirects (deepseek-harness/packages/web/AGENTS.md).
+        // Credential-bearing requests never follow redirects.
         redirect: "error",
         headers: { "content-type": "application/json", accept: "application/json", "user-agent": USER_AGENT, ...route.headers, ...call.headers, ...credential.headers?.(candidate) },
         body: JSON.stringify(call.body),

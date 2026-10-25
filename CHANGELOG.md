@@ -1,8 +1,18 @@
 # Changelog
 
-All notable changes to DS Bot are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the versions follow [Semantic Versioning](https://semver.org/). Before 1.0, a minor version can contain breaking changes.
+All notable changes to Moon Bot are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the versions follow [Semantic Versioning](https://semver.org/). Before 1.0, a minor version can contain breaking changes.
 
 ## [Unreleased]
+
+### Added
+
+- **Personal Agent layer** on top of the Bot team: memory that surfaces itself for the turn's own words (BM25 relevance combined with freshness and confidence, expired entries dropped), schedules that survive a restart and fire exactly once, MCP connectors whose tools run inside the policy budget, and generated interfaces — an OpenUI element map lowers onto the existing cards, with unknown nodes degrading to text.
+- The **policy engine**: L0–L4 risk levels, per-session daily budgets, approvals through the existing cards. The refusal is the server's and names no appeal.
+- An **ACP adapter** as a second `AgentRuntime`: a Bot whose engine names an ACP command runs its turns in that external agent and stays a full member of the team (group chats, assigned work, memory).
+
+### Removed
+
+- The DSH plugin packaging and the DSH-hosted start path, the DSH update offer, the DSH concessions that only existed for the host.
 
 ### Fixed
 
@@ -13,7 +23,10 @@ All notable changes to DS Bot are listed here. The format follows [Keep a Change
 
 ### Changed
 
-
+- **A new runtime, and a new start.** Moon Bot no longer runs on DeepSeek Harness: it ships its own Fastify service (password gate, static UI, SSE feed), its own agent engine (`@earendil-works/pi-agent-core` + `pi-ai`), SQLite storage for sessions, tasks and the memory index, a scheduler, and an Electron main process that loads that service. `@deepseek-ai/*` is gone from the start path.
+- **Data does not migrate.** The new start keeps its own store under the data folder. The previous version keeps reading its own data; nothing is imported, converted or written to it.
+- The whole repository is **TypeScript**: core and app sources, entries and tests (`client.js` and vendored files excepted), with `npm run typecheck` as a gate.
+- The desktop app's window loads the service Moon Bot runs itself; the web build and Docker run the same service without Electron.
 - The fork is now called Moon Bot: new name in every language, app id `com.molimochou.moonbot`, data folder `~/.moon-bot` (an existing `~/.mochou` or `~/.dsh-bot` is still used), `MOON_BOT_*` settings (the `MOCHOU_*` and `DSH_BOT_*` names still work), plugin folder `core/` and package `moon-bot-core` (profiles that list `ds-bot` or `mochou-core` move over by themselves).
 - The Main Bot is a lilac moon sprite instead of DS Bot's whale (a Chief still wearing the blue whale switches once); the whale is no longer in the avatar picker. The app icon, favicon, login page and About page show the matching Moon Bot tile.
 - New default theme, Moon (soft lilac, light and dark). DeepSeek, Claude and Grok Bot stay in Settings > General.

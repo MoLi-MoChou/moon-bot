@@ -4,14 +4,15 @@ Instructions for AI coding agents that work on this repository. Human contributo
 
 ## What this project is
 
-DS Bot is a team of long-lived Bots, built on DeepSeek Harness (DSH). It has two parts:
+Moon Bot is a team of long-lived Bots with its own runtime — no DeepSeek Harness install. It has three parts:
 
-- `core/`: the Bot features, written as a DSH plugin. The plugin runs in DSH Desktop, in DSH Web and in the desktop app.
-- `app/`: the desktop app for Windows and macOS. It runs a pinned DSH with the `ds-bot` plugin, in its own profile and its own `DSH_HOME`, and imports an existing team from the user's DSH.
+- `core/`: the product, in TypeScript. `src/host/` is the host services (roster and store, tools, turns and delivery, groups, parts, memory, schedules, capabilities, the `api/bot` channel); `src/engine/` the `AgentRuntime` seam with two implementations (the built-in pi kernel and ACP); `src/store/` the SQLite store; `src/service/` the Fastify service, its stores and the scheduler; `src/client/` the React surface; `src/web-search/` the `auto` search provider.
+- `app/`: the desktop app for Windows and Linux, in TypeScript. Its window loads the service Moon Bot runs itself; the main process bundles through esbuild.
+- The runtime: the service (auth, static UI, SSE feed), the host services, the built-in engine over SQLite, the policy engine, the scheduler and the connector layer. `@earendil-works/pi-agent-core` + `pi-ai` are the only agent-loop dependencies; everything else is ours.
 
 The Bot team:
 
-- Every Bot is a long-lived identity whose work runs in DSH Sessions: one for its own chat, one for each group it is in, and a fresh one when the context fills up (earlier ones stay readable). Every turn runs through the normal DSH agent loop, tools and model routes.
+- Every Bot is a long-lived identity whose work runs in engine sessions: one for its own chat, one for each group it is in, and a fresh one when the context fills up (earlier ones stay readable). A turn runs on the engine the Bot names — the built-in one, or an ACP agent — behind one `AgentRuntime` interface.
 - The team works together: Bots message each other, share group chats and can see what the other Bots are doing. Each Bot still runs on its own and does not disturb the others.
 - Bots have clear, different roles. A Main Bot has the highest rights: it creates, changes and removes other Bots. Other Bots do not get these rights. There can be more than one Main Bot.
 - Users customize each Bot (name, role label, instructions, model, character).
@@ -19,28 +20,28 @@ The Bot team:
 
 ## Hard rules
 
-1. **Build on DSH; never patch it.** Bot features use the documented plugin APIs. The desktop app starts DSH only through its documented entry points (`@deepseek-ai/dsh/profile-boot`, the `dsh` CLI). Never patch DeepSeek Harness or depend on files inside a DSH install. If something is missing in DSH, stop and say so; do not work around it with a patch.
-2. **No secrets.** Never write, print or commit API keys, tokens, cookies or `DSH_HOME` contents. Use the mock model (`core/dev/mock-llm.mjs`) for tests; it needs no key.
+1. **Keep the runtime our own.** Bot features go through the host services and the `AgentRuntime` seam; a kernel stays behind it (the built-in engine, or an ACP adapter), never called from host code. The two lazy `@deepseek-ai/dsh-mcp-client` strings in the hosted mount paths are the only remaining references — do not add more, and do not resurrect DSH as a runtime or a dependency.
+2. **No secrets.** Never write, print or commit API keys, tokens, cookies or the data folder’s secrets. Use the mock model (`core/dev/mock-llm.ts`) for tests; it needs no key.
 3. **Only original material.** Do not copy code, text, icons, logos or graphics from other products or websites. Code under a license compatible with Apache 2.0 is the only exception: say where it comes from and add its notice to the `NOTICE` file.
 4. **`client.js` is generated.** Change `core/src/client/`, then run `npm run build` and commit both files. Never edit `client.js` by hand.
-5. **Do not touch the user's own DSH data.** The desktop app keeps its data in its own `DSH_HOME`; its import only reads `~/.dsh` and never writes there. The test bench keeps its data in `.dsh-test-<name>/`. Never point a test at `~/.dsh`, at the desktop app's data or at a DSH that the user runs.
+5. **Do not touch the user's own data.** The app keeps the team in its own data folder (`~/.moon-bot`); tests keep theirs in a temp folder and delete it. Never point a test at a real install's data.
 
 ## Commands
 
-Run in `core/`. The unit tests and the linter load the `@deepseek-ai/*` packages from `dev/harness/`, which `npm run harness` installs from npm at the DSH version in `dev/harness/package.json`. `DSH_HARNESS` points them at another install or at a DeepSeek Harness checkout instead. The test bench needs a checkout at `../deepseek-harness` (or `DSH_HARNESS`), at the DSH version in the README.
+Run in `core/`. Node 22.18+ runs the .ts sources directly (native type stripping); nothing needs a build step except the two committed artifacts.
 
 ```sh
-npm ci                                 # build tool only (esbuild)
-npm run harness                        # once: the DSH packages for the tests and the linter
-npm run build                          # src/client → client.js
-npm test                               # unit tests; also fail if client.js is stale
-node scripts/build-client.mjs --check  # client.js matches src/client
-npm run lint                           # oxlint
-CONTEXT_WINDOW=100000 CHECK_RATIO=0.45 dev/bench.sh smoke 3096 8796 reset && node dev/smoke.mjs smoke 3096   # smoke test
-dev/bench.sh smoke 3096 8796 stop
+npm ci                                 # build tool and types only
+npm run build                          # src/client → client.js, and dist/ for the packaged host
+node scripts/build-client.ts --check   # client.js matches src/client
+npm test                               # unit tests (also fail if client.js is stale)
+npm run typecheck                      # tsc --noEmit, strict
+npm run lint                           # oxlint + the architecture/size/floating-promise gates
+npm run eval                           # the five-capability evaluation set
+npm run web                            # the standalone service (MOON_BOT_UI serves the built UI)
 ```
 
-A change is done when `npm test`, the `--check` and `npm run lint` pass; CI runs them on every pull request. Run the smoke test as well for changes to `index.js` or `src/host/`. Use a free port for each bench, and stop every bench and process that you started.
+A change is done when `npm test`, `npm run typecheck`, the `--check` and `npm run lint` pass; CI runs them on every pull request. The bench in `dev/bench.sh` still runs a DSH-hosted profile for comparison; it is not part of the product's start path. Use a free port for each bench, and stop every bench and process that you started.
 
 ## Branches, pull requests and issues
 
@@ -56,11 +57,15 @@ The full workflow is in [CONTRIBUTING.md](CONTRIBUTING.md#how-we-work). The part
 
 ## Layout
 
-- `core/index.js` and `core/src/host/`: the server side (roster and store, tools, turns and delivery, groups, conversation parts and the search index, images, the browser bridge, the `api/bot` channel).
+- `core/src/index.ts`: the plugin entry (module order and the runtime object). `core/index.js` is its generated re-export.
+- `core/src/host/`: the host services (roster and store, tools and the capability registry, turns and delivery, groups, parts, memory, schedules, secrets, images, the browser bridge, the `api/bot` channel, the live feed).
+- `core/src/engine/`: the `AgentRuntime` interface and events, the built-in engine (`builtin/`: pi adapter, runtime, bridge, services), the ACP adapter (`acp/`), the tool registry and the policy engine, the MCP connector.
+- `core/src/store/`: the SQLite store — migrations, sessions and messages, tasks, the memory index, the policy counters.
+- `core/src/service/`: the Fastify service, its host context, credentials, settings, the provider catalog, the scheduler, attachments, the approval bridge, memory sync and the engine wiring.
 - `core/src/client/`: the browser side (sidebar, chat, panels, themes, characters, the Bot browser panel).
-- `core/web-search.js`: the `auto` web-search provider, independent of the Bot team code.
-- `core/test/`: unit tests and fixtures. `core/dev/`: the DSH packages for the tests (`harness/`), mock model, test bench, smoke test, character generator, Desktop scripts for Linux.
-- `app/`: the desktop app (Electron main process and window, first-run setup and import, installer and updates).
+- `core/src/shared/`: the contracts both ends import (schema, rpc, views, the OpenUI lowering, mentions, lean).
+- `core/test/`: unit tests (`.test.ts`) and fixtures; `core/test/eval/` the five-capability set. `core/dev/`: mock model, bench, smoke test, scripts.
+- `app/`: the desktop app in TypeScript (main process and window, the service host child, first-run setup, installer and updates).
 
 ## Style
 

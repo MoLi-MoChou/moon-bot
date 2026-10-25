@@ -142,14 +142,35 @@ MIT License, Copyright (c) 2018 Framer B.V.
     framer-motion 12 (motion, AnimatePresence, Reorder), made by
     core/scripts/build-vendor.mjs. The MIT license text above applies.
 
-No other third-party code is copied into this repository. At run time the
-plugin uses the @deepseek-ai/* packages of the DeepSeek Harness install it
-runs in; they are not bundled. esbuild is a build tool only. The standalone
+No other third-party code is copied into this repository. Since the standalone
 Personal Agent refactor (docs/plans/2026-10-24-standalone-personal-agent.md)
-adds npm dependencies that stay npm dependencies, not copied code:
-@earendil-works/pi-agent-core and @earendil-works/pi-ai (MIT, Copyright (c)
-2025 Earendil Works) as the built-in engine kernel; later phases register
-each further dependency here when it enters the runtime, with its license.
+the runtime is Moon Bot's own, and these npm dependencies stay npm
+dependencies — installed, not copied or modified:
+
+  - @earendil-works/pi-agent-core and @earendil-works/pi-ai, MIT, Copyright (c)
+    2025 Earendil Works: the built-in engine's kernel (agent loop, provider
+    transports, message types). The host reaches them only through
+    src/engine/builtin.
+  - better-sqlite3, MIT, Copyright (c) 2017 Joshua Wise: the SQLite driver
+    behind src/store (sessions, messages, tasks, the memory index, the policy
+    counters).
+  - fastify, and @fastify/websocket, @fastify/static and @fastify/cookie,
+    MIT: the standalone service in src/service (routing, the SSE feed, the
+    built UI, the session cookie).
+  - croner, MIT, Copyright (c) 2019 Hexagon: cron and interval expressions for
+    the scheduler's next-run arithmetic.
+  - @modelcontextprotocol/sdk, MIT: the MCP client behind the connector layer
+    (stdio and streamable HTTP).
+  - zod, MIT, Copyright (c) 2020 Colin McDonnell: the tool registry's schemas.
+    (Also used on the former DSH plugin path.)
+  - react-markdown, remark-gfm, remark-math, remark-emoji, remark-breaks,
+    rehype-highlight, rehype-katex and the d3/radix packages that come with
+    them, MIT: the desktop window's own renderers (app/ui), built by vite.
+
+esbuild is a build tool only. @deepseek-ai/* is no longer used by the start
+path; two lazy strings name its MCP client for the hosted mount branch of
+src/host (capabilities-host, connectors), and its runtime types were replaced
+by the structural declarations in src/host/dsh-types.d.ts.
 The desktop app
 in app/ installs the pinned @deepseek-ai/* packages, Electron and pnpm from
 npm; they keep their own licenses. The build of its window (app/ui) bundles,

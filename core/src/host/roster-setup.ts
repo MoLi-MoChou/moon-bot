@@ -53,7 +53,7 @@ export function createRosterSetup({ ctx, rt, state }: {
   // `dir` is a working folder outside the team workspace. Such a Session is made by cwd
   // alone, so it joins no DSH workspace and the user's own project lists stay as they are.
   async function createSession(title: string, { dir }: { readonly dir?: string } = {}): Promise<string> {
-    // A Bot's tools run here too; while another dsh holds the team, a new Session would
+    // A Bot's tools run here too; while another instance holds the team, a new Session would
     // belong to no saved Bot.
     const readOnly = rt.readOnly()
     if (readOnly !== undefined) throw new Error(readOnly)

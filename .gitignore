@@ -1,8 +1,9 @@
 node_modules/
 *.tgz
-# The desktop app's window build (npm run build in app/), its packages (npm run pack, npm run dist)
-# and the next version that checks its update (see app/README.md).
+# The desktop app's window build and bundled main (npm run build in app/), its packages
+# (npm run pack, npm run dist) and the next version that checks its update (see app/README.md).
 /app/ui/dist/
+/app/dist-main/
 /app/dist-pack/
 /app/dist-next/
 

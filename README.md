@@ -4,7 +4,7 @@
 
 <h1 align="center">Moon Bot</h1>
 
-<p align="center">一支长期在线的 Bot 小队：你建 Bot，不是建对话。<br>基于 <a href="https://github.com/Fei2411/DeepSeek-Bot">DS Bot</a> 修改，运行在 <a href="https://github.com/deepseek-ai/deepseek-harness">DeepSeek Harness</a>（DSH）之上。</p>
+<p align="center">一支长期在线的 Bot 小队：你建 Bot，不是建对话。<br>基于 <a href="https://github.com/Fei2411/DeepSeek-Bot">DS Bot</a> 修改，自带运行时（Fastify 服务 + 内置引擎 + Electron 窗口），不依赖 DeepSeek Harness。</p>
 
 <p align="center">中文 | <a href="#english">English</a></p>
 
@@ -95,7 +95,7 @@ cd app && npm ci && npm run web     # http://127.0.0.1:8290，只监听本机时
 
 ## 桌面版
 
-桌面版（Windows、Linux AppImage）自带 DSH，不用另外安装。从 [Releases](https://github.com/MoLi-MoChou/moon-bot/releases) 下载。安装版启动时和每 4 小时检查一次更新，后台只下载变化的部分，提示「重启以更新」，不用重新安装，数据保留。便携版 exe 不能自我替换，需要手动下载新版。
+桌面版（Windows、Linux AppImage）自带全部运行时，不用另外安装。窗口加载的是 Moon Bot 自己的服务地址，与网页版同一套界面和通道。从 [Releases](https://github.com/MoLi-MoChou/moon-bot/releases) 下载。安装版启动时和每 4 小时检查一次更新，后台只下载变化的部分，提示「重启以更新」，不用重新安装，数据保留。便携版 exe 不能自我替换，需要手动下载新版。
 
 自己打包：
 
@@ -108,21 +108,25 @@ cd ../app && npm ci && npm run dist
 
 ```sh
 cd core
-npm ci && npm run harness   # 测试用的 DSH 包
+npm ci
 npm run build               # src/client → client.js（提交时两个都要提交）
-npm test                    # 单元测试
+npm test                    # 单元测试（Node ≥ 22.18，直接用 .ts 源码）
+npm run typecheck           # 类型门禁
+npm run lint                # oxlint + 架构/行数/浮空 Promise 门禁
+npm run eval                # 五项能力评测集
+npm run web                 # 独立服务（--ui 时同源托管界面）
 cd ../app && npm test
 ```
 
 ## 许可和致谢
 
-Apache-2.0，见 [LICENSE](LICENSE)。Moon Bot 基于 Fei2411 的 [DS Bot（DeepSeek-Bot）](https://github.com/Fei2411/DeepSeek-Bot)（Apache-2.0）修改，DS Bot 的代码直接放在本仓库里并做了改动，改动清单和第三方声明（framer-motion、open-claude-ui 等）见 [NOTICE](NOTICE)。原 DS Bot 的说明保留在 [docs/ds-bot-README.zh.md](docs/ds-bot-README.zh.md)。运行时是 DeepSeek 的 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（MIT）。
+Apache-2.0，见 [LICENSE](LICENSE)。Moon Bot 基于 Fei2411 的 [DS Bot（DeepSeek-Bot）](https://github.com/Fei2411/DeepSeek-Bot)（Apache-2.0）修改，DS Bot 的代码直接放在本仓库里并做了改动，改动清单和第三方声明（framer-motion、open-claude-ui 等）见 [NOTICE](NOTICE)。原 DS Bot 的说明保留在 [docs/ds-bot-README.zh.md](docs/ds-bot-README.zh.md)。运行时是本仓库自己的：Fastify 服务、内置引擎（[@earendil-works/pi-agent-core](https://www.npmjs.com/package/@earendil-works/pi-agent-core) + `pi-ai`，MIT）、SQLite 存储与 Electron 窗口，不依赖 DeepSeek Harness。
 
 ---
 
 ## English
 
-Moon Bot is a team of long-lived Bots: you create Bots, not chats. Chief, the lilac moon sprite, is the Main Bot: it creates Bots, hands them tasks and brings their results back to you. It is a modified copy of [DS Bot](https://github.com/Fei2411/DeepSeek-Bot) running on [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness).
+Moon Bot is a team of long-lived Bots: you create Bots, not chats. Chief, the lilac moon sprite, is the Main Bot: it creates Bots, hands them tasks and brings their results back to you. It was forked from [DS Bot](https://github.com/Fei2411/DeepSeek-Bot) and now ships its own runtime: a Fastify service, a built-in agent engine (pi-agent-core + pi-ai) over SQLite, and an Electron window — no DeepSeek Harness install.
 
 - **Themes:** Moon (default, luminous lilac), DeepSeek, Claude (serif prose, no reply bubbles) and Grok (monochrome), each light and dark. Settings → General → Theme.
 - **Live status:** right after you send, the Bot's avatar and a rotating status line ("Mulling it over", "Getting it done", or the tool it is running) show until the reply streams; the Bot's sidebar tile shows a spinning ring and "Working".

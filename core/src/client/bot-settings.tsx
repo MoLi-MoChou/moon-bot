@@ -138,7 +138,7 @@ function AvatarEditor({ bot, actions, run, onClose }: AvatarEditorProps) {
     const storedShape = bot.avatar?.shape;
     const upload = (file: File | undefined): void => {
         if (file)
-            void run(avatarImage(file).then(image => actions.updateBot(bot.id, { avatar: { ...(bot.avatar ?? {}), image } })));
+            void run(avatarImage(file).then(image => actions.updateBot(bot.id, { avatar: { ...bot.avatar, image } })));
     };
     useEffect(() => {
         const onDown = (event: MouseEvent): void => {

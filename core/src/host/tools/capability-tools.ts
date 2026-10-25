@@ -1,8 +1,9 @@
 // Capability tools: the shared MCP servers, skills and packs, and what is attached to
 // which Bot. The library and the mounts are in capabilities.ts.
-import { defineTool, type ToolRunContext } from '@deepseek-ai/dsh-tools'
+import { z } from 'zod'
+import type { ToolContext } from '../../engine/registry.ts'
 import type { CapabilityItem, HostRuntime } from '../runtime.ts'
-import { errorMessage, output, type ToolShared } from './shared.ts'
+import { errorMessage, type ToolShared } from './shared.ts'
 
 interface SaveCapabilityArgs {
   readonly [key: string]: unknown
@@ -17,19 +18,18 @@ interface ChangeAttachmentArgs {
   readonly bot?: string
 }
 
-export function installCapabilityTools(rt: HostRuntime, shared: ToolShared): void {
-  const { ctx } = rt
+export function installCapabilityTools(_rt: HostRuntime, shared: ToolShared): void {
   const t = shared.rt
   const { state } = shared
 
-  ctx.tools.register(defineTool({
+  shared.register({
     name: 'list_capabilities',
     description: 'List shared MCP servers, skills, and packs, plus the capabilities attached to you.',
     parameters: {},
-    output,
-    async execute(_args: Readonly<Record<string, unknown>>, exec: ToolRunContext): Promise<string> {
+    schema: z.object({}).passthrough(),
+    async execute(_args: Readonly<Record<string, unknown>>, context: ToolContext): Promise<string> {
       await t.load()
-      const self = t.selfOf(exec.agent?.id)
+      const self = t.selfOf(context.sessionId)
       const bot = t.botOf(self)
       if (!bot) return 'Only Bots on the team can use list_capabilities.'
       const items = Object.values(state.capabilities?.items ?? {})
@@ -45,9 +45,9 @@ export function installCapabilityTools(rt: HostRuntime, shared: ToolShared): voi
       })
       return ['Shared capabilities:', ...lines].join('\n')
     },
-  }))
+  })
 
-  ctx.tools.register(defineTool({
+  shared.register({
     name: 'save_capability',
     description: 'Create or update a shared MCP server, skill, or pack. Changes apply from your next message.',
     parameters: {
@@ -63,10 +63,22 @@ export function installCapabilityTools(rt: HostRuntime, shared: ToolShared): voi
       content: { type: 'string', description: 'Skill instructions' },
       items: { type: 'array', items: { type: 'string' }, description: 'MCP server and skill names in the pack' },
     },
-    output,
-    async execute(args: SaveCapabilityArgs, exec: ToolRunContext): Promise<string> {
+    schema: z.object({
+      name: z.string(),
+      kind: z.string(),
+      description: z.string().optional(),
+      transport: z.string().optional(),
+      command: z.string().optional(),
+      args: z.array(z.string()).optional(),
+      env: z.object({}).passthrough().optional(),
+      url: z.string().optional(),
+      headers: z.object({}).passthrough().optional(),
+      content: z.string().optional(),
+      items: z.array(z.string()).optional(),
+    }).passthrough(),
+    async execute(args: SaveCapabilityArgs, context: ToolContext): Promise<string> {
       await t.load()
-      const self = t.selfOf(exec.agent?.id)
+      const self = t.selfOf(context.sessionId)
       if (!t.botOf(self)) return 'Only Bots on the team can use save_capability.'
       try {
         const item = await t.capabilitySave(args, { botId: self })
@@ -76,39 +88,42 @@ export function installCapabilityTools(rt: HostRuntime, shared: ToolShared): voi
         return `Saved ${item.name}. Bots with it attached use the change from their next message.${approval}`
       } catch (error) { return errorMessage(error) }
     },
-  }))
+  })
 
-  ctx.tools.register(defineTool({
+  shared.register({
     name: 'delete_capability',
     description: 'Remove a shared capability and detach it from every Bot and pack.',
     parameters: { name: { type: 'string', required: true } },
-    output,
-    async execute(args: DeleteCapabilityArgs, exec: ToolRunContext): Promise<string> {
+    schema: z.object({ name: z.string() }).passthrough(),
+    async execute(args: DeleteCapabilityArgs, context: ToolContext): Promise<string> {
       await t.load()
-      const self = t.selfOf(exec.agent?.id)
+      const self = t.selfOf(context.sessionId)
       if (!t.botOf(self)) return 'Only Bots on the team can use delete_capability.'
       try {
         await t.capabilityDelete(args.name, { botId: self })
         return `Deleted ${args.name}; it was removed from every Bot and pack. The change applies from their next message.`
       } catch (error) { return errorMessage(error) }
     },
-  }))
+  })
 
   for (const [name, endpoint, verb] of [
     ['attach_capability', 'attach', 'Attached'],
     ['detach_capability', 'detach', 'Detached'],
   ] as const) {
-    ctx.tools.register(defineTool({
+    shared.register({
       name,
       description: `${verb} a shared capability to yourself, or to another Bot if you are a Main Bot.`,
       parameters: {
         name: { type: 'string', required: true, description: 'Capability name from list_capabilities' },
         bot: { type: 'string', description: 'Optional Bot name; only a Main Bot may change another Bot' },
       },
-      output,
-      async execute(args: ChangeAttachmentArgs, exec: ToolRunContext): Promise<string> {
+      schema: z.object({
+        name: z.string(),
+        bot: z.string().optional(),
+      }).passthrough(),
+      async execute(args: ChangeAttachmentArgs, context: ToolContext): Promise<string> {
         await t.load()
-        const self = t.selfOf(exec.agent?.id)
+        const self = t.selfOf(context.sessionId)
         if (!t.botOf(self)) return `Only Bots on the team can use ${name}.`
         try {
           const result = await t.changeCapabilityAttachment(endpoint, args, self)
@@ -123,6 +138,6 @@ export function installCapabilityTools(rt: HostRuntime, shared: ToolShared): voi
           return `${verb} ${args.name} ${args.bot ? `to ${result.bot}` : 'to yourself'}. Changes apply from ${result.bot}'s next message.${endpoint === 'attach' ? approvals : ''}`
         } catch (error) { return errorMessage(error) }
       },
-    }))
+    })
   }
 }

@@ -188,14 +188,14 @@ export function install(rt: HostRuntime): void {
     if (hadHolder) {
       lock.claim()
       if (lock.holder() === undefined) {
-        warn('ds-bot: the other dsh has closed; this one now saves the Bot team')
+        warn('ds-bot: the other instance has closed; this one now saves the Bot team')
         lock.markWarned()
         adopt(await lock.readFileState())
         return
       }
     } else if (!lock.broken() && !lock.owns()) {
       // A cached "writer" is stale once the lock file no longer names this host:
-      // another dsh may have taken it over, or the file may just be gone. Re-claim
+      // another instance may have taken it over, or the file may just be gone. Re-claim
       // and re-check instead of trusting the flag.
       lock.claim()
       if (lock.broken()) return
@@ -246,7 +246,7 @@ export function install(rt: HostRuntime): void {
         const ensureLock = (): void => {
           if (lock.broken()) return
           if (!lock.owns()) {
-            const error = Object.assign(new Error('ds-bot lost the state lock to another dsh'), { code: 'ELOCKLOST' })
+            const error = Object.assign(new Error('ds-bot lost the state lock to another instance'), { code: 'ELOCKLOST' })
             throw error
           }
         }

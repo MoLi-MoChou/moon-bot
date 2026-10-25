@@ -114,7 +114,7 @@ export function BotMark({ bot, look: given, size = 36, state = 'idle', live = fa
         'aria-label': label,
         'aria-hidden': label ? undefined : true,
         onClick: pokeable ? () => setPoked(true) : undefined,
-        onAnimationEnd: poked ? (event: React.AnimationEvent<HTMLSpanElement>) => { if (/^bt-poke/.test(event.animationName))
+        onAnimationEnd: poked ? (event: React.AnimationEvent<HTMLSpanElement>) => { if (event.animationName.startsWith('bt-poke'))
             setPoked(false); } : undefined,
     };
     const props = common as React.HTMLAttributes<HTMLSpanElement>;

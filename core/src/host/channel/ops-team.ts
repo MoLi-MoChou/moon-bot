@@ -80,7 +80,7 @@ function createView(rt: ChannelRuntime): () => TeamView {
     browser: rt.browserEnabled,
     // False when config.memory turns memory off: no Memory row or panel.
     memory: rt.memoryEnabled !== false,
-    // Set while another dsh host holds the team (store.js): why this one cannot change it.
+    // Set while another instance host holds the team (store.js): why this one cannot change it.
     readOnly: rt.readOnly() ?? null,
   })
 }

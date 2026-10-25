@@ -2,11 +2,11 @@
 // Agent's own context, so it lives as long as that Session does and goes away with it.
 // One reconcile chain per Agent: a slow MCP server holds up only its own Agent.
 import { createHash } from 'node:crypto'
-import type { Agent, DshContext, LoaderService, PluginFiber } from './dsh-types.js'
+import type { Agent, DshContext, PluginFiber } from './dsh-types.js'
 import { configFor } from './capabilities-config.ts'
+import { createStandaloneMounts } from './capabilities-standalone.ts'
 import type { CapabilityItem, HostRuntime, StoredBot, StoredState } from './runtime.js'
 
-const MCP_CLIENT = '@deepseek-ai/dsh-mcp-client'
 const ENSURE_TIMEOUT_MS = 15_000
 
 export type CapabilityState = 'error' | 'needs-approval' | 'connecting' | 'ready'
@@ -19,6 +19,8 @@ export interface CapabilityStatus {
 interface MountRecord {
   readonly key: string
   readonly fiber: PluginFiber | undefined
+  /** The standalone mount's own teardown (no DSH fiber involved). */
+  readonly drop?: (() => void) | undefined
 }
 
 interface MountOptions {
@@ -45,15 +47,13 @@ export interface CapabilityMounts {
 
 type StatusMap = Map<string, Map<string, Map<string, CapabilityStatus>>>
 
-export function createCapabilityMounts({ ctx, rt, state, library, expand }: MountOptions): CapabilityMounts {
+export function createCapabilityMounts({ rt, state, library, expand }: MountOptions): CapabilityMounts {
   const agents = new Map<string, WeakRef<Agent>>()
-  // Mounted fibers live in each Agent's own context, so they outlive this plugin unless
-  // its cleanup disposes them; a strong map keeps them reachable for that.
+  // The mounts per Agent; a strong map keeps them reachable for cleanup.
   const mounts = new Map<Agent, Map<string, MountRecord>>()
   const chains = new WeakMap<Agent, Promise<void>>()
   const queued = new WeakSet<Agent>()
   const sessionStatuses: StatusMap = new Map()
-  let pluginPromise: Promise<unknown> | undefined
   let scheduled: Promise<unknown> | null = null
   let loadingSecrets = 0
   let stopped = false
@@ -112,18 +112,8 @@ export function createCapabilityMounts({ ctx, rt, state, library, expand }: Moun
     return result
   }
 
-  async function loadMcpPlugin(): Promise<unknown> {
-    if (!pluginPromise) {
-      pluginPromise = (async () => {
-        const loader = ctx.get<LoaderService>('loader')
-        if (typeof loader?.import !== 'function') throw new Error('This DSH cannot load MCP servers.')
-        const exports = await loader.import(MCP_CLIENT)
-        return loader.unwrapExports?.(exports) ?? (exports as { readonly default?: unknown } | undefined)?.default ?? exports
-      })()
-    }
-    return pluginPromise
-  }
   const disposeMount = async (mount: MountRecord | undefined): Promise<void> => {
+    mount?.drop?.()
     const fiber = mount?.fiber
     if (fiber !== undefined) await Promise.resolve().then(() => fiber.dispose()).catch(() => {})
   }
@@ -154,29 +144,23 @@ export function createCapabilityMounts({ ctx, rt, state, library, expand }: Moun
     await drop()
     statusSet(botId, name, sessionId, { state: 'connecting' })
     try {
-      const plugin = item.kind === 'skill'
-        ? {
-          name: `ds-bot-capability-skill-${name}`,
-          inject: ['skills'],
-          apply(c: { effect(execute: () => unknown): void; readonly skills: { register(entry: Record<string, unknown>): void } }) {
-            c.effect(() => c.skills.register({ name: config.name, description: config.description, source: 'runtime', content: config.content }))
-          },
-        }
-        : await loadMcpPlugin()
-      if (stopped) return
-      const fiber = item.kind === 'skill' ? agent.ctx?.plugin?.(plugin) : agent.ctx?.plugin?.(plugin, config)
-      if (fiber === undefined) throw new Error('This DSH cannot mount capabilities on an Agent.')
-      agentMounts.set(name, { key, fiber })
-      await fiber.await?.()
-      if (stopped || agents.get(sessionId)?.deref() !== agent) return
+      // An MCP server mounts through our own connector into the tool registry the
+      // engine serves; a skill is a DSH-hosted idea and none is offered here.
+      if (item.kind !== 'mcp') throw new Error('Only MCP servers can be mounted.')
+      const drop = await standalone.mount(name, config)
+      agentMounts.set(name, { key, fiber: undefined, drop })
       statusSet(botId, name, sessionId, { state: 'ready' })
+      return
     } catch (error) {
       await drop()
-      const parts = [error, (error as { readonly cause?: unknown } | undefined)?.cause].filter(Boolean)
-      const message = rt.redactSecrets(parts.map(part => String((part as { readonly message?: unknown } | undefined)?.message ?? part)).join(': ') || 'Connection failed').slice(0, 300)
-      statusSet(botId, name, sessionId, { state: 'error', error: message })
+      statusSet(botId, name, sessionId, { state: 'error', error: rt.redactSecrets(error instanceof Error ? error.message : String(error)).slice(0, 300) })
+      return
     }
   }
+
+  // The mount: an MCP server becomes one of our connectors, its tools in the registry.
+  const standalone = createStandaloneMounts(rt.toolRegistry)
+
   const reconcileAgent = async (agent: Agent, bot: StoredBot | undefined): Promise<void> => {
     const sessionId = agent.session.id
     const desired = bot ? expand(bot.capabilities) : new Set<string>()
@@ -282,12 +266,15 @@ export function createCapabilityMounts({ ctx, rt, state, library, expand }: Moun
     trackAgent(agent)
     await prepare(agent, sessionId)
   }
+  // Whether a DSH plugin host serves this process: standalone (no loader service), an
+  // agent has no context at all and its capabilities mount through our connector.
   const trackAgent = (agent: Agent | undefined): void => {
     const sessionId = agent?.session?.id
-    if (agent === undefined || typeof sessionId !== 'string' || !agent.ctx) return
+    if (agent === undefined || typeof sessionId !== 'string') return
+
     if (agents.get(sessionId)?.deref() === agent) return
     agents.set(sessionId, new WeakRef(agent))
-    agent.ctx.effect?.(() => () => {
+    agent.ctx?.effect?.(() => () => {
       if (agents.get(sessionId)?.deref() === agent) agents.delete(sessionId)
       clearSession(sessionId)
       for (const mount of mounts.get(agent)?.values() ?? []) void disposeMount(mount)
@@ -323,6 +310,7 @@ export function createCapabilityMounts({ ctx, rt, state, library, expand }: Moun
   }
   const dispose = async (): Promise<void> => {
     stopped = true
+    standalone.dispose()
     const live = [...mounts.values()]
     mounts.clear()
     agents.clear()

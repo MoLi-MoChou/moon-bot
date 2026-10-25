@@ -4,7 +4,7 @@ import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { after, test } from 'node:test'
-import { hostPort } from '../src/host-port.mjs'
+import { hostPort } from '../src/host-port.ts'
 
 const root = mkdtempSync(join(tmpdir(), 'ds-bot-app-port-'))
 after(() => { rmSync(root, { recursive: true, force: true }) })

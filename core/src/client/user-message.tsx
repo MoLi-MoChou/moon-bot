@@ -1,5 +1,13 @@
 import { Fragment, createElement as h, useState } from 'react';
-import * as ui from '@deepseek-ai/dsh-client-ui-primitives';
+// DSH's drawing helpers for the blocks it renders itself; the standalone product
+// draws plain versions of the same parts, and canDrawUserMessages stays true.
+const ui = {
+  projectUserText: (text: string, ..._rest: readonly unknown[]): string => { void _rest; return text },
+  fileExtension: (name: string): string | undefined => name.split('.').at(-1),
+  fileSizeText: (bytes: number | undefined): string | undefined => (bytes === undefined ? undefined : bytes < 1024 ? `${String(bytes)} B` : `${String(Math.round(bytes / 1024))} KB`),
+  FileTypeIcon: null,
+  JsonBlock: null,
+} as const
 import { mentionSpans } from '../shared/mentions.ts';
 import { BotMark } from './mark.tsx';
 import { CheckIcon, CopyIcon } from './icons.tsx';

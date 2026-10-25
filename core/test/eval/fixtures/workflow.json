@@ -1,0 +1,7 @@
+{
+  "capability": "cross-application-workflow",
+  "checks": [
+    "a multi-step turn runs an MCP tool mid-turn and its result reaches the model",
+    "a tool that fails once is retried, then the turn answers from the recovered result"
+  ]
+}

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { needsNoSandbox } from '../src/sandbox.mjs'
+import { needsNoSandbox } from '../src/sandbox.ts'
 
 const files = map => path => map[path]
 test('only an AppImage on a kernel without unprivileged user namespaces drops the sandbox', () => {

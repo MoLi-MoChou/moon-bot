@@ -6,13 +6,13 @@ directories:
   output: dist-pack
 files:
   - package.json
+  # The main process ships bundled (dist-main/main.cjs); the child Host (service-host.ts),
+  # preload.cjs and mica.css run from src/ as Node type-stripped sources.
+  - dist-main/**
   - src/**
   - assets/**
-  # Moon Bot: size. The Office engine is downloaded after install (src/engines.mjs);
-  # source maps, type declarations, TypeScript sources and test folders do not run.
-  - '!node_modules/@deepseek-ai/libreoffice-kit-{win32-x64,win32-arm64,darwin-x64,darwin-arm64,wasm}/**'
+  # Moon Bot: size. Source maps, type declarations and test folders do not run.
   - '!node_modules/@img/*linuxmusl*/**'
-  - '!node_modules/@deepseek-ai/{dsh-experimental-inspector-profile,dsh-experimental-inspector,dsh-experimental-session-inspector,dsh-experimental-agent-team-profile,dsh-experimental-agent-team,dsh-experimental-client-ui-agent-team,dsh-experimental-tool-agent-team,dsh-experimental-ralph-bundle,dsh-experimental-badge-skill-bundle,dsh-experimental-cot-translation-bundle,dsh-experimental-translator,dsh-experimental-client-ui-cot-translation,dsh-experimental-plugin-market-bundle,dsh-experimental-tool-worktree,dsh-experimental-worktree}/**'
   - '!**/*.{map,d.ts,d.mts,d.cts,tsbuildinfo}'
   - '!**/node_modules/zod/src/**'
   - '!**/node_modules/*/{test,tests,__tests__}/**'

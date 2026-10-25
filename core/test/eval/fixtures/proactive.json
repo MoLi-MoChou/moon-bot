@@ -1,0 +1,7 @@
+{
+  "capability": "proactive-action",
+  "checks": [
+    "a schedule created before a restart fires after it, exactly once, from next_run_at",
+    "a paused schedule never fires"
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "capability": "persistent-memory",
+  "checks": [
+    "a memory written as the remember tool writes it survives a full service restart",
+    "the surfaced memory carries its text verbatim and is deletable (its scope rebuilds empty)"
+  ]
+}

@@ -148,18 +148,7 @@ const ownVersion = (): string | undefined => {
 }
 
 // DSH packages share one version; the LLM package is always beside the plugin.
-const dshVersion = (): string | undefined => {
-  try {
-    let dir = dirname(fileURLToPath(import.meta.resolve('@deepseek-ai/dsh-llm')))
-    for (let depth = 0; depth < 5; depth += 1, dir = dirname(dir)) {
-      try {
-        const manifest = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'))
-        if (manifest.name === '@deepseek-ai/dsh-llm') return manifest.version
-      } catch {}
-    }
-  } catch {}
-  return undefined
-}
+const dshVersion = (): undefined => undefined
 
 export function install(rt: HostRuntime): void {
   const { ctx, home, config } = rt
@@ -257,7 +246,7 @@ export function install(rt: HostRuntime): void {
       node: process.version,
       team: `${count(bots.length, 'Bot', 'Bots')}, ${rt.state.mainBotIds.length} Main, ${count(groups, 'group chat', 'group chats')}`,
       models: models.length > 0 ? models.join(', ') : undefined,
-      readOnly: rt.readOnly?.() ? 'yes, another dsh holds the team' : undefined,
+      readOnly: rt.readOnly?.() ? 'yes, another instance holds the team' : undefined,
     }
   }
 

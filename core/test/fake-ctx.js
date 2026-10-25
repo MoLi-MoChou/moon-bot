@@ -33,7 +33,7 @@ export function fakeContext({ services = {} } = {}) {
     guards,
     listeners,
     sections,
-    logger: { warn() {}, info() {} },
+    logger: { warn(...args) { void args }, info(...args) { void args } },
     get: name => services[name],
     on(name, listener, options) {
       calls.push(`on ${name}${options?.prepend ? ' (prepend)' : ''}`)

@@ -11,9 +11,10 @@ Docker, from the repository root:
 
 Server with compose: copy the repository, put `.env` next to `deploy/docker-compose.yml`
 (`MOON_BOT_PASSWORD=…`, and a provider key such as `SENSENOVA_API_KEY=…`), optionally seed
-`deploy/data/profiles/core/cordis.patch.yml` from `cordis.patch.example.yml`, then
+the provider settings — copy `settings.example.json` to `deploy/data/settings.json` — then
 `docker compose -f deploy/docker-compose.yml up -d --build`. Data (Bots, chats, memory,
-settings) lives in `deploy/data`, mounted at `/data`.
+settings) lives in `deploy/data`, mounted at `/data`; providers may also be configured in
+the interface, under Settings, and the key stays in the container's environment.
 
 Environment: `MOON_BOT_PASSWORD` (required off loopback), `MOON_BOT_WEB_HOST` (0.0.0.0 in
 the image), `MOON_BOT_WEB_PORT` (8290), `MOON_BOT_DATA` (/data), `MOON_BOT_WORKSPACE`.

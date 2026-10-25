@@ -30,7 +30,8 @@ export interface MetricView {
 export interface TableView {
   readonly type: 'table'
   readonly columns: readonly { readonly key: string; readonly label: string }[]
-  readonly rows: readonly Readonly<Record<string, string | number>>[]
+  /** One row per line, cells in the columns' order. */
+  readonly rows: readonly (readonly (string | number | boolean)[])[]
 }
 
 export interface OptionsView {

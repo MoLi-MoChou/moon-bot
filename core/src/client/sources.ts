@@ -17,7 +17,9 @@ export function createSource<T>(initial: T): Source<T> {
       const resolved = typeof next === 'function' ? (next as (previous: T) => T)(value) : next
       if (resolved === value) return
       value = resolved
-      for (const listener of [...listeners]) listener()
+      // A listener may subscribe or unsubscribe as it runs, so it iterates a snapshot.
+      const snapshot = [...listeners]
+      for (const listener of snapshot) listener()
     },
   }
 }

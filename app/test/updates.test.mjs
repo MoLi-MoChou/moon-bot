@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { EventEmitter } from 'node:events'
 import { describe, test } from 'node:test'
 import { setTimeout as sleep } from 'node:timers/promises'
-import { isNewer, RELEASES_URL, watchReleases, watchUpdates } from '../src/updates.mjs'
+import { isNewer, RELEASES_URL, watchReleases, watchUpdates } from '../src/updates.ts'
 
 // electron-updater's AppUpdater, as far as the app uses it. `found` makes the answer of a
 // check that finds a version, with the download that autoDownload starts.

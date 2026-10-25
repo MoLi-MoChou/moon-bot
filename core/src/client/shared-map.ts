@@ -45,7 +45,7 @@ export type ReactionMap = Record<string, Record<string, string[]>>
 
 // reactions: { [message key]: { [bubble index]: [emoji…] } }
 export function toggleReaction(reactions: ReactionMap, key: string, index: number, emoji: string): ReactionMap {
-  const entry = { ...(reactions[key] ?? {}) }
+  const entry = { ...reactions[key] }
   const list = entry[String(index)] ?? []
   entry[String(index)] = list.includes(emoji) ? list.filter(item => item !== emoji) : [...list, emoji]
   if (entry[String(index)]?.length === 0) delete entry[String(index)]

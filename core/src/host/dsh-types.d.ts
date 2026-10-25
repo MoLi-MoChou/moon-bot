@@ -219,6 +219,37 @@ export interface AssistantMessageEvent {
   readonly message?: { readonly content?: readonly MessageContentBlock[] }
 }
 
+/** A message's delivery source, as the host reads it back. */
+export interface LlmMessageSource {
+  readonly kind?: unknown
+  readonly [key: string]: unknown
+}
+
+/** A user message as the inbox carries it. */
+export interface LlmUserMessage {
+  readonly role?: 'user'
+  readonly content: readonly unknown[]
+  readonly source?: LlmMessageSource | undefined
+  readonly [key: string]: unknown
+}
+
+/** One text block of a message. */
+export interface LlmTextBlock {
+  readonly type: 'text'
+  readonly text: string
+  readonly [key: string]: unknown
+}
+
+/** A tool's execution context, the slice the tools read. */
+export interface ToolRunContext {
+  readonly name?: string | undefined
+  readonly callId?: string | undefined
+  readonly agent?: { readonly id?: string, readonly session?: unknown, readonly [key: string]: unknown } | undefined
+  readonly signal?: AbortSignal | undefined
+  concludeTurn?(): void
+  readonly [key: string]: unknown
+}
+
 export interface TurnEndReason {
   readonly kind?: 'completed' | 'aborted' | 'error' | string
   readonly error?: { readonly code?: string; readonly message?: string; readonly status?: number }

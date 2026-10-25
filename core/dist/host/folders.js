@@ -92,7 +92,7 @@ function install(rt) {
     return path;
   }
   const sessionsOfBot = (botId) => [rt.chatOf(botId), ...Object.values(state.rooms).filter((room) => room.members?.includes(botId) ?? false).map((room) => room.sessions?.[botId])].filter((id) => id !== void 0);
-  async function approveFolder(exec, { path, sessions = [], who }) {
+  async function approveFolder(exec, { path, sessions = [], who, toolName }) {
     const team = await realTeam();
     const policy = ctx.get("sandboxPolicy");
     if (path === void 0 || team !== void 0 && within(path, team) || policy === void 0) return;
@@ -100,12 +100,13 @@ function install(rt) {
     const modes = [policy.resolve(), ...agents.map((agent2) => policy.resolve({ session: agent2.session }))].map((entry) => entry.mode);
     if (!modes.includes("workspace-write")) return;
     const approval = ctx.get("approval");
-    const agent = exec.agent;
+    const agent = "agent" in exec && exec.agent !== void 0 ? exec.agent : "sessionId" in exec ? await rt.resolveAgent(exec.sessionId).catch(() => void 0) : void 0;
     if (approval === void 0 || agent?.session === void 0) throw new Error(`Working in ${path} needs the user's approval, and there is no way to ask for it here, so nothing changed. The user can make this change in the settings.`);
+    const name = toolName ?? ("name" in exec ? exec.name : void 0);
     const outcome = await approval.request({
       agent,
-      ...exec.name !== void 0 ? { toolName: exec.name } : {},
-      ...exec.callId !== void 0 ? { callId: exec.callId } : {},
+      ...name !== void 0 ? { toolName: name } : {},
+      ...exec.callId !== void 0 && exec.callId !== "" ? { callId: exec.callId } : {},
       reason: `Let ${who.en} work in ${path}? Files there can then be changed.`,
       displayReason: { en: `Let ${who.en} work in ${path}? Files there can then be changed.`, zh: `\u5141\u8BB8${who.zh}\u5728 ${path} \u4E2D\u5DE5\u4F5C\u5417\uFF1F\u4E4B\u540E\u53EF\u4EE5\u4FEE\u6539\u8FD9\u4E2A\u6587\u4EF6\u5939\u91CC\u7684\u6587\u4EF6\u3002` },
       ...exec.signal ? { signal: exec.signal } : {}

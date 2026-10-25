@@ -1,10 +1,10 @@
 // The wiring for secrets: the card a Bot opens, the settings endpoints, redaction of
 // tool results and model requests, and the shell environment a saved key is offered in.
 import { randomUUID } from 'node:crypto'
-import { defineTool, type ToolRunContext } from '@deepseek-ai/dsh-tools'
+import { z } from 'zod'
+import type { ToolContext } from '../../engine/registry.ts'
 import type { Disposer, DshContext, LlmStreamOptions } from '../dsh-types.js'
 import type { HostRuntime } from '../runtime.js'
-import { output } from '../tools.ts'
 import {
   SECRET_NAME,
   canUse,
@@ -163,31 +163,31 @@ export function install(rt: HostRuntime): void {
     return handler(body ?? {})
   }
 
-  const callerOf = (exec: ToolRunContext): string | undefined => {
-    const headerId = exec.agent?.session?.header?.id
-    return rt.selfOf(typeof headerId === 'string' ? headerId : exec.agent?.id)
+  const callerOf = (context: ToolContext): string | undefined => {
+    const headerId = (context.session as { readonly header?: { readonly id?: unknown } } | undefined)?.header?.id
+    return rt.selfOf(typeof headerId === 'string' ? headerId : context.sessionId)
   }
 
-  ctx.tools.register(defineTool({
+  rt.registerTool({
     name: 'request_secret',
     description: 'Ask the user for a key, token, or password through a secure card in your own chat. The user types it into the card; you never see the value. It reaches your shell as an environment variable. When the key is already saved for you, this only tells you its variable. Showing a card ends your turn; a note arrives when the user saves or cancels.',
     parameters: {
       name: { type: 'string', required: true, description: 'Key name in capitals, digits, and underscores, e.g. GITHUB_TOKEN' },
       purpose: { type: 'string', required: true, description: 'One short line for the user: what you need it for' },
     },
-    output,
-    async execute(args, exec: ToolRunContext): Promise<string> {
+    schema: z.object({ name: z.string(), purpose: z.string() }).passthrough(),
+    async execute(args, context: ToolContext): Promise<string> {
       await rt.load()
       await store.load()
-      const id = exec.agent?.id
-      const bot = rt.botOf(callerOf(exec))
+      const id = context.sessionId
+      const bot = rt.botOf(callerOf(context))
       if (bot === undefined) return 'Only Bots on the team can use request_secret.'
       const name = normalizeName(args.name)
       if (!SECRET_NAME.test(name)) return 'Name the key with capitals, digits, and underscores, starting with a letter (for example GITHUB_TOKEN).'
       const secret = store.secrets.get(name)
       if (canUse(secret, bot.id)) return `${name} is already saved and you may use it: ${store.usage(name)}. You cannot see the value; never print it.`
-      if (id !== undefined && rt.groupOwners.has(id)) return 'Secret cards only work in your own chat. Tell the group you will ask the user in your own chat, and call request_secret there.'
-      if (id === undefined || !rt.chatOwners.has(id)) return 'Secret cards only work in your current own chat.'
+      if (rt.groupOwners.has(id)) return 'Secret cards only work in your own chat. Tell the group you will ask the user in your own chat, and call request_secret there.'
+      if (!rt.chatOwners.has(id)) return 'Secret cards only work in your current own chat.'
       const readOnly = rt.readOnly()
       if (readOnly !== undefined) return `No card can be shown now. ${readOnly}`
       const list = store.requestsOf(bot.id)
@@ -200,7 +200,7 @@ export function install(rt: HostRuntime): void {
       }
       list.push({
         id: randomUUID(),
-        ...(exec.callId !== undefined ? { callId: exec.callId } : {}),
+        ...(context.callId !== '' ? { callId: context.callId } : {}),
         sessionId: id,
         name,
         purpose: String(args.purpose ?? '').trim().slice(0, 300),
@@ -210,22 +210,22 @@ export function install(rt: HostRuntime): void {
       })
       store.trimRequests(list)
       await rt.save()
-      exec.concludeTurn?.()
+      context.concludeTurn?.()
       return secret !== undefined
         ? `The card asking the user to let you use ${name} is on screen. A note arrives when the user answers; you will not see the value.`
         : `The card asking the user for ${name} is on screen. A note arrives when the user saves or cancels; you will not see the value.`
     },
-  }))
+  })
 
-  ctx.tools.register(defineTool({
+  rt.registerTool({
     name: 'list_secrets',
     description: 'List the keys the user saved for the team: name, purpose, which Bots may use them, and whether you may. Values are never shown.',
     parameters: {},
-    output,
-    async execute(_args, exec: ToolRunContext): Promise<string> {
+    schema: z.object({}).passthrough(),
+    async execute(_args, context: ToolContext): Promise<string> {
       await rt.load()
       await store.load()
-      const self = callerOf(exec)
+      const self = callerOf(context)
       if (rt.botOf(self) === undefined) return 'Only Bots on the team can use list_secrets.'
       if (store.secrets.size === 0) return 'No keys are saved yet. Ask for one with request_secret.'
       return [
@@ -233,7 +233,7 @@ export function install(rt: HostRuntime): void {
         ...store.secretsView().map(secret => `- ${secret.name}${secret.purpose ? ` — ${secret.purpose}` : ''} — for ${store.scopeText(secret.scope)} — ${canUse(store.secrets.get(secret.name), self) ? `you may use it as $${envName(secret.name)}` : 'you may not use it; ask with request_secret'}`),
       ].join('\n')
     },
-  }))
+  })
 
   // Tool results lose the values before the registry renders and saves them: a fresh
   // result object is re-rendered from its value, so the model content, the saved

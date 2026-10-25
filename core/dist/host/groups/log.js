@@ -3,7 +3,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { readFile, rm } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
-import { createUserMessage } from "@deepseek-ai/dsh-llm";
+import { createUserMessage } from "../llm-bits.js";
 import { GROUP_LINE_READ, ROOM_LATE_ROUNDS, ROOM_STEP_GAP_MS, SOURCE_KIND, TEXT_KEPT } from "../constants.js";
 import { headOf, splitRef } from "../text.js";
 import {

@@ -30,7 +30,8 @@
     ".": "./index.js",
     "./client": "./client.js",
     "./web-search": "./web-search.js",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./service": "./dist/service/server.js"
   },
   "files": [
     "index.js",
@@ -42,20 +43,14 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "node scripts/build-client.mjs && node scripts/build-host.mjs",
+    "build": "node scripts/build-client.ts && node scripts/build-host.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "node --import ./test/harness-resolve.mjs --test \"test/*.test.js\"",
+    "test": "node --import ./test/harness-resolve.mjs --test \"test/*.test.ts\"",
     "lint": "node scripts/lint.mjs",
-    "harness": "npm install --prefix dev/harness --legacy-peer-deps=false --no-package-lock --no-fund --no-audit",
     "check": "sh dev/check.sh",
     "test:gate": "node scripts/test-gate.mjs",
-    "build:host": "node scripts/build-host.mjs"
-  },
-  "peerDependencies": {
-    "@deepseek-ai/cordis": "*",
-    "@deepseek-ai/dsh-llm": "*",
-    "@deepseek-ai/dsh-tools": "*",
-    "@deepseek-ai/dsh-web": "*"
+    "build:host": "node scripts/build-host.mjs",
+    "eval": "node scripts/eval.ts"
   },
   "dsh": {
     "client": {
@@ -66,13 +61,25 @@
     }
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.20.5",
     "@types/react": "^19.3.0",
     "esbuild": "0.28.2",
     "framer-motion": "^12.43.0",
+    "jsdom": "^26.1.0",
+    "oxlint": "^1.76.0",
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@earendil-works/pi-agent-core": "^1.4.0",
+    "@earendil-works/pi-ai": "^1.4.0",
+    "@fastify/cookie": "^11.1.3",
+    "@fastify/static": "^10.1.7",
+    "@fastify/websocket": "^11.3.4",
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "better-sqlite3": "^12.11.1",
+    "croner": "^10.0.1",
+    "fastify": "^5.12.7",
     "zod": "^3.25.76"
   }
 }

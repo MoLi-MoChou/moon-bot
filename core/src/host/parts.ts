@@ -31,7 +31,7 @@ import { createPartNote } from './parts-note.ts'
 import { createPartPager } from './parts-pager.ts'
 import type { Agent, DshContext } from './dsh-types.js'
 import type { HostRuntime } from './runtime.js'
-import type { LlmMessageSource } from '@deepseek-ai/dsh-llm'
+import type { LlmMessageSource } from './dsh-types.js'
 import type { Lines, SwitchAgent, SwitchJob, SwitchPart, SwitchSession } from './parts-switch-move.ts'
 import type { PartSwitchRuntime } from './parts-switch.ts'
 import type { SwitchState } from './parts-switch-move.ts'
@@ -258,7 +258,7 @@ export function install(rt: HostRuntime): void {
     condense,
     decide,
     adoptCompaction,
-    // A read-only process (another dsh holds the team) neither condenses nor switches.
+    // A read-only process (another instance holds the team) neither condenses nor switches.
     readOnly: () => rt.readOnly() !== undefined,
     writeNote,
     handoffLines,

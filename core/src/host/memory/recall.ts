@@ -4,8 +4,9 @@
 import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { defineTool, type ToolRunContext } from '@deepseek-ai/dsh-tools'
-import { output } from '../tools.ts'
+import { z } from 'zod'
+import type { ToolRunContext } from '../dsh-types.js'
+import type { ToolContext } from '../../engine/registry.ts'
 import type { StoredBot } from '../runtime.ts'
 import type { MemoryActor, MemoryFile, MemoryScope, ScopedEntry } from './records.ts'
 import type { MemoryBody, Panel, RecallDeps, RecallService, Scopes, ScopeList } from '../memory-types.ts'
@@ -75,13 +76,14 @@ const ASK_CHANGES_MAX = 20
 
 /** The read side: recall, the source of an entry, and the memory panel. */
 export function createRecall({ rt, storage, botShot }: RecallDeps): RecallService {
-  const { ctx } = rt
   const USER: MemoryActor = { id: 'user', name: 'user' }
   const languageNow = (): string => rt.uiLanguage?.() ?? 'the language most entries are written in'
   const capital = (text: string): string => (text[0] ?? '').toUpperCase() + text.slice(1)
 
-  const callerOf = (exec: ToolRunContext): Caller | undefined => {
-    const sessionId = exec.agent?.id
+  const callerOf = (exec: ToolContext | ToolRunContext): Caller | undefined => {
+    const agentView = (exec as { readonly agent?: { readonly id?: unknown } | undefined }).agent
+    const fromContext = 'sessionId' in exec ? exec.sessionId : undefined
+    const sessionId: string | undefined = typeof fromContext === 'string' ? fromContext : (agentView !== null && agentView !== undefined && typeof agentView.id === 'string' ? agentView.id : undefined)
     if (sessionId === undefined) return undefined
     const bot = rt.botOf(rt.selfOf(sessionId))
     return bot === undefined ? undefined : { bot, sessionId, roomId: storage.roomIdOf(sessionId) }
@@ -128,7 +130,7 @@ export function createRecall({ rt, storage, botShot }: RecallDeps): RecallServic
   const tagOf = (scope: MemoryScope, botId: string): string => (scope.kind === 'team' ? 'team' : scope.kind === 'group' ? 'group' : scope.botId === botId ? 'yours' : rt.botOf(scope.botId)?.name ?? '?')
 
   function installTools(): void {
-    ctx.tools.register(defineTool({
+    rt.registerTool({
       name: 'recall',
       description: 'Search your memory, the team memory, and in a group chat the group memory, or read one topic whole. It also finds entries saved after this conversation began. With no arguments, lists what is saved where.',
       parameters: {
@@ -136,10 +138,10 @@ export function createRecall({ rt, storage, botShot }: RecallDeps): RecallServic
         topic: { type: 'string', description: 'A topic to read whole, as listed with [[topic]]' },
         scope: { type: 'string', description: 'Omit for yours, the team\'s, and in a group chat the group\'s; "own", "group", "team", or a Bot\'s name (Main Bots only)' },
       },
-      output,
-      async execute(args: Readonly<Record<string, unknown>>, exec: ToolRunContext): Promise<string> {
+      schema: z.object({ query: z.string().optional(), topic: z.string().optional(), scope: z.string().optional() }).passthrough(),
+      async execute(args: Readonly<Record<string, unknown>>, context: ToolContext): Promise<string> {
         await rt.load()
-        const caller = callerOf(exec)
+        const caller = callerOf(context)
         if (caller === undefined) return 'Only Bots on the team keep a memory.'
         const self = caller.bot.id
         const chosen = readScopes(args.scope, self, caller.roomId)
@@ -182,7 +184,7 @@ export function createRecall({ rt, storage, botShot }: RecallDeps): RecallServic
           ...hits.map(({ entry, tag }) => `[${where(tag, entry.file)}] ${formatEntry(entry.text, entry.meta).slice(2)}`),
         ].join('\n')
       },
-    }))
+    })
   }
 
   // ---------------------------------------------------------------------------

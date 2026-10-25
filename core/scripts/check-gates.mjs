@@ -28,7 +28,7 @@ import ts from 'typescript'
 
 const MAX_LINES = 350
 const SOURCE_EXTENSIONS = new Set(['.js', '.ts', '.tsx'])
-const LAYERS = new Set(['shared', 'client', 'host'])
+const LAYERS = new Set(['shared', 'client', 'host', 'engine', 'store', 'service'])
 
 // Exempt by design. The globs are relative to the root (normally core/).
 const LINE_EXEMPTIONS = [
@@ -211,8 +211,14 @@ function targetLayer(file, specifier) {
 
 function boundaryViolation(layer, file, specifier) {
   const target = targetLayer(file, specifier)
-  if (layer === 'client' && target === 'host') return 'client may not import host'
+  if (layer === 'client' && (target === 'host' || target === 'engine' || target === 'store')) return `client may not import ${target}`
   if (layer === 'host' && target === 'client') return 'host may not import client'
+  if (layer === 'engine' && (target === 'host' || target === 'client')) return `engine may not import ${target}`
+  if (layer === 'store' && target !== undefined && target !== 'shared' && target !== 'store') return 'store may import only shared and its own files'
+  // The service is the composition root: it may wire every server-side layer, but the
+  // UI (client) never reaches into it, and it never reaches into the UI.
+  if (layer === 'client' && target === 'service') return 'client may not import service'
+  if (layer === 'service' && target === 'client') return 'service may not import client'
   if (layer !== 'shared') return undefined
   if (specifier === 'zod' || specifier.startsWith('zod/')) return undefined
   if (target === 'shared') return undefined

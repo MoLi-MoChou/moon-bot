@@ -1,13 +1,15 @@
 // The pieces every Bot tool module shares: the tool output shape and parameter blocks,
 // the runtime methods the still-JS host modules install, and the small readers the tools
 // use on the team (the caller, the visible groups, hand-off bodies).
-import type { ToolRunContext } from '@deepseek-ai/dsh-tools'
+import { ToolRegistry, type ToolContext, type ToolEntry } from '../../engine/registry.ts'
+import { registerDshTool } from './dsh.ts'
 import type { CapabilityStatus } from '../capabilities-mount.ts'
 import type {
   Agent,
   AgentSession,
   AttachmentRef,
   InboxMessage,
+  ToolExecution,
   ToolParameter,
 } from '../dsh-types.js'
 import type {
@@ -73,7 +75,12 @@ export interface ApproveFolderOptions {
   readonly path?: string | undefined
   readonly sessions?: readonly string[]
   readonly who: { readonly en: string; readonly zh: string }
+  /** The tool the approval is asked for, where the caller is a tool context with no name. */
+  readonly toolName?: string | undefined
 }
+
+/** What approveFolder asks with: a DSH exec that carries the calling agent, or a tool context. */
+export type ApproveFolderExec = ToolExecution | ToolContext
 
 export interface PostToRoomOptions {
   readonly reportBack?: boolean
@@ -120,7 +127,7 @@ export interface ToolsRuntime extends HostRuntime {
   updateRoom(id: string, patch: Readonly<Record<string, unknown>>, actorId: string | undefined): Promise<RoomChange>
   deleteRoom(id: string): Promise<void>
   cleanWorkDir(input: unknown): Promise<string | undefined>
-  approveFolder(exec: ToolRunContext, options: ApproveFolderOptions): Promise<void>
+  approveFolder(exec: ApproveFolderExec, options: ApproveFolderOptions): Promise<void>
   sessionsOfBot(botId: string): readonly string[]
   workDirOf(options: { readonly botId?: string | undefined; readonly roomId?: string | undefined }): string | undefined
   sessionFolder(session: SessionFolderInput | AgentSession | undefined): string | undefined
@@ -162,11 +169,12 @@ interface MessageBlock {
 
 export interface ToolShared {
   readonly rt: ToolsRuntime
+  register(entry: ToolEntry): void
   readonly state: StoredState
   readonly calledInPosts: Map<string | undefined, CalledInPosts>
-  callerBot(exec: ToolRunContext): StoredBot | undefined
-  callerRoom(exec: ToolRunContext): { readonly fromRoomId?: string }
-  roomOfCaller(exec: ToolRunContext): StoredRoom | undefined
+  callerBot(context: ToolContext): StoredBot | undefined
+  callerRoom(context: ToolContext): { readonly fromRoomId?: string }
+  roomOfCaller(context: ToolContext): StoredRoom | undefined
   roomLine(room: StoredRoom, self: string | undefined): string
   visibleRooms(self: string | undefined): StoredRoom[]
   activeSessions(botId: string): { readonly running: readonly string[]; readonly idle: boolean }
@@ -175,10 +183,10 @@ export interface ToolShared {
   unreadRequest(agent: Agent, senderId: string, toUser: boolean): { readonly message: InboxMessage; readonly steered: boolean } | undefined
   bodyOf(message: InboxMessage): BodyOfMessage
   refuse(message: string): never
-  worksOf(exec: ToolRunContext): readonly string[]
+  worksOf(context: ToolContext): readonly string[]
   tooLong(text: string): string
-  callInGroup(exec: ToolRunContext, room: StoredRoom, sender: StoredBot, target: StoredBot, message: string): Promise<string>
-  turnOf(exec: ToolRunContext): unknown
+  callInGroup(context: ToolContext, room: StoredRoom, sender: StoredBot, target: StoredBot, message: string): Promise<string>
+  turnOf(context: ToolContext): unknown
   hiddenTurn(sessionId: string): boolean
   workFrom(workId: string | undefined): string | undefined
   nameList(value: unknown): string[]
@@ -195,20 +203,17 @@ export const errorMessage = (error: unknown): string => (error instanceof Error 
 
 export const stringOf = (value: unknown): string | undefined => (typeof value === 'string' ? value : undefined)
 
-export function createShared(host: HostRuntime): ToolShared {
+export function createShared(host: HostRuntime, registry: ToolRegistry = new ToolRegistry()): ToolShared {
   const rt = host as ToolsRuntime
-  const { state } = rt
+  const { state, ctx } = rt
 
-  const callerBot = (exec: ToolRunContext): StoredBot | undefined => rt.botOf(rt.selfOf(exec.agent?.id))
-  const callerRoom = (exec: ToolRunContext): { readonly fromRoomId?: string } => {
-    const sessionId = exec.agent?.id
-    const roomId = sessionId === undefined ? undefined : rt.groupOwners.get(sessionId)?.roomId
+  const callerBot = (context: ToolContext): StoredBot | undefined => rt.botOf(rt.selfOf(context.sessionId))
+  const callerRoom = (context: ToolContext): { readonly fromRoomId?: string } => {
+    const roomId = rt.groupOwners.get(context.sessionId)?.roomId
     return roomId ? { fromRoomId: roomId } : {}
   }
-  const roomOfCaller = (exec: ToolRunContext): StoredRoom | undefined => {
-    const sessionId = exec.agent?.id
-    return sessionId === undefined ? undefined : rt.roomOf(rt.groupOwners.get(sessionId)?.roomId)
-  }
+  const roomOfCaller = (context: ToolContext): StoredRoom | undefined =>
+    rt.roomOf(rt.groupOwners.get(context.sessionId)?.roomId)
 
   const roomLine = (room: StoredRoom, self: string | undefined): string => {
     const members = (room.members ?? []).map(id => rt.botOf(id))
@@ -275,8 +280,8 @@ export function createShared(host: HostRuntime): ToolShared {
 
   // The works (handoffs.ts) the calling turn does: what it answers, and the requests
   // that joined it.
-  const worksOf = (exec: ToolRunContext): readonly string[] => {
-    const turn = liveEntry(exec.agent?.id)
+  const worksOf = (context: ToolContext): readonly string[] => {
+    const turn = liveEntry(context.sessionId)
     return [rt.workOf(turn?.info), ...(turn?.joined ?? []).map(joined => rt.workOf(joined.info))]
       .filter((id): id is string => id !== undefined)
   }
@@ -284,22 +289,19 @@ export function createShared(host: HostRuntime): ToolShared {
 
   // Work for a group stays in it: from a group Session, message_bot calls a member there
   // exactly as an "@Name" line would, and never reaches a Bot outside the group.
-  const callInGroup = async (exec: ToolRunContext, room: StoredRoom, sender: StoredBot, target: StoredBot, message: string): Promise<string> => {
+  const callInGroup = async (context: ToolContext, room: StoredRoom, sender: StoredBot, target: StoredBot, message: string): Promise<string> => {
     if (!(room.members ?? []).includes(target.id)) {
       const add = rt.isMain(sender.id) || rt.isAdminOf(room, sender.id) ? ', or add it yourself with update_group first' : ''
       refuse(`Not sent: ${target.name} is not in "${room.name}", and work for this group stays in it. Ask the user to add ${target.name} to the group${add}.`)
     }
     const call = `@${target.name}`
-    const sessionId = exec.agent?.id
-    if (sessionId === undefined) return refuse('Not sent: only a Bot working in the group can call a member there.')
-    await rt.roomStepText(sessionId, rt.live.get(sessionId)?.info, message.startsWith(call) ? message : `${call} ${message}`, false)
+    await rt.roomStepText(context.sessionId, rt.live.get(context.sessionId)?.info, message.startsWith(call) ? message : `${call} ${message}`, false)
     return `Called ${target.name} in "${room.name}" with your message, as writing "${call}" there does: it works on it in the group, and you answer its result there. Nothing went to its own chat.`
   }
 
   // The Bots each Session's post_to_group called by name in its current turn, so that
   // turn does not also send them the same work in their own chats.
-  const calledInPosts = new Map<string | undefined, CalledInPosts>()
-  const turnOf = (exec: ToolRunContext): unknown => liveEntry(exec.agent?.id)?.turn
+  const turnOf = (context: ToolContext): unknown => liveEntry(context.sessionId)?.turn
 
   const hiddenTurn = (sessionId: string): boolean => {
     const turn = rt.live.get(sessionId)?.turn
@@ -337,7 +339,10 @@ export function createShared(host: HostRuntime): ToolShared {
   }
 
   return {
-    rt, state, calledInPosts,
+    rt, state, calledInPosts: new Map<string | undefined, CalledInPosts>(),
+    register: (entry: ToolEntry): void => {
+      registry.register(entry); registerDshTool(ctx, entry, rt)
+    },
     callerBot, callerRoom, roomOfCaller, roomLine, visibleRooms, activeSessions, whereOf,
     unreadRequest, bodyOf, refuse, worksOf, tooLong, callInGroup, turnOf, hiddenTurn, workFrom, liveEntry,
     nameList, resolveBots, teamNames, groupNames, pickRoom,

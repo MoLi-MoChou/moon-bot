@@ -1,9 +1,9 @@
 // The window's own versions of the DSH interface primitives the Bot views draw with (see
-// core/src/client/dsh-primitives.js and vite.config.js).
+// core/src/client/dsh-primitives.ts and vite.config.js).
 import { createElement as h, useMemo, useRef, useState } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { MENTION_ORIGIN } from '../../../core/src/client/text.js'
+import { MENTION_ORIGIN } from '../../../core/src/client/text.ts'
 
 // The DSH Agent's mark. The app has no DSH Agent, so nothing asks for it.
 export const FishLogo = () => null

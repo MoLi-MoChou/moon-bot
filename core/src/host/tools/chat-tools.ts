@@ -1,66 +1,28 @@
 // Group chat tools and the question and view cards. Group rounds and reading chats are
 // in groups.js; the cards land in the Bot's own chat.
 import { randomUUID } from 'node:crypto'
-import { defineTool, type ToolRunContext } from '@deepseek-ai/dsh-tools'
+import { z } from 'zod'
+import type { ToolContext } from '../../engine/registry.ts'
 import type { HostRuntime, StoredBot } from '../runtime.ts'
 import { absoluteLinks } from '../links.ts'
 import { mentionSpans } from '../../shared/mentions.ts'
-import { checkShownView, normalizeView } from '../../shared/views.ts'
+import { checkShownView } from '../../shared/views.ts'
+import { resolveViewBlueprint } from '../../shared/openui.ts'
 import {
   BLOCKING_QUESTION_TOOL, GROUP_REF, MODE_PARAM, WORK_DIR_PARAM,
-  errorMessage, isRecord, output, type ToolShared,
+  errorMessage, isRecord, type ToolShared,
 } from './shared.ts'
-
-interface GroupArgs {
-  readonly group?: string
-}
-
-interface CreateGroupArgs {
-  readonly members?: unknown
-  readonly name?: string
-  readonly notice?: string
-  readonly admin?: string
-  readonly mode?: string
-}
-
-interface UpdateGroupArgs {
-  readonly group?: string
-  readonly name?: string
-  readonly notice?: string
-  readonly add_members?: unknown
-  readonly remove_members?: unknown
-  readonly admin?: string
-  readonly mode?: string
-  readonly work_dir?: unknown
-}
-
-interface PostToGroupArgs {
-  readonly group?: string
-  readonly message?: unknown
-  readonly report_back?: unknown
-}
-
-interface AskUserArgs {
-  readonly question?: unknown
-  readonly options?: unknown
-  readonly detail?: unknown
-  readonly multiSelect?: unknown
-  readonly allowCustom?: unknown
-}
-
-interface ShowViewArgs {
-  readonly title?: unknown
-  readonly view?: unknown
-  readonly await_reply?: unknown
-}
+import type { AskUserArgs, CreateGroupArgs, GroupArgs, PostToGroupArgs, ShowViewArgs, UpdateGroupArgs } from './chat-tools-args.ts'
 
 const botName = (rt: HostRuntime, id: string): string => rt.botOf(id)?.name ?? id
 
+
+
 export function installChatTools(rt: HostRuntime, shared: ToolShared): void {
-  const { ctx, state } = rt
+  const { state } = rt
   const t = shared.rt
 
-  ctx.tools.register(defineTool({
+  shared.register({
     name: 'create_group',
     description: 'Main Bot only. Create a group chat with the user and some Bots. You join it as its admin unless you name another member.',
     parameters: {
@@ -70,10 +32,17 @@ export function installChatTools(rt: HostRuntime, shared: ToolShared): void {
       admin: { type: 'string', description: 'Member who leads the group; defaults to you' },
       mode: MODE_PARAM,
     },
-    output,
-    async execute(args: CreateGroupArgs, exec: ToolRunContext): Promise<string> {
+    // The schema is the engine path's validation; unknown fields pass, as the executor reads.
+    schema: z.object({
+      members: z.array(z.string()),
+      name: z.string().optional(),
+      notice: z.string().optional(),
+      admin: z.string().optional(),
+      mode: z.string().optional(),
+    }).passthrough(),
+    async execute(args: CreateGroupArgs, context: ToolContext): Promise<string> {
       await t.load()
-      const self = t.selfOf(exec.agent?.id)
+      const self = t.selfOf(context.sessionId)
       if (!t.isMain(self)) return 'Only a Main Bot can create group chats. Ask a Main Bot instead.'
       const { bots, unknown } = shared.resolveBots(args.members)
       if (unknown.length > 0) return `No Bot named ${unknown.join(', ')}. Team: ${shared.teamNames()}`
@@ -87,9 +56,9 @@ export function installChatTools(rt: HostRuntime, shared: ToolShared): void {
         return `Could not create the group: ${errorMessage(error)}`
       }
     },
-  }))
+  })
 
-  ctx.tools.register(defineTool({
+  shared.register({
     name: 'update_group',
     description: 'Change a group chat: rename it, set its notice, add or remove members, change its admin or reply mode. Main Bots may change any group; a group\'s admin may change its own group.',
     parameters: {
@@ -102,10 +71,14 @@ export function installChatTools(rt: HostRuntime, shared: ToolShared): void {
       mode: MODE_PARAM,
       work_dir: { ...WORK_DIR_PARAM, description: `${WORK_DIR_PARAM.description}. Every member works there in this group; an empty string lets each member work in its own folder again (Main Bots only)` },
     },
-    output,
-    async execute(args: UpdateGroupArgs, exec: ToolRunContext): Promise<string> {
+    schema: z.object({
+      group: z.string(), name: z.string().optional(), notice: z.string().optional(),
+      add_members: z.array(z.string()).optional(), remove_members: z.array(z.string()).optional(),
+      admin: z.string().optional(), mode: z.string().optional(), work_dir: z.string().optional(),
+    }).passthrough(),
+    async execute(args: UpdateGroupArgs, context: ToolContext): Promise<string> {
       await t.load()
-      const self = t.selfOf(exec.agent?.id)
+      const self = t.selfOf(context.sessionId)
       if (t.botOf(self) === undefined) return 'Only Bots on the team can use update_group.'
       const { room, error } = shared.pickRoom(args.group, self)
       if (error !== undefined) return error
@@ -129,10 +102,10 @@ export function installChatTools(rt: HostRuntime, shared: ToolShared): void {
         const joining = add.bots.filter(bot => !(room.members ?? []).includes(bot.id))
         if (moving && workDir !== room.workDir) {
           const members = [...(room.members ?? []), ...joining.map(bot => bot.id)]
-          await t.approveFolder(exec, { path: workDir, sessions: members.map(id => room.sessions?.[id]).filter((id): id is string => id !== undefined), who: { en: `every member of "${room.name}"`, zh: `群聊「${room.name}」的成员` } })
+          await t.approveFolder(context, { path: workDir, sessions: members.map(id => room.sessions?.[id]).filter((id): id is string => id !== undefined), who: { en: `every member of "${room.name}"`, zh: `群聊「${room.name}」的成员` }, toolName: 'update_group' })
         } else if (joining.length > 0) {
           const names = joining.map(bot => bot.name)
-          await t.approveFolder(exec, { path: room.workDir, sessions: joining.map(bot => room.sessions?.[bot.id]).filter((id): id is string => id !== undefined), who: { en: names.join(', '), zh: ` ${names.join('、')} ` } })
+          await t.approveFolder(context, { path: room.workDir, sessions: joining.map(bot => room.sessions?.[bot.id]).filter((id): id is string => id !== undefined), who: { en: names.join(', '), zh: ` ${names.join('、')} ` }, toolName: 'update_group' })
         }
         const { room: next, changes } = await t.updateRoom(room.id, {
           name: args.name,
@@ -148,16 +121,16 @@ export function installChatTools(rt: HostRuntime, shared: ToolShared): void {
         return `Could not update "${room.name}": ${errorMessage(failure)}`
       }
     },
-  }))
+  })
 
-  ctx.tools.register(defineTool({
+  shared.register({
     name: 'delete_group',
     description: 'Main Bot only. Delete a group chat; its history is archived. Only when the user asks.',
     parameters: { group: GROUP_REF },
-    output,
-    async execute(args: GroupArgs, exec: ToolRunContext): Promise<string> {
+    schema: z.object({ group: z.string() }).passthrough(),
+    async execute(args: GroupArgs, context: ToolContext): Promise<string> {
       await t.load()
-      const self = t.selfOf(exec.agent?.id)
+      const self = t.selfOf(context.sessionId)
       if (!t.isMain(self)) return 'Only a Main Bot can delete group chats.'
       const { room, error } = shared.pickRoom(args.group, self)
       if (error !== undefined) return error
@@ -165,9 +138,9 @@ export function installChatTools(rt: HostRuntime, shared: ToolShared): void {
       await t.deleteRoom(room.id)
       return `Deleted "${room.name}". Its history is archived.`
     },
-  }))
+  })
 
-  ctx.tools.register(defineTool({
+  shared.register({
     name: 'post_to_group',
     description: 'Post a message into a group chat as yourself. A Main Bot may post into any group, any other Bot into a group it is in. A Main Bot\'s or the group admin\'s post starts a round: members reply in the group, where the user reads them. Another member\'s post calls only the members it names with "@Name"; without one it is only written into the group.',
     parameters: {
@@ -175,19 +148,21 @@ export function installChatTools(rt: HostRuntime, shared: ToolShared): void {
       message: { type: 'string', required: true, description: 'What to say; write "@Name" to choose who answers, and a name without "@" to only mention a member' },
       report_back: { type: 'boolean', description: 'Also send the members\' replies back to you as a new message when the round ends' },
     },
-    output,
-    async execute(args: PostToGroupArgs, exec: ToolRunContext): Promise<string> {
+    schema: z.object({
+      group: z.string(), message: z.string(), report_back: z.boolean().optional(),
+    }).passthrough(),
+    async execute(args: PostToGroupArgs, context: ToolContext): Promise<string> {
       await t.load()
-      const self = t.selfOf(exec.agent?.id)
+      const self = t.selfOf(context.sessionId)
       const sender = t.botOf(self)
       if (self === undefined || sender === undefined) return 'Only Bots on the team can use post_to_group.'
       const { room, error } = shared.pickRoom(args.group, self)
       if (error !== undefined) return error
       // An ordinary member's post calls only the members it names (openingSpeakers).
       const member = !t.isMain(self) && !t.isAdminOf(room, self)
-      const info = shared.liveEntry(exec.agent?.id)?.info
+      const info = shared.liveEntry(context.sessionId)?.info
       if (info?.role === 'room' && info.roomId === room.id) return `You are speaking in "${room.name}" right now. Write your message as your reply instead.`
-      const text = absoluteLinks(String(args.message ?? '').trim(), t.sessionFolder(exec.agent?.session ?? exec.agent))
+      const text = absoluteLinks(String(args.message ?? '').trim(), t.sessionFolder(context.session ?? { id: context.sessionId }))
       if (text === '') return 'Write a message to post.'
       const named = mentionSpans(text, (room.members ?? []).map(id => t.botOf(id)).filter((bot): bot is StoredBot => bot !== undefined))
         .flatMap(span => ('bot' in span && span.bot.id !== self ? [span.bot.id] : []))
@@ -199,7 +174,7 @@ export function installChatTools(rt: HostRuntime, shared: ToolShared): void {
       if (long === undefined) return shared.tooLong(text)
       // Replies the poster waits for, while it works on what a Bot asked it for, are
       // work handed on for that request (handoffs.ts).
-      const work = reportBack ? shared.worksOf(exec).find(id => t.ownsWork(self, id)) : undefined
+      const work = reportBack ? shared.worksOf(context).find(id => t.ownsWork(self, id)) : undefined
       const sub = work === undefined ? undefined : randomUUID()
       if (sub !== undefined) t.openWork(sub, { from: self, room: room.id, parent: work })
       try {
@@ -210,19 +185,19 @@ export function installChatTools(rt: HostRuntime, shared: ToolShared): void {
       }
       if (member && named.length === 0) return `Posted in "${room.name}", where the user and its members read it. Nobody answers it: your post only calls the members you name with @Name.`
       if (named.length > 0) {
-        const turn = shared.turnOf(exec)
-        const earlier = shared.calledInPosts.get(exec.agent?.id)
+        const turn = shared.turnOf(context)
+        const earlier = shared.calledInPosts.get(context.sessionId)
         const calls = new Map(earlier !== undefined && earlier.turn === turn ? earlier.calls : [])
         for (const id of named) calls.set(id, room.name)
-        shared.calledInPosts.set(exec.agent?.id, { turn, calls })
+        shared.calledInPosts.set(context.sessionId, { turn, calls })
       }
       const asker = sub === undefined ? undefined : t.botOf(shared.workFrom(work))?.name
       const waits = asker ? ` End your turn when you have handed on everything: the replies bring you back to this work, and your answer goes to ${asker} once all of it is back.` : ''
       return `Posted in "${room.name}". Members reply there, where the user reads them${reportBack ? '; their replies also come back to you as a new message when the round ends' : ', and nothing comes back to you'}.${waits}`
     },
-  }))
+  })
 
-  ctx.tools.register(defineTool({
+  shared.register({
     name: 'ask_user',
     description: 'Show the user a short multiple-choice question card in the chat (the user can also type their own answer). Calling it ends your turn; the chosen answer arrives later as the user\'s next message.',
     parameters: {
@@ -244,11 +219,14 @@ export function installChatTools(rt: HostRuntime, shared: ToolShared): void {
       multiSelect: { type: 'boolean', description: 'Allow choosing several options' },
       allowCustom: { type: 'boolean', description: 'Also offer a field for an answer in the user\'s own words' },
     },
-    output,
-    async execute(args: AskUserArgs, exec: ToolRunContext): Promise<string> {
+    schema: z.object({
+      question: z.string(),
+      options: z.array(z.object({ label: z.string(), description: z.string().optional() }).passthrough()),
+      detail: z.string().optional(), multiSelect: z.boolean().optional(), allowCustom: z.boolean().optional(),
+    }).passthrough(),
+    async execute(args: AskUserArgs, context: ToolContext): Promise<string> {
       await t.load()
-      const id = exec.agent?.id
-      if (id === undefined) return `Only Bots on the team can use ask_user. Use ${BLOCKING_QUESTION_TOOL} if it is available in this session, or ask the user in your reply.`
+      const id = context.sessionId
       if (t.groupOwners.has(id)) return 'Question cards only work in your own chat. In a group, ask in your message instead.'
       if (!t.chatOwners.has(id)) return `Only Bots on the team can use ask_user. Use ${BLOCKING_QUESTION_TOOL} if it is available in this session, or ask the user in your reply.`
       const options = (Array.isArray(args.options) ? args.options : [])
@@ -268,7 +246,7 @@ export function installChatTools(rt: HostRuntime, shared: ToolShared): void {
       const questions = state.questions ?? (state.questions = {})
       questions[id] = {
         id: randomUUID(),
-        ...(exec.callId && !hidden ? { callId: exec.callId } : {}),
+        ...(context.callId && !hidden ? { callId: context.callId } : {}),
         question: String(args.question ?? '').trim(),
         ...(args.detail ? { detail: String(args.detail).trim() } : {}),
         options,
@@ -277,12 +255,11 @@ export function installChatTools(rt: HostRuntime, shared: ToolShared): void {
         askedAt: Date.now(),
       }
       await t.save()
-      exec.concludeTurn?.()
+      context.concludeTurn?.()
       return 'The card is on screen; the user\'s answer arrives as their next message.'
     },
-  }))
-
-  ctx.tools.register(defineTool({
+  })
+  shared.register({
     name: 'show_view',
     description: 'Show the user a view card in your own chat: text, metrics, a table, progress, choices, a confirmation, or a short form. An interactive card (options, confirm, or form) ends your turn; the answer arrives as the user\'s next message. Keep the view under 8 KB. Never collect a key, token, or password in a form.',
     parameters: {
@@ -291,18 +268,23 @@ export function installChatTools(rt: HostRuntime, shared: ToolShared): void {
         type: 'object',
         required: true,
         additionalProperties: true,
-        description: 'One component { type, ...props, children? }. type is stack (children, 1 to 16), text ({ text }), metric ({ label, value, tone? }), table ({ columns: [{ key, label }], rows }), options ({ id, options: [{ label, description? }], multi? }), confirm ({ id, confirmLabel?, cancelLabel? }), form ({ id, fields: [{ id, label, placeholder? }], submitLabel? }), or progress ({ label?, percent }).',
+        description: 'One component { type, ...props, children? }. type is stack (children, 1 to 16), text ({ text }), metric ({ label, value, tone? }), table ({ columns: [{ key, label }], rows }), options ({ id, options: [{ label, description? }], multi? }), confirm ({ id, confirmLabel?, cancelLabel? }), form ({ id, fields: [{ id, label, placeholder? }], submitLabel? }), or progress ({ label?, percent }). A generated interface may also come as an OpenUI element map: { root, elements: { id: { type, props, children } } } — it is lowered onto the same cards, and a node the mapping does not know shows as text.',
       },
       await_reply: { type: 'boolean', description: 'Wait for the user to submit the card. A view with options, confirm, or form always waits; a display-only view cannot.' },
     },
-    output,
-    async execute(args: ShowViewArgs, exec: ToolRunContext): Promise<string> {
+    schema: z.object({
+      title: z.string(),
+      view: z.object({}).passthrough(),
+      await_reply: z.boolean().optional(),
+    }).passthrough(),
+    async execute(args: ShowViewArgs, context: ToolContext): Promise<string> {
       await t.load()
-      const id = exec.agent?.id
-      if (id === undefined) return `Only Bots on the team can use show_view. Use ${BLOCKING_QUESTION_TOOL} if it is available in this session, or ask the user in your reply.`
+      const id = context.sessionId
       if (t.groupOwners.has(id)) return 'View cards only work in your own chat. In a group, ask in your message instead.'
       if (!t.chatOwners.has(id)) return `Only Bots on the team can use show_view. Use ${BLOCKING_QUESTION_TOOL} if it is available in this session, or ask the user in your reply.`
-      const view: unknown = normalizeView(args.view)
+      const resolved = resolveViewBlueprint(args.view)
+      if ('error' in resolved) return resolved.error
+      const view: unknown = resolved.view
       const checked = checkShownView(args.title, view)
       if (checked.error !== undefined) return checked.error
       const title = checked.title
@@ -316,14 +298,14 @@ export function installChatTools(rt: HostRuntime, shared: ToolShared): void {
       const views = state.views ?? (state.views = {})
       views[id] = {
         id: randomUUID(),
-        ...(exec.callId && !hidden ? { callId: exec.callId } : {}),
+        ...(context.callId && !hidden ? { callId: context.callId } : {}),
         title,
         view,
         askedAt: Date.now(),
       }
       await t.save()
-      exec.concludeTurn?.()
+      context.concludeTurn?.()
       return 'The view is on screen; the user\'s answer arrives as their next message.'
     },
-  }))
+  })
 }

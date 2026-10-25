@@ -12,16 +12,6 @@ if (host !== undefined && location.origin === host) {
     dataLocation: () => ipcRenderer.invoke('ds-bot:data-location'),
     moveData: (workspace) => ipcRenderer.invoke('ds-bot:move-data', typeof workspace === 'string' ? workspace : undefined),
     teamWorkspaceChanged: (path) => { ipcRenderer.send('ds-bot:team-workspace', String(path)) },
-    // Moon Bot patch: the downloaded Office engine, for Settings > About.
-    engine: {
-      state: () => ipcRenderer.invoke('ds-bot:engine-state'),
-      download: () => ipcRenderer.invoke('ds-bot:engine-download'),
-      onChange: (listener) => {
-        const handler = (_event, state) => { listener(state) }
-        ipcRenderer.on('ds-bot:engine-changed', handler)
-        return () => { ipcRenderer.removeListener('ds-bot:engine-changed', handler) }
-      },
-    },
     // Moon Bot patch: the app's own updater, for Settings > About.
     updates: {
       state: () => ipcRenderer.invoke('ds-bot:update-state'),

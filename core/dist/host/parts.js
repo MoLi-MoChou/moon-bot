@@ -188,7 +188,7 @@ function install(rt) {
     condense,
     decide,
     adoptCompaction,
-    // A read-only process (another dsh holds the team) neither condenses nor switches.
+    // A read-only process (another instance holds the team) neither condenses nor switches.
     readOnly: () => rt.readOnly() !== void 0,
     writeNote,
     handoffLines,

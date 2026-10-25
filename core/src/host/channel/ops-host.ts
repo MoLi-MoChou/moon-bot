@@ -3,7 +3,7 @@
 // These endpoints change the host's own profile or an external service; none of them
 // edits the team.
 import { randomUUID } from 'node:crypto'
-import { createUserMessage } from '@deepseek-ai/dsh-llm'
+import { createUserMessage } from '../llm-bits.ts'
 import { validateViewAnswer } from '../../shared/views.ts'
 import type { RpcEndpoint } from '../../shared/rpc.ts'
 import { questionReply as questionReplyJs, viewReply as viewReplyJs } from '../parts.ts'
@@ -164,10 +164,9 @@ export function hostHandlers(rt: ChannelRuntime): ChannelHandlers {
 
     'update-check': async (body) => {
       const fresh = body.fresh === true
-      return ok({ ...(await rt.updateCheck({ fresh })), dsh: (await rt.dshUpdateCheck?.({ fresh })) ?? null })
+      return ok(await rt.updateCheck({ fresh }))
     },
     'update-install': async () => ok(rt.updateStart()),
-    'dsh-update-install': async () => ok(rt.dshUpdateStart?.()),
     'repo-stars': async () => ok(await rt.repoStars()),
 
     // The Desktop window's long poll for read_browser, and its answers.

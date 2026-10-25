@@ -69,6 +69,14 @@ export async function startService(options: ServiceOptions): Promise<StandaloneS
 
   const app = Fastify({ logger: options.logger === true })
   await app.register((await import('@fastify/cookie')).default)
+  app.addContentTypeParser('application/x-www-form-urlencoded', { parseAs: 'string' }, (_req, body, done) => {
+    try {
+      const params = new URLSearchParams(typeof body === 'string' ? body : String(body))
+      done(null, Object.fromEntries(params.entries()))
+    } catch (err) {
+      done(err as Error, undefined)
+    }
+  })
   const secret = randomBytes(32)
 
   // Throttled password guessing, per client address, as the old proxy had it.
@@ -96,24 +104,63 @@ export async function startService(options: ServiceOptions): Promise<StandaloneS
     const path = request.url.split('?')[0] ?? request.url
     if (path === '/login' || path === '/login/check' || path === '/healthz') return
     if (!authenticated(request)) {
+      const accept = String(request.headers.accept ?? '')
+      if (request.method === 'GET' && accept.includes('text/html')) {
+        await reply.redirect('/login')
+        return
+      }
       await reply.code(401).send({ ok: false, error: { code: 'bot/unavailable', message: 'authentication required' } })
     }
   })
 
   app.get('/healthz', async () => ({ ok: true }))
 
-  // The password page the old web mode had: POST the password, get the session cookie.
+  // Password page for browsers (the desktop web.ts wrapper also has one; Docker runs this service directly).
+  const loginHtml = (note: string): string => `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Moon Bot · 登录</title><style>
+:root{color-scheme:light dark;--bg:#fcfafd;--glow:#efe6fa;--card:#fff;--ink:#2a2233;--ink2:rgba(42,34,51,.6);--line:rgba(70,45,110,.12);--accent:#8a6bd1;--btn:#8a6bd1;--btn-ink:#fff}
+@media (prefers-color-scheme:dark){:root{--bg:#17131d;--glow:#2a2138;--card:#221c2b;--ink:#f1ecf7;--ink2:rgba(241,236,247,.6);--line:rgba(210,190,255,.14);--accent:#b9a3f5;--btn:#b9a3f5;--btn-ink:#1a1422}}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:radial-gradient(900px 600px at 50% 20%,var(--glow),var(--bg));color:var(--ink);font:15px/1.5 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+form{width:min(360px,92vw);background:var(--card);border:1px solid var(--line);border-radius:22px;padding:28px;box-shadow:0 18px 48px -20px rgba(90,60,150,.35)}
+h1{font-size:20px;margin:0 0 4px}p{margin:0 0 20px;color:var(--ink2);font-size:13px}
+input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:transparent;color:inherit;font:inherit}
+input:focus{outline:2px solid var(--accent);outline-offset:1px}
+button{margin-top:14px;width:100%;padding:10px;border:0;border-radius:999px;background:var(--btn);color:var(--btn-ink);font:inherit;font-weight:600;cursor:pointer}
+.err{color:#e5484d;font-size:13px;margin-top:10px;min-height:1em}
+</style></head><body><form method="post" action="/login">
+<h1>Moon Bot</h1><p>输入访问密码 · Enter the access password</p>
+<input type="password" name="password" autocomplete="current-password" autofocus required aria-label="访问密码">
+<button type="submit">登录</button><div class="err" role="alert">${note}</div></form></body></html>`
+
+  app.get('/login', async (request, reply) => {
+    if (password === '') return await reply.redirect('/')
+    const q = (request.query ?? {}) as { wrong?: string; wait?: string }
+    const note = 'wait' in q ? '尝试次数过多，请 10 分钟后再试。 Too many tries, wait 10 minutes.'
+      : 'wrong' in q ? '密码不对。 Wrong password.' : ''
+    return await reply.type('text/html; charset=utf-8').header('cache-control', 'no-store').send(loginHtml(note))
+  })
+
+  // POST the password (JSON from the UI client, or form fields from this page), get the session cookie.
   app.post('/login', async (request: FastifyRequest<{ Body: { password?: unknown } }>, reply: FastifyReply) => {
     const ip = request.socket.remoteAddress ?? '?'
-    if (blocked(ip)) return await reply.code(429).send({ ok: false, error: { code: 'bot/refused', message: 'too many attempts; wait ten minutes' } })
-    const given = String((request.body as { password?: unknown } | undefined)?.password ?? '')
+    const wantsHtml = String(request.headers.accept ?? '').includes('text/html')
+      || String(request.headers['content-type'] ?? '').includes('application/x-www-form-urlencoded')
+    if (blocked(ip)) {
+      if (wantsHtml) return await reply.redirect('/login?wait')
+      return await reply.code(429).send({ ok: false, error: { code: 'bot/refused', message: 'too many attempts; wait ten minutes' } })
+    }
+    const body = request.body as { password?: unknown } | undefined
+    const given = String(body?.password ?? '')
     if (password === '' || !passwordMatches(given, password)) {
       failures.set(ip, [...(failures.get(ip) ?? []), Date.now()])
+      if (wantsHtml) return await reply.redirect('/login?wrong')
       return await reply.code(403).send({ ok: false, error: { code: 'bot/refused', message: 'wrong password' } })
     }
     failures.delete(ip)
     const id = randomBytes(16).toString('hex')
-    return await reply.setCookie('mb-session', sign(secret, id), { httpOnly: true, sameSite: 'lax', path: '/' }).send({ ok: true })
+    void reply.setCookie('mb-session', sign(secret, id), { httpOnly: true, sameSite: 'lax', path: '/' })
+    if (wantsHtml) return await reply.redirect('/')
+    return await reply.send({ ok: true })
   })
 
   if (apiRoute !== undefined) {

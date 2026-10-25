@@ -294,4 +294,6 @@ TS 现状盘点（2026-10-24 实测）：core 源码侧仅剩 `index.js`（70 �
 - **DSH 移除第一遍已扫**（commit 4f933e8）：web-search 本地 WebError；client 原语独立版（app 构建仍以其 react-markdown 模块替换）；dsh-update 整特性删除（模块/通道/RPC/测试）；llm 类型入 dsh-types；工具派生恒用本地折参包装；speech 普通包名；诊断不再探测 DSH。**运行时剩余仅两处惰性 seam**（connectors/capabilities-mount 的 dsh-mcp-client，DSH 宿主能力路径）——自研 McpConnector 已在，改接线为独立一步。ambient declare-module 类型仍在 .d.ts。
 - **能力挂载不再依赖 DSH**（commit 80e91a9）：capabilities-standalone.ts 用自研连接器把 MCP 能力挂进注册表（L3 策略天然覆盖），capabilities-host.ts 收拢 DSH 宿主 fiber 路径（惰性 import）；按"有无 DSH 插件宿主"选路，独立侧连无 ctx 的桥 agent 也纳入跟踪。测试对真 echo 服务器全链路。GitHub 连接器同样双路（独立走 streamable-http 连接器）。**运行时仅剩两处惰性 @deepseek-ai 引用**（两个 hosted seam 的 MCP client 字符串）。
 - **生成式界面已并存**（commit 7520d0a）：shared/openui.ts 把 OpenUI 元素图（{root, elements:{id:{type,props,children}}}）落到既有 8 种卡片上，成为第九种输入形态——未知节点降级为其文本、环引用与空 spec 直接答因、生成内容永不以标记或代码进 DOM；交互一律落成 options 卡，答案走既有 view-reply（前端不能自批）。@openuidev/react-ui 已核（MIT，解包 16MB，拖 d3/radix/katex）：spec 通道先上，上游渲染器保持可选并在此记录取舍。
-- 门禁：core 930/927/0；eval 五项 PASS；typecheck 0；lint ok；client.js fresh。
+- **文档已同步到独立运行时**（README 双语、AGENTS、vision 双语、CHANGELOG、NOTICE）：框架叙述改成"自带运行时"（Fastify 服务 + 内置引擎 + SQLite + Electron 窗口），开发命令换成实际有的（typecheck/lint/eval/web），AGENTS 的硬规则改成"运行时自己的、不得新增 @deepseek-ai 引用"，vision 增写 Personal Agent 五项能力，CHANGELOG 明示**新起点不迁移数据**（旧版继续读自己的数据），NOTICE 逐个登记运行时依赖与其许可证。
+- 门禁：core 930/927/0；eval 五项 PASS；typecheck 0；lint ok；client.js fresh；app 84/83/0、typecheck 0。
+- 阶段 6 收尾待办：把 hosted seam（capabilities-host.ts 与 connectors 的 DSH fiber 分支）连同其测试一并改为独立路径，做到全仓零 @deepseek-ai 引用；然后按 §九 逐条核对最终验收。

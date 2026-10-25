@@ -20,7 +20,7 @@ The Bot team:
 
 ## Hard rules
 
-1. **Keep the runtime our own.** Bot features go through the host services and the `AgentRuntime` seam; a kernel stays behind it (the built-in engine, or an ACP adapter), never called from host code. The two lazy `@deepseek-ai/dsh-mcp-client` strings in the hosted mount paths are the only remaining references — do not add more, and do not resurrect DSH as a runtime or a dependency.
+1. **Keep the runtime our own.** Bot features go through the host services and the `AgentRuntime` seam; a kernel stays behind it (the built-in engine, or an ACP adapter), never called from host code. `@deepseek-ai` is gone from `core/`; do not add it back. The desktop app still carries the profile-boot path used by its import-from-DSH feature, and that is the only place the name may appear.
 2. **No secrets.** Never write, print or commit API keys, tokens, cookies or the data folder’s secrets. Use the mock model (`core/dev/mock-llm.ts`) for tests; it needs no key.
 3. **Only original material.** Do not copy code, text, icons, logos or graphics from other products or websites. Code under a license compatible with Apache 2.0 is the only exception: say where it comes from and add its notice to the `NOTICE` file.
 4. **`client.js` is generated.** Change `core/src/client/`, then run `npm run build` and commit both files. Never edit `client.js` by hand.

@@ -296,4 +296,6 @@ TS 现状盘点（2026-10-24 实测）：core 源码侧仅剩 `index.js`（70 �
 - **生成式界面已并存**（commit 7520d0a）：shared/openui.ts 把 OpenUI 元素图（{root, elements:{id:{type,props,children}}}）落到既有 8 种卡片上，成为第九种输入形态——未知节点降级为其文本、环引用与空 spec 直接答因、生成内容永不以标记或代码进 DOM；交互一律落成 options 卡，答案走既有 view-reply（前端不能自批）。@openuidev/react-ui 已核（MIT，解包 16MB，拖 d3/radix/katex）：spec 通道先上，上游渲染器保持可选并在此记录取舍。
 - **文档已同步到独立运行时**（README 双语、AGENTS、vision 双语、CHANGELOG、NOTICE）：框架叙述改成"自带运行时"（Fastify 服务 + 内置引擎 + SQLite + Electron 窗口），开发命令换成实际有的（typecheck/lint/eval/web），AGENTS 的硬规则改成"运行时自己的、不得新增 @deepseek-ai 引用"，vision 增写 Personal Agent 五项能力，CHANGELOG 明示**新起点不迁移数据**（旧版继续读自己的数据），NOTICE 逐个登记运行时依赖与其许可证。
 - 门禁：core 930/927/0；eval 五项 PASS；typecheck 0；lint ok；client.js fresh；app 84/83/0、typecheck 0。
-- 阶段 6 收尾待办：把 hosted seam（capabilities-host.ts 与 connectors 的 DSH fiber 分支）连同其测试一并改为独立路径，做到全仓零 @deepseek-ai 引用；然后按 §九 逐条核对最终验收。
+- **core 已彻底 DSH-free**（commit 8caffa0）：hosted seam 不是留着，而是删掉——能力与 GitHub 连接器只走自研连接器。独立化测试抓出两个真 bug：卸载只断连不退工具（停掉的运行时仍供工具）；同一能力的两次挂载（私聊 + 群会话）共享工具名，先卸载的那个会把另一个会话的工具也拿走——ToolRegistry 改为引用计数，最后一个声明释放才移除；capabilities-standalone 按"每次挂载一条"记录，杜绝第二个会话覆盖第一个的卸载闭包导致子进程泄漏。测试全部改走独立路径（真 stdio MCP 服务器夹具、回环 Streamable HTTP 服务器），jsdom 改用自有 devDependency，两处 DSH 神谕测试改为字面契约；DSH 的 ambient 声明删除；test/harness-resolve.mjs 只负责隔离数据目录。
+- 门禁：core 931/928/0；typecheck 0；lint ok；eval 5/5；client.js 与 dist fresh。
+- **阶段 6 收尾待办**：桌面 app 仍带 profile-boot/import-from-DSH 分支（app/src/host.ts、profile.ts、import.ts、session-check.ts）——新起点不迁移，故下一步删除该特性与其测试；之后按 §九 逐条核对最终验收。

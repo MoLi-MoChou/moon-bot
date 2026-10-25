@@ -64,13 +64,13 @@ export function readPage(limits: ReadLimits): ReadPage {
     stash.push(text)
     return `\n\n\u0001${stash.length - 1}${end}\n\n`
   }
-  const expand = (text: string): string => text.replace(/\u0001(\d+)[\u0002\u0003]/g, (_match, index: string) => expand(stash[Number(index)] ?? ''))
+  const expand = (text: string): string => text.replace(/\u0001(\d+)[\u0002\u0003]/g, (_match, index: string) => expand(stash[Number(index)] ?? '')) // oxlint-disable-line no-control-regex -- the stash tokens this reader wrote
   const flow = (text: string): string => text
     .split('\n')
     .map(line => line.replace(/[ \t\f\v\u00a0\u2028\u2029]+/g, ' ').trim().replace(/^· /, ''))
     .join('\n')
     .replace(/\n{3,}/g, '\n\n')
-    .replace(/\u0003\n\n(?=\u0001\d+\u0003)/g, '\u0003\n')
+    .replace(/\u0003\n\n(?=\u0001\d+\u0003)/g, '\u0003\n') // oxlint-disable-line no-control-regex -- a preformatted line's stash token
     .trim()
   const block = (text: string): string => expand(flow(text))
   const oneLine = (text: string): string => block(text).replace(/\s*\n+\s*/g, ' ').trim()
@@ -230,7 +230,7 @@ export function readPage(limits: ReadLimits): ReadPage {
     stats.nodes += 1
     if (node.nodeType === 3) {
       if (!ctx.shown) return ''
-      const data = (node as Text).data.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '')
+      const data = (node as Text).data.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '') // oxlint-disable-line no-control-regex -- drop invisible C0 controls
       const text = ctx.pre ? data : data.replace(/[\t\n\r ]+/g, ' ')
       chars += text.length
       return text

@@ -64,7 +64,7 @@ const HOST_ERRORS: readonly (readonly [RegExp, string])[] = [
   [/^There is no entry (.+)\.$/, '没有第 $1 条'],
   [/^No entry in [\s\S]* matches "([\s\S]*)"\.[\s\S]*$/, '找不到「$1」这条记忆'],
   [/^"([\s\S]*)" matches (\d+) entries in [\s\S]*$/, '「$1」对应了 $2 条记忆，请说得更具体'],
-  [/^Memory cannot change now: [\s\S]*$/, '现在不能修改记忆：另一个 dsh 正在使用这个 Bot 团队'],
+  [/^Memory cannot change now: [\s\S]*$/, '现在不能修改记忆：另一个窗口正在使用这个 Bot 团队'],
   [/^This file no longer exists$/, '这个文件已经不在原来的位置了'],
   [/^Only files in this conversation's folder can be downloaded$/, '只能下载这段对话自己文件夹里的文件'],
   [/^This file is not one this conversation produced$/, '这个文件不是这段对话产出的，不能从这里下载'],

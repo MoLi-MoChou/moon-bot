@@ -30,7 +30,7 @@ const ROOM_MODES = ["everyone", "admin"];
 const ROOM_NAME_MAX = 60;
 const ROOM_NOTICE_MAX = 2e3;
 const ROOM_MAX_MEMBERS = 12;
-const AGENT_NAME = "DSH Agent";
+const AGENT_NAME = "Agent";
 const AGENT_SESSION_TITLE_MAX = 80;
 const TEAM_TOOLS = [
   "list_bots",

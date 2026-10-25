@@ -48,8 +48,7 @@ function reportMarkdown({ facts, client = {}, entries = [], clientEntries = [] }
   const lines = [
     "| | |",
     "|---|---|",
-    row("DS Bot", facts.botVersion),
-    row("DSH", facts.dshVersion),
+    row("Moon Bot", facts.botVersion),
     row("Surface", client.surface),
     row("OS", facts.os),
     row("Node", facts.node),
@@ -77,7 +76,6 @@ const ownVersion = () => {
     return void 0;
   }
 };
-const dshVersion = () => void 0;
 function install(rt) {
   const { ctx, home, config } = rt;
   const logPath = join(home, "logs", "diagnostics.jsonl");
@@ -156,7 +154,6 @@ ${clean(frames.join("\n"))}` : ""}`);
     const groups = Object.keys(rt.state.rooms).length;
     return {
       botVersion: ownVersion(),
-      dshVersion: dshVersion(),
       os: `${platform()} ${release()} ${arch()}`,
       node: process.version,
       team: `${count(bots.length, "Bot", "Bots")}, ${rt.state.mainBotIds.length} Main, ${count(groups, "group chat", "group chats")}`,

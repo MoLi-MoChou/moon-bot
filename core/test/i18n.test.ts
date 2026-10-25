@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict'
 import { readdirSync, readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { test } from 'node:test'
 import { DICTIONARY, errorCopy, hostText, installLocale, language, t } from '../src/client/i18n.ts'
+
+const PLUGIN = dirname(dirname(fileURLToPath(import.meta.url)))
 
 function fakeLocale(active) {
   const dicts = new Map()
@@ -82,4 +86,26 @@ test('copy follows the interface language and stays English without a locale ser
   assert.equal(errorCopy('bot/refused'), 'That was refused. Follow the hint and try another way.')
   // English keeps the host's reason as it came.
   assert.equal(errorCopy('bot/refused', 'This file no longer exists'), 'That was refused. This file no longer exists Follow the hint and try another way.')
+})
+
+test('every Chinese entry still has a literal the interface shows', () => {
+  // A rename can leave a dictionary entry behind: the key no longer matches anything the
+  // client passes to t() or hostText(), so the entry is dead weight and hides the fact that
+  // the new literal has no Chinese. This walks the sources the interface is built from.
+  const walk = (directory: string): string[] => readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
+    const full = join(directory, entry.name)
+    if (entry.isDirectory()) return /node_modules|dist|\.git/.test(full) ? [] : walk(full)
+    return /\.(ts|tsx)$/.test(entry.name) && !entry.name.endsWith('.d.ts') ? [full] : []
+  })
+  const sources = [...walk(join(PLUGIN, 'src')), ...walk(join(PLUGIN, '..', 'app', 'ui', 'src'))]
+    .map(file => readFileSync(file, 'utf8'))
+    .join('\n')
+  // The dictionary's own values are not evidence: only the code that asks for a key is.
+  const dictionary = readFileSync(join(PLUGIN, 'src/client/i18n/zh.ts'), 'utf8')
+  const keys = [...dictionary.matchAll(/^ {2}(?:'((?:[^'\\]|\\.)*)'|"([^"]*)"):/gm)]
+    .map(match => (match[1] ?? match[2] ?? '').replace(/\\(.)/g, '$1'))
+    .filter(key => key !== '')
+  // A literal written with an escaped apostrophe counts as the same key.
+  const live = (key: string): boolean => sources.includes(key) || sources.includes(key.replace(/'/g, "\\'"))
+  assert.deepEqual(keys.filter(key => !live(key)), [], 'these Chinese entries no longer match any literal')
 })

@@ -246,9 +246,9 @@ export function install(rt: HostRuntime): void {
   /** Start reinstalling the newest version; the answer comes back through `check`. */
   function start(): Record<string, unknown> {
     if (status.phase === 'installing') return view()
-    if (target === null) throw new Error('No DS Bot update is available')
+    if (target === null) throw new Error('No Moon Bot update is available')
     const service = manager()
-    if (typeof service?.installBundle !== 'function') throw new Error('The DSH plugin manager is not available in this profile')
+    if (typeof service?.installBundle !== 'function') throw new Error('Updates are installed by the desktop app, not by this window')
     const chosen = target
     Object.assign(status, { phase: 'installing', error: null })
     void Promise.resolve(service.installBundle(chosen.spec, chosen.registry ? { registry: chosen.registry } : {}))

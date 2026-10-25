@@ -69,7 +69,7 @@ export function install(rt: HostRuntime): void {
       restricted.add(agent)
       pendingRestrict.delete(agent)
     } catch (error) {
-      rt.warn('ds-bot: team tools stay visible to DSH Agent %s: %s', agent.session?.id, error)
+      rt.warn('moon-bot: team tools stay visible to Agent %s: %s', agent.session?.id, error)
       scheduleRetry(agent)
     }
   }
@@ -146,7 +146,7 @@ export function install(rt: HostRuntime): void {
   async function archiveAgentSession(agentId: string, sessionId: string): Promise<void> {
     writeCheck()
     const agent = record(agentId)
-    if (!agent.sessions.includes(sessionId)) throw new Error('Session does not belong to the DSH Agent')
+    if (!agent.sessions.includes(sessionId)) throw new Error('Session does not belong to the Agent')
     // Archive first: the Session leaves the Agent only once it is actually gone,
     // so a failed archive stays retryable and keeps its tool restriction.
     await ctx.workspaceRegistry.archiveSession(sessionId)
@@ -157,7 +157,7 @@ export function install(rt: HostRuntime): void {
   async function renameAgentSession(agentId: string, sessionId: string, title: unknown): Promise<void> {
     writeCheck()
     const agent = record(agentId)
-    if (!agent.sessions.includes(sessionId)) throw new Error('Session does not belong to the DSH Agent')
+    if (!agent.sessions.includes(sessionId)) throw new Error('Session does not belong to the Agent')
     const clean = String(title ?? '').trim()
     if (clean === '') throw new Error('A session needs a title')
     const agent_ = await rt.resolveAgent(sessionId)

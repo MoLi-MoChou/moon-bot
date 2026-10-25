@@ -46,7 +46,7 @@ function install(rt) {
     if (bot !== void 0) {
       return [
         "# Your identity",
-        `You are ${bot.name}, a Bot on the user's team in DS Bot.${bot.role ? ` Your role: ${bot.role}.` : ""}`,
+        `You are ${bot.name}, a Bot on the user's team in Moon Bot.${bot.role ? ` Your role: ${bot.role}.` : ""}`,
         bot.instructions ? `
 ${bot.instructions}` : "",
         "",

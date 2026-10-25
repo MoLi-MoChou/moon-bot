@@ -46,7 +46,7 @@ function install(rt) {
   };
   const usable = () => {
     const found = seams();
-    if (found === void 0) throw invalid("This DSH cannot set up model providers");
+    if (found === void 0) throw invalid("Model providers cannot be set up here");
     return found;
   };
   const sections = (settings) => new Map(settings.describe({ redactSecrets: true }).map((section) => [section.ns, section]));

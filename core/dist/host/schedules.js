@@ -90,7 +90,7 @@ function install(rt) {
   const endpoints = {
     schedules: () => schedulesView(),
     async "schedule-create"(body) {
-      if (service === null) throw invalid("Automation tasks are off in DSH");
+      if (service === null) throw invalid("Scheduled tasks are turned off");
       const target = bodyText(body, "target");
       const bot = rt.botOf(target);
       const room = rt.roomOf(target);
@@ -106,7 +106,7 @@ function install(rt) {
       return schedulesView();
     },
     async "schedule-delete"(body) {
-      if (service === null) throw invalid("Automation tasks are off in DSH");
+      if (service === null) throw invalid("Scheduled tasks are turned off");
       const sessionId = bodyText(body, "sessionId") ?? "";
       if (ownerOf(sessionId) === void 0) throw invalid("No such task");
       await service.delete({ sessionId, id: String(body.id ?? "") });

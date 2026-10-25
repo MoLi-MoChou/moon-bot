@@ -856,7 +856,7 @@ test('without file storage a message past 20,000 characters is not sent', async 
   const { agentOf, tool, exchanges, stop } = await start(team())
   t.after(stop)
   const answer = await tool('message_bot', { to: 'Writer', message: 'x'.repeat(20_001) }, 'a')
-  assert.equal(answer, 'Not sent: the message has 20001 characters, more than 20000, and this DeepSeek Harness cannot send it as a file. Write it to a file in your working folder and send its path instead.')
+  assert.equal(answer, 'Not sent: the message has 20001 characters, more than 20000, and this window cannot send it as a file. Write it to a file in your working folder and send its path instead.')
   assert.deepEqual(agentOf('b').calls, [])
   assert.deepEqual(await exchanges(), [])
   // 20,000 characters still go as they are.

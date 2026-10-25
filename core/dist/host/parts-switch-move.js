@@ -204,7 +204,7 @@ function createPartMove({ ctx, rt, state, tables, placeOf, tokensOf, contextLine
       tokens ?? -1,
       lines?.check ?? -1,
       lines?.hard ?? -1,
-      written !== void 0 ? `note written in ${written.attempts} attempt(s)` : `note put together by DS Bot (${noted.fallback}${noted.note ? `, carries part ${noted.noteFrom}'s` : ", nothing to carry"})`,
+      written !== void 0 ? `note written in ${written.attempts} attempt(s)` : `note put together by Moon Bot (${noted.fallback}${noted.note ? `, carries part ${noted.noteFrom}'s` : ", nothing to carry"})`,
       carried.recent.length,
       carried.earlier.length,
       folder === void 0 ? "" : `; now works in ${folder}`

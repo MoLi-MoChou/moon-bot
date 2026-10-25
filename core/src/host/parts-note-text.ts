@@ -17,7 +17,7 @@ const NOTE_SECTIONS: ReadonlyArray<readonly [string, string]> = [
 export const NOTE_NAMES: readonly string[] = NOTE_SECTIONS.map(([name]) => name)
 
 const handoffPrompt = (why: string): string => [
-  `You are now writing a handoff note to yourself. This request comes from DS Bot, not from the user: do not answer or continue the messages above. ${why}, so it moves on to a fresh conversation now. The fresh one starts with this note and your latest messages word for word; everything else leaves your working context. The full record stays saved, and you can search it later with read_own_chat. Write the note that lets you carry on as the same Bot without losing anything that matters.`,
+  `You are now writing a handoff note to yourself. This request comes from Moon Bot, not from the user: do not answer or continue the messages above. ${why}, so it moves on to a fresh conversation now. The fresh one starts with this note and your latest messages word for word; everything else leaves your working context. The full record stays saved, and you can search it later with read_own_chat. Write the note that lets you carry on as the same Bot without losing anything that matters.`,
   '',
   'Output EXACTLY the Markdown structure below: every heading as written, in English and in this order. Write the content in the language the user writes in, as terse bullets. Write "(none)" under a heading with nothing to say.',
   '',

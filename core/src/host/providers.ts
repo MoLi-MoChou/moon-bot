@@ -72,7 +72,7 @@ export function install(rt: HostRuntime): void {
   }
   const usable = (): ProviderSeams => {
     const found = seams()
-    if (found === undefined) throw invalid('This DSH cannot set up model providers')
+    if (found === undefined) throw invalid('Model providers cannot be set up here')
     return found
   }
   const sections = (settings: SettingsService): Map<string, SettingsSection> => new Map(settings.describe({ redactSecrets: true }).map(section => [section.ns, section]))

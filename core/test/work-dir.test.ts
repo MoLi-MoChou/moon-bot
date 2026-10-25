@@ -167,7 +167,7 @@ test('DSH_HOME is read as DSH reads it', () => {
   assert.equal(dshHomeOf('dsh-x'), resolve('dsh-x'))
 })
 
-test('a working folder is a full path to a folder outside the DeepSeek Harness data', async (t) => {
+test('a working folder is a full path to a folder outside another app\'s data', async (t) => {
   const { call, state, workingIn, dsh, home, team, root, project, stop } = await start()
   t.after(stop)
   const error = async workDir => (await call('update-bot', { id: 'b', workDir })).error?.message
@@ -591,7 +591,7 @@ test('the user moves the team workspace, and Bots without a folder of their own 
   assert.equal(state().bots.a.workDir, project)
 })
 
-test('the team workspace holds no DeepSeek Harness data, apart from the plugin\'s own default', async (t) => {
+test('the team workspace holds no other app\'s data, apart from its own default', async (t) => {
   const { root, dsh, home, team, state, call, stop } = await start()
   t.after(stop)
   const error = async path => (await call('team-workspace', { path })).error?.message

@@ -42,7 +42,7 @@ export const groupNote = (review: boolean): string => [
   review ? ' The memory review after each turn here keeps in it what the group should know.' : '',
 ].join('')
 
-export const SUMMARY_SYSTEM = 'You write the memory summary that a user reads in the memory panel of DS Bot, an app where a team of AI Bots works for the user. You only restate saved memory entries; you never add to them.'
+export const SUMMARY_SYSTEM = 'You write the memory summary that a user reads in the memory panel of Moon Bot, an app where a team of AI Bots works for the user. You only restate saved memory entries; you never add to them.'
 
 export const summaryRequest = ({ name, own, team, language }: SummaryRequestInput): string => [
   `Here is everything ${name} remembers: its own memory, then the team memory that every Bot shares. Each line is one entry; [[name]] is a topic.`,
@@ -67,8 +67,8 @@ export const groupSummaryRequest = ({ name, lines, language }: GroupSummaryReque
 
 export const askSystem = (group: boolean): string => [
   group
-    ? 'You keep the memory of one group chat in DS Bot, an app where a team of AI Bots works for the user; its members share this memory in that group. The user is talking to you in the memory panel. You see every saved entry, numbered. Answer the user from the entries only, or change them as the user asks.'
-    : 'You keep the memory of one Bot in DS Bot, an app where a team of AI Bots works for the user. The user is talking to you in the memory panel. You see every saved entry, numbered. Answer the user from the entries only, or change them as the user asks.',
+    ? 'You keep the memory of one group chat in Moon Bot, an app where a team of AI Bots works for the user; its members share this memory in that group. The user is talking to you in the memory panel. You see every saved entry, numbered. Answer the user from the entries only, or change them as the user asks.'
+    : 'You keep the memory of one Bot in Moon Bot, an app where a team of AI Bots works for the user. The user is talking to you in the memory panel. You see every saved entry, numbered. Answer the user from the entries only, or change them as the user asks.',
   'Reply with one JSON object and nothing else: {"reply": "…", "changes": […]}',
   '- reply: one to three short sentences to the user. Say what you changed, or answer the question; when the entries do not say, say so. The user does not see the entry numbers, so never mention them.',
   '- changes: empty unless the user asks to add, correct, or remove something. Each change is one of',
@@ -82,8 +82,8 @@ export const askSystem = (group: boolean): string => [
 // which a Bot's review leaves out: only the members read it, and only there.
 export const reviewSystem = ({ teamWrites = false, group = false }: ReviewSystemInput = {}): string => [
   group
-    ? 'You keep the long-term memory of one group chat in DS Bot, an app where a team of AI Bots works for the user. The members read it in their later conversations in this group, which will not have these messages; no Bot reads it anywhere else. After each turn you read the new messages and decide what the group should still know. Most turns hold nothing worth keeping.'
-    : 'You keep the long-term memory of one Bot in DS Bot, an app where a team of AI Bots works for the user. After each turn of a conversation you read the new messages and decide what the Bot should still know in its later conversations, which will not have these messages. Most turns hold nothing worth keeping.',
+    ? 'You keep the long-term memory of one group chat in Moon Bot, an app where a team of AI Bots works for the user. The members read it in their later conversations in this group, which will not have these messages; no Bot reads it anywhere else. After each turn you read the new messages and decide what the group should still know. Most turns hold nothing worth keeping.'
+    : 'You keep the long-term memory of one Bot in Moon Bot, an app where a team of AI Bots works for the user. After each turn of a conversation you read the new messages and decide what the Bot should still know in its later conversations, which will not have these messages. Most turns hold nothing worth keeping.',
   'Reply with one JSON object and nothing else: {"changes": […]}, with an empty list when nothing should change.',
   `At most ${REVIEW_CHANGES_MAX} changes in one answer, the most lasting first; the rest can wait for the next review.`,
   'Keep, as a new entry:',

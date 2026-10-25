@@ -167,7 +167,7 @@ export const CONVERSATION_CELLS_CSS = `
 .bt-activity{display:flex;align-items:center;gap:10px;margin:8px 0 4px 2px;font-size:14px;color:var(--bt-ink-2)}
 .bt-group-replies{display:contents}
 /* A Bot chat is flat in every work-details mode, without changing the user's mode
-   (it is a DSH-wide setting): step groups lose their header and stay open, and what a
+   (which is a setting of its own): step groups lose their header and stay open, and what a
    mode folds away in a finished turn stays shown. TurnProcessCell also opens that
    fold; these rules cover the first frame before it does. */
 [data-step-process]>div:first-child{display:none!important}

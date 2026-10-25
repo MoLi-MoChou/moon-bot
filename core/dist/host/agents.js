@@ -51,7 +51,7 @@ function install(rt) {
       restricted.add(agent);
       pendingRestrict.delete(agent);
     } catch (error) {
-      rt.warn("ds-bot: team tools stay visible to DSH Agent %s: %s", agent.session?.id, error);
+      rt.warn("moon-bot: team tools stay visible to Agent %s: %s", agent.session?.id, error);
       scheduleRetry(agent);
     }
   };
@@ -110,7 +110,7 @@ function install(rt) {
   async function archiveAgentSession(agentId, sessionId) {
     writeCheck();
     const agent = record(agentId);
-    if (!agent.sessions.includes(sessionId)) throw new Error("Session does not belong to the DSH Agent");
+    if (!agent.sessions.includes(sessionId)) throw new Error("Session does not belong to the Agent");
     await ctx.workspaceRegistry.archiveSession(sessionId);
     agent.sessions = agent.sessions.filter((id) => id !== sessionId);
     await rt.save();
@@ -118,7 +118,7 @@ function install(rt) {
   async function renameAgentSession(agentId, sessionId, title) {
     writeCheck();
     const agent = record(agentId);
-    if (!agent.sessions.includes(sessionId)) throw new Error("Session does not belong to the DSH Agent");
+    if (!agent.sessions.includes(sessionId)) throw new Error("Session does not belong to the Agent");
     const clean = String(title ?? "").trim();
     if (clean === "") throw new Error("A session needs a title");
     const agent_ = await rt.resolveAgent(sessionId);

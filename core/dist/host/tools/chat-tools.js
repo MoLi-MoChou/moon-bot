@@ -3,7 +3,8 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { absoluteLinks } from "../links.js";
 import { mentionSpans } from "../../shared/mentions.js";
-import { checkShownView, normalizeView } from "../../shared/views.js";
+import { checkShownView } from "../../shared/views.js";
+import { resolveViewBlueprint } from "../../shared/openui.js";
 import {
   BLOCKING_QUESTION_TOOL,
   GROUP_REF,
@@ -254,7 +255,7 @@ function installChatTools(rt, shared) {
         type: "object",
         required: true,
         additionalProperties: true,
-        description: "One component { type, ...props, children? }. type is stack (children, 1 to 16), text ({ text }), metric ({ label, value, tone? }), table ({ columns: [{ key, label }], rows }), options ({ id, options: [{ label, description? }], multi? }), confirm ({ id, confirmLabel?, cancelLabel? }), form ({ id, fields: [{ id, label, placeholder? }], submitLabel? }), or progress ({ label?, percent })."
+        description: "One component { type, ...props, children? }. type is stack (children, 1 to 16), text ({ text }), metric ({ label, value, tone? }), table ({ columns: [{ key, label }], rows }), options ({ id, options: [{ label, description? }], multi? }), confirm ({ id, confirmLabel?, cancelLabel? }), form ({ id, fields: [{ id, label, placeholder? }], submitLabel? }), or progress ({ label?, percent }). A generated interface may also come as an OpenUI element map: { root, elements: { id: { type, props, children } } } \u2014 it is lowered onto the same cards, and a node the mapping does not know shows as text."
       },
       await_reply: { type: "boolean", description: "Wait for the user to submit the card. A view with options, confirm, or form always waits; a display-only view cannot." }
     },
@@ -268,7 +269,9 @@ function installChatTools(rt, shared) {
       const id = context.sessionId;
       if (t.groupOwners.has(id)) return "View cards only work in your own chat. In a group, ask in your message instead.";
       if (!t.chatOwners.has(id)) return `Only Bots on the team can use show_view. Use ${BLOCKING_QUESTION_TOOL} if it is available in this session, or ask the user in your reply.`;
-      const view = normalizeView(args.view);
+      const resolved = resolveViewBlueprint(args.view);
+      if ("error" in resolved) return resolved.error;
+      const view = resolved.view;
       const checked = checkShownView(args.title, view);
       if (checked.error !== void 0) return checked.error;
       const title = checked.title;

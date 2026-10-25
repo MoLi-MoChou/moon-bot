@@ -6,56 +6,17 @@ import type { ToolContext } from '../../engine/registry.ts'
 import type { HostRuntime, StoredBot } from '../runtime.ts'
 import { absoluteLinks } from '../links.ts'
 import { mentionSpans } from '../../shared/mentions.ts'
-import { checkShownView, normalizeView } from '../../shared/views.ts'
+import { checkShownView } from '../../shared/views.ts'
+import { resolveViewBlueprint } from '../../shared/openui.ts'
 import {
   BLOCKING_QUESTION_TOOL, GROUP_REF, MODE_PARAM, WORK_DIR_PARAM,
   errorMessage, isRecord, type ToolShared,
 } from './shared.ts'
-
-interface GroupArgs {
-  readonly group?: string
-}
-
-interface CreateGroupArgs {
-  readonly members?: unknown
-  readonly name?: string
-  readonly notice?: string
-  readonly admin?: string
-  readonly mode?: string
-}
-
-interface UpdateGroupArgs {
-  readonly group?: string
-  readonly name?: string
-  readonly notice?: string
-  readonly add_members?: unknown
-  readonly remove_members?: unknown
-  readonly admin?: string
-  readonly mode?: string
-  readonly work_dir?: unknown
-}
-
-interface PostToGroupArgs {
-  readonly group?: string
-  readonly message?: unknown
-  readonly report_back?: unknown
-}
-
-interface AskUserArgs {
-  readonly question?: unknown
-  readonly options?: unknown
-  readonly detail?: unknown
-  readonly multiSelect?: unknown
-  readonly allowCustom?: unknown
-}
-
-interface ShowViewArgs {
-  readonly title?: unknown
-  readonly view?: unknown
-  readonly await_reply?: unknown
-}
+import type { AskUserArgs, CreateGroupArgs, GroupArgs, PostToGroupArgs, ShowViewArgs, UpdateGroupArgs } from './chat-tools-args.ts'
 
 const botName = (rt: HostRuntime, id: string): string => rt.botOf(id)?.name ?? id
+
+
 
 export function installChatTools(rt: HostRuntime, shared: ToolShared): void {
   const { state } = rt
@@ -298,7 +259,6 @@ export function installChatTools(rt: HostRuntime, shared: ToolShared): void {
       return 'The card is on screen; the user\'s answer arrives as their next message.'
     },
   })
-
   shared.register({
     name: 'show_view',
     description: 'Show the user a view card in your own chat: text, metrics, a table, progress, choices, a confirmation, or a short form. An interactive card (options, confirm, or form) ends your turn; the answer arrives as the user\'s next message. Keep the view under 8 KB. Never collect a key, token, or password in a form.',
@@ -308,7 +268,7 @@ export function installChatTools(rt: HostRuntime, shared: ToolShared): void {
         type: 'object',
         required: true,
         additionalProperties: true,
-        description: 'One component { type, ...props, children? }. type is stack (children, 1 to 16), text ({ text }), metric ({ label, value, tone? }), table ({ columns: [{ key, label }], rows }), options ({ id, options: [{ label, description? }], multi? }), confirm ({ id, confirmLabel?, cancelLabel? }), form ({ id, fields: [{ id, label, placeholder? }], submitLabel? }), or progress ({ label?, percent }).',
+        description: 'One component { type, ...props, children? }. type is stack (children, 1 to 16), text ({ text }), metric ({ label, value, tone? }), table ({ columns: [{ key, label }], rows }), options ({ id, options: [{ label, description? }], multi? }), confirm ({ id, confirmLabel?, cancelLabel? }), form ({ id, fields: [{ id, label, placeholder? }], submitLabel? }), or progress ({ label?, percent }). A generated interface may also come as an OpenUI element map: { root, elements: { id: { type, props, children } } } — it is lowered onto the same cards, and a node the mapping does not know shows as text.',
       },
       await_reply: { type: 'boolean', description: 'Wait for the user to submit the card. A view with options, confirm, or form always waits; a display-only view cannot.' },
     },
@@ -322,7 +282,9 @@ export function installChatTools(rt: HostRuntime, shared: ToolShared): void {
       const id = context.sessionId
       if (t.groupOwners.has(id)) return 'View cards only work in your own chat. In a group, ask in your message instead.'
       if (!t.chatOwners.has(id)) return `Only Bots on the team can use show_view. Use ${BLOCKING_QUESTION_TOOL} if it is available in this session, or ask the user in your reply.`
-      const view: unknown = normalizeView(args.view)
+      const resolved = resolveViewBlueprint(args.view)
+      if ('error' in resolved) return resolved.error
+      const view: unknown = resolved.view
       const checked = checkShownView(args.title, view)
       if (checked.error !== undefined) return checked.error
       const title = checked.title

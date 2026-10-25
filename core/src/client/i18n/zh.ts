@@ -315,7 +315,6 @@ export const ZH = {
   'Upload photo': '上传照片',
   'A Bot named {name} already exists': '已经有叫 {name} 的 Bot 了',
   'The Bot runs on this model. You can change it later in its details.': 'Bot 会使用这个模型。以后可以在详情里修改。',
-  "Add a provider and a model in DeepSeek Harness first, or pick one in the Bot's chat later.": '请先在 DeepSeek Harness 里添加服务商和模型，或者稍后在 Bot 的对话里选择。',
   'Creating…': '创建中…',
   Create: '创建',
 
@@ -327,7 +326,6 @@ export const ZH = {
   'Choose a model': '选择模型',
   '{provider} · not available': '{provider} · 不可用',
   'Model for {name}': '{name} 的模型',
-  'No models are set up in DeepSeek Harness yet.': 'DeepSeek Harness 里还没有设置模型。',
   'Models and providers…': '模型和服务商…',
   Models: '模型',
   'Harness default': 'Harness 默认',
@@ -372,8 +370,12 @@ export const ZH = {
   'A group chat lets several Bots work on one thing with you.': '在群聊里，几个 Bot 和你一起做一件事。',
   'Back to group chats': '返回群聊列表',
   'Moon Bot settings': 'Moon Bot 设置',
+  'Updates come with the Moon Bot desktop app.': '更新随 Moon Bot 桌面版一起发布。',
+  'Scheduled tasks are turned off for this Bot.': '这个 Bot 的定时任务没有打开。',
+  'Open settings': '打开设置',
+  'Advanced settings': '高级设置',
+  'Agent': 'Agent',
   'Settings pages': '设置页面',
-  'Models, providers, and the rest of DeepSeek Harness': '模型、服务商和 DeepSeek Harness 的其他设置',
   'Harness settings': 'Harness 设置',
   'Back to Bots': '返回 Bot 列表',
   'Close settings': '关闭设置',
@@ -994,7 +996,7 @@ export const ZH = {
 
 const HOST_ZH: Record<string, string> = {
   'Request failed': '请求失败',
-  'Permissions are not available in this DeepSeek Harness': '这个 DeepSeek Harness 不支持权限设置',
+  'Permissions are not available here': '这里不支持权限设置',
   'Avatar images must be PNG, JPEG, WebP, or GIF': '头像图片必须是 PNG、JPEG、WebP 或 GIF',
   'Avatar image is too large': '头像图片太大了',
   'A Bot needs a name': 'Bot 需要一个名字',
@@ -1024,8 +1026,8 @@ const HOST_ZH: Record<string, string> = {
   'Memory is turned off on this host': '这台主机关闭了记忆功能',
   'The model wrote nothing': '模型没有输出内容',
   'Write the entry to save.': '请写下要保存的内容。',
-  'This DeepSeek Harness has no folder chooser': '这个 DeepSeek Harness 没有文件夹选择窗口',
-  'This DeepSeek Harness cannot list folders': '这个 DeepSeek Harness 不能列出文件夹',
+  'This window cannot open a folder chooser': '这个窗口不能打开文件夹选择窗口',
+  'This window cannot list folders': '这个窗口不能列出文件夹',
 }
 
 // The host's own messages join the table the locale service receives.

@@ -225,8 +225,8 @@ function AutomationOff({ actions }: {
     return <div className='bt-set-card bt-task-off'>{h(EmptyState, {
         icon: h(ClockIcon),
         title: t('Turn on scheduled tasks'),
-        hint: t('Switch on Automation tasks on the Plugins page in Harness settings.'),
-        ...(actions.openHarnessSettings ? { action: { label: t('Open Harness settings'), onClick: actions.openHarnessSettings } } : {}),
+        hint: t('Scheduled tasks are turned off for this Bot.'),
+        ...(actions.openHarnessSettings ? { action: { label: t('Open settings'), onClick: actions.openHarnessSettings } } : {}),
     })}</div>;
 }
 export function SchedulesPage({ roster, actions, start }: {
@@ -285,7 +285,7 @@ export function BotSchedules({ bot, roster, actions }: {
         return null;
     const tasks = view.available ? view.tasks.filter(task => task.botId === bot.id) : [];
     return <section className='bt-set-section'><h3>{t('Scheduled tasks')}</h3><div className='bt-set-card'>{!view.available
-        ? <div className='bt-set-row bt-bs-row'><span className='bt-set-copy'><span className='bt-set-hint'>{t('Switch on Automation tasks on the Plugins page in Harness settings.')}</span></span>{actions.openHarnessSettings ? <button type='button' className='bt-soft bt-soft-sm' onClick={actions.openHarnessSettings}>{t('Open Harness settings')}</button> : null}</div> : [
+        ? <div className='bt-set-row bt-bs-row'><span className='bt-set-copy'><span className='bt-set-hint'>{t('Scheduled tasks are turned off for this Bot.')}</span></span>{actions.openHarnessSettings ? <button type='button' className='bt-soft bt-soft-sm' onClick={actions.openHarnessSettings}>{t('Open settings')}</button> : null}</div> : [
         ...tasks.map(task => h(TaskRow, { key: task.id, task, actions, roster, onView: publish })),
         <button key='new' type='button' className='bt-set-row bt-bs-row bt-gs-add' onClick={() => actions.openSettings('schedules', bot.id)}>{h(PlusIcon)}{t('New task')}</button>,
     ]}</div></section>;
@@ -301,7 +301,7 @@ export function ScheduleSummary({ bot, actions }: {
     const view = useSchedules(actions);
     const tasks = view?.available ? view.tasks.filter(task => task.botId === bot.id && task.status === 'active') : [];
     return <div><div className='bt-section-title'>{t('Scheduled tasks')}</div>{tasks.length === 0
-        ? <button type='button' className='bt-more' onClick={() => actions.openSettings('schedules', bot.id)}>{view?.available === false ? t('Switch on Automation tasks on the Plugins page in Harness settings.') : t('No scheduled tasks yet. Add one')}</button> : <div className='bt-task-list'>{tasks.slice(0, 3).map(task => <button key={task.id} type='button' className='bt-task-line' onClick={() => actions.openSettings('schedules')}>{h(ClockIcon)}<span className='bt-task-line-title'>{task.title}</span><span className='bt-task-line-when'>{timingText(task)}</span></button>)}</div>}</div>;
+        ? <button type='button' className='bt-more' onClick={() => actions.openSettings('schedules', bot.id)}>{view?.available === false ? t('Scheduled tasks are turned off for this Bot.') : t('No scheduled tasks yet. Add one')}</button> : <div className='bt-task-list'>{tasks.slice(0, 3).map(task => <button key={task.id} type='button' className='bt-task-line' onClick={() => actions.openSettings('schedules')}>{h(ClockIcon)}<span className='bt-task-line-title'>{task.title}</span><span className='bt-task-line-when'>{timingText(task)}</span></button>)}</div>}</div>;
 }
 export const SCHEDULE_CSS = `
 .bt-task{gap:10px}

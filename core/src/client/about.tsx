@@ -74,7 +74,7 @@ function botHint(update: AboutUpdate): string | null {
     if (update.available)
         return t('Moon Bot {version} is available', { version: update.latest });
     if (update.source === 'app')
-        return t('Updates come with the DeepSeek Bot app.');
+        return t('Updates come with the Moon Bot desktop app.');
     if (update.source === 'web')
         return t('The web version updates when its server is redeployed.');
     if (update.enabled === false)

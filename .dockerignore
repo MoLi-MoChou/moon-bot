@@ -1,6 +1,5 @@
 **/node_modules
 .git
-app/ui
 app/dist-pack
 app/dist-next
 app/build

@@ -48,6 +48,11 @@ function host(home, extra = {}) {
     state: { bots: { a: { id: 'a', name: 'Chief', model: 'deepseek/deepseek-chat' } }, mainBotIds: ['a'], rooms: {} },
     readOnly: () => undefined,
     ...extra,
+  } as unknown as Parameters<typeof installDiagnostics>[0] & {
+    stop(): Promise<unknown>
+    warn(template: string, ...args: unknown[]): void
+    noteFailure(entry: Record<string, unknown>): void
+    diagnostics: { entries(): Promise<{ level: string, code: string, text: string, stack: string }[]>, report(input: unknown): Promise<{ markdown: string, entries: { code: string }[] }>, logText(): Promise<string>, clear: () => void }
   }
   installDiagnostics(rt)
   rt.stop = () => Promise.all(cleanups.map(cleanup => cleanup()))
@@ -184,7 +189,7 @@ test('a stop waits for the log writes queued before it, and nothing is written a
 })
 
 test('reportMarkdown says when nothing went wrong', () => {
-  const text = reportMarkdown({ facts: { botVersion: '0.1.0', os: 'linux' } })
+  const text = reportMarkdown({ facts: { botVersion: '0.1.0', os: 'linux' } as unknown as Parameters<typeof reportMarkdown>[0]['facts'] })
   assert.match(text, /No host errors recorded\./)
   assert.doesNotMatch(text, /DSH \|/)
 })
@@ -215,15 +220,16 @@ function turnsHost() {
   let listener
   const delivered = []
   const noted = []
+  const bots: Record<string, { id: string, name: string }> = { a: { id: 'a', name: 'Chief' }, b: { id: 'b', name: 'Writer' } }
   const rt = {
     ctx: { on: (name, fn) => { if (name === 'session/event') listener = fn } },
     state: { exchangeTurns: {}, questions: {} },
-    bots: { a: { id: 'a', name: 'Chief' }, b: { id: 'b', name: 'Writer' } },
+    bots,
     isBotSession: () => true,
     roomOf: () => undefined,
     groupOwners: new Map(),
     chatOwners: new Map(),
-    botOf: id => rt.bots[id],
+    botOf: id => bots[id],
     selfOf: id => id,
     save: async () => {},
     deliver: async (args) => { delivered.push(args) },
@@ -231,7 +237,7 @@ function turnsHost() {
     warn() {},
     switchJobs: () => [],
     dropKickoff() {},
-  }
+  } as unknown as Parameters<typeof installTurns>[0] & { roomWaiters: Map<string, unknown> & { failed?: unknown } }
   installTurns(rt)
   let seq = 0
   const emit = (id, type, data) => listener({ id }, { type, seq: ++seq, data })

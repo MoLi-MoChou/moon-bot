@@ -17,7 +17,7 @@ async function loadOverlayHooks() {
     format: 'cjs',
     external: ['react'],
   })
-  const listeners = new Map()
+  const listeners = new Map<string, Set<(event: unknown) => void>>()
   const effects = []
   let activeElement = null
   const windowStub = {
@@ -28,7 +28,7 @@ async function loadOverlayHooks() {
     removeEventListener(type, fn) {
       listeners.get(type)?.delete(fn)
     },
-    dispatchKey(key, extra = {}) {
+    dispatchKey(key, extra: { defaultPrevented?: boolean, isComposing?: boolean } = {}) {
       let defaultPrevented = Boolean(extra.defaultPrevented)
       let stopped = false
       const event = {
@@ -50,7 +50,7 @@ async function loadOverlayHooks() {
     useLayoutEffect: () => {},
     useEffect: (fn, deps) => { effects.push({ fn, deps, cleanup: null }) },
   }
-  const mod = { exports: {} }
+  const mod = { exports: {} as { useEscape: (handler: () => void, enabled: boolean) => void, stepMenuFocus: (menu: unknown, key: string) => boolean } }
   runInNewContext(outputFiles[0].text, {
     module: mod,
     exports: mod.exports,

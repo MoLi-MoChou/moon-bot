@@ -12,7 +12,7 @@ const makeHome = state => {
   writeFileSync(join(home, 'state.json'), JSON.stringify(state))
   return home
 }
-const team = () => ({
+const team = (): Record<string, unknown> & { bots: Record<string, { capabilities?: unknown, [key: string]: unknown }> } => ({
   version: 1,
   mainBotIds: ['chief'],
   bots: {
@@ -30,7 +30,7 @@ const team = () => ({
 const mcp = (name, command = 'node') => ({ name, kind: 'mcp', description: 'Echo service', transport: 'stdio', command, args: [], env: {} })
 const created = env => env.ctx.listeners.get('agent/created').find(listener => listener.name === 'prepareCapabilities')
 
-function testAgent(id, mounts, skillsBySession, { awaitMount = async () => {} } = {}) {
+function testAgent(id, mounts, skillsBySession, { awaitMount = async () => {} }: { awaitMount?: (record: unknown) => Promise<void> } = {}) {
   const disposers = []
   const skills = new Map()
   skillsBySession.set(id, skills)
@@ -40,7 +40,7 @@ function testAgent(id, mounts, skillsBySession, { awaitMount = async () => {} } 
       if (typeof dispose === 'function') disposers.push(dispose)
     },
     plugin(plugin, config) {
-      const record = { plugin, config, sessionId: id, disposed: false }
+      const record: { plugin: { inject?: readonly string[], apply?: (ctx: unknown) => void } | undefined, config: Record<string, unknown> & { url?: string, serverName?: string }, sessionId: string, disposed: boolean, cleanup?: () => void } = { plugin, config, sessionId: id, disposed: false }
       mounts.push(record)
       if (plugin.inject?.includes('skills')) {
         const c = {
@@ -59,7 +59,7 @@ function testAgent(id, mounts, skillsBySession, { awaitMount = async () => {} } 
   return { id, session: { id }, ctx: agentCtx }
 }
 
-async function setup({ state = team(), secret, beforeLoad } = {}) {
+async function setup({ state = team(), secret, beforeLoad }: { state?: Record<string, unknown> & { capabilities?: unknown }, secret?: unknown, beforeLoad?: (env: { ctx: { logger: { warn: (...args: unknown[]) => void } }, rt: Record<string, unknown>, mounts?: unknown, skills?: unknown, mcpPlugin?: unknown }) => Promise<void> | void } = {}) {
   const home = makeHome(state)
   if (secret) writeFileSync(join(home, 'secrets.json'), JSON.stringify({ secrets: [secret] }))
   const mounts = []
@@ -95,10 +95,10 @@ test('capability names use the MCP and skill validator intersection', () => {
 })
 
 test('packs expand only to MCP and skill items', () => {
-  const items = { server: { kind: 'mcp' }, guide: { kind: 'skill' }, team: { kind: 'pack', items: ['server', 'guide'] } }
+  const items = { server: { kind: 'mcp' }, guide: { kind: 'skill' }, team: { kind: 'pack', items: ['server', 'guide'] } } as unknown as Parameters<typeof expandCapabilityNames>[1]
   assert.deepEqual(expandCapabilityNames(['team', 'server'], items), new Set(['server', 'guide']))
   assert.throws(() => expandCapabilityNames(['missing'], items), /No capability/)
-  assert.throws(() => expandCapabilityNames(['bad'], { ...items, bad: { kind: 'pack', items: ['team'] } }), /unavailable capability/)
+  assert.throws(() => expandCapabilityNames(['bad'], { ...items, bad: { kind: 'pack', items: ['team'] } } as unknown as Parameters<typeof expandCapabilityNames>[1]), /unavailable capability/)
 })
 
 test('state migration adds an empty library and Bot attachment lists', async t => {
@@ -131,7 +131,7 @@ test('Bot saves enforce approval and ownership, and deletion cascades', async t 
   assert.equal(changed.approved, false)
   await assert.rejects(
     rt.capabilitySave({ name: 'echo', kind: 'skill', description: 'Other kind', content: 'Instructions' }, { botId: 'worker' }),
-    error => error.message === 'A capability cannot change its kind. Delete it and save a new one.',
+    error => (error as Error).message === 'A capability cannot change its kind. Delete it and save a new one.',
   )
   await assert.rejects(rt.capabilitySave(mcp('echo'), { botId: 'helper' }), /creator or a Main Bot/)
   await assert.rejects(rt.capabilityDelete('echo', { botId: 'helper' }), /creator or a Main Bot/)
@@ -422,12 +422,12 @@ test('mounts agent-only MCP and skills, remounts changed config, resolves scoped
   await rt.changeCapabilityAttachment('detach', { name: 'team' }, 'chief')
   await rt.scheduleCapabilitiesReconcile()
   assert.equal(first.disposed, true)
-  assert.equal(mounts.findLast(mount => mount.sessionId === 'chief' && mount.plugin.inject?.includes('skills')).disposed, true)
+  assert.equal([...mounts].reverse().find(mount => mount.sessionId === 'chief' && mount.plugin.inject?.includes('skills')).disposed, true)
   assert.equal(rt.capabilityStatusesView().chief.team, undefined)
 })
 
 const exaSecret = (value, scope = ['chief']) => ({ name: 'EXA_API_KEY', value, purpose: '', scope, requestedBy: null, createdAt: 1, updatedAt: 1 })
-async function mountUrlCapability(t, { value, url, bots = ['chief'], awaitMount }) {
+async function mountUrlCapability(t, { value, url, bots = ['chief'], awaitMount }: { value: string, url: string, bots?: string[], awaitMount?: (record: unknown) => Promise<void> }) {
   const env = await setup({ secret: exaSecret(value) })
   t.after(() => env.dispose())
   const { ctx, rt, mounts, skills } = env
@@ -467,7 +467,7 @@ test('a failed HTTP MCP mount does not show the encoded secret from its URL', as
   const env = await mountUrlCapability(t, {
     value,
     url: 'https://mcp.exa.test/mcp?apiKey=$DSH_SECRET_EXA_API_KEY',
-    awaitMount: async mount => { throw new Error('Connection failed', { cause: new Error(`fetch ${mount.config.url}`) }) },
+    awaitMount: async (mount: { config: { url?: string } }) => { throw new Error('Connection failed', { cause: new Error(`fetch ${mount.config.url}`) }) },
   })
   const status = env.rt.capabilityStatusesView().chief.exa
   assert.equal(status.state, 'error')

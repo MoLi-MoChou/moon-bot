@@ -9,7 +9,7 @@ import { signIn } from '../src/host/connectors.ts'
 import { fakeContext } from './fake-ctx.js'
 
 const fresh = () => `ghp_${randomBytes(16).toString('hex')}`
-const answer = (status, body) => ({ status, ok: status >= 200 && status < 300, json: async () => body })
+const answer = (status: number, body: unknown): Response => ({ status, ok: status >= 200 && status < 300, json: async () => body }) as unknown as Response
 
 test('signIn asks GitHub who owns the token', async () => {
   const token = fresh()
@@ -44,7 +44,7 @@ const teamHome = () => {
 }
 
 // A loader that hands out a fake MCP client and records each mount.
-function setup({ fail = false, github = { api: 'https://gh.test' } } = {}) {
+function setup({ fail = false, github = { api: 'https://gh.test' } }: { fail?: boolean, github?: { api: string, url?: string, fetch?: typeof fetch } } = {}) {
   const home = teamHome()
   const mounts = []
   const plugin = { name: 'mcp-client', apply() {} }

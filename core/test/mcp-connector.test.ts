@@ -51,16 +51,20 @@ test('results are bounded, errors keep their flag, and a dropped connection retr
   const entries = await connector.entries()
   const byName = new Map(entries.map(entry => [entry.name.split('__').at(-1) as string, entry]))
 
-  const huge = await byName.get('huge')?.execute({}, { sessionId: 's', callId: 'c' })
-  const hugeText = huge?.content[0]?.type === 'text' ? huge.content[0].text : ''
+  // A tool's outcome as the assertions read it: content blocks or an error flag.
+  type Outcome = { content?: { type: string, text?: string }[], isError?: boolean } | undefined
+  const run = (name: string) => byName.get(name)?.execute({}, { sessionId: 's', callId: 'c' }) as unknown as Promise<Outcome>
+
+  const huge = await run('huge')
+  const hugeText = huge?.content?.[0]?.type === 'text' ? huge.content[0].text : ''
   assert.ok(hugeText.length < 21_000, 'bounded')
   assert.match(hugeText, /more characters cut/)
 
-  const broken = await byName.get('broken')?.execute({}, { sessionId: 's', callId: 'c' })
+  const broken = await run('broken')
   assert.equal(broken?.isError, true)
 
-  const flaky = await byName.get('flaky')?.execute({}, { sessionId: 's', callId: 'c' })
-  const flakyText = flaky?.content[0]?.type === 'text' ? flaky.content[0].text : ''
+  const flaky = await run('flaky')
+  const flakyText = flaky?.content?.[0]?.type === 'text' ? flaky.content[0].text : ''
   assert.equal(flakyText, 'recovered')
   assert.equal(flakyCalls, 2, 'the first failure was retried once')
 })

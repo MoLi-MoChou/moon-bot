@@ -25,7 +25,7 @@ const seed = (room = {}, extraRooms = {}) => ({
   revision: 0,
 })
 
-async function start(t, room, services, extraRooms) {
+async function start(t, room = undefined, services = undefined, extraRooms = undefined) {
   const home = mkdtempSync(join(tmpdir(), 'ds-bot-work-'))
   writeFileSync(join(home, 'state.json'), JSON.stringify(seed(room, extraRooms)))
   const ctx = fakeContext({ services })
@@ -397,7 +397,7 @@ test('the late round limit makes a late post quiet', async (t) => {
 // anyone could see it. It is written into the log and the running round at once,
 // and the relay it still opens shows it again nowhere.
 const logLines = host => JSON.parse(readFileSync(join(host.home, 'state.json'), 'utf8')).rooms.r1.log
-const busyRound = async (t, room, services) => {
+const busyRound = async (t, room = undefined, services = undefined) => {
   const host = await start(t, room, services)
   const first = host.round('c1', host.say('@Writer 整理文档'))
   await settle(() => host.agentOf('gb').calls.length === 1)

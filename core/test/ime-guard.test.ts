@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import { installImeGuard } from '../src/client/ime-guard.ts'
 
 // The guard runs in a page, where `Element` exists; the test brings its own.
-globalThis.Element ??= class Element {}
+globalThis.Element ??= class {} as unknown as typeof Element
 
 const realNow = performance.now
 let clock = 0
@@ -25,13 +25,14 @@ function createRoot() {
       for (const listener of listeners.get(type) ?? []) listener(event)
     },
     count: type => (listeners.get(type) ?? []).length,
-  }
+  } as unknown as Parameters<typeof installImeGuard>[0] & { fire: (type: string, event: unknown) => void, count: (type: string) => number }
 }
 
 class Field extends Element {
+  composer: boolean | undefined
   constructor (composer) { super(); this.composer = composer }
   // Only the composer's descendants answer the guard's selector, as in the page.
-  closest (selector) { return this.composer && selector.includes('data-composer-input') ? this : null }
+  override closest (selector) { return this.composer && selector.includes('data-composer-input') ? this : null }
 }
 
 const enter = (target, { composing = false, keyCode = 13 } = {}) => {

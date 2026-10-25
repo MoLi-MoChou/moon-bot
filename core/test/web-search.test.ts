@@ -15,16 +15,26 @@ const MINUTE = 60_000
 const HOUR = 60 * MINUTE
 
 /** A provider over recorded fakes; `keys` is the whole credential store, `fetch` answers by URL. */
-function harness({ route, keys = {}, fetch, webFetch, token, now, config } = {}) {
-  const calls = { fetch: [], webFetch: [], keys: [] }
+function harness({ route, keys = {}, fetch, webFetch, token, now, config }: {
+  route?: unknown,
+  keys?: Record<string, unknown>,
+  fetch?: (url: string, init?: RequestInit) => Response | Promise<Response>,
+  webFetch?: (request: { url: string }, signal?: AbortSignal) => { url: string, statusCode: number, body: { kind: string, content: string }, truncated: boolean },
+  token?: string,
+  now?: () => number,
+  config?: Record<string, unknown>,
+} = {}) {
+  // The recorded requests, as the assertions read them back.
+  type RecordedInit = { body?: string, headers?: Record<string, string | undefined>, redirect?: string, signal?: AbortSignal, [key: string]: unknown }
+  const calls = { fetch: [] as { url: string, init: RecordedInit }[], webFetch: [] as string[], keys: [] as string[] }
   const provider = createAutoSearchProvider({
     route: () => route,
-    resolveKey: async (ref) => { calls.keys.push(ref); return keys[ref] },
+    resolveKey: async (ref) => { calls.keys.push(ref); return keys[ref] as string | undefined },
     resolveAccountToken: async () => token,
-    fetch: async (url, init) => { calls.fetch.push({ url, init }); return fetch ? fetch(url, init) : json({}, 500) },
+    fetch: async (url, init) => { calls.fetch.push({ url, init: init as unknown as RecordedInit }); return fetch ? Promise.resolve(fetch(url, init)) : json({}, 500) },
     webFetch: async (request, signal) => { calls.webFetch.push(request.url); return webFetch ? webFetch(request, signal) : page(fixture('bing.html')) },
     ...now ? { now } : {},
-  }, config)
+  } as unknown as Parameters<typeof createAutoSearchProvider>[0], config)
   return { provider, calls }
 }
 const urls = calls => calls.fetch.map(call => call.url)
@@ -63,7 +73,7 @@ test('planNative puts search APIs declared for the route host first, on the rout
   // A local Ollama is not ollama.com: no declared API, only the protocol.
   assert.deepEqual(plan({ baseURL: 'http://localhost:11434/v1' }), ['responses http://localhost:11434/v1/responses', 'messages http://localhost:11434/v1/messages'])
   // A path that would move the key to another origin is never planned.
-  const hostile = ['@evil.example/steal', '.evil.example/steal', ':8443/steal'].map(path => ({ id: 'evil', hosts: ['api.acme.example'], path, body: { q: '$query' } }))
+  const hostile = ['@evil.example/steal', '.evil.example/steal', ':8443/steal'].map(path => ({ id: 'evil', hosts: ['api.acme.example'], path, body: { q: '$query' } })) as unknown as Parameters<typeof planNative>[1]
   assert.deepEqual(planNative({ provider: 'r', model: 'm', api: 'openai-responses', baseURL: 'https://api.acme.example/v1' }, hostile).candidates.map(c => c.url), ['https://api.acme.example/v1/responses'])
 })
 
@@ -78,16 +88,16 @@ test('planNative explains when there is nothing to try', () => {
 })
 
 test('routeOf reads the asking Session route: protocol, endpoint, key name, and headers', () => {
-  const settings = [
+  const settings: { ns: string, value: Record<string, unknown> }[] = [
     { ns: 'llm-pi-ai', value: { providers: { mimo: { api: 'openai-completions', apiKeyEnv: 'MIMO_KEY', baseURL: 'https://token-plan-cn.xiaomimimo.com/v1', headers: { 'x-team': 'bots', bad: 1 } } } } },
     { ns: 'llm-deepseek-api-key', value: { apiKeyEnv: 'DEEPSEEK_API_KEY' } },
   ]
-  const directory = [
+  const directory: { provider: string, settingsNs: string, settingsPath: string[] }[] = [
     { provider: 'mimo', settingsNs: 'llm-pi-ai', settingsPath: ['providers', 'mimo'] },
     { provider: 'moonshotai', settingsNs: 'llm-pi-ai', settingsPath: ['providers', 'moonshotai'] },
     { provider: 'deepseek-official', settingsNs: 'llm-deepseek-api-key', settingsPath: [] },
   ]
-  const ctxFor = (provider, env = {}, id) => ({
+  const ctxFor = (provider: string, env: Record<string, string> = {}, id?: string) => ({
     get: name => ({
       agents: { currentInitiator: () => ({ session: { id, requestContext: () => ({ provider, model: 'x' }) } }) },
       llm: { listConfigurableProviders: () => directory },
@@ -158,7 +168,7 @@ test('a host this plugin has never heard of gets native search through its proto
   assert.equal(init.headers['x-api-key'], 'sk-acme')
   assert.equal(init.headers.authorization, 'Bearer sk-acme')
   assert.equal(init.headers['anthropic-version'], '2023-06-01')
-  const body = JSON.parse(init.body)
+  const body = JSON.parse(init.body as string)
   assert.equal(body.model, 'acme-1')
   assert.deepEqual(body.tools, [{ type: 'web_search_20250305', name: 'web_search', max_uses: 1 }])
   assert.deepEqual(calls.keys, ['ACME_KEY'])
@@ -264,15 +274,15 @@ test('profile headers go with the request, but cannot replace the credential', a
 test('credential-bearing native requests do not follow redirects', async (t) => {
   let targetHits = 0
   const target = createServer((_req, res) => { targetHits += 1; res.end('{}') })
-  const origin = createServer((_req, res) => { res.writeHead(302, { location: `http://127.0.0.1:${target.address().port}/steal` }); res.end() })
-  await new Promise(done => target.listen(0, '127.0.0.1', done))
-  await new Promise(done => origin.listen(0, '127.0.0.1', done))
+  const origin = createServer((_req, res) => { res.writeHead(302, { location: `http://127.0.0.1:${(target.address() as { port: number }).port}/steal` }); res.end() })
+  await new Promise<void>(done => target.listen(0, "127.0.0.1", done))
+  await new Promise<void>(done => origin.listen(0, "127.0.0.1", done))
   t.after(() => { target.close(); origin.close() })
   const { provider } = harness({
     route: KIMI,
     keys: { MOONSHOT_API_KEY: 'sk-secret' },
     // The endpoint URLs are real; only the socket is pointed at the local redirecting server.
-    fetch: (url, init) => fetch(url.replace('https://api.moonshot.cn', `http://127.0.0.1:${origin.address().port}`), init),
+    fetch: (url, init) => fetch(url.replace('https://api.moonshot.cn', `http://127.0.0.1:${(origin.address() as { port: number }).port}`), init),
   })
   const result = await provider.search({ query: 'q' })
   assert.equal(targetHits, 0)
@@ -283,7 +293,7 @@ test('credential-bearing native requests do not follow redirects', async (t) => 
 // Outcome memory
 
 test('each outcome keeps its endpoint from being retried for its own time', async () => {
-  const cases = [
+  const cases: [string, () => Response, number][] = [
     ['HTTP 404', () => json({ error: { message: 'Not Found' } }, 404), 24 * HOUR],
     ['HTTP 405', () => json({}, 405), 24 * HOUR],
     ['HTTP 400', () => json({ error: { message: 'web search tool found in the request body, but webSearchEnabled is false' } }, 400), 30 * MINUTE],
@@ -391,7 +401,7 @@ test('when every path fails the error forbids guessing', async () => {
   })
   await assert.rejects(provider.search({ query: 'q' }), (error) => {
     assert.ok(error instanceof Error && /code|status|message/.test(Object.keys(error).join(',') || 'message'))
-    assert.equal(error.code, 'WEB_SEARCH_UNAVAILABLE')
+    assert.equal((error as Error & { code?: string }).code, 'WEB_SEARCH_UNAVAILABLE')
     assert.match(error.message, /Native search: route "moonshotai-cn": Kimi search API \(api\.moonshot\.cn\/v1\/tools\/search\): HTTP 401: Invalid Authentication; OpenAI Responses web_search tool/)
     assert.match(error.message, /Keyless fallback: www\.bing\.com: HTTP 429; html\.duckduckgo\.com: HTTP 202\./)
     assert.match(error.message, /Do not guess URLs/)
@@ -417,7 +427,7 @@ test('cancellation surfaces as WEB_ABORTED, not as a fallback', async () => {
       controller.abort()
     }),
   })
-  await assert.rejects(provider.search({ query: 'q' }, controller.signal), error => error.code === 'WEB_ABORTED')
+  await assert.rejects(provider.search({ query: 'q' }, controller.signal), error => (error as { code?: string }).code === 'WEB_ABORTED')
   assert.deepEqual(calls.webFetch, [])
 })
 
@@ -517,7 +527,7 @@ test('declared search API responses are read by shape, skipping media links and 
 })
 
 test('a guessed protocol search gets a short budget and is skipped for an hour after it hangs', async () => {
-  const hang = (_url, init) => new Promise((_resolve, reject) => init.signal.addEventListener('abort', () => reject(init.signal.reason)))
+  const hang = (_url: string, init: RequestInit): Promise<Response> => new Promise((_resolve, reject) => init.signal?.addEventListener('abort', () => reject(init.signal?.reason)))
   const { provider, calls } = harness({ route: { ...ACME, api: 'anthropic-messages' }, keys: { ACME_KEY: 'k' }, config: { guessTimeoutMs: 1000 }, fetch: hang })
   const first = await provider.search({ query: 'q' })
   assert.match(first.content, /timed out after 1s/)

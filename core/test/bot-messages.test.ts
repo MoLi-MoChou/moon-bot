@@ -18,8 +18,8 @@ function team({ group = false } = {}) {
     bots: {
       a: { id: 'a', name: 'Chief', role: 'Boss', sessionId: 'a', createdAt: 1 },
       b: { id: 'b', name: 'Writer', role: 'Write', sessionId: 'b', createdAt: 2 },
-    },
-    rooms: group ? { r1: { id: 'r1', name: 'Ops', members: ['a', 'b'], mode: 'admin', admin: 'a', named: true, sessions: { b: 'gb' } } } : {},
+    } as Record<string, { id: string, name: string, role?: string, sessionId: string, createdAt: number }>,
+    rooms: (group ? { r1: { id: 'r1', name: 'Ops', members: ['a', 'b'], mode: 'admin', admin: 'a', named: true, sessions: { b: 'gb' } } } : {}) as Record<string, { id: string, name: string, members: string[], mode: string, admin: string, named?: boolean, sessions: Record<string, string> }>,
     agents: {},
     exchanges: [],
     exchangeTurns: {},
@@ -310,15 +310,16 @@ test('stop_bot belongs to a Main Bot', async (t) => {
 function turnsHost() {
   let listener
   const delivered = []
+  const bots: Record<string, { id: string, name: string }> = { a: { id: 'a', name: 'Chief' }, b: { id: 'b', name: 'Writer' } }
   const rt = {
     ctx: { on: (name, fn) => { if (name === 'session/event') listener = fn } },
     state: { exchangeTurns: {}, questions: {} },
-    bots: { a: { id: 'a', name: 'Chief' }, b: { id: 'b', name: 'Writer' } },
+    bots,
     isBotSession: () => true,
     roomOf: () => undefined,
     groupOwners: new Map(),
     chatOwners: new Map(),
-    botOf: id => rt.bots[id],
+    botOf: id => bots[id],
     selfOf: id => id,
     save: async () => {},
     deliver: async (args) => { delivered.push(args) },
@@ -326,7 +327,7 @@ function turnsHost() {
     warn() {},
     switchJobs: () => [],
     dropKickoff() {},
-  }
+  } as unknown as Parameters<typeof installTurns>[0]
   installTurns(rt)
   let seq = 0
   const emit = (id, type, data) => listener({ id }, { type, seq: ++seq, data })
@@ -493,7 +494,7 @@ function turnTaker(agents, emit) {
     emit(id, 'user/message', { content: message.content, source: message.source })
     return message
   }
-  const end = (id, text) => {
+  const end = (id, text?) => {
     if (text !== undefined) emit(id, 'assistant/message', assistantText(text))
     emit(id, 'turn/end', { turn: turns.get(id), reason: { kind: 'completed' } })
   }
@@ -517,7 +518,7 @@ const callsOf = (agents, id) => agents.get(id)?.calls ?? []
 // ones, and a read while one renames the file over makes that save fail on Windows.
 const worksIn = async ({ call, home }) => {
   await call('set-prefs', {})
-  return JSON.parse(readFileSync(join(home, 'state.json'), 'utf8')).works ?? {}
+  return (JSON.parse(readFileSync(join(home, 'state.json'), 'utf8')).works ?? {}) as Record<string, { from: string, to: string, open: unknown[], held?: string }>
 }
 
 // Chief asks Writer, which hands part of it on to Tester.
@@ -690,6 +691,8 @@ function earlierParts(events) {
     roomOf: () => undefined,
     chatOf: () => 'b2',
     resolveAgent: async id => ({ session: { id, seq: 3 } }),
+  } as unknown as Parameters<typeof installParts>[0] & {
+    earlierPage(sessionId: string): Promise<{ items: { kind: string, text?: string, role?: string, time?: number, botId?: string }[] }>
   }
   installParts(rt)
   return rt

@@ -31,7 +31,18 @@ const react = {
   useMemo: make => make(), useRef: current => ({ current }), useId: () => 'card-id',
 }
 const timers = new Set()
-const module = { exports: {} }
+// The bundled module's exports, as this test drives them.
+interface CellNode { type: unknown, props: Record<string, unknown> & { children?: unknown, className?: string, title?: string }, [key: string]: unknown }
+const module = { exports: {} as {
+  ToolCell: (props: Record<string, unknown>) => CellNode | null
+  TriggerCell: (props: Record<string, unknown>) => CellNode | null
+  callTree: (root: unknown) => { callId: string }[]
+  stackReplies: (replies: unknown[]) => { index?: number, texts?: string[], time?: number, duration?: number }[]
+  forgetMemoryLines: () => void
+  QuestionDock: (props: Record<string, unknown>) => unknown
+  SecretDock: (props: Record<string, unknown>) => unknown
+  countCards: (state: unknown, sessionId: string, ids: unknown, delta: number) => unknown
+} }
 runInNewContext(outputFiles[0].text, {
   module, exports: module.exports,
   document: { hidden: false }, TextEncoder,
@@ -82,10 +93,10 @@ const question = (callId, over = {}) => ({ id: 'question', callId, question: 'Wh
 const request = (callId, over = {}) => ({ id: 'request', callId, sessionId: chief.id, name: 'DEMO_TOKEN', purpose: 'Test card', status: 'pending', kind: 'fill', ...over })
 
 const text$ = value => [{ type: 'text', text: typeof value === 'string' ? value : JSON.stringify(value) }]
-const call = (name, callId, { args = {}, content = '', subCalls = [], running = false, isError = false } = {}) => (running
+const call = (name, callId, { args = {}, content = '', subCalls = [], running = false, isError = false }: { args?: Record<string, unknown>, content?: unknown, subCalls?: unknown[], running?: boolean, isError?: boolean } = {}) => (running
   ? { phase: 'start', name, callId, argsRaw: JSON.stringify(args), subCalls, turn: 0 }
   : { kind: 'tool-result', name, callId, call: { name, argsRaw: JSON.stringify(args) }, content: text$(content), isError, subCalls })
-const program = (subCalls, over = {}) => call('run_code', 'program', { subCalls, ...over })
+const program = (subCalls, { running = false, isError = false }: { running?: boolean, isError?: boolean } = {}) => call('run_code', 'program', { subCalls, running, isError })
 
 test('a member\'s messages in a row stack under its name, and an event line starts a new block', () => {
   const replies = [
@@ -177,10 +188,10 @@ const show = (root, options) => {
   effects = []
   return out
 }
-const shown = (root, options) => text(show(root, options))
+const shown = (root, options?) => text(show(root, options))
 
 // One finished call of every kind ToolCell draws, and what it shows.
-const BRANCHES = [
+const BRANCHES: [string, Parameters<typeof call>[2], RegExp][] = [
   ['message_bot', { args: { to: 'Writer' } }, /Messaged.*Writer/],
   ['stop_bot', { args: { bot: 'Writer' } }, /Stopped.*Writer/],
   ['create_bot', { args: { name: 'Writer' } }, /Created.*Writer/],
@@ -306,10 +317,12 @@ test('the live note follows the running sub-call of a program', () => {
   assert.equal(notes(call('message_bot', 'direct', { args: { to: 'Writer' }, running: true }))[0].entry.label, 'Asking Writer')
 })
 
-// A minimal cards store, as index.ts keeps it.
+// A minimal cards store, as index.ts keeps one.
 const cardStore = () => {
-  const store = { state: {} }
-  store.noteCards = (sessionId, ids, delta) => { store.state = countCards(store.state, sessionId, ids, delta) }
+  const store: { state: Record<string, unknown> & Record<string, Record<string, number>>, noteCards: (sessionId: string, ids: readonly string[], delta: number) => void } = {
+    state: {},
+    noteCards: (sessionId, ids, delta) => { store.state = countCards(store.state, sessionId, ids, delta) as typeof store.state },
+  }
   return store
 }
 const draw = (root, store, options = {}) => {
@@ -343,7 +356,7 @@ const dockProps = (store, roster, { sessionId = chief.id, openState = 'open', ac
   useHeldCards: select => select(held),
   useSession: select => select({ openState }),
 })
-const docks = (store, roster, options) => {
+const docks = (store, roster, options?) => {
   const out = text(expand([QuestionDock(dockProps(store, roster, options)), SecretDock(dockProps(store, roster, options))]))
   effects = []
   return out

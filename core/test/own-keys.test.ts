@@ -66,7 +66,7 @@ function start() {
   const register = ctx.connection.fetch.register
   ctx.connection.fetch.register = (route) => { ctx.route = route; return register(route) }
   apply(ctx, { home })
-  const call = async (endpoint, payload) => (await ctx.route.fetch(new Request('http://localhost/api/bot', {
+  const call = async (endpoint, payload?) => (await ctx.route.fetch(new Request('http://localhost/api/bot', {
     method: 'POST', body: JSON.stringify({ endpoint, payload }),
   }))).json()
   const tool = (name, args, sessionId) => ctx.registeredTools.get(name).execute(args, { agent: { id: sessionId } })
@@ -81,7 +81,7 @@ function start() {
 // Each endpoint's answer for an inherited name must be the same as for an id that is
 // simply not there; in particular never ok and never bot/internal unless an unknown
 // id gets that too.
-const ENDPOINTS = [
+const ENDPOINTS: [string, (id: string) => Record<string, unknown>][] = [
   ['update-bot', id => ({ id, role: 'x' })],
   ['delete-bot', id => ({ id })],
   ['duplicate-bot', id => ({ id })],
@@ -124,9 +124,10 @@ test('api endpoints answer an inherited name like any unknown id and never write
     }
   }
   assert.deepEqual(Object.getOwnPropertyNames(Object.prototype), prototypeNames)
-  assert.equal({}.role, undefined)
-  assert.equal({}.hidden, undefined)
-  assert.equal({}.name, undefined)
+  const bare = {} as Record<string, unknown>
+  assert.equal(bare.role, undefined)
+  assert.equal(bare.hidden, undefined)
+  assert.equal(bare.name, undefined)
   assert.equal(state(), before)
 })
 

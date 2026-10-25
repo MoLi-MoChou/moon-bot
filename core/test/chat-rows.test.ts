@@ -83,8 +83,9 @@ test('a live reasoning row titles "Thinking" with a ticking clock', () => {
   const row = ThinkingRow({ text: 'one\ntwo', live: true, at: Date.now() - 4000 })
   const title = row.children[0]
   assert.equal(title.children[0], 'Thinking')
-  assert.equal(title.children[1]?.type?.name, 'Elapsed')
-  assert.equal(title.children[1]?.props.at <= Date.now() - 4000, true)
+  const elapsed = title.children[1] as unknown as { type: { name?: string }, props: { at: number } } | undefined
+  assert.equal(elapsed?.type?.name, 'Elapsed')
+  assert.equal(elapsed?.props.at <= Date.now() - 4000, true)
 })
 
 test('a settled reasoning row shows the turn’s thinking time when known', () => {

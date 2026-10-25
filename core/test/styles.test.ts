@@ -31,7 +31,7 @@ const react = {
 
 const tick = () => new Promise(resolve => setImmediate(resolve))
 // DS Bot's style tags in a document, all of them or those of one group.
-const tagged = (document, tag) => [...document.head.querySelectorAll('style')]
+const tagged = (document, tag?) => [...document.head.querySelectorAll('style')]
   .filter(style => style.dataset.dshBot !== undefined && (tag === undefined || style.dataset.dshBot === tag))
 
 // The client-modules bundle registers itself through the page's __ModuleLoader__
@@ -55,7 +55,7 @@ const { createClientModuleSystem, parseBootManifest } = clientModules
 // ClientModuleSystem that materializes the pretend modules named in `rows`.
 const bench = (rows) => {
   const { window } = new JSDOM('<!doctype html><html><head></head><body></body></html>')
-  const module = { exports: {} }
+  const module = { exports: {} as { installStyles: (css: string, tag: string) => { dataset: Record<string, string>, isConnected: boolean }, installCompiledStyles: (css: string, tag: string) => () => void } }
   runInNewContext(outputFiles[0].text, {
     module, exports: module.exports,
     document: window.document,

@@ -13,7 +13,16 @@ const bundle = await build({
 })
 
 function loadMotion(prefersReduced = false) {
-  const mod = { exports: {} }
+  interface Spring { duration: number, easing: string }
+  const mod = { exports: {} as {
+    MENU_EXIT_MS: number, DIALOG_EXIT_MS: number, SHEET_EXIT_MS: number, PANEL_LINGER_MS: number,
+    SPRING_SHAPE: Spring, SPRING_TAP: Spring, SPRING_ROW_GLIDE: Spring,
+    PANEL_TAB_EDGES: { lead: Spring, trail: Spring },
+    MOTION_PRESETS: { sidebar: { rowGlide: Spring }, overlay: { exitMs: number }, menu: { exitMs: number }, panel: { lingerMs: number }, message: { enter: Spring }, [key: string]: unknown },
+    reducedMotion: () => boolean,
+    useLinger: (node: unknown, ms: number) => void,
+    [key: string]: unknown,
+  } }
   const timeouts = []
   runInNewContext(bundle.outputFiles[0].text, {
     module: mod,

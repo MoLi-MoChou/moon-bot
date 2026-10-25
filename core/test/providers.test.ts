@@ -6,8 +6,12 @@ import { checkKey, install, keyRefFor } from '../src/host/providers.ts'
 // A DSH with the official DeepSeek route, an account route, and the pi-ai adapter: its
 // directory offers catalog providers, and its settings take path writes the way DSH's
 // do, under a revision. Routes come and go with the pi-ai section.
-function dsh({ keys = {}, readOnly = [], user = {}, base = {}, catalog = { anthropic: ['claude-a', 'claude-b'], moonshotai: ['kimi-k3'] } } = {}) {
-  const store = { ...keys }
+// A pi-ai settings tree: providers under user and base, merged the way the page reads them.
+interface PiTree { providers?: Record<string, { apiKeyEnv?: string, displayName?: string, models?: (string | { id: string, [key: string]: unknown })[] }>, [key: string]: unknown }
+// The Models page as these tests read it.
+type PageView = { available: boolean, providers?: { id: string, key: { configured: boolean, writable: boolean }, removable: boolean, models: { ref: string, [key: string]: unknown }[] }[], addable?: { id: string, name: string }[], protocols?: string[] }
+function dsh({ keys = {}, readOnly = [], user = {}, base = {}, catalog = { anthropic: ['claude-a', 'claude-b'], moonshotai: ['kimi-k3'] } }: { keys?: Record<string, string>, readOnly?: string[], user?: PiTree, base?: PiTree, catalog?: Record<string, string[]> } = {}) {
+  const store: Record<string, string> = { ...keys }
   const writes = []
   const listeners = new Map()
   let revision = 0
@@ -64,7 +68,15 @@ function dsh({ keys = {}, readOnly = [], user = {}, base = {}, catalog = { anthr
       discoverModels: async (ns, request) => { discovered.push([ns, request]); return [{ id: 'relay-1', name: 'Relay One', contextWindow: 128000, inputModalities: ['text'] }, { id: 'relay-2' }] },
     },
   }
-  const rt = { ctx, state: { bots: {} } }
+  const rt = { ctx, state: { bots: {} } } as unknown as Parameters<typeof installModels>[0] & Parameters<typeof install>[0] & {
+    catalog(options?: { fresh?: boolean }): Promise<{ provider: string, needsKey?: boolean, [key: string]: unknown }[]>
+    providersView(): Promise<PageView>
+    setProviderKey(provider: string, key: string): Promise<unknown>
+    clearProviderKey(provider: string): Promise<unknown>
+    addProvider(options: Record<string, unknown>): Promise<PageView>
+    removeProvider(provider: string): Promise<PageView>
+    discoverModels(request: Record<string, unknown>): Promise<{ id: string, name?: string }[]>
+  }
   installModels(rt)
   install(rt)
   return { rt, store, writes, listeners, discovered }

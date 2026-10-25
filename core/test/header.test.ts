@@ -10,7 +10,8 @@ const bundle = await build({
   bundle: true, format: 'cjs', platform: 'node', write: false,
   external: ['react', 'react-dom', '@deepseek-ai/dsh-client-ui-primitives'],
 })
-const module = { exports: {} }
+interface PillNode { props: Record<string, unknown> & { onClick?: () => void }, children: PillNode[] }
+const module = { exports: {} as { HeaderPill: (props: Record<string, unknown>) => PillNode } }
 runInNewContext(bundle.outputFiles[0].text, {
   module, exports: module.exports, URL, URLSearchParams, setTimeout, clearTimeout,
   require: (name) => {
@@ -110,7 +111,7 @@ test('the replacement header shares DSH\'s store and navigation injection withou
     inject: (sessionId, actions) => ({ hooks: { conversationViews: views }, selectView: view => { assert.equal(sessionId, 'a'); actions.setView(view) } }),
   }
   const own = { actions: { openMemory() {} }, hooks: { roster } }
-  const options = headerNavigation([{ options: {} }, source], () => own)
+  const options = headerNavigation([{ options: {} }, source], () => own) as { store: unknown, children?: unknown, inject: (sessionId: string, actions?: unknown) => { hooks: Record<string, unknown>, selectView: (view: string) => void, actions: unknown } }
   assert.equal(options.store, store)
   assert.equal(options.children, undefined)
   const injected = options.inject('a', bound)
@@ -119,14 +120,14 @@ test('the replacement header shares DSH\'s store and navigation injection withou
   assert.equal(injected.actions, own.actions)
   injected.selectView('chat')
   assert.deepEqual(picked, ['chat'])
-  const absent = headerNavigation([], () => own)
+  const absent = headerNavigation([], () => own) as { store: unknown, inject: (sessionId: string) => unknown }
   assert.equal(absent.store, undefined)
   assert.deepEqual(absent.inject('a'), own)
 })
 
 test('the Bot header follows a later host header registration and releases its subscription', () => {
   const entries = []
-  const listeners = new Set()
+  const listeners = new Set<() => void>()
   let registrations = 0
   const slots = {
     entries: () => entries,
@@ -140,7 +141,7 @@ test('the Bot header follows a later host header registration and releases its s
   }
   const changed = () => { for (const listener of listeners) listener() }
   const own = { hooks: {}, actions: {} }
-  const stop = installHeaderNavigation(slots, () => own, HeaderPill, -100)
+  const stop = installHeaderNavigation(slots as unknown as Parameters<typeof installHeaderNavigation>[0], () => own, HeaderPill, -100)
   assert.equal(entries[0].store, undefined)
   const store = {}
   const host = { options: { priority: 0 }, component() {}, store, inject: () => ({ selectView() {} }) }

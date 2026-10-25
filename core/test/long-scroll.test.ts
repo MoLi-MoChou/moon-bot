@@ -13,7 +13,13 @@ const bundle = await build({
   bundle: true, format: 'cjs', platform: 'node', write: false,
   external: ['react', 'react-dom', '@deepseek-ai/dsh-client-ui-primitives'],
 })
-const mod = { exports: {} }
+const mod = { exports: {} as {
+  OFF_BOTTOM_PX: number
+  isOffBottom: (scroller: { scrollHeight: number, scrollTop: number, clientHeight: number } | null) => boolean
+  scrollToBottom: (scroller: { scrollHeight: number, querySelector: (sel: string) => { click: () => void } | null, scrollTo: (opts: { top: number, behavior: string }) => void }) => void
+  followBottom: (scroller: { scrollHeight: number, scrollTop: number, clientHeight: number, scrollTo: (opts: unknown) => void }, wasPinned: boolean) => boolean
+  stackChatItems: (items: unknown[]) => { kind: string, texts: string[] }[]
+} }
 runInNewContext(bundle.outputFiles[0].text, {
   module: mod, exports: mod.exports, Object, Array, Number, URL, URLSearchParams, setTimeout, clearTimeout,
   require: (name) => {

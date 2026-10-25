@@ -11,7 +11,7 @@ const roster = indexRoster({
     { id: 'writer', name: 'Writer', sessionId: 'writer' },
   ],
   rooms: [{ id: 'room', name: 'Launch', members: ['chief', 'king'], parts: ['king-in-room'] }],
-})
+}) as unknown as Parameters<typeof mentionRows>[0]
 const names = rows => rows.map(row => row.bot?.name ?? 'everyone')
 
 test('a session mention is the one DSH writes and reads back', () => {
@@ -29,7 +29,7 @@ test('"@" offers a group\'s members and everyone, or every other Bot in a Bot\'s
   assert.deepEqual(names(mentionRows(roster, 'room', 'ev')), ['everyone'])
   assert.deepEqual(mentionRows(roster, 'room', 'k').map(row => row.text), ['@King '])
   assert.equal(mentionRows(roster, 'plain'), null)
-  assert.equal(mentionRows(indexRoster({ bots: [], rooms: [] }), 'room'), null)
+  assert.equal(mentionRows(indexRoster({ bots: [], rooms: [] }) as unknown as Parameters<typeof mentionRows>[0], 'room'), null)
 })
 
 test('the chats are the other Bots\' current parts, then the latest Sessions outside the team', () => {
@@ -65,7 +65,7 @@ test('the chats join only the menu that "+" opened, and a pick inserts a session
   open = true
   const rows = await chats.candidates(session, { query: '' })
   assert.deepEqual(rows.map(row => row.name), ['King', 'Writer'])
-  const picked = chats.onPick({ candidate: rows[0] })
+  const picked = chats.onPick({ candidate: rows[0] }) as { insert: { ref: string, [key: string]: unknown } }
   assert.deepEqual(picked.insert, {
     source: CHATS_SOURCE, ref: sessionMention('king', 'Chat with King'), label: 'Chat with King', appearance: 'session', clipboardText: sessionMention('king', 'Chat with King'),
   })

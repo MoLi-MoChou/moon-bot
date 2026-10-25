@@ -30,7 +30,7 @@ const TEAM = {
 // starts in the team workspace unless it is made with a cwd. `services` are what
 // ctx.get finds, such as the sandbox policy and approvals.
 // `locked`: another dsh holds the team, so this one only shows it.
-async function start({ services = {}, workspaces = [], llm, team: saved = TEAM, locked = false }: { services?: Record<string, unknown>, workspaces?: unknown[], llm?: Record<string, unknown>, team?: Record<string, unknown>, locked?: boolean } = {}) {
+async function start({ services = {}, workspaces = [], llm, team: saved = TEAM, locked = false }: { services?: Record<string, unknown>, workspaces?: { id: string, path: string, title?: string }[], llm?: Record<string, unknown>, team?: Record<string, unknown>, locked?: boolean } = {}) {
   // The native realpath, as fs/promises uses: on Windows the JS one keeps 8.3 short names.
   const root = realpathSync.native(mkdtempSync(join(tmpdir(), 'ds-bot-work-dir-')))
   const dsh = join(root, 'dsh')

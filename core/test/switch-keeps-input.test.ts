@@ -33,7 +33,7 @@ const INACTIVE = 'cannot get required service "sessions" in inactive context'
 
 // `fail.create`/`fail.resolve`/`fail.flush`: true fails with the inactive-context
 // error; an Error value fails with it, so an ordinary error is testable too.
-async function start({ fail = {}, services = {}, home: reuse } = {}) {
+async function start({ fail = {}, services = {}, home: reuse }: { fail?: { create?: unknown, resolve?: { has(sessionId: string): boolean }, flush?: unknown }, services?: Record<string, unknown>, home?: string } = {}) {
   const root = reuse === undefined
     ? realpathSync.native(mkdtempSync(join(tmpdir(), 'ds-bot-switch-')))
     : join(reuse, '..', '..')
@@ -195,7 +195,7 @@ test('a move that fails while the plugin unloads hands its input back to the par
   // The first flush writes the fresh part's handoff; the second moves the input.
   const fail = { flush: 2 }
   const host = await start({ fail, services })
-  t.after(host.stop)
+  t.after(() => host.stop())
   host.agentOf('b').inbox.nextTurn.push(said('h1', 'waiting input', 'e-held'))
   await moveWriter(host, [said('m1', 'Now build it', 'e-carry'), said('m2', 'and this too', 'e-carry2')])
 
@@ -214,7 +214,7 @@ test('a move that fails while the plugin unloads hands its input back to the par
 test('a move that never started keeps carry and one pause note in the inbox; a retry adds none', async (t) => {
   const fail = { create: true, flush: true }
   const host = await start({ fail, services })
-  t.after(host.stop)
+  t.after(() => host.stop())
   await moveWriter(host, [said('m1', 'keep me', 'e1')])
   await until(() => host.infos.some(line => line.includes('plugin unloaded')))
   assert.equal(host.warnings.length, 0)
@@ -247,7 +247,7 @@ test('a move that never started keeps carry and one pause note in the inbox; a r
 test('an ordinary failure during the move is still a warning, not the unload note', async (t) => {
   const fail = { create: new Error('disk full'), flush: new Error('disk full') }
   const host = await start({ fail, services })
-  t.after(host.stop)
+  t.after(() => host.stop())
   await moveWriter(host, [said('m1', 'keep me', 'e1')])
   await until(() => host.warnings.some(line => line.includes('did not move on to a fresh part')))
   await until(() => host.warnings.some(line => line.includes('was not handed on')))
@@ -259,7 +259,7 @@ test('an ordinary failure during the move is still a warning, not the unload not
 test('an ordinary failure in the move that never started wakes the part at once', async (t) => {
   const fail = { create: new Error('disk full'), flush: new Error('disk full') }
   const host = await start({ fail, services })
-  t.after(host.stop)
+  t.after(() => host.stop())
   await moveWriter(host, [said('m1', 'keep me', 'e1')])
   await until(() => host.warnings.some(line => line.includes('was not handed on')))
   const sends = host.agentOf('b').calls.filter(([kind]) => kind === 'send')
@@ -272,7 +272,7 @@ test('an ordinary failure in the move that never started wakes the part at once'
   // An unload instead would not wake it: no send calls at all.
   const failOff = { create: true, flush: true }
   const silent = await start({ fail: failOff, services })
-  t.after(silent.stop)
+  t.after(() => silent.stop())
   await moveWriter(silent, [said('m1', 'keep me', 'e1')])
   await until(() => silent.infos.some(line => line.includes('plugin unloaded')))
   assert.equal(silent.agentOf('b').calls.filter(([kind]) => kind === 'send').length, 0)
@@ -291,7 +291,7 @@ test('a marked earlier part hands its kept input on after a restart, once, and i
   // The restart: the kept input sits in the earlier part's (durable fake) inbox; a
   // copy of one message already reached the fresh part before the unload.
   const second = await start({ home: host.home, services })
-  t.after(second.stop)
+  t.after(() => second.stop())
   second.agentOf('s1').inbox.nextTurn.push(said('m1-copy', 'Now build it', 'e-carry'))
   await second.rt.heldBack()
 
@@ -315,7 +315,7 @@ test('a marked part that stayed current is woken for its kept input, once, in or
   await host.stop({ keep: true })
 
   const second = await start({ home: host.home, services })
-  t.after(second.stop)
+  t.after(() => second.stop())
   await second.rt.heldBack()
 
   // The inbox kept the input; the wake re-sends it through send() so the driver runs.
@@ -337,7 +337,7 @@ test('unmarked earlier parts are never resolved by the restart pass', async (t) 
   await host.stop({ keep: true })
 
   const second = await start({ home: host.home, services })
-  t.after(second.stop)
+  t.after(() => second.stop())
   await second.rt.heldBack()
   assert.equal(second.resolved.includes('b'), false)
 })
@@ -348,7 +348,7 @@ test('a state write that fails as a switch ends is warned about, not left unhand
   process.on('unhandledRejection', note)
   t.after(() => { process.off('unhandledRejection', note) })
   const host = await start({ services })
-  t.after(host.stop)
+  t.after(() => host.stop())
   // The write that drops the switch's mark fails, as on a full disk.
   const save = host.rt.save
   host.rt.save = () => (host.rt.state.bots.b.sessionId === 's1' && Object.keys(host.rt.state.switching).length === 0

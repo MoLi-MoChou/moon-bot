@@ -15,7 +15,12 @@ const bundle = await build({
   bundle: true, format: 'cjs', platform: 'node', write: false,
   external: ['react', 'react-dom', '@deepseek-ai/dsh-client-ui-primitives'],
 })
-const module = { exports: {} }
+const module = { exports: {} as {
+  userTextParts: (text: string, bots: unknown[]) => { bot?: { id: string }, text?: string }[]
+  mentionableBots: (roster: unknown, roomId: string) => { id: string }[]
+  canDrawUserMessages: () => boolean
+  contentParts: (parts: unknown[]) => { text: string }
+} }
 runInNewContext(bundle.outputFiles[0].text, {
   module, exports: module.exports,
   require: (name) => {
@@ -27,7 +32,7 @@ runInNewContext(bundle.outputFiles[0].text, {
 const { userTextParts, mentionableBots, canDrawUserMessages, contentParts } = module.exports
 const plain = value => JSON.parse(JSON.stringify(value))
 
-const called = text => mentionSpans(text, bots).map(span => (span.all ? '@all' : span.bot.name))
+const called = text => mentionSpans(text, bots).map(span => ('all' in span ? '@all' : span.bot.name))
 
 test('a name may hold spaces, and the longest name wins', () => {
   assert.deepEqual(called('@新 Bot 提权'), ['新 Bot'])
@@ -94,8 +99,8 @@ test('a Bot name is something "@" can call without a second reading', () => {
 })
 
 test('a group log line of a Bot named like the user never reads as the user', () => {
-  assert.equal(speakerOf({ who: 'User', text: 'hi' }), 'User')
-  assert.equal(speakerOf({ who: 'User', botId: 'b', text: 'hi' }), 'Bot "User"')
-  assert.equal(speakerOf({ who: 'you', botId: 'b', text: 'hi' }), 'Bot "you"')
-  assert.equal(speakerOf({ who: 'Writer', botId: 'b', text: 'hi' }), 'Writer')
+  assert.equal(speakerOf({ who: 'User', text: 'hi' } as Parameters<typeof speakerOf>[0]), 'User')
+  assert.equal(speakerOf({ who: 'User', botId: 'b', text: 'hi' } as Parameters<typeof speakerOf>[0]), 'Bot "User"')
+  assert.equal(speakerOf({ who: 'you', botId: 'b', text: 'hi' } as Parameters<typeof speakerOf>[0]), 'Bot "you"')
+  assert.equal(speakerOf({ who: 'Writer', botId: 'b', text: 'hi' } as Parameters<typeof speakerOf>[0]), 'Writer')
 })

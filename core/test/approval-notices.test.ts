@@ -19,7 +19,7 @@ function windowWith({ permission = 'granted', visibility = 'visible' } = {}) {
     return note
   }
   Notification.permission = permission
-  const listeners = new Set()
+  const listeners = new Set<() => void>()
   let snapshot = { bots: {}, approvals: [] }
   const work = {
     getSnapshot: () => snapshot,
@@ -27,7 +27,7 @@ function windowWith({ permission = 'granted', visibility = 'visible' } = {}) {
     set: (next) => { snapshot = next; for (const listener of listeners) listener() },
   }
   const roster = { getSnapshot: () => ({ byId: { b: { id: 'b', name: 'Writer' } }, roomsById: { r1: { id: 'r1', name: 'Ops' } } }) }
-  const module = { exports: {} }
+  const module = { exports: {} as { noticeApprovals: (options: Record<string, unknown>) => () => void } }
   runInNewContext(bundle.outputFiles[0].text, {
     module, exports: module.exports, Notification,
     document: { visibilityState: visibility },

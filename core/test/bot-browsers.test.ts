@@ -5,7 +5,7 @@ import { migrateStorage, STORAGE } from '../src/client/storage.ts'
 
 function createSource(initial) {
   let value = initial
-  const listeners = new Set()
+  const listeners = new Set<() => void>()
   return {
     getSnapshot: () => value,
     subscribe: (listener) => { listeners.add(listener); return () => listeners.delete(listener) },
@@ -25,7 +25,7 @@ function fakeWebview() {
   const element = {
     dataset: {}, style: {}, attributes: {}, isConnected: true, url: '', loads: [], stopped: false, captured: false,
     setAttribute(name, value) { this.attributes[name] = value; if (name === 'src') this.url = value },
-    addEventListener(name, listener, { signal } = {}) {
+    addEventListener(name, listener, { signal }: { signal?: { addEventListener(kind: string, run: () => void): void } } = {}) {
       (listeners[name] ??= new Set()).add(listener)
       signal?.addEventListener('abort', () => listeners[name].delete(listener))
     },
@@ -61,8 +61,8 @@ function fakeDesktop() {
     onOpenRequested: (leaseId, handler) => { openHandlers[leaseId] = handler; return () => { delete openHandlers[leaseId] } },
   }
   const store = new Map()
-  const storage = { getItem: key => store.get(key) ?? null, setItem: (key, value) => store.set(key, value), removeItem: key => store.delete(key) }
-  return { doc, bridge, storage, created, released, openHandlers }
+  const storage = { getItem: key => store.get(key) ?? null, setItem: (key, value) => store.set(key, value), removeItem: key => store.delete(key) } as unknown as Storage
+  return { doc: doc as unknown as Document, bridge: bridge as unknown as Parameters<typeof createBotBrowsers>[0]['bridge'], storage, created, released, openHandlers }
 }
 
 const tick = () => new Promise(resolve => setImmediate(resolve))
@@ -278,9 +278,9 @@ test('serveBrowserReads answers each request once and re-polls when the open pag
   desktop.created[0].emit('dom-ready')
   const calls = []
   const polls = []
-  const post = (endpoint, payload, signal) => {
+  const post = <T,>(endpoint: string, payload: unknown, signal?: AbortSignal): Promise<T> => {
     calls.push([endpoint, payload])
-    if (endpoint !== 'browser-wait') return Promise.resolve(true)
+    if (endpoint !== 'browser-wait') return Promise.resolve(true as unknown as T)
     return new Promise((resolve, reject) => {
       polls.push(resolve)
       signal?.addEventListener('abort', () => reject(Object.assign(new Error('aborted'), { name: 'AbortError' })))
@@ -322,13 +322,13 @@ test('serveBrowserReads answers a resend from the cache when the first submit fa
   const results = []
   const polls = []
   let offline = true
-  const post = (endpoint, payload, signal) => {
+  const post = <T,>(endpoint: string, payload: unknown, signal?: AbortSignal): Promise<T> => {
     if (endpoint === 'browser-result') {
       results.push(payload)
       if (offline) return Promise.reject(new Error('offline'))
-      return Promise.resolve(true)
+      return Promise.resolve(true as unknown as T)
     }
-    if (endpoint !== 'browser-wait') return Promise.resolve(true)
+    if (endpoint !== 'browser-wait') return Promise.resolve(true as unknown as T)
     return new Promise((resolve, reject) => {
       polls.push(resolve)
       signal?.addEventListener('abort', () => reject(Object.assign(new Error('aborted'), { name: 'AbortError' })))

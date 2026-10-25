@@ -19,7 +19,7 @@ function start({ home = mkdtempSync(join(tmpdir(), 'ds-bot-rounds-')) } = {}) {
   const inboxes = new Map()
   const inboxOf = (sessionId) => {
     if (!inboxes.has(sessionId)) {
-      const inbox = { nextTurn: [], nextStep: [] }
+      const inbox: { nextTurn: { id: string }[], nextStep: { id: string }[], remove?: (id: string) => boolean } = { nextTurn: [], nextStep: [] }
       inbox.remove = (id) => {
         for (const list of ['nextTurn', 'nextStep']) {
           const at = inbox[list].findIndex(message => message.id === id)
@@ -117,7 +117,7 @@ const turnFor = (sent, ...earlier) => waitFor(() => sent.find(entry => !earlier.
 
 test('a new group Session waits for capabilities before its first member prompt', async (t) => {
   const { call, emit, userMessage, relay, answer, stop, sent, rt } = start()
-  t.after(stop)
+  t.after(() => stop())
   const room = await team(call, sent)
   await emit(room.id, userMessage('Start'))
 
@@ -154,7 +154,7 @@ async function team(call, sent) {
 
 test('a message the composer queues mid-round joins the round and leaves the Session\'s queue', async (t) => {
   const { call, emit, userMessage, compose, relay, inboxOf, answer, stop, sent } = start()
-  t.after(stop)
+  t.after(() => stop())
   const room = await team(call, sent)
 
   // The user's first message opens the round: the admin speaks first.
@@ -182,7 +182,7 @@ test('a message the composer queues mid-round joins the round and leaves the Ses
 
 test('a plain message steered mid-round is answered by everyone, admin first, inside the round', async (t) => {
   const { call, emit, userMessage, compose, relay, inboxOf, answer, stop, sent } = start()
-  t.after(stop)
+  t.after(() => stop())
   const room = await team(call, sent)
 
   await emit(room.id, userMessage('Start'))
@@ -206,7 +206,7 @@ test('a plain message steered mid-round is answered by everyone, admin first, in
 
 test('a message sent during the last speaker\'s turn is still answered in the round', async (t) => {
   const { call, emit, userMessage, relay, answer, stop, sent } = start()
-  t.after(stop)
+  t.after(() => stop())
   const room = await team(call, sent)
 
   await emit(room.id, userMessage('Kick it off'))
@@ -232,7 +232,7 @@ test('a message sent during the last speaker\'s turn is still answered in the ro
 
 test('in admin mode a plain mid-round message goes to the admin', async (t) => {
   const { call, emit, userMessage, compose, relay, answer, stop, sent } = start()
-  t.after(stop)
+  t.after(() => stop())
   const room = await team(call, sent)
   await call('update-room', { id: room.id, mode: 'admin' })
 
@@ -255,7 +255,7 @@ test('in admin mode a plain mid-round message goes to the admin', async (t) => {
 
 test('a message with an image or a chat reference waits for its own round, and so does what follows it', async (t) => {
   const { call, emit, userMessage, compose, relay, inboxOf, answer, stop, sent } = start()
-  t.after(stop)
+  t.after(() => stop())
   const room = await team(call, sent)
 
   await emit(room.id, userMessage('Start'))
@@ -276,7 +276,7 @@ test('a message with an image or a chat reference waits for its own round, and s
 
 test('the greeting round leaves a waiting message for its own round', async (t) => {
   const { call, emit, compose, relay, inboxOf, answer, stop, sent } = start()
-  t.after(stop)
+  t.after(() => stop())
   const room = await team(call, sent)
 
   await emit(room.id, { type: 'user/message', data: { source: { kind: 'bot', role: 'kickoff' }, content: [{ type: 'text', text: '[Group chat created]' }] } })
@@ -291,7 +291,7 @@ test('the greeting round leaves a waiting message for its own round', async (t) 
 
 test('a stopped round leaves a waiting message for the next round', async (t) => {
   const { call, emit, userMessage, compose, relay, inboxOf, stop, sent } = start()
-  t.after(stop)
+  t.after(() => stop())
   const room = await team(call, sent)
 
   await emit(room.id, userMessage('Start'))
@@ -307,7 +307,7 @@ test('a stopped round leaves a waiting message for the next round', async (t) =>
 
 test('a message sent between rounds still opens a full round', async (t) => {
   const { call, emit, userMessage, relay, answer, stop, sent } = start()
-  t.after(stop)
+  t.after(() => stop())
   const room = await team(call, sent)
 
   await emit(room.id, userMessage('Hello group'))
@@ -327,7 +327,7 @@ test('a message sent between rounds still opens a full round', async (t) => {
 // again every round.
 test('a member whose group Session cannot be opened shows a failure, and its next turn there starts a new Session', async (t) => {
   const { call, emit, userMessage, relay, answer, stop, sent, ctx, rt } = start()
-  t.after(stop)
+  t.after(() => stop())
   const room = await team(call, sent)
   const chief = (await call('state', {})).value.mainBotId
 
@@ -345,7 +345,7 @@ test('a member whose group Session cannot be opened shows a failure, and its nex
   ctx.sessionController.resolveAgent = async sessionId => (sessionId === broken
     ? { error: { code: 'gateway/internal', message: `resume failed for session "${sessionId}": SessionQueryError: stored session "${sessionId}" is corrupt: released v2 row has seq gap (expected 20, got 16)` } }
     : resolve(sessionId))
-  t.mock.method(rt, 'warn', () => {})
+  t.mock.method(rt as unknown as { warn: () => void }, 'warn', () => {})
   sent.length = 0
   await emit(room.id, userMessage('Again'))
   running = relay(room.id, 'r2')
@@ -372,7 +372,7 @@ test('a member whose group Session cannot be opened shows a failure, and its nex
 
 test('a delivery that fails for another reason shows a failure and keeps the Session', async (t) => {
   const { call, emit, userMessage, relay, answer, stop, sent, ctx, rt } = start()
-  t.after(stop)
+  t.after(() => stop())
   const room = await team(call, sent)
   const chief = (await call('state', {})).value.mainBotId
   await emit(room.id, userMessage('Report in'))
@@ -387,7 +387,7 @@ test('a delivery that fails for another reason shows a failure and keeps the Ses
   ctx.sessionController.resolveAgent = async sessionId => (sessionId === first.sessionId
     ? { error: { code: 'session/writer-held', message: 'another process holds this Session' } }
     : resolve(sessionId))
-  t.mock.method(rt, 'warn', () => {})
+  t.mock.method(rt as unknown as { warn: () => void }, 'warn', () => {})
   sent.length = 0
   await emit(room.id, userMessage('Again'))
   running = relay(room.id, 'r2')
@@ -403,7 +403,7 @@ test('a delivery that fails for another reason shows a failure and keeps the Ses
 // group's Session and other Bots work elsewhere, so the link reaches them in full.
 test('a relative file link a member writes reaches the group, and another Bot, as a full path', async (t) => {
   const { call, emit, userMessage, relay, answer, stop, sent, ctx, rt } = start()
-  t.after(stop)
+  t.after(() => stop())
   const folder = realpathSync.native(mkdtempSync(join(tmpdir(), 'ds-bot-links-')))
   t.after(() => rmSync(folder, { recursive: true, force: true }))
   const room = await team(call, sent)
@@ -437,7 +437,7 @@ test('a relative file link a member writes reaches the group, and another Bot, a
 // once instead of waiting minutes for a reply that cannot come.
 test('a member turn that fails before it takes the call fails that member in the round at once', async (t) => {
   const { call, emit, userMessage, relay, answer, stop, sent } = start()
-  t.after(stop)
+  t.after(() => stop())
   const room = await team(call, sent)
   await emit(room.id, userMessage('Start'))
   const running = relay(room.id, 'relay')
@@ -455,7 +455,7 @@ test('a member turn that fails before it takes the call fails that member in the
 // getting belongs to no one, so it is archived instead of left over.
 test('a member deleted while its group Session is made is left out, and the Session is not kept', async (t) => {
   const { call, emit, userMessage, relay, answer, stop, sent, ctx, rt } = start()
-  t.after(stop)
+  t.after(() => stop())
   const room = await team(call, sent)
   const writer = rt.state.rooms[room.id].members.find(id => !rt.isMain(id))
   const archived = []
@@ -546,7 +546,7 @@ test('a long group line keeps its start in state.json, and members and read_grou
 
 test('a group line longer than a member reads is cut in its prompt, with its length, and its file keeps only that', async (t) => {
   const { call, emit, userMessage, relay, answer, stop, sent, home, rt } = start()
-  t.after(stop)
+  t.after(() => stop())
   const room = await team(call, sent)
   await emit(room.id, userMessage('Go'))
   const running = relay(room.id, 'relay')
@@ -566,7 +566,7 @@ test('a group line longer than a member reads is cut in its prompt, with its len
 // every Bot said it could not read it; in a Bot's own chat the same file worked.
 test('a file the user sends in a group reaches each member the line is shown to, once', async (t) => {
   const { call, emit, relay, answer, stop, sent, rt } = start()
-  t.after(stop)
+  t.after(() => stop())
   const room = await team(call, sent)
   const pdf = { attachmentId: 'sha256:39cb3dab00', name: 'report-XYZ176.pdf', bytes: 607 }
   await emit(room.id, { type: 'user/message', data: { source: { kind: 'user' }, content: [{ type: 'text', text: 'Read this PDF' }, { type: 'file', attachment: pdf }] } })
@@ -597,7 +597,7 @@ test('a file the user sends in a group reaches each member the line is shown to,
 // each member it is shown to gets it with its prompt.
 test('a long post goes to the group as a file, and reaches the member with its prompt', async (t) => {
   const { call, emit, relay, answer, stop, sent, ctx, rt } = start()
-  t.after(stop)
+  t.after(() => stop())
   const store = fakeAttachments()
   ctx.get = name => (name === 'attachments' ? store : undefined)
   const room = await team(call, sent)

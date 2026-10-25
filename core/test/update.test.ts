@@ -11,17 +11,24 @@ const realFetch = globalThis.fetch
 afterEach(() => { globalThis.fetch = realFetch })
 
 // The update module alone, on a stub plugin manager and a scripted fetch.
-function start({ source, registries, answers = {}, result = { application: 'restart-required' }, config = {}, profileDir }) {
+function start({ source, registries, answers = {}, result = { application: 'restart-required' }, config = {}, profileDir }: {
+  source?: string,
+  registries?: { registry: string | null, fallbackRegistries: string[], resolved: string },
+  answers?: Record<string, unknown>,
+  result?: unknown,
+  config?: Record<string, unknown>,
+  profileDir?: string,
+} = {}) {
   const fetched = []
   const installs = []
   const warnings = []
-  globalThis.fetch = async (url) => {
+  globalThis.fetch = (async (url) => {
     fetched.push(url)
     const answer = answers[url]
     if (answer === undefined) return { ok: false, status: 404, json: async () => ({}) }
     if (answer instanceof Error) throw answer
     return { ok: true, status: 200, json: async () => answer }
-  }
+  }) as unknown as typeof fetch
   const pluginManager = {
     listBundles: async () => [{ name: 'other', source: 'other@^1.0.0' }, ...(source === undefined ? [] : [{ name: PKG.name, source }])],
     registries: async () => registries ?? { registry: null, fallbackRegistries: ['https://registry.npmmirror.com/'], resolved: 'https://registry.npmjs.org/' },
@@ -31,6 +38,11 @@ function start({ source, registries, answers = {}, result = { application: 'rest
     ctx: { get: name => (name === 'pluginManager' ? pluginManager : name === 'profileContext' && profileDir ? { dir: profileDir } : undefined), effect() {} },
     config,
     warn: (...args) => warnings.push(args),
+  } as unknown as Parameters<typeof install>[0] & {
+    updateCheck(options?: { fresh?: boolean }): Promise<{ available: boolean, [key: string]: unknown }>
+    updateStart(options?: Record<string, unknown>): { phase: string, [key: string]: unknown }
+    updateView(): { repoUrl: string, [key: string]: unknown }
+    repoStars(): Promise<number | null>
   }
   install(rt)
   return { rt, fetched, installs, warnings }
@@ -164,7 +176,7 @@ test('the star count comes from the repository, is kept for an hour, and survive
   const { rt, fetched } = start({ source: `${PKG.name}@^${PKG.version}`, answers })
   assert.equal(rt.updateView().repoUrl, 'https://github.com/MoLi-MoChou/moon-bot')
   assert.equal(await rt.repoStars(), null)
-  answers[repo] = { stargazers_count: 42 }
+  answers[repo] = { stargazers_count: 42 } as unknown as Error
   assert.equal(await rt.repoStars(), 42)
   answers[repo] = new Error('offline')
   assert.equal(await rt.repoStars(), 42)

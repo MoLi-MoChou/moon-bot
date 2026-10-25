@@ -11,7 +11,7 @@ const NOW = Date.UTC(2026, 9, 12, 4, 30)
 const reading = (time, kind = 'ds-bot-time-context') => ({ type: 'user/message', time, data: { source: { kind } } })
 
 function setup(t, { events = [], config = {}, owned = true } = {}) {
-  t.mock.method(Date, 'now', () => NOW)
+  const nowMock = t.mock.method(Date, 'now', () => NOW)
   const ctx = fakeContext()
   let reads = 0
   const rt = {
@@ -22,15 +22,15 @@ function setup(t, { events = [], config = {}, owned = true } = {}) {
       reads += 1
       yield* [...events].reverse()
     },
-  }
+  } as unknown as Parameters<typeof install>[0]
   install(rt)
   const hook = ctx.listeners.get('agent/pre-step')[0]
   const message = { role: 'user', content: [{ type: 'text', text: 'Hello' }], source: { kind: 'user' } }
-  const step = (decision = { kind: 'enter', messages: [message] }, payload = {}) => hook({
+  const step = (decision: { kind: string, messages?: readonly unknown[] } = { kind: 'enter', messages: [message] }, payload = {}) => hook({
     agent: { id: 'bot', session: { id: 'bot' } }, turn: 1, step: 1,
     signal: new AbortController().signal, ...payload,
   }, async () => decision)
-  return { step, message, reads: () => reads }
+  return { step, message, nowMock, reads: () => reads }
 }
 
 test('a first Bot step appends a dated, zoned snapshot without changing the user message', async (t) => {
@@ -47,10 +47,10 @@ test('a first Bot step appends a dated, zoned snapshot without changing the user
 })
 
 test('a resumed session suppresses readings before ten minutes and refreshes at the boundary', async (t) => {
-  const { step } = setup(t, { events: [reading(NOW - 599_999)] })
+  const { step, nowMock } = setup(t, { events: [reading(NOW - 599_999)] })
   const decision = { kind: 'enter', messages: [] }
   assert.equal(await step(decision), decision)
-  Date.now.mock.mockImplementation(() => NOW + 1)
+  nowMock.mock.mockImplementation(() => NOW + 1)
   assert.equal((await step(decision)).messages.length, 1)
 })
 
@@ -85,9 +85,9 @@ test('a loaded DSH clock gets no second clock in either listener order', async (
     })
     ctx.sessionProjections = ctx.get('sessionProjections')
     // Prepended listeners run last-registered first.
-    ctx.on = (name, listener) => { ctx.listeners.set(name, [listener, ...(ctx.listeners.get(name) ?? [])]) }
-    const rt = { ctx, config: { timeZone: 'UTC' }, load: async () => {}, isBotSession: () => true, async* eventsBackwards() {} }
-    if (nativeFirst) { nativeClock(ctx, { timeZone: 'UTC' }); install(rt) } else { install(rt); nativeClock(ctx, { timeZone: 'UTC' }) }
+    ctx.on = (name, listener) => { ctx.listeners.set(name, [listener, ...(ctx.listeners.get(name) ?? [])]); return () => {} }
+    const rt = { ctx, config: { timeZone: 'UTC' }, load: async () => {}, isBotSession: () => true, async* eventsBackwards() {} } as unknown as Parameters<typeof install>[0]
+    if (nativeFirst) { nativeClock(ctx as unknown as Parameters<typeof nativeClock>[0], { timeZone: 'UTC' }); install(rt) } else { install(rt); nativeClock(ctx as unknown as Parameters<typeof nativeClock>[0], { timeZone: 'UTC' }) }
     const hooks = ctx.listeners.get('agent/pre-step')
     const payload = { agent: { id: 'bot', session: { seq: 0, eventAt() {} } }, turn: 1, step: 1, signal: new AbortController().signal }
     const user = { role: 'user', content: [{ type: 'text', text: 'Hello' }], source: { kind: 'user' } }
@@ -140,7 +140,7 @@ test('a zero interval refreshes every eligible step', async (t) => {
 
 test('invalid intervals and zones fail at plugin installation', () => {
   for (const interval of [-1, 0.5, Infinity, NaN, '10']) {
-    assert.throws(() => install({ ctx: fakeContext(), config: { timeRefreshIntervalMs: interval } }), /timeRefreshIntervalMs/)
+    assert.throws(() => install({ ctx: fakeContext(), config: { timeRefreshIntervalMs: interval } } as unknown as Parameters<typeof install>[0]), /timeRefreshIntervalMs/)
   }
-  assert.throws(() => install({ ctx: fakeContext(), config: { timeZone: 'invalid-zone' } }), RangeError)
+  assert.throws(() => install({ ctx: fakeContext(), config: { timeZone: 'invalid-zone' } } as unknown as Parameters<typeof install>[0]), RangeError)
 })

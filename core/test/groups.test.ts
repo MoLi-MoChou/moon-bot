@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import { isPass, mentionsIn, referenceNote, stripOwnName } from '../src/host/groups.ts'
 import { attachReference } from '../src/host/turns.ts'
 
-const members = [{ name: 'M' }, { name: 'Mx' }, { name: 'K' }, { name: 'Writer' }]
+const members = [{ name: 'M' }, { name: 'Mx' }, { name: 'K' }, { name: 'Writer' }] as unknown as Parameters<typeof mentionsIn>[1]
 const names = ({ all, found }) => ({ all, found: found.map(member => member.name) })
 
 test('mentionsIn finds members in order, longest name first', () => {
@@ -30,10 +30,10 @@ test('stripOwnName drops an echoed "Name:" prefix', () => {
 })
 
 test('a referenced conversation rides with the user\'s queued message, not a Bot\'s post', () => {
-  const queued = [{ text: 'first' }, { text: 'look @Chat with K', images: [] }, { text: 'post', botId: 'k' }]
-  attachReference(queued, { kind: 'session-reference', references: [{ label: 'Chat with K' }, { label: '' }] }, '## Referenced sessions\n…')
-  attachReference(queued, { kind: 'session-reference', references: [{ label: 'K notes' }] }, '## Referenced sessions\n2')
-  attachReference(queued, { kind: 'session-reference' }, '')
+  const queued: { text: string, images?: unknown[], botId?: string, references?: unknown }[] = [{ text: 'first' }, { text: 'look @Chat with K', images: [] }, { text: 'post', botId: 'k' }]
+  attachReference(queued as unknown as Parameters<typeof attachReference>[0], { kind: 'session-reference', references: [{ label: 'Chat with K' }, { label: '' }] }, '## Referenced sessions\n…')
+  attachReference(queued as unknown as Parameters<typeof attachReference>[0], { kind: 'session-reference', references: [{ label: 'K notes' }] }, '## Referenced sessions\n2')
+  attachReference(queued as unknown as Parameters<typeof attachReference>[0], { kind: 'session-reference' }, '')
   assert.equal(queued[0].references, undefined)
   assert.deepEqual(queued[1].references, [{ labels: ['Chat with K'], text: '## Referenced sessions\n…' }, { labels: ['K notes'], text: '## Referenced sessions\n2' }])
   assert.equal(queued[2].references, undefined)
@@ -41,7 +41,7 @@ test('a referenced conversation rides with the user\'s queued message, not a Bot
 })
 
 test('a reference label is not a call, even when it starts with a member\'s name', () => {
-  const references = [{ labels: ['K notes', 'K'] }]
+  const references = [{ labels: ['K notes', 'K'] }] as unknown as Parameters<typeof mentionsIn>[2]
   assert.deepEqual(names(mentionsIn('see @K notes, then @Writer', members, references)), { all: false, found: ['Writer'] })
   assert.deepEqual(names(mentionsIn('@K notes', members)), { all: false, found: ['K'] })
   assert.equal(referenceNote([]), '')
@@ -49,11 +49,11 @@ test('a reference label is not a call, even when it starts with a member\'s name
 })
 
 test('a reference takes out only its own "@label", so a typed call with the same text stays', () => {
-  const writer = [{ labels: ['Writer'] }]
+  const writer = [{ labels: ['Writer'] }] as unknown as Parameters<typeof mentionsIn>[2]
   assert.deepEqual(names(mentionsIn('Read @Writer, then @Writer please answer.', members, writer)), { all: false, found: ['Writer'] })
   assert.deepEqual(names(mentionsIn('see @Writer', members, writer)), { all: false, found: [] })
-  assert.deepEqual(names(mentionsIn('see @Writer and @Writer', members, [...writer, ...writer])), { all: false, found: [] })
+  assert.deepEqual(names(mentionsIn('see @Writer and @Writer', members, [...writer, ...writer] as unknown as Parameters<typeof mentionsIn>[2])), { all: false, found: [] })
   // "@Kate" is not the reference "K", so the "@K" after it is the one taken out.
-  assert.deepEqual(names(mentionsIn('@Kate, @K', [...members, { name: 'Kate' }], [{ labels: ['K'] }])), { all: false, found: ['Kate'] })
-  assert.deepEqual(names(mentionsIn('@K notes and @K', members, [{ labels: ['K notes'] }])), { all: false, found: ['K'] })
+  assert.deepEqual(names(mentionsIn('@Kate, @K', [...members, { name: 'Kate' }] as unknown as Parameters<typeof mentionsIn>[1], [{ labels: ['K'] }] as unknown as Parameters<typeof mentionsIn>[2])), { all: false, found: ['Kate'] })
+  assert.deepEqual(names(mentionsIn('@K notes and @K', members, [{ labels: ['K notes'] }] as unknown as Parameters<typeof mentionsIn>[2])), { all: false, found: ['K'] })
 })

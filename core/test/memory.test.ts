@@ -122,7 +122,7 @@ const ownChat = [
 // it says otherwise. `requireSession` turns down a request without a Session, as
 // some routes do.
 function start({ home = mkdtempSync(join(tmpdir(), 'ds-bot-memory-')), replies = [], config = {}, history = {}, reasoning = { efforts: [{ id: 'off' }, { id: 'high' }] }, models = ['v4'], defaultModel, requireSession = false }: {
-    home?: string, replies?: unknown[], config?: Record<string, unknown>, history?: Record<string, unknown>,
+    home?: string, replies?: unknown[], config?: Record<string, unknown>, history?: Record<string, { event: { seq: number } }[]>,
     reasoning?: { efforts?: { id: string }[] }, models?: string[], defaultModel?: string, requireSession?: boolean,
   } = {}) {
   if (!existsSync(join(home, 'state.json'))) writeFileSync(join(home, 'state.json'), JSON.stringify(TEAM))
@@ -139,7 +139,7 @@ function start({ home = mkdtempSync(join(tmpdir(), 'ds-bot-memory-')), replies =
         if (requireSession && request.sessionId === undefined) throw new Error('400: {"type":"MissingSessionID","message":"Request is missing x-opencode-session"}')
         const reply = await replies.shift()
         if (reply instanceof Error) throw reply
-        const out = typeof reply === 'object' && reply !== null ? reply : { text: reply ?? '' }
+        const out: { text?: string, finish?: string, failure?: string } = typeof reply === 'object' && reply !== null ? reply as { text?: string, finish?: string, failure?: string } : { text: (reply ?? '') as string | undefined }
         yield { type: 'text-delta', index: 0, text: out.text ?? '' }
         yield { type: 'finish', reason: { kind: out.finish ?? 'stop', ...(out.failure ? { failure: { message: out.failure } } : {}) } }
       },
@@ -341,7 +341,7 @@ test('deleting a Bot moves its memory to the archive', async (t) => {
 })
 
 test('the memory panel shows every entry and a summary the Bot\'s model writes once per change', async (t) => {
-  const replies = ['## Overview\nYou like tea.']
+  const replies: unknown[] = ['## Overview\nYou like tea.']
   const { tool, call, requests, stop } = start({ replies })
   t.after(() => stop())
   assert.equal((await call('state', {})).value.memory, true)
@@ -456,7 +456,7 @@ test('a summary cut off at both budgets on the Bot\'s model is written by the de
 })
 
 test('a summary that failed on both models is tried again once the Bot has another model', async (t) => {
-  const replies = [new Error('401: Unauthorized'), { text: '', finish: 'error', failure: '503 Service Unavailable' }]
+  const replies: unknown[] = [new Error('401: Unauthorized'), { text: '', finish: 'error', failure: '503 Service Unavailable' }]
   const { tool, call, requests, stop } = start({ replies, models: ['v4', 'flash'], defaultModel: 'flash' })
   t.after(() => stop())
   await tool('remember', { text: 'Likes tea' }, 'b2')
@@ -776,8 +776,8 @@ test('topic entries that share words with the user\'s new lines come first', () 
     { text: 'Ships on Fridays', meta: { added: '2026-01-01' } },
     { text: 'Drinks green tea', meta: { added: '2026-10-01' } },
     { text: '用户住在杭州的西湖区附近哦', meta: { added: '2026-02-01' } },
-  ] }]
-  const shown = about => reviewEntries(own, [{ entries: [] }], 16, about).numbered.map(entry => entry.text)
+  ] }] as unknown as Parameters<typeof reviewEntries>[0]
+  const shown = about => reviewEntries(own, [{ entries: [] }] as unknown as Parameters<typeof reviewEntries>[1], 16, about).numbered.map(entry => entry.text)
   assert.deepEqual(shown(''), ['Drinks green tea'])
   assert.deepEqual(shown('We no longer ship on Fridays'), ['Ships on Fridays'])
   assert.deepEqual(shown('我搬离杭州了'), ['用户住在杭州的西湖区附近哦'])
@@ -1074,15 +1074,15 @@ test('a chat review reads back to its cursor through every page', async (t) => {
 })
 
 test('a review shows both MEMORY.md files whole, then the newest topic entries that fit', () => {
-  const own = [{ entries: [{ text: 'A', meta: {} }] }, { topic: 't', entries: [{ text: 'old', meta: { added: '2026-01-01' } }, { text: 'new', meta: { added: '2026-10-01' } }] }]
-  const team = [{ entries: [{ text: 'T', meta: {} }] }]
+  const own = [{ entries: [{ text: 'A', meta: {} }] }, { topic: 't', entries: [{ text: 'old', meta: { added: '2026-01-01' } }, { text: 'new', meta: { added: '2026-10-01' } }] }] as unknown as Parameters<typeof reviewEntries>[0]
+  const team = [{ entries: [{ text: 'T', meta: {} }] }] as unknown as Parameters<typeof reviewEntries>[1]
   const { numbered, left } = reviewEntries(own, team, 5)
   assert.deepEqual(numbered.map(entry => [entry.scope, entry.file.topic, entry.text]), [['own', undefined, 'A'], ['team', undefined, 'T'], ['own', 't', 'new']])
   assert.equal(left, 1)
   assert.equal(reviewEntries(own, team).left, 0)
   // One entry too long for what is left does not keep out a shorter one after it.
-  const tight = [{ entries: [{ text: 'A', meta: {} }] }, { topic: 't', entries: [{ text: 'x'.repeat(5), meta: { added: '2026-10-01' } }, { text: 'yy', meta: { added: '2026-01-01' } }] }]
-  const fit = reviewEntries(tight, [{ entries: [] }], 5)
+  const tight = [{ entries: [{ text: 'A', meta: {} }] }, { topic: 't', entries: [{ text: 'x'.repeat(5), meta: { added: '2026-10-01' } }, { text: 'yy', meta: { added: '2026-01-01' } }] }] as unknown as Parameters<typeof reviewEntries>[0]
+  const fit = reviewEntries(tight, [{ entries: [] }] as unknown as Parameters<typeof reviewEntries>[1], 5)
   assert.deepEqual(fit.numbered.map(entry => entry.text), ['A', 'yy'])
   assert.equal(fit.left, 1)
 })

@@ -40,7 +40,7 @@ function start({ pages = {}, services = {} } = {}) {
     return register(options)
   }
   apply(ctx, { home })
-  const call = async (endpoint, payload) => {
+  const call = async (endpoint, payload?) => {
     const response = await routes['/api/bot'].fetch(new Request('http://localhost/api/bot', { method: 'POST', body: JSON.stringify({ endpoint, payload }) }))
     return response.json()
   }

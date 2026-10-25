@@ -12,7 +12,11 @@ import { createServer } from 'node:http'
 import { test } from 'node:test'
 import { Agent } from '@earendil-works/pi-agent-core'
 import { Type } from '@earendil-works/pi-ai'
+import type { Api, Model } from '@earendil-works/pi-ai'
 import { streamSimple } from '@earendil-works/pi-ai/api/openai-completions'
+
+// The text of a message's blocks, whatever else the kernel mixes into them.
+const textOfBlocks = (blocks: readonly unknown[]): string => blocks.map(block => (block as { text?: string }).text ?? '').join('')
 
 // A scripted OpenAI-compatible /chat/completions endpoint. Each reply is a list of
 // deltas; tool calls stream in the standard incremental form, each with its own index.
@@ -58,18 +62,18 @@ const openaiMock = () => {
   return {
     requests, state,
     reply(...deltas) { script.push(deltas) },
-    listen: () => new Promise(resolve => server.listen(0, '127.0.0.1', () => resolve(server.address()))),
+    listen: (): Promise<{ port: number }> => new Promise(resolve => server.listen(0, '127.0.0.1', () => resolve(server.address() as { port: number }))),
     close: () => new Promise(resolve => server.close(resolve)),
   }
 }
 
 // A Model as pi-ai's catalog would serve it, pointed at whatever OpenAI-compatible
 // base URL the caller runs. `input` is required: image-support checks read it.
-const model = (baseUrl) => ({
+const model = (baseUrl): Model<Api> => ({
   id: 'mock-1', name: 'Mock', api: 'openai-completions', provider: 'mock', baseUrl,
   input: ['text'], reasoning: false, contextWindow: 100000, maxTokens: 4096,
   cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-})
+} as unknown as Model<Api>)
 
 const tool = (name, execute) => ({
   name, label: name, description: `test tool ${name}`,
@@ -94,7 +98,7 @@ test('an OpenAI-compatible endpoint with a custom base URL and key drives the ag
   assert.equal(mock.requests[0].url, '/v1/chat/completions')
   assert.equal(mock.requests[0].auth, 'Bearer sk-prototype')
   assert.equal(mock.requests[0].body.model, 'mock-1')
-  const said = agent.state.messages.filter(m => m.role === 'assistant').map(m => m.content.map(b => b.text ?? '').join('')).join('')
+  const said = agent.state.messages.filter(m => m.role === 'assistant').map(m => textOfBlocks(m.content)).join('')
   assert.equal(said, 'hello from the custom endpoint')
   await mock.close()
 })
@@ -171,26 +175,26 @@ test('a run cancels mid-stream and resumes from the same transcript', async () =
   // the client has the word.
   mock.reply({ content: 'partial' }, { stall: 5000 }, { content: ' more' })
   const first = agent.prompt('start')
-  while (!String(agent.state.streamingMessage?.content?.[0]?.text ?? '').startsWith('partial')) {
+  while (!String((agent.state.streamingMessage?.content?.[0] as { text?: string } | undefined)?.text ?? '').startsWith('partial')) {
     await new Promise(resolve => setTimeout(resolve, 5))
   }
   agent.abort()
   await first
   const stopped = agent.state.messages.filter(m => m.role === 'assistant').at(-1)
   assert.equal(stopped.stopReason, 'aborted')
-  assert.match(stopped.content.map(block => block.text ?? '').join(''), /^partial/)
+  assert.match(textOfBlocks(stopped.content), /^partial/)
   // Resume: the next run continues from the same transcript. The aborted partial stays
   // in the transcript (the host can still show what was said), though pi's LLM
   // conversion leaves unfinished aborted replies off the wire.
   mock.reply({ content: 'resumed' })
   agent.followUp({ role: 'user', content: 'go on', timestamp: Date.now() })
   await agent.continue()
-  const kept = agent.state.messages.filter(m => m.role === 'assistant').map(m => m.content.map(b => b.text ?? '').join(''))
+  const kept = agent.state.messages.filter(m => m.role === 'assistant').map(m => textOfBlocks(m.content))
   assert.ok(kept.some(text => text.startsWith('partial')), 'the aborted partial answer stays in the transcript')
   const wire = mock.requests.at(-1).body.messages
   assert.ok(wire.some(m => m.role === 'user' && JSON.stringify(m).includes('start')), 'the earlier turn is still in context')
   assert.ok(wire.some(m => m.role === 'user' && JSON.stringify(m).includes('go on')), 'the follow-up was sent')
-  const finalText = agent.state.messages.filter(m => m.role === 'assistant').at(-1).content.map(b => b.text ?? '').join('')
+  const finalText = textOfBlocks(agent.state.messages.filter(m => m.role === 'assistant').at(-1).content)
   assert.equal(finalText, 'resumed')
   await mock.close()
 })

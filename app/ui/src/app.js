@@ -4,20 +4,30 @@ import { HeaderPill } from '../../../core/src/client/header.tsx'
 import { t } from '../../../core/src/client/i18n.ts'
 import { Overlays } from '../../../core/src/client/overlays.tsx'
 import { BrandMark, TeamSidebar, YouAvatar } from '../../../core/src/client/sidebar.tsx'
-import { allThemes, themeCss } from '../../../core/src/client/themes.ts'
+import { allThemes, resolveThemeId, themeCss } from '../../../core/src/client/themes.ts'
 import { Chat } from './chat.js'
 import { createTeam } from './team.js'
 
-// The team's theme and accent, as the plugin paints them.
+// The team's theme and accent, as the plugin paints them (client-install.ts).
 function useTheme(prefs) {
   useEffect(() => {
-    const theme = allThemes()[prefs?.theme] ?? allThemes().deepseek
+    const themes = allThemes()
+    const id = resolveThemeId(themes, String(prefs?.theme ?? ''))
+    const theme = themes[id] ?? themes.moon
+    if (!theme) return undefined
     const style = document.createElement('style')
-    style.textContent = themeCss(theme, prefs?.accent)
+    style.dataset.dshBot = 'theme'
+    style.dataset.plugin = 'ds-bot'
+    style.textContent = themeCss(theme, prefs?.accent || undefined)
     document.head.append(style)
+    document.body.dataset.btTheme = id
     if (prefs?.motion) document.body.dataset.btMotion = prefs.motion
     else delete document.body.dataset.btMotion
-    return () => { style.remove() }
+    return () => {
+      style.remove()
+      delete document.body.dataset.btTheme
+      delete document.body.dataset.btMotion
+    }
   }, [prefs?.theme, prefs?.accent, prefs?.motion])
 }
 

@@ -51,7 +51,7 @@ function install(rt) {
   const root = join(home, "memory");
   async function modelFor(bot) {
     const route = splitRef(await rt.desiredModel(bot) ?? await rt.defaultModel());
-    if (route === void 0) throw new Error("No model is available. Add one in Harness settings.");
+    if (route === void 0) throw new Error("No model is available. Add one in Settings \u2192 Models.");
     return route;
   }
   async function oneShot(route, system, text, tag) {

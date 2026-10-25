@@ -831,7 +831,6 @@ var ZH = {
   "Model for {name}": "{name} 的模型",
   "Models and providers…": "模型和服务商…",
   Models: "模型",
-  "Harness default": "Harness 默认",
   Saving: "保存中",
   "Manage models": "管理模型",
   // Shapes
@@ -912,7 +911,6 @@ var ZH = {
   "Advanced settings": "高级设置",
   "Agent": "Agent",
   "Settings pages": "设置页面",
-  "Harness settings": "Harness 设置",
   "Back to Bots": "返回 Bot 列表",
   "Close settings": "关闭设置",
   // Context menu
@@ -1456,8 +1454,6 @@ var ZH = {
   Unit: "单位",
   "Create task": "创建任务",
   "Turn on scheduled tasks": "打开「定时任务」",
-  "Switch on Automation tasks on the Plugins page in Harness settings.": "在 Harness 设置的插件页启用「自动化任务」。",
-  "Open Harness settings": "打开 Harness 设置",
   "New task": "新建任务",
   "No scheduled tasks yet.": "还没有定时任务。",
   "No scheduled tasks yet. Add one": "还没有定时任务，去添加",
@@ -1541,7 +1537,7 @@ var HOST_ZH = {
   "A name uses capitals, digits, and underscores, and starts with a letter": "名字只能用大写字母、数字和下划线，并以字母开头",
   "No such key": "没有这个密钥",
   "Type a question or a change first": "请先输入问题或要改的内容",
-  "No model is available. Add one in Harness settings.": "没有可用的模型，请先在 Harness 设置里添加模型。",
+  "No model is available. Add one in Settings → Models.": "没有可用的模型，请先在「设置 → 模型」里添加。",
   "Memory is turned off on this host": "这台主机关闭了记忆功能",
   "The model wrote nothing": "模型没有输出内容",
   "Write the entry to save.": "请写下要保存的内容。",
@@ -1589,7 +1585,7 @@ var HOST_ERRORS = [
   [/^Give the full path of the folder, not (.+)$/, "请填写文件夹的完整路径，而不是 $1"],
   [/^There is no folder at (.+)$/, "找不到文件夹 $1"],
   [/^(.+) is a file, not a folder$/, "$1 是文件，不是文件夹"],
-  [/^(.+) holds another runtime\'s data, so Bots cannot work there$/, "$1 里有其他运行时的数据，Bot 不能在这里工作"],
+  [/^(.+) holds another runtime's data, so Bots cannot work there$/, "$1 里有其他运行时的数据，Bot 不能在这里工作"],
   // Memory changes the memory panel asked for; the whole message is matched.
   [/^This looks like a key, token, or password[\s\S]*$/, "看起来像密钥、令牌或密码，记忆不会保存这类内容"],
   [/^An entry holds at most (\d+) characters; this one has (\d+)\.[\s\S]*$/, "一条记忆最多 $1 个字符，这条有 $2 个"],

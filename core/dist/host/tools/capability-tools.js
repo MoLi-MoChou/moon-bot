@@ -62,7 +62,7 @@ function installCapabilityTools(_rt, shared) {
       if (!t.botOf(self)) return "Only Bots on the team can use save_capability.";
       try {
         const item = await t.capabilitySave(args, { botId: self });
-        const approval = item.kind === "mcp" && item.transport === "stdio" && !item.approved ? " The user must allow this MCP server in DS Bot settings before it can work." : "";
+        const approval = item.kind === "mcp" && item.transport === "stdio" && !item.approved ? " The user must allow this MCP server in Settings \u2192 Capabilities before it can work." : "";
         return `Saved ${item.name}. Bots with it attached use the change from their next message.${approval}`;
       } catch (error) {
         return errorMessage(error);
@@ -109,7 +109,7 @@ function installCapabilityTools(_rt, shared) {
           const result = await t.changeCapabilityAttachment(endpoint, args, self);
           const attached = t.own(state.capabilities.items, args.name);
           const members = attached?.kind === "pack" ? (attached.items ?? []).map((child) => t.own(state.capabilities.items, child)).filter((item) => item !== void 0) : attached ? [attached] : [];
-          const approvals = members.filter((item) => item.kind === "mcp" && item.transport === "stdio" && item.approved !== true).map((item) => ` The user must allow ${item.name} in DS Bot settings before it can work.`).join("");
+          const approvals = members.filter((item) => item.kind === "mcp" && item.transport === "stdio" && item.approved !== true).map((item) => ` The user must allow ${item.name} in Settings \u2192 Capabilities before it can work.`).join("");
           return `${verb} ${args.name} ${args.bot ? `to ${result.bot}` : "to yourself"}. Changes apply from ${result.bot}'s next message.${endpoint === "attach" ? approvals : ""}`;
         } catch (error) {
           return errorMessage(error);

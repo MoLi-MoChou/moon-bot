@@ -86,7 +86,7 @@ export function install(rt: HostRuntime): void {
   }
   const record = (agentId: string): StoredAgent => {
     const agent = rt.own(state.agents, agentId)
-    if (agent === undefined) throw new Error('Unknown DSH Agent')
+    if (agent === undefined) throw new Error(`Unknown ${AGENT_NAME}`)
     return agent
   }
 
@@ -125,7 +125,7 @@ export function install(rt: HostRuntime): void {
 
   async function addAgent(): Promise<StoredAgent> {
     writeCheck()
-    if (Object.keys(state.agents).length > 0) throw new Error('The team already has a DSH Agent')
+    if (Object.keys(state.agents).length > 0) throw new Error(`The team already has an ${AGENT_NAME}`)
     const agent: StoredAgent = { id: randomUUID(), name: AGENT_NAME, sessions: [], createdAt: Date.now() }
     state.agents[agent.id] = agent
     try {

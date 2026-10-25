@@ -54,7 +54,7 @@ const HOST_ERRORS: readonly (readonly [RegExp, string])[] = [
   [/^Give the full path of the folder, not (.+)$/, '请填写文件夹的完整路径，而不是 $1'],
   [/^There is no folder at (.+)$/, '找不到文件夹 $1'],
   [/^(.+) is a file, not a folder$/, '$1 是文件，不是文件夹'],
-  [/^(.+) holds another runtime\'s data, so Bots cannot work there$/, '$1 里有其他运行时的数据，Bot 不能在这里工作'],
+  [/^(.+) holds another runtime's data, so Bots cannot work there$/, '$1 里有其他运行时的数据，Bot 不能在这里工作'],
   // Memory changes the memory panel asked for; the whole message is matched.
   [/^This looks like a key, token, or password[\s\S]*$/, '看起来像密钥、令牌或密码，记忆不会保存这类内容'],
   [/^An entry holds at most (\d+) characters; this one has (\d+)\.[\s\S]*$/, '一条记忆最多 $1 个字符，这条有 $2 个'],

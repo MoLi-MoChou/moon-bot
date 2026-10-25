@@ -104,7 +104,7 @@ export function install(rt: MemoryRuntime): void {
 
   async function modelFor(bot: StoredBot): Promise<ModelRoute> {
     const route = splitRef((await rt.desiredModel(bot)) ?? (await rt.defaultModel()))
-    if (route === undefined) throw new Error('No model is available. Add one in Harness settings.')
+    if (route === undefined) throw new Error('No model is available. Add one in Settings → Models.')
     return route
   }
   // The panel's model calls belong to the Bot or group whose memory they serve;

@@ -64,7 +64,7 @@ function install(rt) {
   };
   const record = (agentId) => {
     const agent = rt.own(state.agents, agentId);
-    if (agent === void 0) throw new Error("Unknown DSH Agent");
+    if (agent === void 0) throw new Error(`Unknown ${AGENT_NAME}`);
     return agent;
   };
   async function createAgentSession(agentId, workspaceId) {
@@ -91,7 +91,7 @@ function install(rt) {
   }
   async function addAgent() {
     writeCheck();
-    if (Object.keys(state.agents).length > 0) throw new Error("The team already has a DSH Agent");
+    if (Object.keys(state.agents).length > 0) throw new Error(`The team already has an ${AGENT_NAME}`);
     const agent = { id: randomUUID(), name: AGENT_NAME, sessions: [], createdAt: Date.now() };
     state.agents[agent.id] = agent;
     try {

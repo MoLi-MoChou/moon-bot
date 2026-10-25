@@ -12,7 +12,7 @@ const GROUP_REF = { type: "string", required: true, description: "Exact group ch
 const BLOCKING_QUESTION_TOOL = "ask_user_question";
 const GOAL_TOOLS = ["create_goal", "update_goal", "get_goal"];
 const HIDDEN_TOOLS = [BLOCKING_QUESTION_TOOL, ...GOAL_TOOLS, ...LEAN_HIDDEN_TOOLS];
-const GOAL_REFUSAL = "DS Bot does not run goals. Ask the Bot in a message instead.";
+const GOAL_REFUSAL = "Moon Bot does not run goals. Ask the Bot in a message instead.";
 const MODE_PARAM = {
   type: "string",
   enum: ["everyone", "admin"],

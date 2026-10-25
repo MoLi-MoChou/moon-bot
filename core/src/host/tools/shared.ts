@@ -43,7 +43,7 @@ export const BLOCKING_QUESTION_TOOL = 'ask_user_question'
 const GOAL_TOOLS = ['create_goal', 'update_goal', 'get_goal']
 // Moon Bot patch: plus the tools of the features LEAN hides (group chats, schedules).
 export const HIDDEN_TOOLS: readonly string[] = [BLOCKING_QUESTION_TOOL, ...GOAL_TOOLS, ...LEAN_HIDDEN_TOOLS]
-export const GOAL_REFUSAL = 'DS Bot does not run goals. Ask the Bot in a message instead.'
+export const GOAL_REFUSAL = 'Moon Bot does not run goals. Ask the Bot in a message instead.'
 export const MODE_PARAM: ToolParameter = {
   type: 'string',
   enum: ['everyone', 'admin'],

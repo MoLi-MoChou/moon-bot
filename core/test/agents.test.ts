@@ -94,7 +94,7 @@ test('add-agent creates one record with a first Session in the DS Bot workspace'
   t.after(stop)
   await call('state', {})
   const agent = (await call('add-agent')).value
-  assert.equal(agent.name, 'DSH Agent')
+  assert.equal(agent.name, 'Agent')
   assert.equal(agent.sessions.length, 1)
   const view = (await call('state', {})).value
   assert.deepEqual(view.agents.map(entry => entry.id), [agent.id])
@@ -103,14 +103,14 @@ test('add-agent creates one record with a first Session in the DS Bot workspace'
   assert.equal(created.at(-1).workspaceId, workspaceId)
 })
 
-test('a team holds at most one DSH Agent', async (t) => {
+test('a team holds at most one Agent', async (t) => {
   const { call, stop } = start(TEAM)
   t.after(stop)
   await call('state', {})
   assert.equal((await call('add-agent')).ok, true)
   const again = await call('add-agent')
   assert.equal(again.ok, false)
-  assert.equal(again.error.message, 'The team already has a DSH Agent')
+  assert.equal(again.error.message, 'The team already has an Agent')
 })
 
 test('agent-session appends Sessions; agent-archive removes one and archives it', async (t) => {
@@ -237,10 +237,10 @@ test('agent-adopt takes an unowned Session and refuses team-owned ones', async (
   assert.equal((await call('agent-adopt', { agentId: agent.id, sessionId: 'fresh' })).ok, true)
   // A Bot's Session and an unknown Agent are refused.
   assert.equal((await call('agent-adopt', { agentId: agent.id, sessionId: 'm1' })).ok, false)
-  assert.equal((await call('agent-adopt', { agentId: 'none', sessionId: 'fresh2' })).error.message, 'Unknown DSH Agent')
+  assert.equal((await call('agent-adopt', { agentId: 'none', sessionId: 'fresh2' })).error.message, 'Unknown Agent')
 })
 
-test('team tools are restricted on DSH Agent Sessions but not on Bot Sessions', async (t) => {
+test('team tools are restricted on Agent Sessions but not on Bot Sessions', async (t) => {
   const { call, stop, restricted: all, createdAgents } = start(TEAM)
   t.after(stop)
   // Moon Bot patch: a Bot Session's own LEAN mask (group and schedule tools) is not the

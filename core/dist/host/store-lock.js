@@ -26,14 +26,14 @@ function createStoreLock({ home, statePath, warn }) {
     } catch (error) {
       lockBroken = true;
       holder = void 0;
-      warn("ds-bot: cannot lock %s, so another dsh on the same data could undo changes: %s", home, error);
+      warn("ds-bot: cannot lock %s, so another instance on the same data could undo changes: %s", home, error);
     }
   };
   const readOnly = () => {
     if (stuck !== void 0) return `The Bot team file ${statePath} could not be read (${stuck}). DS Bot does not change it; fix or move the file and reload.`;
     if (holder === void 0) return void 0;
     const where = holder?.pid ? `pid ${holder.pid}${holder.host ? ` on ${holder.host}` : ""}` : "unknown process";
-    return `The Bot team in ${home} is open in another dsh (Web or Desktop, ${where}). This window shows the team but cannot change it; close the other one and reload.`;
+    return `The Bot team in ${home} is open in another Moon Bot (Web or Desktop, ${where}). This window shows the team but cannot change it; close the other one and reload.`;
   };
   const readFileState = async () => {
     let contents;

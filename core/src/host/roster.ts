@@ -64,7 +64,7 @@ export function install(rt: HostRuntime): void {
   // A deletion whose save fails stays in memory, and the next save writes it, so its
   // Sessions are stopped anyway: left armed, their scheduled tasks would keep running
   // with nothing in the team to show or delete them. Only a host that lost the team
-  // to another dsh keeps them, since the other host's copy still has them.
+  // to another instance keeps them, since the other host's copy still has them.
   async function saveForDelete(): Promise<unknown | undefined> {
     try {
       await rt.save()

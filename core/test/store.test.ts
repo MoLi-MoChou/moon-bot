@@ -242,7 +242,7 @@ test('a read-only host resolves awaited saves without writing', async (t) => {
   const ownerState = JSON.stringify({ version: 1, revision: 900, prefs: { marker: 'new owner' } })
   fs.writeFileSync(statePath, ownerState)
   await rt.refresh()
-  assert.match(rt.readOnly(), /another dsh/)
+  assert.match(rt.readOnly(), /another Moon Bot/)
   rt.state.prefs.marker = 'not saved'
   await rt.save()
   assert.equal(fs.readFileSync(statePath, 'utf8'), ownerState)

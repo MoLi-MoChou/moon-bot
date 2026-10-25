@@ -29,7 +29,7 @@ const TEAM = {
 // DSH_HOME, the team's data inside it, and a project folder beside it. Every Session
 // starts in the team workspace unless it is made with a cwd. `services` are what
 // ctx.get finds, such as the sandbox policy and approvals.
-// `locked`: another dsh holds the team, so this one only shows it.
+// `locked`: another instance holds the team, so this one only shows it.
 async function start({ services = {}, workspaces = [], llm, team: saved = TEAM, locked = false }: { services?: Record<string, unknown>, workspaces?: { id: string, path: string, title?: string }[], llm?: Record<string, unknown>, team?: Record<string, unknown>, locked?: boolean } = {}) {
   // The native realpath, as fs/promises uses: on Windows the JS one keeps 8.3 short names.
   const root = realpathSync.native(mkdtempSync(join(tmpdir(), 'ds-bot-work-dir-')))
@@ -775,7 +775,7 @@ test('Sessions that are not a Bot\'s keep DSH\'s own working_directory', async (
   assert.deepEqual(Object.values(state().bots as Record<string, { workDir?: string }>).map(bot => bot.workDir), [undefined, undefined])
 })
 
-test('while another dsh has the team open, a Bot cannot leave its working folder', async (t) => {
+test('while another instance has the team open, a Bot cannot leave its working folder', async (t) => {
   const { service } = folderService()
   const { services } = approvalServices('allowed-once')
   const { ctx, agentOf, team, project, state, stop } = await start({ services: { ...services, workingDirectory: service }, locked: true })
@@ -783,7 +783,7 @@ test('while another dsh has the team open, a Bot cannot leave its working folder
   mkdirSync(join(team, 'site'))
   assert.equal((await changeDirectory(ctx, service, agentOf('b'), 'site')).ran, true)
   const out = await changeDirectory(ctx, service, agentOf('b'), project)
-  assert.match(out.error, /^Your working folder cannot change now: The Bot team in .* is open in another dsh/)
+  assert.match(out.error, /^Your working folder cannot change now: The Bot team in .* is open in another Moon Bot/)
   assert.equal(out.ran, false)
   assert.equal(state().bots.b.workDir, undefined)
 })

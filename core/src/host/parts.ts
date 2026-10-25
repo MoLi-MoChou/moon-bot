@@ -258,7 +258,7 @@ export function install(rt: HostRuntime): void {
     condense,
     decide,
     adoptCompaction,
-    // A read-only process (another dsh holds the team) neither condenses nor switches.
+    // A read-only process (another instance holds the team) neither condenses nor switches.
     readOnly: () => rt.readOnly() !== undefined,
     writeNote,
     handoffLines,

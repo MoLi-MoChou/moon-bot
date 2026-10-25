@@ -159,7 +159,7 @@ function install(rt) {
     if (hadHolder) {
       lock.claim();
       if (lock.holder() === void 0) {
-        warn("ds-bot: the other dsh has closed; this one now saves the Bot team");
+        warn("ds-bot: the other instance has closed; this one now saves the Bot team");
         lock.markWarned();
         adopt(await lock.readFileState());
         return;
@@ -207,7 +207,7 @@ function install(rt) {
         const ensureLock = () => {
           if (lock.broken()) return;
           if (!lock.owns()) {
-            const error = Object.assign(new Error("ds-bot lost the state lock to another dsh"), { code: "ELOCKLOST" });
+            const error = Object.assign(new Error("ds-bot lost the state lock to another instance"), { code: "ELOCKLOST" });
             throw error;
           }
         };

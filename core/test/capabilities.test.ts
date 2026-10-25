@@ -217,7 +217,7 @@ test('read-only secret reload does not requeue capability reconciliation', async
   t.after(() => env.dispose())
   await env.rt.loadSecrets()
   await env.rt.scheduleCapabilitiesReconcile()
-  env.rt.readOnly = () => 'The Bot team is open in another dsh.'
+  env.rt.readOnly = () => 'The Bot team is open in another Moon Bot.'
   let loads = 0
   const loadSecrets = env.rt.loadSecrets
   env.rt.loadSecrets = async () => {

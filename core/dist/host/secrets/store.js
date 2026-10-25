@@ -43,7 +43,7 @@ class SecretStoreImpl {
     this.changed = changed;
     this.path = join(rt.home, "secrets.json");
   }
-  // While another dsh holds the team, that host writes secrets.json, so a reading host
+  // While another instance holds the team, that host writes secrets.json, so a reading host
   // reads it again each time; a copy read then is also read again after taking over,
   // before this host saves anything.
   load() {

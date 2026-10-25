@@ -161,7 +161,7 @@ ${clean(frames.join("\n"))}` : ""}`);
       node: process.version,
       team: `${count(bots.length, "Bot", "Bots")}, ${rt.state.mainBotIds.length} Main, ${count(groups, "group chat", "group chats")}`,
       models: models.length > 0 ? models.join(", ") : void 0,
-      readOnly: rt.readOnly?.() ? "yes, another dsh holds the team" : void 0
+      readOnly: rt.readOnly?.() ? "yes, another instance holds the team" : void 0
     };
   };
   const sanitizeClient = (client) => {

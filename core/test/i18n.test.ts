@@ -28,7 +28,7 @@ test('every literal the client translates has a Chinese entry', () => {
   assert.deepEqual(missing, [])
 })
 
-test('copy follows the DSH language and stays English without a locale service', () => {
+test('copy follows the interface language and stays English without a locale service', () => {
   assert.equal(t('Message {name}', { name: 'Chief' }), 'Message Chief')
   assert.equal(language(), 'en')
   const off = installLocale(fakeLocale('zh'))
@@ -48,7 +48,7 @@ test('copy follows the DSH language and stays English without a locale service',
     assert.equal(hostText('This file no longer exists'), '这个文件已经不在原来的位置了')
     // The error codes the API throws say what happened, what the host said, and what to do.
     assert.equal(errorCopy('NETWORK'), '连不上 Moon Bot：网络断了，或者服务在重启。 检查一下网络，过几秒再试。')
-    assert.equal(errorCopy('bot/read-only'), '这个窗口现在只能看，不能改。 关掉另一个打开同一团队的 dsh 窗口，然后刷新。')
+    assert.equal(errorCopy('bot/read-only'), '这个窗口现在只能看，不能改。 关掉另一个打开同一团队的 Moon Bot 窗口，然后刷新。')
     assert.equal(errorCopy('HTTP_500'), '服务端出错了。 稍后再试；一直这样的话，到「设置 → 反馈」把诊断发给开发者。')
     assert.equal(errorCopy(undefined), '出了点问题，请再试一次。')
     assert.equal(errorCopy('some/code', 'This file no longer exists'), '这个文件已经不在原来的位置了')

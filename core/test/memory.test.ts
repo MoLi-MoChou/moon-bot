@@ -527,7 +527,7 @@ test('a host that only reads the team shows memory but changes none of it', asyn
   const { tool, call, section, stop } = start({ home })
   t.after(() => stop())
   await call('state', {})
-  assert.match(await tool('remember', { text: 'Likes tea' }, 'b2'), /^Memory cannot change now: The Bot team in .* is open in another dsh/)
+  assert.match(await tool('remember', { text: 'Likes tea' }, 'b2'), /^Memory cannot change now: The Bot team in .* is open in another Moon Bot/)
   assert.equal((await call('memory-view', { botId: 'b2' })).ok, true)
   assert.equal((await call('memory-ask', { botId: 'b2', text: 'hi' })).error.code, 'bot/read-only')
   assert.match(section('b2'), /^# Your memory/)

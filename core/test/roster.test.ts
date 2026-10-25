@@ -422,7 +422,7 @@ const takeover = (home, team) => {
   if (team !== undefined) writeFileSync(join(home, 'state.json'), JSON.stringify(team))
 }
 
-test('a host that loses its lock to another dsh refuses changes instead of making a phantom Bot', async (t) => {
+test('a host that loses its lock to another instance refuses changes instead of making a phantom Bot', async (t) => {
   const { call, stop, home, ctx } = start({ version: 1, mainBotIds: ['chief'], bots: { chief: { id: 'chief', name: 'Chief' } } })
   t.after(stop)
   assert.equal((await call('state', {})).value.readOnly, null)
@@ -437,7 +437,7 @@ test('a host that loses its lock to another dsh refuses changes instead of makin
   assert.equal(created, 0)
   // The file keeps the new owner's team, and this host now follows it.
   const team = (await call('state', {})).value
-  assert.match(team.readOnly, /another dsh/)
+  assert.match(team.readOnly, /another Moon Bot/)
   assert.ok(team.bots.some(bot => bot.name === 'FromB'))
   assert.equal(team.bots.some(bot => bot.name === 'Phantom'), false)
 })

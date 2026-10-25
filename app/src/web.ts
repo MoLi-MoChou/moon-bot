@@ -1,21 +1,19 @@
-// Moon Bot web mode: the same Host and UI, served to a normal browser without Electron.
+// Moon Bot web mode: the same service and UI, served to a normal browser without Electron.
 //
 //   MOON_BOT_PASSWORD=… node src/web.ts     (npm run web)
 //
-// The Host listens on loopback only. This process listens on MOON_BOT_WEB_HOST:MOON_BOT_WEB_PORT
-// (default 127.0.0.1:8290) and puts a password page in front of it: the right password is
-// exchanged for the Host's launch token, which makes DSH mint its own signed session cookie;
-// from then on DSH authenticates every request itself. Without a password set, the page
-// is skipped only on loopback (a local `npm run web`); on any other address it refuses to start.
-import { createServer, request as httpRequest, type IncomingMessage, type ServerResponse } from 'node:http'
-import { connect } from 'node:net'
-import { existsSync, mkdirSync } from 'node:fs'
-import { join, dirname } from 'node:path'
-import { homedir } from 'node:os'
-import { fileURLToPath } from 'node:url'
+// The service listens on a loopback port and serves the window's UI and the Bot channel from
+// one origin. This process listens on MOON_BOT_WEB_HOST:MOON_BOT_WEB_PORT (default
+// 127.0.0.1:8290) and puts a password page in front of it: the password is exchanged for the
+// service's signed cookie, which authenticates every later request. Without a password the
+// page is skipped on loopback only; on any other address the app refuses to start.
 import { createHash, timingSafeEqual } from 'node:crypto'
-import { HostProcess } from './host-process.ts'
-import { PROFILE } from './profile.ts'
+import { existsSync } from 'node:fs'
+import { createServer, request as httpRequest, type IncomingMessage, type ServerResponse } from 'node:http'
+import { homedir } from 'node:os'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { startService } from 'moon-bot-core/service'
 import { loginPage } from './web-login.ts'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -52,33 +50,29 @@ const blocked = (ip: string): boolean => {
 }
 
 async function main(): Promise<void> {
-  const profileDir = join(dataDir, 'profiles', PROFILE)
-  mkdirSync(profileDir, { recursive: true })
-  const pnpm = join(here, '..', 'node_modules', 'pnpm', 'bin', 'pnpm.mjs')
-  const host = new HostProcess({
-    entry: join(here, 'host.ts'), cwd: profileDir, pnpm,
-    // The access password stays in this process; the Host never sees it.
-    env: { ...Object.fromEntries(Object.entries(env).filter(([name]) => !['MOON_BOT_PASSWORD', 'MOCHOU_PASSWORD', 'DSH_BOT_PASSWORD'].includes(name))), DSH_HOME: dataDir, DS_BOT_PORT: setting('HOST_PORT') ?? '0', DS_BOT_WEB: '1', ...(setting('WORKSPACE') ? { DS_BOT_WORKSPACE: setting('WORKSPACE') } : {}) },
-    onFailure: (error) => { console.error(`moon-bot web: the Host stopped: ${error.message}`); process.exit(1) },
+  const uiDir = setting('UI') ?? join(here, '..', 'ui', 'dist')
+  // The service checks its own cookie; this page only hands that cookie out after the password.
+  const service = await startService({
+    home: dataDir,
+    ...(password !== '' ? { password } : {}),
+    ...(existsSync(uiDir) ? { uiDir } : {}),
+    host: '127.0.0.1',
+    port: 0,
   })
-  const ready = await host.start()
-  if (!('url' in ready)) throw new Error('moon-bot web: the Host reported no URL')
-  const launch = new URL(ready.url)
-  const token = launch.searchParams.get('token')
-  const target = { host: launch.hostname, port: Number(launch.port) }
+  const target = new URL(service.url)
+  const local = `${target.hostname}:${target.port}`
 
-  // DSH accepts only its own loopback origin. A request from this page (its Origin is the
-  // address the browser used) is passed on as from DSH's origin; any other origin is refused
-  // here, so DSH's cross-site protection still holds.
-  const local = `${target.host.includes(':') ? `[${target.host}]` : target.host}:${String(target.port)}`
+  // The service accepts requests from its own loopback origin. A request from this page (its
+  // Origin is the address the browser used) is passed on as from the service's origin; any
+  // other origin is refused here, so the service's cross-site protection still holds.
   const upstreamHeaders = (req: IncomingMessage): Record<string, string | string[] | undefined> | undefined => {
     const origin = req.headers.origin
     if (origin !== undefined && origin !== `http://${req.headers.host}` && origin !== `https://${req.headers.host}`) return undefined
     const headers: Record<string, string | string[] | undefined> = { ...req.headers, host: local }
-    if (origin !== undefined) headers.origin = `http://${local}`
-    if (typeof req.headers.referer === 'string' && req.headers.host && /^https?:\/\//.test(req.headers.referer)) {
+    if (origin !== undefined) headers.origin = target.origin
+    if (typeof req.headers.referer === 'string' && /^https?:\/\//.test(req.headers.referer)) {
       const ref = new URL(req.headers.referer)
-      if (ref.host === req.headers.host) headers.referer = `http://${local}${ref.pathname}${ref.search}`
+      headers.referer = `${target.origin}${ref.pathname}${ref.search}`
     }
     return headers
   }
@@ -86,8 +80,8 @@ async function main(): Promise<void> {
   const forward = (req: IncomingMessage, res: ServerResponse): void => {
     const headers = upstreamHeaders(req)
     if (headers === undefined) { res.writeHead(403).end('Cross-origin request refused'); return }
-    const upstream = httpRequest({ ...target, method: req.method, path: req.url, headers }, (answer) => {
-      // An unauthenticated page load gets the password page instead of DSH's bare 401.
+    const upstream = httpRequest({ hostname: target.hostname, port: target.port, method: req.method, path: req.url, headers }, (answer) => {
+      // An unauthenticated page load gets the password page instead of the service's bare 401.
       if (answer.statusCode === 401 && req.method === 'GET' && (req.headers.accept ?? '').includes('text/html')) {
         answer.resume()
         res.writeHead(302, { location: '/login' }).end()
@@ -100,10 +94,24 @@ async function main(): Promise<void> {
     req.pipe(upstream)
   }
 
+  // Sign in through the service, so that the browser gets the cookie the service itself checks.
+  const exchange = (given: string): Promise<{ cookie?: string[] | undefined; wait: boolean }> => new Promise((resolve) => {
+    const body = JSON.stringify({ password: given })
+    const call = httpRequest({
+      hostname: target.hostname, port: target.port, method: 'POST', path: '/login',
+      headers: { 'content-type': 'application/json', 'content-length': Buffer.byteLength(body) },
+    }, (answer) => {
+      answer.resume()
+      resolve({ cookie: answer.headers['set-cookie'], wait: answer.statusCode === 429 })
+    })
+    call.on('error', () => resolve({ wait: false }))
+    call.end(body)
+  })
+
   const server = createServer((req, res) => {
     const url = new URL(req.url ?? '/', 'http://x')
     if (url.pathname === '/login' && req.method === 'GET') {
-      if (!password) { res.writeHead(302, { location: `/?token=${token}` }).end(); return }
+      if (!password) { res.writeHead(302, { location: '/' }).end(); return }
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' }).end(loginPage({ error: url.searchParams.has('wrong'), wait: url.searchParams.has('wait') }))
       return
     }
@@ -116,30 +124,19 @@ async function main(): Promise<void> {
         const given = new URLSearchParams(body).get('password') ?? ''
         if (!passwordOk(given)) { failures.get(ip)?.push(Date.now()); res.writeHead(303, { location: '/login?wrong' }).end(); return }
         failures.delete(ip)
-        // DSH exchanges the launch token for its signed cookie and redirects to a clean URL.
-        res.writeHead(303, { location: `/?token=${token}` }).end()
+        void exchange(given).then(({ cookie, wait }) => {
+          if (cookie === undefined) { res.writeHead(303, { location: wait ? '/login?wait' : '/login?wrong' }).end(); return }
+          res.writeHead(303, { location: '/', 'set-cookie': cookie }).end()
+        })
       })
       return
     }
-    // The token is only handed out after the password; a guessed ?token= still has to match.
     forward(req, res)
   })
-  // WebSockets (DSH's live connection) go straight through; DSH checks the cookie.
-  server.on('upgrade', (req, socket, head) => {
-    const headers = upstreamHeaders(req)
-    if (headers === undefined) { socket.end('HTTP/1.1 403 Forbidden\r\nconnection: close\r\n\r\n'); return }
-    const upstream = connect(target.port, target.host, () => {
-      upstream.write(`${req.method} ${req.url} HTTP/${req.httpVersion}\r\n${Object.entries(headers).flatMap(([k, v]) => (Array.isArray(v) ? v : [v]).map(item => `${k}: ${item}`)).join('\r\n')}\r\n\r\n`)
-      if (head?.length) upstream.write(head)
-      upstream.pipe(socket).pipe(upstream)
-    })
-    upstream.on('error', () => socket.destroy())
-    socket.on('error', () => upstream.destroy())
-  })
   server.listen(port, bind, () => {
-    console.log(`moon-bot web: http://${bind.includes(':') ? `[${bind}]` : bind}:${port}/${password ? 'login' : `login (no password: loopback only)`}`)
+    console.log(`moon-bot web: http://${bind.includes(':') ? `[${bind}]` : bind}:${String(port)}/${password ? 'login' : ''}`)
   })
-  const stop = async (): Promise<void> => { server.close(); await host.stop().catch(() => {}); process.exit(0) }
+  const stop = async (): Promise<void> => { server.close(); await service.close().catch(() => {}); process.exit(0) }
   process.once('SIGINT', stop)
   process.once('SIGTERM', stop)
 }

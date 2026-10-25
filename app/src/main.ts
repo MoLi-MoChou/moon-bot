@@ -1,42 +1,38 @@
-// Electron main process: one window for the Bot team, served by the app's own DSH Host.
-// The window loads the Host's loopback address as DSH Web does: DSH's sign-in sends the page's
-// origin as the address the browser comes back to, and accepts only a loopback one.
+// Electron main process: one window for the Bot team, served by Moon Bot's own service.
+// The service listens on loopback and serves the window's page and the Bot channel on one
+// origin, so the window loads that address.
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, shell } from 'electron'
 import type { IpcMainEvent, IpcMainInvokeEvent } from 'electron'
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync } from 'node:fs'
 import { rm } from 'node:fs/promises'
 import { release } from 'node:os'
 import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { fileURLToPath } from 'node:url'
-import { getDshRuntimeVersion } from '@deepseek-ai/dsh-app-boot'
 import electronUpdater from 'electron-updater'
 import { chooseLocations, localeText, programFolder, saveLocations, text } from './first-run.ts'
-import type { SavedPlaces } from './first-run.ts'
 import { hostPort } from './host-port.ts'
 import { HostProcess } from './host-process.ts'
-import { copySessions, findTeam, importTeam, teamInUse, userDshHome, type ImportChoice } from './import.ts'
-import { copyData, moveProblem, type MoveProblem } from './move-data.ts'
-import { CHECK_PROFILE, PROFILE } from './profile.ts'
+import { copyData, moveProblem, teamInUse, userDshHome, type MoveProblem } from './move-data.ts'
 import { UPDATE_TEXT, watchReleases, watchUpdates, type UpdateFound, type UpdateWatch } from './updates.ts'
 import { needsNoSandbox } from './sandbox.ts'
-import { engineFor, engineReady, enginesModules, ensureEngine, type EngineProgress } from './engines.ts'
 import { CAPTION_HEIGHT, cssColor, micaAvailable, nativeThemeSource } from './window-frame.ts'
 
 const IPC = {
   caption: 'ds-bot:caption-colors', nativeTheme: 'ds-bot:native-theme', fullscreen: 'ds-bot:fullscreen',
   dataLocation: 'ds-bot:data-location', moveData: 'ds-bot:move-data', teamWorkspace: 'ds-bot:team-workspace',
   updateState: 'ds-bot:update-state', updateCheck: 'ds-bot:update-check', updateInstall: 'ds-bot:update-install', updateChanged: 'ds-bot:update-changed',
-  engineState: 'ds-bot:engine-state', engineDownload: 'ds-bot:engine-download', engineChanged: 'ds-bot:engine-changed',
 } as const
 const MOVE_PROBLEMS: Readonly<Record<Exclude<MoveProblem, 'dsh'>, 'moveDrive' | 'moveNested' | 'moveWorkspace' | 'inProgram' | 'moveNotEmpty'>> = { drive: 'moveDrive', nested: 'moveNested', workspace: 'moveWorkspace', program: 'inProgram', notEmpty: 'moveNotEmpty' }
 const UPDATE_CHECK_WAIT_MS = 15_000
 const UPDATE_DOWNLOAD_WAIT_MS = 15 * 60_000
 
 const here = dirname(fileURLToPath(import.meta.url))
-// This file ships bundled into dist-main; the source-run Hosts, the preload script and the
+// This file ships bundled into dist-main; the source-run Host, the preload script and the
 // window resources stay where the sources are.
 const srcDir = join(here, '..', 'src')
+// The Host works in the profile folder earlier builds kept it in, so the data layout is unchanged.
+const PROFILE = 'ds-bot'
 // Drawn by scripts/icon.mjs. Windows takes the .ico for its several sizes.
 const iconFile = join(here, '..', 'assets', process.platform === 'win32' ? 'icon.ico' : 'icon.png')
 // Windows 11 draws Mica behind the page; mica.css lets it through the sidebar.
@@ -54,9 +50,9 @@ let stopping = false
 let stopped = false
 let failed = false
 let places: { dataDir: string; workspace: string | undefined }
-// Quitting while a first-run dialog is open stops the first run, and during the copy (of the
-// first run or of a data move) it waits for the copy to stop at a safe point, so that it leaves
-// no half team and no temporary copy.
+// Quitting while a first-run dialog is open stops the first run, and during a data move it
+// waits for the copy to stop at a safe point, so that it leaves no half team and no
+// temporary copy.
 let choosing: AbortController | undefined
 let copying: Promise<unknown> | undefined
 const copyAbort = new AbortController()
@@ -103,44 +99,21 @@ async function start(): Promise<void> {
   const pnpm = join(app.getAppPath(), 'node_modules', 'pnpm', 'bin', 'pnpm.mjs')
   const profileDir = join(where.dataDir, 'profiles', PROFILE)
   mkdirSync(profileDir, { recursive: true })
-  // The window's Host is Moon Bot's own service: same ready/fatal/shutdown protocol,
-  // no DSH profile. The team data dir is its home; the workspace rides along as before.
-  const newHost = (): HostProcess => new HostProcess({
+  // The Host is Moon Bot's own service: the team data dir is its home, and the workspace
+  // rides along as before.
+  host = new HostProcess({
     entry: join(srcDir, 'service-host.ts'),
     cwd: profileDir,
-    env: { ...process.env, ...engineEnv(), MOON_BOT_DATA: where.dataDir, MOON_BOT_WEB_PORT: String(port), ...(where.workspace !== undefined ? { MOON_BOT_WORKSPACE: where.workspace } : {}) },
+    env: { ...process.env, MOON_BOT_DATA: where.dataDir, MOON_BOT_WEB_PORT: String(port), ...(where.workspace !== undefined ? { MOON_BOT_WORKSPACE: where.workspace } : {}) },
     pnpm,
     onFailure: fail,
   })
-  // A failed check is not a failed start: start() rejects, and the copy goes on unchecked.
-  const newCheck = (home: string, list: string): HostProcess => {
-    const cwd = join(home, 'profiles', CHECK_PROFILE)
-    mkdirSync(cwd, { recursive: true })
-    return new HostProcess({ entry: join(srcDir, 'host.ts'), cwd, env: { ...process.env, DSH_HOME: home, DS_BOT_CHECK: list }, pnpm, onFailure: () => {} })
-  }
-  const ready = (async (): Promise<unknown> => {
-    let copied: unknown
-    if (where.import !== undefined) {
-      copying = copyTeam(where, where.import, newHost, newCheck, copyAbort.signal)
-      copied = await copying
-      copying = undefined
-    }
-    if (copied === 'quit') app.exit(0)
-    // The window may be waiting for the Host; it goes away with the app.
-    if (copied !== undefined) return new Promise(() => {})
-    // Not during the import, which a restart would cut short; before the Host, so that an
-    // update can still come when this version's Host does not start.
-    updates = startUpdates()
-    host = newHost()
-    // Moon Bot patch: fetch the Office engine once the app is up.
-    setTimeout(() => { void downloadEngine() }, 20_000).unref?.()
-    return host.start()
-  })()
+  // Before the Host, so that an update can still come when this version's Host does not start.
+  updates = startUpdates()
+  const ready = host.start()
   void ready.catch(fail)
   // A throwaway run (DS_BOT_HOME) keeps its folders where it was told.
   const fixed = Boolean(process.env.DS_BOT_HOME)
-  ipcMain.handle(IPC.engineState, (event) => { assertWindow(event); return engineState })
-  ipcMain.handle(IPC.engineDownload, async (event) => { assertWindow(event); await downloadEngine(); return engineState })
   // Moon Bot patch: Settings > About drives the app's own updater.
   ipcMain.handle(IPC.updateState, (event) => { assertWindow(event); return updates?.state?.() ?? { phase: 'unsupported', current: app.getVersion(), reason: updateUnsupported() } })
   ipcMain.handle(IPC.updateCheck, async (event) => { assertWindow(event); if (updates?.check === undefined) return { phase: 'unsupported', current: app.getVersion(), reason: updateUnsupported() }; await updates.check(); return updates.state?.() })
@@ -176,89 +149,8 @@ async function start(): Promise<void> {
   // A packaged app has the icon in its bundle; Electron's own run shows Electron's.
   if (process.platform === 'darwin' && !app.isPackaged) app.dock?.setIcon(iconFile)
   createWindow()
-  // The launch URL trades its token for the Host's cookie and goes on to the page.
-  void ready.then((started) => {
-    if (typeof started === 'object' && started !== null && 'url' in started) mainWindow?.loadURL((started as { url: string }).url)
-  }).catch(() => {})
-}
-
-// The Host starts once on the new data location first: DSH then sets up its project list
-// without the copied Sessions' folders, so the old team's folders are not offered as projects.
-// Before that, the app's own DSH reads every chat of the team once: a newer DSH can write
-// records that this one refuses while the log format stays the same. Such a chat stops the
-// copy, as a newer log format does; 'quit' means the user updates Moon Bot first, and
-// 'stopped' that the app quit during the copy.
-async function copyTeam(where: SavedPlaces, importing: ImportChoice, newHost: () => HostProcess, newCheck: (home: string, list: string) => HostProcess, signal: AbortSignal): Promise<'quit' | 'stopped' | undefined> {
-  const unreadable = await checkTeam(importing, newCheck, signal)
-  if (signal.aborted) return 'stopped'
-  if (unreadable > 0) {
-    const t = text()
-    const { response } = await dialog.showMessageBox({ type: 'warning', title: 'Moon Bot', noLink: true, message: t.newer(unreadable), buttons: [t.quit, t.startEmpty], defaultId: 0, cancelId: 0, signal })
-    if (signal.aborted) return 'stopped'
-    if (response === 0) return 'quit'
-    saveLocations(where)
-    return undefined
-  }
-  const warm = newHost()
-  host = warm
-  const stopWarm = () => { void warm.stop() }
-  signal.addEventListener('abort', stopWarm, { once: true })
-  try {
-    await warm.start()
-    if (signal.aborted) return 'stopped'
-    mainWindow?.setProgressBar(2)
-    await warm.stop()
-    host = undefined
-    const summary = await importTeam({ ...importing, to: where.dataDir, workspace: where.workspace, dsh: getDshRuntimeVersion(), signal })
-    console.log(`Moon Bot: copied ${String(summary.bots)} Bots and ${String(summary.sessions)} Sessions from ${summary.from}`)
-  } catch (error) {
-    if (signal.aborted) return 'stopped'
-    console.error(error)
-    await dialog.showMessageBox({ type: 'warning', title: 'Moon Bot', message: text().failed(error instanceof Error ? error.message : String(error)), signal })
-    if (signal.aborted) return 'stopped'
-  } finally {
-    signal.removeEventListener('abort', stopWarm)
-    mainWindow?.setProgressBar(-1)
-  }
-  saveLocations(where)
-  return undefined
-}
-
-// A copy of the chats in a DSH home of its own, so that nothing of the check stays in the data.
-async function checkTeam(importing: ImportChoice, newCheck: (home: string, list: string) => HostProcess, signal: AbortSignal): Promise<number> {
-  // A run that was killed can leave its temporary check home behind.
-  for (const name of readdirSync(places.dataDir).filter(entry => /^\.import-check-\d+$/u.test(entry))) {
-    await rm(join(places.dataDir, name), { recursive: true, force: true }).catch((error: unknown) => { console.error(error) })
-  }
-  const home = join(places.dataDir, `.import-check-${String(Date.now())}`)
-  try {
-    const found = findTeam(importing.from)
-    const ids = found === undefined ? [] : await copySessions(importing.from, found.team, home, signal)
-    if (ids.length === 0) return 0
-    mainWindow?.setProgressBar(2)
-    const list = join(home, 'check.json')
-    writeFileSync(list, JSON.stringify(ids))
-    const check = newCheck(home, list)
-    const stop = () => { void check.stop() }
-    signal.addEventListener('abort', stop, { once: true })
-    try {
-      signal.throwIfAborted()
-      const started = await check.start()
-      if (!('unreadable' in started)) return 0
-      const unreadable = started.unreadable
-      if (unreadable.length > 0) console.warn(`Moon Bot: this DSH cannot read ${unreadable.join(', ')}`)
-      return unreadable.length
-    } finally {
-      signal.removeEventListener('abort', stop)
-      await check.stop()
-    }
-  } catch (error) {
-    if (!signal.aborted) console.error('Moon Bot: the chats were not checked before the copy:', error)
-    return 0
-  } finally {
-    mainWindow?.setProgressBar(-1)
-    await rm(home, { recursive: true, force: true, maxRetries: 5 }).catch((error: unknown) => { console.error(error) })
-  }
+  // The service reports its URL once it listens; the window loads it.
+  void ready.then((started) => { mainWindow?.loadURL(started.url) }).catch(() => {})
 }
 
 // The data moves as a copy while the Host is stopped, and the app starts again on the new
@@ -294,7 +186,7 @@ async function moveData(workspace: string | undefined): Promise<boolean> {
       app.relaunch()
       return
     }
-    // Another DSH on the same data would go on writing while the copy is made.
+    // Another Moon Bot on the same data would go on writing while the copy is made.
     if (teamInUse(places.dataDir)) {
       await dialog.showMessageBox({ type: 'warning', title: 'Moon Bot', message: t.moveInUse })
       app.relaunch()
@@ -349,32 +241,6 @@ function startUpdates(): UpdateWatch | undefined {
     })
   }
   return undefined
-}
-
-// Moon Bot patch: the Office-to-PDF engine is downloaded, not installed (engines.ts).
-const enginesRoot = (): string => join(app.getPath('userData'), 'engines')
-const engine = engineFor()
-// In development, and in a build that still carries it, the engine is already there.
-const engineBundled = (): boolean => engine !== undefined && existsSync(join(app.getAppPath(), 'node_modules', engine.name, 'package.json'))
-const engineEnv = (): Record<string, string | undefined> => (engine === undefined || engineBundled() ? {} : { NODE_PATH: [enginesModules(enginesRoot()), process.env.NODE_PATH].filter(Boolean).join(process.platform === 'win32' ? ';' : ':') })
-type EngineState = Partial<Omit<EngineProgress, 'phase'>> & {
-  phase: EngineProgress['phase'] | 'unsupported' | 'idle' | 'error'
-  error?: string | undefined
-}
-let engineState: EngineState = { phase: engine === undefined ? 'unsupported' : 'idle' }
-let engineRun: Promise<void> | undefined
-function setEngineState(patch: Partial<EngineState>): void {
-  engineState = { ...engineState, ...patch }
-  if (mainWindow !== undefined && !mainWindow.isDestroyed()) mainWindow.webContents.send(IPC.engineChanged, engineState)
-}
-function downloadEngine(): Promise<void> {
-  if (engine === undefined) return Promise.resolve()
-  if (engineBundled() || engineReady(enginesRoot(), engine)) { setEngineState({ phase: 'ready', error: undefined }); return Promise.resolve() }
-  engineRun ??= ensureEngine({ root: enginesRoot(), engine, onProgress: setEngineState })
-    .then(() => setEngineState({ phase: 'ready', error: undefined }))
-    .catch((error: unknown) => { console.error(`Moon Bot: ${error instanceof Error ? error.message : String(error)}`); setEngineState({ phase: 'error', error: error instanceof Error ? error.message.slice(0, 200) : String(error) }) })
-    .finally(() => { engineRun = undefined })
-  return engineRun
 }
 
 function updateUnsupported(): string {

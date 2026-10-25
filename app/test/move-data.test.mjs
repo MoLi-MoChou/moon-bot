@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict'
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, readlinkSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { spawnSync } from 'node:child_process'
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, readlinkSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs'
+import { homedir, tmpdir } from 'node:os'
 import { dirname, join, parse } from 'node:path'
 import { test } from 'node:test'
 import { copyTree } from '../src/copy-tree.ts'
-import { copyData, installFolder, moveProblem } from '../src/move-data.ts'
+import { copyData, installFolder, moveProblem, teamInUse, userDshHome } from '../src/move-data.ts'
 
 const write = (path, text) => {
   mkdirSync(dirname(path), { recursive: true })
@@ -152,7 +153,7 @@ test('links in the data lead inside the copy, not back into the old folder', asy
 
 // Windows makes a link to nothing that is not a folder only with special rights, which the
 // tests do not have, so there it is a link the copy cannot make again.
-test('a link the move cannot make again stops the move; the import skips it', { skip: process.platform !== 'win32' }, async (t) => {
+test('a link the move cannot make again stops the move; a copy that skips it goes on', { skip: process.platform !== 'win32' }, async (t) => {
   const { root, from } = setup(t)
   symlinkSync(join(root, 'gone'), join(from, 'lost'), 'junction')
   const to = join(root, 'new')
@@ -161,4 +162,33 @@ test('a link the move cannot make again stops the move; the import skips it', { 
   assert.deepEqual(readdirSync(root).filter(name => name.includes('.moving-')), [])
   assert.deepEqual(await copyTree(from, join(root, 'files'), { skip: true }), ['lost'])
   assert.equal(readFileSync(join(root, 'files', 'sessions', 'g', 's1', 'log.jsonl'), 'utf8'), 'chat')
+})
+
+test('the team counts as in use while a live process here or a fresh lock elsewhere holds it', (t) => {
+  const { from } = setup(t)
+  const botLock = join(from, 'bot', 'state.lock')
+  rmSync(botLock)
+  assert.equal(teamInUse(from, { host: 'here' }), false)
+  // The standalone runtime locks the data folder itself.
+  const lock = join(from, 'state.lock')
+  write(lock, JSON.stringify({ pid: process.pid, host: 'here' }))
+  assert.equal(teamInUse(from, { host: 'here' }), true)
+  const ended = spawnSync(process.execPath, ['-e', '']).pid
+  write(lock, JSON.stringify({ pid: ended, host: 'here' }))
+  assert.equal(teamInUse(from, { host: 'here' }), false)
+  write(lock, JSON.stringify({ pid: 1, host: 'elsewhere' }))
+  assert.equal(teamInUse(from, { host: 'here' }), true)
+  const old = new Date(Date.now() - 120_000)
+  utimesSync(lock, old, old)
+  assert.equal(teamInUse(from, { host: 'here' }), false)
+  rmSync(lock)
+  // Data of the app's earlier layout kept its team under bot/.
+  write(botLock, JSON.stringify({ pid: process.pid, host: 'here' }))
+  assert.equal(teamInUse(from, { host: 'here' }), true)
+})
+
+test('the other app home comes from the environment, as that app reads it', () => {
+  assert.equal(userDshHome({}), join(homedir(), '.dsh'))
+  assert.equal(userDshHome({ DSH_HOME: ' ' }), join(homedir(), '.dsh'))
+  assert.equal(userDshHome({ DSH_HOME: '~/dsh-x' }), join(homedir(), 'dsh-x'))
 })

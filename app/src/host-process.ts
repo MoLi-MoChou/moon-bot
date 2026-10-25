@@ -24,9 +24,8 @@ export interface HostProcessOptions {
   readonly onFailure: (error: Error) => void
 }
 
-/** What the Host's `start` resolves to: its launch URL and index injections; for the first-run
- *  check, the Sessions it cannot read. */
-export type HostReady = { readonly url: string; readonly injections: readonly unknown[] } | { readonly unreadable: readonly string[] }
+/** What the Host's `start` resolves to: the URL the window loads. */
+export type HostReady = { readonly url: string; readonly injections: readonly unknown[] }
 
 export class HostProcess {
   readonly #options: HostProcessOptions
@@ -59,16 +58,14 @@ export class HostProcess {
       child.on('message', (raw: unknown) => {
         const message = record(raw)
         if (message === undefined) return
-        const strings = (value: unknown): readonly string[] => (Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [])
         if (message.type === 'ready') resolve({ url: String(message.url), injections: Array.isArray(message.injections) ? message.injections : [] })
-        else if (message.type === 'checked') resolve({ unreadable: strings(message.unreadable) })
         else if (message.type === 'fatal') this.#fail(new Error(String(message.message)), reject)
       })
       child.once('error', (error: Error) => { this.#fail(error, reject) })
       this.#exit = new Promise((done) => {
         child.once('close', (code: number | null) => {
           const tail = redact(this.#stderr.trim())
-          this.#fail(new Error(`The DSH Host stopped (exit ${String(code)})${tail === '' ? '' : `:\n${tail}`}`), reject)
+          this.#fail(new Error(`The Moon Bot service stopped (exit ${String(code)})${tail === '' ? '' : `:\n${tail}`}`), reject)
           done()
         })
       })

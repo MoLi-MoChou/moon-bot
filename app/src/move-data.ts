@@ -1,16 +1,18 @@
 // Moving the app's data to another folder. The copy is put together in a folder beside the new
 // one and takes its name only once it is whole, so a copy that stopped or failed leaves nothing
 // that looks like data. The old folder stays as it was.
-import { existsSync, readdirSync, statSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { mkdir, rename, rm, rmdir, writeFile } from 'node:fs/promises'
+import { homedir, hostname } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { copyTree, real, within } from './copy-tree.ts'
 
-// The engine's lock on the team belongs to the old folder; the first-run copy and its check
-// leave their temporary folders only when they were cut short.
+// The Host's lock on the team belongs to the old folder; the temporary folders that an
+// earlier build's first run left behind are not part of the data either.
 const LEFT_BEHIND = [/^bot[\\/]state\.lock$/u, /^\.import(-check)?-\d+$/u]
 // Marks a staging folder as this app's, so that only those are removed.
 const MARK = '.ds-bot-moving'
+const LOCK_STALE_MS = 60_000
 
 /** The folder that an update or uninstall replaces: on macOS the whole .app bundle. */
 export function installFolder(exe: string, platform: string = process.platform): string {
@@ -18,6 +20,46 @@ export function installFolder(exe: string, platform: string = process.platform):
     for (let at = dirname(exe); dirname(at) !== at; at = dirname(at)) if (at.endsWith('.app')) return at
   }
   return dirname(exe)
+}
+
+/** The data folder of the other app that Moon Bot keeps its own data apart from (DSH_HOME, else ~/.dsh). */
+export function userDshHome(env: NodeJS.ProcessEnv = process.env): string {
+  const value = env.DSH_HOME?.trim()
+  if (!value) return join(homedir(), '.dsh')
+  return resolve(value === '~' ? homedir() : /^~[\\/]/u.test(value) ? join(homedir(), value.slice(2)) : value)
+}
+
+export interface TeamInUseCheck {
+  readonly host?: string | undefined
+  readonly now?: number | undefined
+}
+
+/** Whether a running Host holds the team's lock, as the core's home-lock writes it. */
+export function teamInUse(from: string, { host = hostname(), now = Date.now() }: TeamInUseCheck = {}): boolean {
+  // The standalone runtime locks the data folder itself; the app's earlier layout kept the
+  // team under bot/, so a lock there still counts while such data is moved.
+  return lockHeld(join(from, 'state.lock'), host, now) || lockHeld(join(from, 'bot', 'state.lock'), host, now)
+}
+
+function lockHeld(path: string, host: string, now: number): boolean {
+  if (!existsSync(path)) return false
+  const fresh = now - statSync(path).mtimeMs < LOCK_STALE_MS
+  let holder: Record<string, unknown> | undefined
+  try {
+    const value: unknown = JSON.parse(readFileSync(path, 'utf8'))
+    holder = typeof value === 'object' && value !== null ? value as Record<string, unknown> : undefined
+  } catch {
+    return fresh
+  }
+  if (holder?.host !== host) return fresh
+  try {
+    const pid = holder.pid
+    if (typeof pid !== 'number') throw new TypeError('no pid in the lock')
+    process.kill(pid, 0)
+    return true
+  } catch (error) {
+    return typeof error === 'object' && error !== null ? (error as { readonly code?: string }).code === 'EPERM' : false
+  }
 }
 
 export type MoveProblem = 'drive' | 'nested' | 'workspace' | 'dsh' | 'program' | 'notEmpty'

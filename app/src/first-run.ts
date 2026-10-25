@@ -1,12 +1,12 @@
-// The first start: where the app keeps its data and the Bots' files, and whether it copies the
-// Bot team of the user's own DSH. The answers are kept in the app's own data.
+// The first start: where Moon Bot keeps its data and the Bots' files. The answers are kept in
+// the app's own data.
 import { app, dialog } from 'electron'
 import type { MessageBoxOptions } from 'electron'
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { type ImportChoice, findTeam, newerSessions, teamInUse, userDshHome, within } from './import.ts'
-import { installFolder } from './move-data.ts'
+import { within } from './copy-tree.ts'
+import { installFolder, userDshHome } from './move-data.ts'
 
 export interface FirstRunText {
   readonly welcome: string
@@ -32,17 +32,7 @@ export interface FirstRunText {
   readonly starting: string
   readonly moveInUse: string
   readonly moveFailed: (message: string) => string
-  readonly found: (bots: number, rooms: number) => string
-  readonly foundDetail: (home: string) => string
-  readonly copy: string
-  readonly skip: string
-  readonly inUse: string
-  readonly retry: string
-  readonly newer: (count: number) => string
   readonly quit: string
-  readonly startEmpty: string
-  readonly whichModels: string
-  readonly failed: (message: string) => string
   readonly notStarted: string
 }
 
@@ -54,7 +44,7 @@ const TEXT: Readonly<Record<'en' | 'zh', FirstRunText>> = {
     pickData: 'Folder for Moon Bot data', pickWorkspace: 'Folder for the team workspace',
     dataInWorkspace: 'The data folder cannot be inside the team workspace.',
     workspaceInData: 'The team workspace cannot be inside the data folder.',
-    inDsh: home => `Choose a folder outside the DeepSeek Harness data (${home}).`,
+    inDsh: home => `Choose a folder outside another app's data (${home}).`,
     inProgram: 'Choose a folder outside the program folder: uninstalling removes it.',
     pickMove: 'New folder for Moon Bot data',
     moveDrive: 'Choose a folder, not a whole drive.',
@@ -66,16 +56,9 @@ const TEXT: Readonly<Record<'en' | 'zh', FirstRunText>> = {
     move: 'Move and restart', cancel: 'Cancel',
     moving: 'Copying Moon Bot\'s data…',
     starting: 'Starting Moon Bot…',
-    moveInUse: 'Another DeepSeek Harness is using this data, so it was not moved. Close it, then try again.',
+    moveInUse: 'Moon Bot is using this data, so it was not moved. Close it, then try again.',
     moveFailed: message => `The data could not be copied: ${message}\n\nMoon Bot goes on with its data where it was.`,
-    found: (bots, rooms) => `DeepSeek Harness has a Bot team: ${bots} Bot${bots === 1 ? '' : 's'}${rooms > 0 ? `, ${rooms} group${rooms === 1 ? '' : 's'}` : ''}. Copy it into Moon Bot?`,
-    foundDetail: home => `The copy takes the Bots, groups, memories, chats, files, keys and model settings. Nothing in ${home} changes, and the two teams do not stay in step.`,
-    copy: 'Copy', skip: 'Do not copy',
-    inUse: 'DeepSeek Harness is using this team. Close it, then try again.', retry: 'Try again',
-    newer: count => `${count} chat${count === 1 ? ' was' : 's were'} written by a newer DeepSeek Harness than this Moon Bot can read. Update Moon Bot, then start it again to copy the team.`,
-    quit: 'Quit', startEmpty: 'Start without the team',
-    whichModels: 'Which model settings should Moon Bot use?',
-    failed: message => `The team could not be copied: ${message}\n\nMoon Bot starts with a new team. The team in DeepSeek Harness is unchanged.`,
+    quit: 'Quit',
     notStarted: 'Moon Bot could not start.',
   },
   zh: {
@@ -85,7 +68,7 @@ const TEXT: Readonly<Record<'en' | 'zh', FirstRunText>> = {
     pickData: '选择 Moon Bot 的数据文件夹', pickWorkspace: '选择总工作区的文件夹',
     dataInWorkspace: '数据文件夹不能放在总工作区里面。',
     workspaceInData: '总工作区不能放在数据文件夹里面。',
-    inDsh: home => `请选择 DeepSeek Harness 数据（${home}）以外的文件夹。`,
+    inDsh: home => `请选择其他应用的数据（${home}）以外的文件夹。`,
     inProgram: '请选择程序文件夹以外的位置：卸载时会删掉程序文件夹。',
     pickMove: '选择 Moon Bot 数据的新文件夹',
     moveDrive: '请选择一个文件夹，不要选整个磁盘。',
@@ -97,23 +80,15 @@ const TEXT: Readonly<Record<'en' | 'zh', FirstRunText>> = {
     move: '移动并重启', cancel: '取消',
     moving: '正在复制 Moon Bot 的数据…',
     starting: '正在启动 Moon Bot…',
-    moveInUse: '另一个 DeepSeek Harness 正在使用这份数据，所以没有移动。请先关掉它，再重试。',
+    moveInUse: 'Moon Bot 正在使用这份数据，所以没有移动。请先关掉它，再重试。',
     moveFailed: message => `数据没有复制成功：${message}\n\nMoon Bot 会继续使用原来位置的数据。`,
-    found: (bots, rooms) => `DeepSeek Harness 里有一个 Bot 团队：${bots} 个 Bot${rooms > 0 ? `、${rooms} 个群` : ''}。要复制到 Moon Bot 吗？`,
-    foundDetail: home => `会复制 Bot、群、记忆、对话、文件、密钥和模型设置。${home} 里的内容不会改变；复制以后两个团队各自独立。`,
-    copy: '复制', skip: '不复制',
-    inUse: 'DeepSeek Harness 正在使用这个团队。请先关掉它，再重试。', retry: '重试',
-    newer: count => `有 ${count} 段对话是更新版本的 DeepSeek Harness 写的，这个版本的 Moon Bot 读不了。请先更新 Moon Bot，再打开它来复制团队。`,
-    quit: '退出', startEmpty: '不带团队开始',
-    whichModels: 'Moon Bot 用哪一份模型设置？',
-    failed: message => `团队没有复制成功：${message}\n\nMoon Bot 会用一个新团队开始。DeepSeek Harness 里的团队没有变化。`,
+    quit: '退出',
     notStarted: 'Moon Bot 没能启动。',
   },
 }
 export const localeText = <T>(table: Readonly<Record<'zh' | 'en', T>>): T => (app.getLocale().toLowerCase().startsWith('zh') ? table.zh : table.en)
 export const text = (): FirstRunText => localeText(TEXT)
 
-const PROFILE_NAMES: Record<string, string> = { desktop: 'DSH Desktop', web: 'DSH Web' }
 const locationsFile = (): string => join(app.getPath('userData'), 'locations.json')
 
 // A quit request while a first-run dialog is open stops the first run right after that dialog.
@@ -137,49 +112,15 @@ async function pick(title: string, current: string, signal: AbortSignal): Promis
 export const programFolder = (): string => installFolder(app.getPath('exe'))
 
 function placeProblem(t: FirstRunText, dataDir: string, workspace: string): string | undefined {
-  const dsh = userDshHome()
+  const other = userDshHome()
   const program = programFolder()
   if (within(dataDir, workspace)) return t.dataInWorkspace
   if (within(workspace, dataDir)) return t.workspaceInData
   for (const path of [dataDir, workspace]) {
-    if (within(path, dsh) || within(dsh, path)) return t.inDsh(dsh)
+    if (within(path, other) || within(other, path)) return t.inDsh(other)
     if (app.isPackaged && within(path, program)) return t.inProgram
   }
   return undefined
-}
-
-function hasTeam(dataDir: string): boolean {
-  try {
-    const state: unknown = JSON.parse(readFileSync(join(dataDir, 'bot', 'state.json'), 'utf8'))
-    const bots = typeof state === 'object' && state !== null ? (state as { readonly bots?: unknown }).bots : undefined
-    const roster = typeof bots === 'object' && bots !== null ? bots : {}
-    return Object.keys(roster).length > 0
-  } catch {
-    return false
-  }
-}
-
-async function offerImport(t: FirstRunText, dataDir: string, signal: AbortSignal): Promise<ImportChoice | { readonly quit: true } | undefined> {
-  const from = userDshHome()
-  let found
-  try {
-    found = hasTeam(dataDir) ? undefined : findTeam(from)
-  } catch (error) {
-    console.error(error)
-  }
-  if (found === undefined) return undefined
-  if (await ask({ type: 'question', message: t.found(found.bots, found.rooms), detail: t.foundDetail(from), buttons: [t.copy, t.skip], defaultId: 0, cancelId: 1 }, signal) === 1) return undefined
-  while (teamInUse(from)) {
-    if (await ask({ type: 'warning', message: t.inUse, buttons: [t.retry, t.skip], defaultId: 0, cancelId: 1 }, signal) === 1) return undefined
-  }
-  const newer = newerSessions(from, found.team)
-  if (newer.length > 0) {
-    if (await ask({ type: 'warning', message: t.newer(newer.length), buttons: [t.quit, t.startEmpty], defaultId: 0, cancelId: 0 }, signal) === 0) return { quit: true }
-    return undefined
-  }
-  const { profiles } = found
-  const chosen = profiles.length < 2 ? profiles[0] : profiles[await ask({ type: 'question', message: t.whichModels, buttons: profiles.map(entry => PROFILE_NAMES[entry.name] ?? entry.name), defaultId: 0, cancelId: 0 }, signal)]
-  return { from, profile: chosen?.name }
 }
 
 /** The places the app keeps its data, as written by the first run. */
@@ -197,12 +138,12 @@ export function saveLocations({ dataDir, workspace }: SavedPlaces): void {
   renameSync(`${file}.tmp`, file)
 }
 
-/** What the first run chose: the places, and the team to import; `quit` when the user left. */
-export type FirstRunResult = (SavedPlaces & { readonly import?: ImportChoice | undefined }) | { readonly quit: true }
+/** What the first run chose: the places, or `quit` when the user left. */
+export type FirstRunResult = SavedPlaces | { readonly quit: true }
 
 /**
  * Where the app keeps its data and the Bots' files, asked at the first start.
- * A run on throwaway folders (DS_BOT_HOME, for development and tests) asks nothing and copies nothing.
+ * A run on throwaway folders (DS_BOT_HOME, for development and tests) asks nothing.
  */
 export async function chooseLocations(signal: AbortSignal): Promise<FirstRunResult> {
   const throwaway = process.env.DS_BOT_HOME
@@ -233,14 +174,10 @@ export async function chooseLocations(signal: AbortSignal): Promise<FirstRunResu
       if (problem === undefined) break
       await ask({ type: 'warning', message: problem, buttons: ['OK'] }, signal)
     }
-    const imported = await offerImport(t, dataDir, signal)
-    if (imported !== undefined && 'quit' in imported) return { quit: true }
-    if (imported !== undefined && !('quit' in imported)) return { dataDir, workspace, import: imported }
   } catch (error) {
     if (error instanceof Quit) return { quit: true }
     throw error
   }
-  // There is nothing to copy, so the first run ends with the chosen places.
   saveLocations({ dataDir, workspace })
   return { dataDir, workspace }
 }

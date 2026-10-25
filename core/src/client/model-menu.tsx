@@ -235,10 +235,10 @@ export interface ModelMenuOptionalActions {
     efforts?: ((ref: string) => Promise<ModelReasoning | null | undefined>) | undefined;
     runStats?: ((botId: string) => Promise<ContextValues | undefined>) | undefined;
     openModels?: (() => void) | undefined;
-    openHarnessSettings?: ((page?: string) => void) | undefined;
+    openShellSettingsPanel?: ((page?: string) => void) | undefined;
     canSignIn?: (() => boolean) | undefined;
     signIn?: (() => void) | undefined;
-    openHarnessOnboarding?: ((provider?: string) => void) | undefined;
+    openShellOnboardingPanel?: ((provider?: string) => void) | undefined;
     setProviderKey?: ((provider: string | undefined, value: string | null) => Promise<unknown>) | undefined;
     signInEntry?: (() => SignInEntry | null) | undefined;
     closeSignIn?: (() => void) | undefined;

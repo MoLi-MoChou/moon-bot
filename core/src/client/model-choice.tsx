@@ -109,8 +109,8 @@ export function setupChoices(actions: ModelMenuOptionalActions): [
         () => unknown
     ] | null)[] = [
         actions.canSignIn?.() ? [t('Sign in to DeepSeek'), () => actions.signIn?.()] : null,
-        actions.openHarnessOnboarding ? [t('Enter a DeepSeek API key'), () => actions.openHarnessOnboarding?.('deepseek-official')] : null,
-        actions.openHarnessSettings ? [t('Open settings to set up a custom model'), () => actions.openHarnessSettings?.('models')] : null,
+        actions.openShellOnboardingPanel ? [t('Enter a DeepSeek API key'), () => actions.openShellOnboardingPanel?.('deepseek-official')] : null,
+        actions.openShellSettingsPanel ? [t('Open settings to set up a custom model'), () => actions.openShellSettingsPanel?.('models')] : null,
     ];
     return choices.filter((choice): choice is [
         string,
@@ -145,7 +145,7 @@ export function SignInHost({ entry, actions }: {
         ...hooks,
         t: actions.accountT?.(),
         complete: close,
-        useApiKey: () => { close(); actions.openHarnessOnboarding?.('deepseek-official'); },
+        useApiKey: () => { close(); actions.openShellOnboardingPanel?.('deepseek-official'); },
     });
 }
 const failureMessage = (failure: unknown): string => (failure as {

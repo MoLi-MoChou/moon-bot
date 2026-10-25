@@ -9,7 +9,7 @@ const toolWrapper = () => ((definition) => ({
   }
 }));
 const asText = (outcome) => outcome.content.flatMap((block) => block.type === "text" ? [block.text] : []).join("\n");
-function registerDshTool(ctx, entry, rt, toolOutput = output) {
+function registerCollectedTool(ctx, entry, rt, toolOutput = output) {
   {
     const defineTool = toolWrapper();
     ctx.tools.register(defineTool({
@@ -39,5 +39,5 @@ function registerDshTool(ctx, entry, rt, toolOutput = output) {
   }
 }
 export {
-  registerDshTool
+  registerCollectedTool
 };

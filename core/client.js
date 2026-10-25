@@ -3028,121 +3028,6 @@ function atSources({ roster, sessions, launched, iconFor }) {
 var bare = (value) => String(value ?? "").trim().replace(/^v/iu, "").split("+")[0] ?? "";
 var sameVersion = (a, b) => bare(a) !== "" && bare(a) === bare(b);
 
-// src/client/shell-quiet.ts
-var userAsked = false;
-var noteSignInAsked = () => {
-  userAsked = true;
-};
-var isPreviewNotice = (dialog) => {
-  const text = dialog.textContent ?? "";
-  if (!/DeepSeek Harness/.test(text)) return false;
-  return Array.from(dialog.querySelectorAll("button")).some((node) => /^(继续|Continue)$/u.test((node.textContent ?? "").trim()));
-};
-var signInRoot = () => document.querySelector('[class*="_76YFJG_"]');
-function quietShellOnboarding({ windowMs = 2e4 } = {}) {
-  if (typeof MutationObserver === "undefined") return () => {
-  };
-  const started = Date.now();
-  const sweep = () => {
-    for (const dialog of document.querySelectorAll("[role=dialog]")) {
-      if (!isPreviewNotice(dialog)) continue;
-      const button = Array.from(dialog.querySelectorAll("button")).find((node) => /^(继续|Continue)$/u.test((node.textContent ?? "").trim()));
-      button?.click();
-    }
-    const signIn = signInRoot();
-    if (signIn && !userAsked && Date.now() - started < windowMs) {
-      const box = signIn.closest("[role=dialog]") ?? signIn.parentElement;
-      const close = box?.querySelector('button[aria-label="关闭"], button[aria-label="Close"]');
-      if (close) close.click();
-      else document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-    }
-  };
-  const observer = new MutationObserver(sweep);
-  observer.observe(document.body, { childList: true, subtree: true });
-  sweep();
-  const stop = setTimeout(() => observer.disconnect(), windowMs + 4e4);
-  return () => {
-    clearTimeout(stop);
-    observer.disconnect();
-  };
-}
-var VERSION_LINE = /^(当前版本：|Current version: )(\d[\w.-]*)$/u;
-function relabelShellVersion(appVersion) {
-  if (typeof MutationObserver === "undefined" || !appVersion) return () => {
-  };
-  const fix = () => {
-    if (!document.querySelector("[role=dialog]")) return;
-    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-      const match = VERSION_LINE.exec((node.nodeValue ?? "").trim());
-      if (match) node.nodeValue = `${match[1] ?? ""}${productName()} ${appVersion}（DSH ${match[2] ?? ""}）`;
-    }
-  };
-  const observer = new MutationObserver(fix);
-  observer.observe(document.body, { childList: true, subtree: true, characterData: true });
-  return () => observer.disconnect();
-}
-function relabelTitle() {
-  if (typeof MutationObserver === "undefined" || typeof document === "undefined" || !document.head) return () => {
-  };
-  const fix = () => {
-    const icon3 = document.head.querySelector('link[rel~="icon"]');
-    if (icon3?.getAttribute("href") !== FAVICON) {
-      const link = icon3 ?? document.head.appendChild(Object.assign(document.createElement("link"), { rel: "icon" }));
-      link.setAttribute("href", FAVICON);
-      link.setAttribute("type", "image/png");
-    }
-    const name = productName();
-    const next = document.title.includes("DeepSeek Harness") ? document.title.replace("DeepSeek Harness", name) : document.title || name;
-    if (next !== document.title) document.title = next;
-  };
-  fix();
-  const observer = new MutationObserver(fix);
-  observer.observe(document.head, { childList: true, subtree: true, characterData: true });
-  return () => observer.disconnect();
-}
-var DEEPSEEK_CTA = /Session Log|帮助改进\s*DeepSeek|help improve DeepSeek|Improve DeepSeek/i;
-function quietShellDeepSeekCtas() {
-  if (typeof MutationObserver === "undefined") return () => {
-  };
-  const hide = () => {
-    for (const node of document.querySelectorAll("button, a, [role=button]")) {
-      const label = `${node.textContent ?? ""} ${node.getAttribute("aria-label") ?? ""}`;
-      if (!DEEPSEEK_CTA.test(label)) continue;
-      const row = node.closest('[class*="row"], [class*="Row"], li, section, div') ?? node;
-      if (row instanceof HTMLElement) row.style.display = "none";
-    }
-  };
-  const observer = new MutationObserver(hide);
-  observer.observe(document.body, { childList: true, subtree: true });
-  hide();
-  return () => observer.disconnect();
-}
-var REJECT_LINE = /^(?:Error:\s*)?the user rejected escalating this command to ([\w-]+)\.?$/i;
-var REJECT_PLAIN = /^(?:Error:\s*)?the user rejected(?: this (?:command|action|request))?\.?$/i;
-function quietShellRejectionCopy() {
-  if (typeof MutationObserver === "undefined") return () => {
-  };
-  const fix = () => {
-    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-      const raw = (node.nodeValue ?? "").trim();
-      if (!raw || raw.length > 200) continue;
-      let next = null;
-      const m = REJECT_LINE.exec(raw);
-      if (m) {
-        const preset = (m[1] ?? "").toLowerCase();
-        next = preset === "danger-full-access" ? "你拒绝了完全访问权限，命令没有执行" : preset === "workspace-write" ? "你拒绝了工作区写入权限，命令没有执行" : `你拒绝了权限提升（${m[1] ?? ""}），命令没有执行`;
-      } else if (REJECT_PLAIN.test(raw)) next = "你拒绝了这次操作，命令没有执行";
-      if (next && node.nodeValue !== next) node.nodeValue = next;
-    }
-  };
-  const observer = new MutationObserver(fix);
-  observer.observe(document.body, { childList: true, subtree: true, characterData: true });
-  fix();
-  return () => observer.disconnect();
-}
-
 // src/client/vendor/framer-motion.js
 var loaded;
 function framerMotion() {
@@ -9297,7 +9182,7 @@ function holdShellShortcuts(shortcuts) {
       shellShortcuts = null;
   };
 }
-function openHarnessSettings(section) {
+function openShellSettingsPanel(section) {
   requestAnimationFrame(() => {
     if (section)
       showShellSection(section);
@@ -9325,13 +9210,12 @@ function showShellSection(section, tries = 40) {
   if (tries > 0)
     setTimeout(() => showShellSection(section, tries - 1), 50);
 }
-function openHarnessOnboarding(id) {
-  noteSignInAsked();
+function openShellOnboardingPanel(id) {
   requestAnimationFrame(() => {
     if (openShellOnboarding)
       openShellOnboarding(id);
     else
-      openHarnessSettings();
+      openShellSettingsPanel();
   });
 }
 function openThroughMenu(trigger) {
@@ -10317,7 +10201,6 @@ function createActions({ ctx, client, after, partFor, show, atMenu }) {
     signInEntry: () => ctx.slots.entries?.("settings.models.sign-in")?.[0] ?? null,
     canSignIn: () => Boolean(actions.signInEntry()),
     signIn: () => {
-      noteSignInAsked();
       ui2.set((state) => ({ ...state, signIn: (state.signIn ?? 0) + 1 }));
     },
     closeSignIn: () => ui2.set((state) => ({ ...state, signIn: null })),
@@ -10325,8 +10208,8 @@ function createActions({ ctx, client, after, partFor, show, atMenu }) {
     // The Voice Input plugin's speech Remote; absent while that plugin is off.
     speech: () => ctx.get("remote.speech") ?? void 0,
     // DSH's own settings: models, providers, keys and its plugins.
-    openHarnessSettings,
-    openHarnessOnboarding,
+    openShellSettingsPanel,
+    openShellOnboardingPanel,
     voiceSetup: () => {
       const navigation = ctx.get("pluginNavigation");
       return navigation ? () => navigation.openBundle(VOICE_BUNDLE) : null;
@@ -14289,7 +14172,7 @@ body[data-ds-dark-theme] .bt-member-state.bt-mw-ask{color:#f0b84a}
 `;
 
 // src/client/model-menu-manage.ts
-var manageModels = (actions) => actions.openModels ?? actions.openHarnessSettings;
+var manageModels = (actions) => actions.openModels ?? actions.openShellSettingsPanel;
 
 // src/client/model-context.tsx
 var import_react34 = require("react");
@@ -14546,8 +14429,8 @@ function ModelKeyCard({ model, actions }) {
 function setupChoices(actions) {
   const choices = [
     actions.canSignIn?.() ? [t("Sign in to DeepSeek"), () => actions.signIn?.()] : null,
-    actions.openHarnessOnboarding ? [t("Enter a DeepSeek API key"), () => actions.openHarnessOnboarding?.("deepseek-official")] : null,
-    actions.openHarnessSettings ? [t("Open settings to set up a custom model"), () => actions.openHarnessSettings?.("models")] : null
+    actions.openShellOnboardingPanel ? [t("Enter a DeepSeek API key"), () => actions.openShellOnboardingPanel?.("deepseek-official")] : null,
+    actions.openShellSettingsPanel ? [t("Open settings to set up a custom model"), () => actions.openShellSettingsPanel?.("models")] : null
   ];
   return choices.filter((choice) => choice !== null);
 }
@@ -14571,7 +14454,7 @@ function SignInHost({ entry, actions }) {
     complete: close,
     useApiKey: () => {
       close();
-      actions.openHarnessOnboarding?.("deepseek-official");
+      actions.openShellOnboardingPanel?.("deepseek-official");
     }
   });
 }
@@ -15053,7 +14936,7 @@ function AutomationOff({ actions }) {
     icon: (0, import_react39.createElement)(ClockIcon),
     title: t("Turn on scheduled tasks"),
     hint: t("Scheduled tasks are turned off for this Bot."),
-    ...actions.openHarnessSettings ? { action: { label: t("Open settings"), onClick: actions.openHarnessSettings } } : {}
+    ...actions.openShellSettingsPanel ? { action: { label: t("Open settings"), onClick: actions.openShellSettingsPanel } } : {}
   }));
 }
 function SchedulesPage({ roster, actions, start }) {
@@ -15086,7 +14969,7 @@ function BotSchedules({ bot, roster, actions }) {
   if (view === null)
     return null;
   const tasks = view.available ? view.tasks.filter((task) => task.botId === bot.id) : [];
-  return /* @__PURE__ */ (0, import_react39.createElement)("section", { className: "bt-set-section" }, /* @__PURE__ */ (0, import_react39.createElement)("h3", null, t("Scheduled tasks")), /* @__PURE__ */ (0, import_react39.createElement)("div", { className: "bt-set-card" }, !view.available ? /* @__PURE__ */ (0, import_react39.createElement)("div", { className: "bt-set-row bt-bs-row" }, /* @__PURE__ */ (0, import_react39.createElement)("span", { className: "bt-set-copy" }, /* @__PURE__ */ (0, import_react39.createElement)("span", { className: "bt-set-hint" }, t("Scheduled tasks are turned off for this Bot."))), actions.openHarnessSettings ? /* @__PURE__ */ (0, import_react39.createElement)("button", { type: "button", className: "bt-soft bt-soft-sm", onClick: actions.openHarnessSettings }, t("Open settings")) : null) : [
+  return /* @__PURE__ */ (0, import_react39.createElement)("section", { className: "bt-set-section" }, /* @__PURE__ */ (0, import_react39.createElement)("h3", null, t("Scheduled tasks")), /* @__PURE__ */ (0, import_react39.createElement)("div", { className: "bt-set-card" }, !view.available ? /* @__PURE__ */ (0, import_react39.createElement)("div", { className: "bt-set-row bt-bs-row" }, /* @__PURE__ */ (0, import_react39.createElement)("span", { className: "bt-set-copy" }, /* @__PURE__ */ (0, import_react39.createElement)("span", { className: "bt-set-hint" }, t("Scheduled tasks are turned off for this Bot."))), actions.openShellSettingsPanel ? /* @__PURE__ */ (0, import_react39.createElement)("button", { type: "button", className: "bt-soft bt-soft-sm", onClick: actions.openShellSettingsPanel }, t("Open settings")) : null) : [
     ...tasks.map((task) => (0, import_react39.createElement)(TaskRow, { key: task.id, task, actions, roster, onView: publish })),
     /* @__PURE__ */ (0, import_react39.createElement)("button", { key: "new", type: "button", className: "bt-set-row bt-bs-row bt-gs-add", onClick: () => actions.openSettings("schedules", bot.id) }, (0, import_react39.createElement)(PlusIcon), t("New task"))
   ]));
@@ -17517,9 +17400,9 @@ function SettingsDialog({ page, id, roster, actions, useUpdate, leaving = false 
   if (shown === "usage" && !usageOpened)
     setUsageOpened(true);
   const errorLine = error ? /* @__PURE__ */ (0, import_react55.createElement)("div", { className: "bt-error", role: "alert", style: { padding: 0 } }, error) : null;
-  return /* @__PURE__ */ (0, import_react55.createElement)("div", { className: "bt-settings-layer", "data-leaving": leaving || void 0 }, /* @__PURE__ */ (0, import_react55.createElement)("div", { className: "bt-scrim", onMouseDown: close }), /* @__PURE__ */ (0, import_react55.createElement)("div", { className: "bt-settings", role: "dialog", "aria-modal": true, "aria-label": t("Moon Bot settings") }, /* @__PURE__ */ (0, import_react55.createElement)("nav", { ref: nav.box, className: "bt-settings-nav", "aria-label": t("Settings pages") }, /* @__PURE__ */ (0, import_react55.createElement)("span", { ref: nav.thumb, className: "bt-thumb", "aria-hidden": true }), pages.map(([key, text]) => /* @__PURE__ */ (0, import_react55.createElement)("button", { key, type: "button", className: "bt-settings-item", "aria-current": shown === key ? "page" : void 0, onClick: () => actions.openSettings(key) }, (0, import_react55.createElement)(PAGE_ICONS[key] ?? InfoIcon), t(text))), actions.openHarnessSettings ? /* @__PURE__ */ (0, import_react55.createElement)("button", { type: "button", className: "bt-settings-item bt-settings-shell", title: t("Models, providers, and the rest of Moon Bot"), onClick: () => {
+  return /* @__PURE__ */ (0, import_react55.createElement)("div", { className: "bt-settings-layer", "data-leaving": leaving || void 0 }, /* @__PURE__ */ (0, import_react55.createElement)("div", { className: "bt-scrim", onMouseDown: close }), /* @__PURE__ */ (0, import_react55.createElement)("div", { className: "bt-settings", role: "dialog", "aria-modal": true, "aria-label": t("Moon Bot settings") }, /* @__PURE__ */ (0, import_react55.createElement)("nav", { ref: nav.box, className: "bt-settings-nav", "aria-label": t("Settings pages") }, /* @__PURE__ */ (0, import_react55.createElement)("span", { ref: nav.thumb, className: "bt-thumb", "aria-hidden": true }), pages.map(([key, text]) => /* @__PURE__ */ (0, import_react55.createElement)("button", { key, type: "button", className: "bt-settings-item", "aria-current": shown === key ? "page" : void 0, onClick: () => actions.openSettings(key) }, (0, import_react55.createElement)(PAGE_ICONS[key] ?? InfoIcon), t(text))), actions.openShellSettingsPanel ? /* @__PURE__ */ (0, import_react55.createElement)("button", { type: "button", className: "bt-settings-item bt-settings-shell", title: t("Models, providers, and the rest of Moon Bot"), onClick: () => {
     close();
-    actions.openHarnessSettings?.();
+    actions.openShellSettingsPanel?.();
   } }, (0, import_react55.createElement)(SlidersIcon), t("Advanced settings")) : null), /* @__PURE__ */ (0, import_react55.createElement)("div", { className: "bt-settings-main" }, /* @__PURE__ */ (0, import_react55.createElement)("div", { className: "bt-settings-head" }, back ? /* @__PURE__ */ (0, import_react55.createElement)("button", { type: "button", className: "bt-icon-btn", "aria-label": back, title: back, onClick: () => actions.openSettings(shown) }, (0, import_react55.createElement)(ChevronLeftIcon)) : null, /* @__PURE__ */ (0, import_react55.createElement)("h2", { key: bot?.id ?? room2?.id ?? shown }, bot?.name ?? room2?.name ?? label)), shown === "usage" ? null : /* @__PURE__ */ (0, import_react55.createElement)("div", { key: pageKey, className: "bt-settings-scroll bt-settings-page", "data-move": last.current.move }, errorLine, shown === "general" ? (0, import_react55.createElement)(GeneralPage, { roster, actions, run }) : null, shown === "models" ? (0, import_react55.createElement)(ProvidersPage, { actions, run, Section: SetSection }) : null, bot ? /* @__PURE__ */ (0, import_react55.createElement)("div", { className: "bt-settings-form" }, (0, import_react55.createElement)(BotSettingsForm, { key: bot.id, bot, roster, actions, run })) : null, shown === "bots" && !bot ? (0, import_react55.createElement)(BotsPage, { roster, actions, run }) : null, room2 ? /* @__PURE__ */ (0, import_react55.createElement)("div", { className: "bt-settings-form" }, (0, import_react55.createElement)(GroupSettingsForm, { key: room2.id, room: room2, roster, actions, run })) : null, shown === "groups" && !room2 ? (0, import_react55.createElement)(GroupsPage, { roster, actions, run }) : null, shown === "connectors" ? (0, import_react55.createElement)(ConnectorsPage, { roster, actions }) : null, shown === "capabilities" ? (0, import_react55.createElement)(CapabilitiesPage, { roster, actions, run }) : null, shown === "schedules" ? (0, import_react55.createElement)(SchedulesPage, { roster, actions, start: id ?? void 0 }) : null, shown === "secrets" ? (0, import_react55.createElement)(SecretsPage, { roster, actions, run, Section: SetSection }) : null, shown === "feedback" ? (0, import_react55.createElement)(FeedbackPage, { actions, run, Section: SetSection, Row: SetRow }) : null, shown === "about" ? (0, import_react55.createElement)(AboutPage, { useUpdate, actions, run, Section: SetSection, Row: SetRow }) : null), usageOpened ? /* @__PURE__ */ (0, import_react55.createElement)("div", { key: "usage", className: "bt-settings-scroll bt-settings-usage", "data-off": shown === "usage" ? void 0 : "", "aria-hidden": shown === "usage" ? void 0 : true }, shown === "usage" ? errorLine : null, (0, import_react55.createElement)(UsagePage, { roster, actions, focusId: usageFocus })) : null), /* @__PURE__ */ (0, import_react55.createElement)("button", { type: "button", className: "bt-settings-close", "aria-label": t("Close settings"), onClick: close }, (0, import_react55.createElement)(CloseIcon))));
 }
 var failureMessage3 = (failure) => failure?.message ?? String(failure);
@@ -18841,16 +18724,11 @@ var BROWSER_CSS = `
 var inject = ["sessions", "uiWorkspace", "uiConversation", "slots", "theme", "layout"];
 var errorText = (error) => typeof error === "object" && error !== null && "message" in error && typeof error.message === "string" ? error.message : String(error);
 function apply(ctx) {
-  quietShellOnboarding();
   installImeGuard();
-  relabelTitle();
   ctx.effect(() => installFilesPanel({ call, onPickFolder: () => {
     const id = mainView();
     if (id) actions.showDetails(id);
   } }), "moon-bot: workspace file downloads");
-  relabelShellVersion(true ? "0.1.4" : "");
-  quietShellDeepSeekCtas();
-  quietShellRejectionCopy();
   ctx.effect(() => installLocale(ctx.get("locale")), "ds-bot: interface copy");
   const client = createClientState(ctx);
   ctx.effect(() => installRegistry(ctx), "ds-bot: registry");

@@ -81,7 +81,7 @@ export interface SettingsActions extends FolderMenuActions, SecretActions, Conne
   setTeamWorkspace: (path: string) => Promise<{ team: string }>
   refreshModels?: (() => Promise<unknown>) | undefined
   providers?: (() => Promise<unknown>) | undefined
-  openHarnessSettings?: ((page?: string) => void) | undefined
+  openShellSettingsPanel?: ((page?: string) => void) | undefined
   setSurface?: ((mode: string) => void) | undefined
   usage: UsagePageProps['actions']['usage']
   diagnostics: (input: { readonly client: Record<string, string>; readonly clientErrors: unknown }) => Promise<DiagnosticsReport>

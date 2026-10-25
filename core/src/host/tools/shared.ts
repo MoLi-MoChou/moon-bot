@@ -2,7 +2,7 @@
 // the runtime methods the still-JS host modules install, and the small readers the tools
 // use on the team (the caller, the visible groups, hand-off bodies).
 import { ToolRegistry, type ToolContext, type ToolEntry } from '../../engine/registry.ts'
-import { registerDshTool } from './dsh.ts'
+import { registerCollectedTool } from './collector.ts'
 import type { CapabilityStatus } from '../capabilities-mount.ts'
 import type {
   Agent,
@@ -341,7 +341,7 @@ export function createShared(host: HostRuntime, registry: ToolRegistry = new Too
   return {
     rt, state, calledInPosts: new Map<string | undefined, CalledInPosts>(),
     register: (entry: ToolEntry): void => {
-      registry.register(entry); registerDshTool(ctx, entry, rt)
+      registry.register(entry); registerCollectedTool(ctx, entry, rt)
     },
     callerBot, callerRoom, roomOfCaller, roomLine, visibleRooms, activeSessions, whereOf,
     unreadRequest, bodyOf, refuse, worksOf, tooLong, callInGroup, turnOf, hiddenTurn, workFrom, liveEntry,

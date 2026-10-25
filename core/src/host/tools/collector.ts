@@ -1,25 +1,20 @@
-// The DSH derivation of a registry entry (plan §阶段 2, transition): while DSH runs the
-// loop, every registry tool is also registered with DSH — same executor, same parameter
-// map, no schema validation on this path (the executors stay lenient exactly as they
-// are today). When phase 3 retires the DSH loop, this file goes with it.
-//
-// defineTool loads lazily: the standalone service has no DSH install, and there the
-// registration is a plain pass-through anyway (the context's own collector).
+// A registry entry registered a second time with the host context's own tool collector:
+// the same executor, the same parameter map, and no schema validation on this path (the
+// executors read their arguments leniently, as they always have). The collector is what
+// the context exposes — the service keeps it, and tests reach a tool through it.
 import type { ToolContext, ToolEntry, ToolOutcome } from '../../engine/registry.ts'
 import type { HostRuntime } from '../runtime.ts'
 import { output, type ToolOutput } from './shared.ts'
 
-export interface DshToolContext {
+export interface ToolCollectorContext {
   readonly tools: { register(tool: unknown): () => void }
 }
 
 type ToolWrapper = <T extends Record<string, unknown>>(definition: T) => T
 
-// Synchronous on purpose: tools register during install, before any await. With a DSH
-// install its defineTool runs; without one (the standalone service) the definition
-// passes through, which the service's own collector takes as it is.
-// The one wrapper: the definition passes through with the parameter map folded into
-// the schema shape every reader expects (properties + required).
+// Synchronous on purpose: tools register during install, before any await. The definition
+// passes through with the parameter map folded into the schema shape every reader expects
+// (properties + required).
 const toolWrapper = (): ToolWrapper => ((definition: Record<string, unknown>) => ({
   ...definition,
   parameters: {
@@ -35,8 +30,8 @@ const asText = (outcome: ToolOutcome): string => outcome.content
   .flatMap(block => block.type === 'text' ? [block.text] : [])
   .join('\n')
 
-/** Registers one entry with DSH, adapting the ToolContext. */
-export function registerDshTool(ctx: DshToolContext, entry: ToolEntry, rt: HostRuntime, toolOutput: ToolOutput = output): void {
+/** Registers one entry with the context's collector, adapting the ToolContext. */
+export function registerCollectedTool(ctx: ToolCollectorContext, entry: ToolEntry, rt: HostRuntime, toolOutput: ToolOutput = output): void {
   {
     const defineTool = toolWrapper()
     ctx.tools.register(defineTool({

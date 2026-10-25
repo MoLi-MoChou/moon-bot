@@ -8,8 +8,7 @@ import type { ClientState, UpdateState } from './client-types.ts'
 import type { AtMenuSlot, ClientContext, SlotEntry, SpeechRemote } from './client-ctx.js'
 import type { PanelRect } from './bot-browsers.ts'
 import { sameVersion } from './update-state.ts'
-import { noteSignInAsked } from './shell-quiet.ts'
-import { openHarnessOnboarding, openHarnessSettings } from './sidebar.tsx'
+import { openShellOnboardingPanel, openShellSettingsPanel } from './sidebar.tsx'
 import { toggleReaction } from './shared-map.ts'
 import { VOICE_BUNDLE } from './speech.ts'
 import { writeMode } from './surface.ts'
@@ -67,8 +66,8 @@ export interface ClientActionExtras {
   closeSignIn(): void
   accountT(): (key: string, params?: Record<string, unknown>) => string
   speech(): SpeechRemote | undefined
-  openHarnessSettings(section?: string): void
-  openHarnessOnboarding(id?: string): void
+  openShellSettingsPanel(section?: string): void
+  openShellOnboardingPanel(id?: string): void
   voiceSetup(): (() => void) | null
   seatAccount(on: boolean): void
   installUpdate(): Promise<void>
@@ -246,17 +245,14 @@ export function createActions({ ctx, client, after, partFor, show, atMenu }: Cli
     // Whether AccountLauncher holds the shell's settings seat; FooterAccount steps aside if so.
     signInEntry: () => ctx.slots.entries?.('settings.models.sign-in')?.[0] ?? null,
     canSignIn: () => Boolean(actions.signInEntry()),
-    signIn: () => {
-      noteSignInAsked()
-      ui.set(state => ({ ...state, signIn: (state.signIn ?? 0) + 1 }))
-    },
+    signIn: () => { ui.set(state => ({ ...state, signIn: (state.signIn ?? 0) + 1 })) },
     closeSignIn: () => ui.set(state => ({ ...state, signIn: null })),
     accountT: () => ctx.get('locale').bind('settings.account'),
     // The Voice Input plugin's speech Remote; absent while that plugin is off.
     speech: () => ctx.get('remote.speech') ?? undefined,
     // DSH's own settings: models, providers, keys and its plugins.
-    openHarnessSettings,
-    openHarnessOnboarding,
+    openShellSettingsPanel,
+    openShellOnboardingPanel,
     voiceSetup: () => {
       const navigation = ctx.get('pluginNavigation')
       return navigation ? () => navigation.openBundle(VOICE_BUNDLE) : null

@@ -35,7 +35,6 @@ import { RetryCell, RETRY_CSS } from './retry-cell.tsx'
 import { SCHEDULE_CSS } from './schedules.tsx'
 import { SecretDock } from './secret-card.tsx'
 import { SECRET_CSS } from './secret-card-css.ts'
-import { quietShellOnboarding, relabelShellVersion, relabelTitle, quietShellDeepSeekCtas, quietShellRejectionCopy } from './shell-quiet.ts'
 import { TeamSidebar, ConnectPlugins, YouAvatar, AccountLauncher, FooterAccount, BrandMark, BrandName, BotReturn, SIDEBAR_CSS, RETURN_CSS, holdShellShortcuts } from './sidebar.tsx'
 import { StarterChips, STARTERS_CSS } from './starters.tsx'
 import { freePriority, groupsFor, surfaceGroups } from './surface.ts'
@@ -69,13 +68,8 @@ interface ShadowOptions {
 }
 
 export function apply(ctx: ClientContext): void {
-  quietShellOnboarding()
   installImeGuard()
-  relabelTitle()
   ctx.effect(() => installFilesPanel({ call, onPickFolder: () => { const id = mainView(); if (id) actions.showDetails(id) } }), 'moon-bot: workspace file downloads')
-  relabelShellVersion(typeof __MOON_BOT_VERSION__ === 'string' ? __MOON_BOT_VERSION__ : '')
-  quietShellDeepSeekCtas()
-  quietShellRejectionCopy()
   ctx.effect(() => installLocale(ctx.get('locale')), 'ds-bot: interface copy')
 
   const client = createClientState(ctx)

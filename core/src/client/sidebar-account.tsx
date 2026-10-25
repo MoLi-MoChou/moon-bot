@@ -1,5 +1,4 @@
 // Account launcher, shell settings openers, and brand marks.
-import { noteSignInAsked } from './shell-quiet.ts';
 import { Fragment, createElement as h, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { LEAN } from './lean.ts';
 import { createPortal } from 'react-dom';
@@ -21,7 +20,7 @@ export function holdShellShortcuts(shortcuts: TSidebarShellShortcuts | null): ()
 // the Desktop's account menu holds that seat, its first item (Settings) is the way in;
 // the Desktop on Windows and macOS takes shortcuts natively, so a synthetic key press
 // reaches the shell only where the page delivers them (the Web, Linux).
-export function openHarnessSettings(section?: string): void {
+export function openShellSettingsPanel(section?: string): void {
     // A frame first, so a Bot dialog that closes on this click leaves the modal stack.
     requestAnimationFrame(() => {
         if (section)
@@ -53,13 +52,12 @@ export function showShellSection(section: string, tries = 40): void {
         setTimeout(() => showShellSection(section, tries - 1), 50);
 }
 // Opens one of the shell's own onboarding editors, such as the DeepSeek API key form.
-export function openHarnessOnboarding(id?: unknown): void {
-    noteSignInAsked();
+export function openShellOnboardingPanel(id?: unknown): void {
     requestAnimationFrame(() => {
         if (openShellOnboarding)
             openShellOnboarding(id);
         else
-            openHarnessSettings();
+            openShellSettingsPanel();
     });
 }
 export function openThroughMenu(trigger: Element): void {

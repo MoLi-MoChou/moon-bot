@@ -183,5 +183,5 @@ export function ConnectPlugins({ wide, actions }: {
 export function YouAvatar() {
     return <span className='bt-you-wrap'><span className='bt-you' aria-hidden>{h(MoonBotMark, { size: 24 })}</span><span style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>{t('Settings')}</span></span>;
 }
-export { AccountLauncher, FooterAccount, BotReturn, BrandMark, BrandName, holdShellShortcuts, openHarnessSettings, openHarnessOnboarding, } from './sidebar-account.tsx';
+export { AccountLauncher, FooterAccount, BotReturn, BrandMark, BrandName, holdShellShortcuts, openShellSettingsPanel, openShellOnboardingPanel, } from './sidebar-account.tsx';
 export { SIDEBAR_CSS, RETURN_CSS } from './sidebar-css.ts';

@@ -1,10 +1,10 @@
-// The Bot tool surface: the registration order every module's tools go out in, the
-// hidden DSH tools of a Bot Session, and the goal refusal. The tools themselves live
-// in `tools/` by area.
+// The Bot tool surface: the registration order every module's tools go out in, the tools
+// a Bot Session hides from itself, and the goal refusal. The tools themselves live in
+// `tools/` by area.
 import type { Agent, Disposer, ToolExecution } from './dsh-types.js'
 import type { HostRuntime } from './runtime.ts'
 import { ToolRegistry, type ToolEntry } from '../engine/registry.ts'
-import { registerDshTool } from './tools/dsh.ts'
+import { registerCollectedTool } from './tools/collector.ts'
 import { LEAN_HIDDEN_TOOLS } from '../shared/lean.ts'
 import {
   BLOCKING_QUESTION_TOOL, GOAL_REFUSAL, HIDDEN_TOOLS, createShared,
@@ -16,7 +16,7 @@ import { installCapabilityTools } from './tools/capability-tools.ts'
 
 export { GROUP_REF, output } from './tools/shared.ts'
 
-/** The DSH goal service, as far as blocking a goal in a Bot Session needs it. */
+/** The goal service, as far as blocking a goal in a Bot Session needs it. */
 interface Goal {
   readonly id: string
   readonly revision: number
@@ -28,7 +28,7 @@ interface GoalService {
   block(agent: Agent, ref: { readonly id: string; readonly revision: number }, reason: { readonly code: string; readonly message: string }): void
 }
 
-/** A context that carries the goal service: DSH's injected one, or the plugin's own. */
+/** A context that carries the goal service: the host injects it, or the runtime keeps its own. */
 interface GoalHost {
   readonly goals: GoalService
   effect(execute: () => void | Disposer, label?: string): void
@@ -42,16 +42,16 @@ interface GoalEvent {
 
 export function install(rt: HostRuntime): void {
   const { ctx } = rt
-  // The Zod registry: every tool registers here; while DSH runs, its registration is
-  // derived from the same entry (tools/dsh.ts), so both paths run the same code.
+  // The Zod registry: every tool registers here, and the same entry goes to the context's
+  // collector (tools/collector.ts), so both paths run the same code.
   const registry = new ToolRegistry()
   const shared: ToolShared = createShared(rt, registry)
-  // Host modules outside tools/ register the same way: the Zod registry entry and its
-  // DSH derivation from one executor. (tools/ modules use shared.register, which also
+  // Host modules outside tools/ register the same way: the Zod registry entry and the
+  // collector's copy, from one executor. (tools/ modules use shared.register, which also
   // reaches the shared helpers.)
   const registerTool = (entry: ToolEntry): void => {
     registry.register(entry)
-    registerDshTool(ctx, entry, rt)
+    registerCollectedTool(ctx, entry, rt)
   }
   Object.assign(rt, { toolRegistry: registry, registerTool })
 
@@ -106,7 +106,7 @@ export function install(rt: HostRuntime): void {
   })
 
   // The /goal command stays open in every Session, so a goal started in a Bot chat or a
-  // group is blocked at once; DSH's round driver then starts no round for it.
+  // group is blocked at once; the round driver then starts no round for it.
   let goals: GoalService | null = null
   const attachGoals = (sub: GoalHost): void => {
     const own = sub.goals

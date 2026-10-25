@@ -45,7 +45,7 @@ function dock(models, { model, ready = true, harness = true }: { model?: string,
     sessionId: bot.id, useRoster: select => select(roster),
     actions: {
       updateBot: (id, patch) => { picked.push([id, patch.model]); return Promise.resolve() },
-      ...(harness ? { openHarnessSettings: () => {}, openHarnessOnboarding: () => {} } : {}),
+      ...(harness ? { openShellSettingsPanel: () => {}, openShellOnboardingPanel: () => {} } : {}),
     },
   })
   return { tree, picked }

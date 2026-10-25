@@ -54,7 +54,7 @@ interface ScheduleActions {
         prompt: string;
         when: Record<string, unknown>;
     }) => Promise<unknown>;
-    openHarnessSettings?: (() => void) | undefined;
+    openShellSettingsPanel?: (() => void) | undefined;
     openSettings: (page: string, id?: string | null) => void;
 }
 type ScheduleListener = (view: ScheduleView) => void;
@@ -226,7 +226,7 @@ function AutomationOff({ actions }: {
         icon: h(ClockIcon),
         title: t('Turn on scheduled tasks'),
         hint: t('Scheduled tasks are turned off for this Bot.'),
-        ...(actions.openHarnessSettings ? { action: { label: t('Open settings'), onClick: actions.openHarnessSettings } } : {}),
+        ...(actions.openShellSettingsPanel ? { action: { label: t('Open settings'), onClick: actions.openShellSettingsPanel } } : {}),
     })}</div>;
 }
 export function SchedulesPage({ roster, actions, start }: {
@@ -285,7 +285,7 @@ export function BotSchedules({ bot, roster, actions }: {
         return null;
     const tasks = view.available ? view.tasks.filter(task => task.botId === bot.id) : [];
     return <section className='bt-set-section'><h3>{t('Scheduled tasks')}</h3><div className='bt-set-card'>{!view.available
-        ? <div className='bt-set-row bt-bs-row'><span className='bt-set-copy'><span className='bt-set-hint'>{t('Scheduled tasks are turned off for this Bot.')}</span></span>{actions.openHarnessSettings ? <button type='button' className='bt-soft bt-soft-sm' onClick={actions.openHarnessSettings}>{t('Open settings')}</button> : null}</div> : [
+        ? <div className='bt-set-row bt-bs-row'><span className='bt-set-copy'><span className='bt-set-hint'>{t('Scheduled tasks are turned off for this Bot.')}</span></span>{actions.openShellSettingsPanel ? <button type='button' className='bt-soft bt-soft-sm' onClick={actions.openShellSettingsPanel}>{t('Open settings')}</button> : null}</div> : [
         ...tasks.map(task => h(TaskRow, { key: task.id, task, actions, roster, onView: publish })),
         <button key='new' type='button' className='bt-set-row bt-bs-row bt-gs-add' onClick={() => actions.openSettings('schedules', bot.id)}>{h(PlusIcon)}{t('New task')}</button>,
     ]}</div></section>;

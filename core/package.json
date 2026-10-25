@@ -1,15 +1,13 @@
 {
   "name": "moon-bot-core",
   "version": "0.1.4",
-  "description": "Moon Bot: the Bot team inside the Moon Bot app (a slim fork of DS Bot by Fei2411, Apache-2.0)",
+  "description": "Moon Bot: the Bot team, its own runtime (a slim fork of DS Bot by Fei2411, Apache-2.0)",
   "keywords": [
-    "dsh-plugin",
-    "deepseek-harness",
-    "dsh",
-    "deepseek",
     "bot",
     "multi-agent",
-    "agents"
+    "agents",
+    "personal-agent",
+    "sqlite"
   ],
   "homepage": "https://github.com/MoLi-MoChou/moon-bot#readme",
   "bugs": {
@@ -38,7 +36,6 @@
     "dist/",
     "client.js",
     "web-search.js",
-    "cordis.patch.yml",
     "README.md",
     "LICENSE"
   ],
@@ -51,14 +48,6 @@
     "test:gate": "node scripts/test-gate.mjs",
     "build:host": "node scripts/build-host.mjs",
     "eval": "node scripts/eval.ts"
-  },
-  "dsh": {
-    "client": {
-      "platform": "web"
-    },
-    "bundle": {
-      "patch": "./cordis.patch.yml"
-    }
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",

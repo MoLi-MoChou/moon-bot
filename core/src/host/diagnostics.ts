@@ -22,7 +22,6 @@ interface CleanOptions {
 
 interface ReportFacts {
   readonly botVersion?: string | undefined
-  readonly dshVersion?: string | undefined
   readonly os: string
   readonly node: string
   readonly team: string
@@ -116,8 +115,7 @@ export function reportMarkdown({ facts, client = {}, entries = [], clientEntries
   const lines = [
     '| | |',
     '|---|---|',
-    row('DS Bot', facts.botVersion),
-    row('DSH', facts.dshVersion),
+    row('Moon Bot', facts.botVersion),
     row('Surface', client.surface),
     row('OS', facts.os),
     row('Node', facts.node),
@@ -148,7 +146,6 @@ const ownVersion = (): string | undefined => {
 }
 
 // DSH packages share one version; the LLM package is always beside the plugin.
-const dshVersion = (): undefined => undefined
 
 export function install(rt: HostRuntime): void {
   const { ctx, home, config } = rt
@@ -241,7 +238,6 @@ export function install(rt: HostRuntime): void {
     const groups = Object.keys(rt.state.rooms).length
     return {
       botVersion: ownVersion(),
-      dshVersion: dshVersion(),
       os: `${platform()} ${release()} ${arch()}`,
       node: process.version,
       team: `${count(bots.length, 'Bot', 'Bots')}, ${rt.state.mainBotIds.length} Main, ${count(groups, 'group chat', 'group chats')}`,

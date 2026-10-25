@@ -151,13 +151,13 @@ export function CommandPalette({ start, token, roster, actions, useSessions }: C
     ];
     if (people.length)
         sections.push([t('Bots'), people]);
-    const agents: PaletteRow[] = (roster.agents ?? []).filter(() => matchesName('DSH Agent')).map(agent => ({
-        key: agent.id, avatar: <span className='bt-palette-agent'>{h(FishLogo, { size: 18 })}</span>, title: 'DSH Agent',
+    const agents: PaletteRow[] = (roster.agents ?? []).filter(() => matchesName('Agent')).map(agent => ({
+        key: agent.id, avatar: <span className='bt-palette-agent'>{h(FishLogo, { size: 18 })}</span>, title: 'Agent',
         subtitle: t('Plain dsh session'),
         run: () => actions.openAgent(agent.id),
     }));
     if (agents.length)
-        sections.push(['DSH Agent', agents]);
+        sections.push(['Agent', agents]);
     const messages: PaletteRow[] = (JSON.parse(found) as [
         string,
         number,

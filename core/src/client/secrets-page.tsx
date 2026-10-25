@@ -105,7 +105,7 @@ export function SecretsPage({ roster, actions, run, Section }: SecretsPageProps)
     useEscape(() => setOpen(null), open !== null && !adding);
     const secrets = roster.secrets ?? [];
     return [
-        <p key='about' className='bt-secret-about'>{t('Keys your Bots asked for. Bots never see the values: they use them as ')}<code>$DSH_SECRET_NAME</code>{t(' in their shell, and every value is replaced by ')}<code>[secret:NAME]</code>{t(' before anything goes to a model.')}</p>,
+        <p key='about' className='bt-secret-about'>{t('Keys your Bots asked for. Bots never see the values: they use them as ')}<code>$MOON_BOT_SECRET_NAME</code>{t(' in their shell, and every value is replaced by ')}<code>[secret:NAME]</code>{t(' before anything goes to a model.')}</p>,
         h(Section, { key: 'list', title: t('Secrets · {count}', { count: secrets.length }) }, secrets.length === 0 && !adding ? <div className='bt-set-row'><span className='bt-set-hint'>{t('No keys yet. When a Bot needs one, it shows a card in its chat.')}</span></div> : null, secrets.map(secret => h(SecretRow, { key: secret.name, secret, roster, actions, run, open: open === secret.name, onToggle: () => setOpen(open === secret.name ? null : secret.name) })), adding ? h(AddSecret, { actions, run, onDone: () => setAdding(false) }) : null),
         adding ? null : <div key='add' className='bt-actions'><button type='button' className='bt-soft bt-soft-sm' onClick={() => setAdding(true)}>{t('Add a key')}</button></div>,
     ];

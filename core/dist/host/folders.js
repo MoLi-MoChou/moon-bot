@@ -65,7 +65,7 @@ function install(rt) {
     return workFolder(path);
   }
   async function workFolder(path) {
-    if (await guarded(path)) throw new Error(`${path} holds DeepSeek Harness data, so Bots cannot work there`);
+    if (await guarded(path)) throw new Error(`${path} holds another runtime's data, so Bots cannot work there`);
     return path === await realTeam() ? void 0 : path;
   }
   async function setTeamWorkspace(input) {
@@ -80,11 +80,11 @@ function install(rt) {
       if (path2 === own && await realBeyond(fallback) === own) return false;
       return roots.some((data) => within(path2, data));
     };
-    if (await holdsData(await realBeyond(resolve(expanded)))) throw new Error(`${text} holds DeepSeek Harness data, so it cannot be the team workspace`);
+    if (await holdsData(await realBeyond(resolve(expanded)))) throw new Error(`${text} holds another runtime's data, so it cannot be the team workspace`);
     await mkdir(expanded, { recursive: true });
     const path = await realpath(expanded);
     if (!await isFolder(path)) throw new Error(`${text} is a file, not a folder`);
-    if (await holdsData(path)) throw new Error(`${text} holds DeepSeek Harness data, so it cannot be the team workspace`);
+    if (await holdsData(path)) throw new Error(`${text} holds another runtime's data, so it cannot be the team workspace`);
     if (path === await realTeam()) return path;
     const workspace = await ctx.workspaceRegistry.resolveByPath(path) ?? await ctx.workspaceRegistry.create(path, "DS Bot");
     state.workspaceId = workspace.id;
@@ -142,12 +142,12 @@ function install(rt) {
       }
       case "folder-pick": {
         const native = picker();
-        if (native?.kind !== "native") throw new Error("This DeepSeek Harness has no folder chooser");
+        if (native?.kind !== "native") throw new Error("This window cannot open a folder chooser");
         return await native.pick(AbortSignal.any([signal, AbortSignal.timeout(PICK_TIMEOUT_MS)]));
       }
       case "folder-list": {
         const browse = picker();
-        if (browse?.kind !== "browse") throw new Error("This DeepSeek Harness cannot list folders");
+        if (browse?.kind !== "browse") throw new Error("This window cannot list folders");
         const listing = await browse.list(typeof body.path === "string" && body.path !== "" ? body.path : void 0, signal);
         return { path: listing.path, home: listing.home, crumbs: listing.crumbs, entries: listing.entries, truncated: listing.truncated };
       }

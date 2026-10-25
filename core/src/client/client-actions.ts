@@ -7,8 +7,7 @@ import { CHATS_SOURCE } from './at-menu.ts'
 import type { ClientState, UpdateState } from './client-types.ts'
 import type { AtMenuSlot, ClientContext, SlotEntry, SpeechRemote } from './client-ctx.js'
 import type { PanelRect } from './bot-browsers.ts'
-import type { DshState } from './dsh-offer.ts'
-import { sameVersion } from './dsh-offer.ts'
+import { sameVersion } from './update-state.ts'
 import { noteSignInAsked } from './shell-quiet.ts'
 import { openHarnessOnboarding, openHarnessSettings } from './sidebar.tsx'
 import { toggleReaction } from './shared-map.ts'
@@ -73,7 +72,6 @@ export interface ClientActionExtras {
   voiceSetup(): (() => void) | null
   seatAccount(on: boolean): void
   installUpdate(): Promise<void>
-  installDshUpdate(): Promise<void>
   openAppUpdates(verified: string): Promise<void>
   checkUpdate(): Promise<void>
   canReferenceChat(): boolean
@@ -268,12 +266,6 @@ export function createActions({ ctx, client, after, partFor, show, atMenu }: Cli
     installUpdate: async () => {
       const value = await call<UpdateState>('update-install')
       update.set(previous => ({ ...previous, ...value }))
-      client.wakeUpdate()
-    },
-    // The DSH the newest released DS Bot verified installs the same way.
-    installDshUpdate: async () => {
-      const dsh = await call<DshState>('dsh-update-install')
-      update.set(previous => ({ ...previous, dsh }))
       client.wakeUpdate()
     },
     // The app's panel installs whatever its updater found by now, so it opens only

@@ -113,7 +113,7 @@ function install(rt) {
   async function writableRef(provider) {
     const ref = keyRefs().get(provider);
     if (ref === void 0) throw invalid(`${provider} takes no API key here`);
-    if ((await usable().credentials.describe(ref)).writable === false) throw invalid(`The API key for ${provider} is set outside DS Bot and cannot be changed here`);
+    if ((await usable().credentials.describe(ref)).writable === false) throw invalid(`The API key for ${provider} is set outside Moon Bot and cannot be changed here`);
     return ref;
   }
   async function setProviderKey(provider, value) {
@@ -132,13 +132,13 @@ function install(rt) {
     const entry = entryOf(provider);
     if (entry !== void 0 && (entry.settingsNs !== PI_AI || profileOf(entry, map) !== void 0)) throw invalid(`${provider} is already set up`);
     const custom = body.custom === true;
-    if (!custom && (entry === void 0 || entry.declared === true)) throw invalid(`DSH offers no provider ${provider}`);
+    if (!custom && (entry === void 0 || entry.declared === true)) throw invalid(`Moon Bot offers no provider ${provider}`);
     if (custom && !ROUTE_ID.test(provider)) throw invalid("A provider id is lowercase letters, digits and dashes, starting with a letter");
-    if (custom && entry !== void 0) throw invalid(`DSH already offers ${provider}; add it from its list`);
+    if (custom && entry !== void 0) throw invalid(`Moon Bot already offers ${provider}; add it from its list`);
     const key = typeof body.key === "string" && body.key.trim() !== "" ? checkKey(body.key) : void 0;
     const ref = keyRefFor(provider);
     const info = await credentials.describe(ref);
-    if (key !== void 0 && info.writable === false) throw invalid(`The API key for ${provider} is set outside DS Bot and cannot be changed here`);
+    if (key !== void 0 && info.writable === false) throw invalid(`The API key for ${provider} is set outside Moon Bot and cannot be changed here`);
     const keyed = key !== void 0 || info.configured === true;
     const profile = custom ? customProfile(body) : {};
     if (keyed) profile.apiKeyEnv = ref;

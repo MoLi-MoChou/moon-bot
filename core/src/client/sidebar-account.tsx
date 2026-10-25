@@ -231,7 +231,7 @@ export function BotReturn({ wide, useSurface, actions }: {
     const mode = useSurface(value => value.mode);
     if (mode !== 'agent')
         return null;
-    return <button type='button' className='bt-return' aria-label={t('DS Bot')} title={t('DS Bot')} onClick={() => actions.setSurface('bot')}>{h(MoonBotMark, { size: 20 })}{wide ? <span className='bt-return-name'>{t('DS Bot')}</span> : null}</button>;
+    return <button type='button' className='bt-return' aria-label={t('Moon Bot')} title={t('Moon Bot')} onClick={() => actions.setSurface('bot')}>{h(MoonBotMark, { size: 20 })}{wide ? <span className='bt-return-name'>{t('Moon Bot')}</span> : null}</button>;
 }
 // Agent mode has none of the shell-group styles, so the return button carries its own.
 export function BrandMark({ size = 24 }: {

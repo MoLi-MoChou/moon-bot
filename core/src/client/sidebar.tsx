@@ -7,7 +7,6 @@ import { PlusIcon, SearchIcon, SidebarIcon, PlugIcon, CloudDownloadIcon, MoonBot
 import { PeopleIcon } from './icons.tsx';
 import { EmptyState } from './empty-state.tsx';
 import { hostText, t } from './i18n.ts';
-import { showsDshRow } from './dsh-offer.ts';
 import type { ReactNode } from 'react';
 import type { TSidebarActions, TSidebarEntry, TSidebarHook, TSidebarProps, TSidebarUpdate, } from './sidebar-types.js';
 import { AgentRow, BotRow, RoomRow, manualSort, readOrder, saveOrder, useListGlide } from './sidebar-rows.tsx';
@@ -114,7 +113,7 @@ export function ReorderList({ shown, wide, reorder, dropped, dragging, render }:
 // the release notes link, and each row's own button.
 export function UpdateButton({ useUpdate, actions }: {
     readonly useUpdate: TSidebarHook<TSidebarUpdate | null>;
-    readonly actions: Pick<TSidebarActions, 'installUpdate' | 'installDshUpdate' | 'openAppUpdates'>;
+    readonly actions: Pick<TSidebarActions, 'installUpdate' | 'openAppUpdates'>;
 }) {
     const update = useUpdate(value => value);
     const [open, setOpen] = useState(false);
@@ -123,7 +122,6 @@ export function UpdateButton({ useUpdate, actions }: {
         top: number;
     } | null>(null);
     const [error, setError] = useState('');
-    const [dshError, setDshError] = useState('');
     const button = useRef<HTMLButtonElement | null>(null);
     useEffect(() => {
         if (!open)
@@ -146,14 +144,11 @@ export function UpdateButton({ useUpdate, actions }: {
     if (update === null)
         return null;
     const phase = update.phase ?? 'idle';
-    const dsh = update.dsh ?? {};
-    const dshPhase = dsh.phase ?? 'idle';
-    const dshRow = showsDshRow(dsh, update.app as never);
     if (update.source === 'web')
         return null;
-    if (!update.available && !dshRow && phase === 'idle' && dshPhase === 'idle')
+    if (!update.available && phase === 'idle')
         return null;
-    const cloudPhase = phase === 'installing' || dshPhase === 'installing' ? 'installing' : phase !== 'idle' ? phase : dshPhase;
+    const cloudPhase = phase;
     const toggle = (): void => {
         const rect = button.current?.getBoundingClientRect();
         if (rect)
@@ -166,32 +161,14 @@ export function UpdateButton({ useUpdate, actions }: {
             readonly message?: string;
         } | null | undefined) => setError(hostText(failure?.message ?? String(failure))));
     };
-    const startDsh = (): void => {
-        setDshError('');
-        void actions.installDshUpdate().catch((failure: {
-            readonly message?: string;
-        } | null | undefined) => setDshError(hostText(failure?.message ?? String(failure))));
-    };
-    const label = phase === 'installing' ? t('Updating DS Bot…')
-        : dshPhase === 'installing' ? t('Updating DSH…')
-            : phase === 'installed' ? t('DS Bot {version} is installed. Restart DSH to use it.', { version: update.installed ?? update.latest })
-                : dshPhase === 'installed' ? t('Restart DSH to start using DSH {version}.', { version: dsh.installed ?? dsh.verified })
-                    : update?.available ? t('DS Bot {version} is available', { version: update.latest })
-                        : t('DSH {version} is available', { version: dsh?.verified });
+    const label = phase === 'installing' ? t('Updating Moon Bot…')
+        : phase === 'installed' ? t('Moon Bot {version} is installed. Restart to use it.', { version: update.installed ?? update.latest })
+            : update?.available ? t('Moon Bot {version} is available', { version: update.latest })
+                : t('Moon Bot is up to date');
     const message = error || (phase === 'failed' ? update.error : '');
-    const dshMessage = dshError || (dshPhase === 'failed' ? dsh?.error : '');
-    const dshText = dshPhase === 'installed'
-        ? t('Restart DSH to start using DSH {version}.', { version: dsh.installed ?? dsh.verified })
-        : dsh?.available === false && dsh?.blockedBy
-            ? t('Update DS Bot {version} first.', { version: dsh.blockedBy })
-            : t('You have {version}.', { version: dsh?.current });
-    return <><button ref={button} type='button' className='bt-round bt-update' data-phase={cloudPhase} aria-label={label} title={label} aria-haspopup='dialog' aria-expanded={open} onClick={toggle}>{h(CloudDownloadIcon, { done: phase === 'installed' })}{phase === 'failed' || dshPhase === 'failed' ? <span className='bt-update-dot' aria-hidden/> : null}</button>{open && box ? createPortal(<div className='bt-update-pop' role='dialog' aria-label={update?.available || phase !== 'idle' ? t('DS Bot update') : t('DSH update')} style={box}>{update?.available || phase !== 'idle' ? <><div className='bt-update-title'>{phase === 'installed' ? t('Update installed') : t('DS Bot {version}', { version: update.latest })}</div><div className='bt-update-text'>{phase === 'installed'
-        ? t('Restart DSH to start using DS Bot {version}.', { version: update.installed ?? update.latest })
-        : t('You have {version}.', { version: update.current })}</div>{message ? <div className='bt-update-error' role='alert'>{t('The update did not finish: {reason}', { reason: message })}</div> : null}<div className='bt-update-actions'>{update.notesUrl ? <a className='bt-update-notes' href={update.notesUrl} target='_blank' rel='noopener noreferrer'>{t("What's new")}</a> : null}{phase === 'installed' ? null : <button type='button' className='bt-update-go' disabled={phase === 'installing'} onClick={start}>{phase === 'installing' ? t('Updating…') : phase === 'failed' ? t('Try again') : t('Update')}</button>}</div></> : null}{dshRow ? <div className='bt-update-dsh'><div className='bt-update-title'>{t('DSH {version}', { version: dsh.verified })}</div><div className='bt-update-text'>{dshText}</div>{dshMessage ? <div className='bt-update-error' role='alert'>{t('The update did not finish: {reason}', { reason: dshMessage })}</div> : null}<div className='bt-update-actions'>{dsh.kind === 'app' ? (dsh.available
-        ? <button type='button' className='bt-update-go' onClick={() => void actions.openAppUpdates(dsh.verified).catch(() => { })}>{t('Open updates')}</button> : null)
-        : !dsh.available && dshPhase === 'idle' ? null
-            : dshPhase === 'installed' ? null
-                : <button type='button' className='bt-update-go' disabled={dshPhase === 'installing'} onClick={startDsh}>{dshPhase === 'installing' ? t('Updating…') : dshPhase === 'failed' ? t('Try again') : t('Update')}</button>}</div></div> : null}</div>, document.body) : null}</>;
+    return <><button ref={button} type='button' className='bt-round bt-update' data-phase={cloudPhase} aria-label={label} title={label} aria-haspopup='dialog' aria-expanded={open} onClick={toggle}>{h(CloudDownloadIcon, { done: phase === 'installed' })}{phase === 'failed' ? <span className='bt-update-dot' aria-hidden/> : null}</button>{open && box ? createPortal(<div className='bt-update-pop' role='dialog' aria-label={t('Moon Bot update')} style={box}><div className='bt-update-title'>{phase === 'installed' ? t('Update installed') : t('Moon Bot {version}', { version: update.latest })}</div><div className='bt-update-text'>{phase === 'installed'
+        ? t('Restart to start using Moon Bot {version}.', { version: update.installed ?? update.latest })
+        : t('You have {version}.', { version: update.current })}</div>{message ? <div className='bt-update-error' role='alert'>{t('The update did not finish: {reason}', { reason: message })}</div> : null}<div className='bt-update-actions'>{update.notesUrl ? <a className='bt-update-notes' href={update.notesUrl} target='_blank' rel='noopener noreferrer'>{t("What's new")}</a> : null}{phase === 'installed' ? null : <button type='button' className='bt-update-go' disabled={phase === 'installing'} onClick={start}>{phase === 'installing' ? t('Updating…') : phase === 'failed' ? t('Try again') : t('Update')}</button>}</div></div>, document.body) : null}</>;
 }
 // The footer entry to the shell's plugin panel.
 export function ConnectPlugins({ wide, actions }: {

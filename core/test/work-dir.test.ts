@@ -176,7 +176,7 @@ test('a working folder is a full path to a folder outside the DeepSeek Harness d
   writeFileSync(join(project, 'notes.txt'), 'x')
   assert.equal(await error(join(project, 'notes.txt')), `${join(project, 'notes.txt')} is a file, not a folder`)
   // DSH_HOME, the team's data, and any folder that holds them are refused.
-  for (const guarded of [dsh, home, root]) assert.equal(await error(guarded), `${guarded} holds DeepSeek Harness data, so Bots cannot work there`)
+  for (const guarded of [dsh, home, root]) assert.equal(await error(guarded), `${guarded} holds another runtime's data, so Bots cannot work there`)
   // The team workspace and a folder inside it are fine; the workspace itself is no setting.
   assert.equal(state().bots.b.workDir, undefined)
   mkdirSync(join(team, 'site'))
@@ -391,7 +391,7 @@ test('a Bot that joins a group with a folder needs the user\'s approval to work 
   assert.equal(requests.length, 1)
 })
 
-test('the folder menu lists DSH projects and the folders Bots use, but not the team workspace', async (t) => {
+test('the folder menu lists the team projects and the folders Bots use, but not the team workspace', async (t) => {
   const { call, workingIn, root, project, team, stop } = await start({ workspaces: [{ id: 'w2', path: join(rootless(), 'gone'), title: 'Gone' }] })
   t.after(stop)
   const other = join(root, 'other')
@@ -404,7 +404,7 @@ test('the folder menu lists DSH projects and the folders Bots use, but not the t
     picker: null,
     folders: [{ path: project, title: 'project' }, { path: other, title: 'other' }],
   })
-  assert.equal((await call('folder-pick', {})).error.message, 'This DeepSeek Harness has no folder chooser')
+  assert.equal((await call('folder-pick', {})).error.message, 'This window cannot open a folder chooser')
 })
 
 test('the folder menu browses through the DSH folder picker', async (t) => {
@@ -595,13 +595,13 @@ test('the team workspace holds no DeepSeek Harness data, apart from the plugin\'
   const { root, dsh, home, team, state, call, stop } = await start()
   t.after(stop)
   const error = async path => (await call('team-workspace', { path })).error?.message
-  assert.match(await error(join(dsh, 'inside')), /holds DeepSeek Harness data/)
-  assert.match(await error(root), /holds DeepSeek Harness data/)
+  assert.match(await error(join(dsh, 'inside')), /holds another runtime's data/)
+  assert.match(await error(root), /holds another runtime's data/)
   assert.match(await error('relative'), /full path/)
   assert.equal(existsSync(join(dsh, 'inside')), false)
   // A folder to be made under a link into the data is refused before anything is made.
   symlinkSync(dsh, join(root, 'dsh-link'), process.platform === 'win32' ? 'junction' : 'dir')
-  assert.match(await error(join(root, 'dsh-link', 'new')), /holds DeepSeek Harness data/)
+  assert.match(await error(join(root, 'dsh-link', 'new')), /holds another runtime's data/)
   assert.equal(existsSync(join(dsh, 'new')), false)
   assert.equal(state().workspaceId, 'w1')
   await call('team-workspace', { path: join(root, 'moved') })
@@ -611,11 +611,11 @@ test('the team workspace holds no DeepSeek Harness data, apart from the plugin\'
   await call('team-workspace', { path: join(root, 'moved') })
   rmSync(team, { recursive: true, force: true })
   symlinkSync(home, team, process.platform === 'win32' ? 'junction' : 'dir')
-  assert.match(await error(team), /holds DeepSeek Harness data/)
+  assert.match(await error(team), /holds another runtime's data/)
   rmSync(team, { recursive: true, force: true })
   mkdirSync(join(dsh, 'profiles'))
   symlinkSync(join(dsh, 'profiles'), team, process.platform === 'win32' ? 'junction' : 'dir')
-  assert.match(await error(team), /holds DeepSeek Harness data/)
+  assert.match(await error(team), /holds another runtime's data/)
   assert.equal(state().workspaceId, 'w-new')
 })
 
@@ -635,9 +635,9 @@ test('in the desktop app the user\'s own DSH data is no team workspace and no Bo
   mkdirSync(join(user, 'profiles'), { recursive: true })
   process.env.DS_BOT_USER_DSH_HOME = user
   t.after(() => { delete process.env.DS_BOT_USER_DSH_HOME })
-  assert.match((await call('team-workspace', { path: join(user, 'new') })).error?.message, /holds DeepSeek Harness data/)
+  assert.match((await call('team-workspace', { path: join(user, 'new') })).error?.message, /holds another runtime's data/)
   assert.equal(existsSync(join(user, 'new')), false)
-  assert.equal((await call('update-bot', { id: 'b', workDir: join(user, 'profiles') })).error?.message, `${join(user, 'profiles')} holds DeepSeek Harness data, so Bots cannot work there`)
+  assert.equal((await call('update-bot', { id: 'b', workDir: join(user, 'profiles') })).error?.message, `${join(user, 'profiles')} holds another runtime's data, so Bots cannot work there`)
   assert.equal(state().workspaceId, 'w1')
 })
 
@@ -740,7 +740,7 @@ test('a change out of the working folder that is not allowed changes nothing', a
   t.after(stop)
   assert.deepEqual(await changeDirectory(ctx, service, agentOf('b'), project), { error: notAllowed(project), ran: false })
   const guarded = await changeDirectory(ctx, service, agentOf('b'), dsh)
-  assert.match(guarded.error, /holds DeepSeek Harness data, so Bots cannot work there/)
+  assert.match(guarded.error, /holds another runtime's data, so Bots cannot work there/)
   assert.equal(guarded.ran, false)
   assert.equal(state().bots.b.workDir, undefined)
 })

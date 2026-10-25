@@ -146,7 +146,7 @@ export function install(rt: HostRuntime): void {
   async function writableRef(provider: string): Promise<string> {
     const ref = keyRefs().get(provider)
     if (ref === undefined) throw invalid(`${provider} takes no API key here`)
-    if ((await usable().credentials.describe(ref)).writable === false) throw invalid(`The API key for ${provider} is set outside DS Bot and cannot be changed here`)
+    if ((await usable().credentials.describe(ref)).writable === false) throw invalid(`The API key for ${provider} is set outside Moon Bot and cannot be changed here`)
     return ref
   }
 
@@ -172,13 +172,13 @@ export function install(rt: HostRuntime): void {
     const entry = entryOf(provider)
     if (entry !== undefined && (entry.settingsNs !== PI_AI || profileOf(entry, map) !== undefined)) throw invalid(`${provider} is already set up`)
     const custom = body.custom === true
-    if (!custom && (entry === undefined || entry.declared === true)) throw invalid(`DSH offers no provider ${provider}`)
+    if (!custom && (entry === undefined || entry.declared === true)) throw invalid(`Moon Bot offers no provider ${provider}`)
     if (custom && !ROUTE_ID.test(provider)) throw invalid('A provider id is lowercase letters, digits and dashes, starting with a letter')
-    if (custom && entry !== undefined) throw invalid(`DSH already offers ${provider}; add it from its list`)
+    if (custom && entry !== undefined) throw invalid(`Moon Bot already offers ${provider}; add it from its list`)
     const key = typeof body.key === 'string' && body.key.trim() !== '' ? checkKey(body.key) : undefined
     const ref = keyRefFor(provider)
     const info = await credentials.describe(ref)
-    if (key !== undefined && info.writable === false) throw invalid(`The API key for ${provider} is set outside DS Bot and cannot be changed here`)
+    if (key !== undefined && info.writable === false) throw invalid(`The API key for ${provider} is set outside Moon Bot and cannot be changed here`)
     // A blank key keeps a key that is already there, else the provider's own sign-in.
     const keyed = key !== undefined || info.configured === true
     const profile: Record<string, unknown> = custom ? customProfile(body) : {}

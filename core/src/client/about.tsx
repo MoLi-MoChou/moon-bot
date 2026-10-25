@@ -7,7 +7,6 @@ import { dateLocale, hostText, t, productName } from './i18n.ts';
 import { StarLineIcon } from './icons.tsx';
 import { SPRING_POP } from './motion.tsx';
 import { MoonBotMark } from './icons.tsx';
-import { showsDshRow } from './dsh-offer.ts';
 // The desktop app's own updater and its engine downloader, as the app exposes them.
 interface AppUpdateState {
     phase?: string;
@@ -35,16 +34,6 @@ interface AppEngineBridge {
     download: () => Promise<AppEngineState | null>;
 }
 // The plugin's own update state, and DSH's beside it.
-interface AboutDsh {
-    phase?: string;
-    available?: boolean;
-    blockedBy?: string;
-    installed?: string;
-    verified?: string;
-    current?: string;
-    kind?: string;
-    error?: string;
-}
 export interface AboutUpdate {
     phase?: string;
     available?: boolean;
@@ -61,12 +50,10 @@ export interface AboutUpdate {
         phase?: string;
         version?: string;
     };
-    dsh?: AboutDsh;
 }
 export interface AboutActions {
     checkUpdate: () => Promise<unknown>;
     installUpdate: () => Promise<unknown>;
-    installDshUpdate: () => Promise<unknown>;
     openAppUpdates: (version?: string) => void;
     openSettings: (page: string) => void;
     repoStars: () => Promise<number>;
@@ -79,15 +66,15 @@ const CHEER_MS = 1800;
 const starCount = (count: number): string => new Intl.NumberFormat(dateLocale(), { notation: 'compact', maximumFractionDigits: 1 }).format(count);
 function botHint(update: AboutUpdate): string | null {
     if (update.phase === 'installing')
-        return t('Updating DS Bot…');
+        return t('Updating Moon Bot…');
     if (update.phase === 'installed')
-        return t('Restart DSH to start using DS Bot {version}.', { version: update.installed ?? update.latest });
+        return t('Restart to start using Moon Bot {version}.', { version: update.installed ?? update.latest });
     if (update.phase === 'failed')
         return t('The update did not finish: {reason}', { reason: hostText(update.error ?? '') });
     if (update.available)
-        return t('DS Bot {version} is available', { version: update.latest });
+        return t('Moon Bot {version} is available', { version: update.latest });
     if (update.source === 'app')
-        return t('Updates come with the DeepSeek Bot app.');
+        return t('Updates come with the Moon Bot desktop app.');
     if (update.source === 'web')
         return t('The web version updates when its server is redeployed.');
     if (update.enabled === false)
@@ -100,19 +87,6 @@ function botHint(update: AboutUpdate): string | null {
         return t('Updates are not offered for this install.');
     const checked = t('Checked {time}', { time: whenText(update.checkedAt) });
     return `${update.latest ? t('Up to date') : t('Could not check for updates.')} · ${checked}`;
-}
-function dshHint(dsh: AboutDsh, shown: boolean | undefined): string {
-    if (dsh.phase === 'installing')
-        return t('Updating DSH…');
-    if (dsh.phase === 'installed')
-        return t('Restart DSH to start using DSH {version}.', { version: dsh.installed ?? dsh.verified });
-    if (dsh.phase === 'failed')
-        return t('The update did not finish: {reason}', { reason: hostText(dsh.error ?? '') });
-    if (dsh.available === false && dsh.blockedBy)
-        return t('Update DS Bot {version} first.', { version: dsh.blockedBy });
-    if (shown)
-        return t('DSH {version} is available', { version: dsh.verified });
-    return t('Version {version}', { version: dsh.current });
 }
 // Moon Bot patch: the desktop app's own updater (electron-updater in the app's main
 // process): checks at launch and every few hours, downloads only the changed blocks,
@@ -228,31 +202,19 @@ export function AboutPage({ useUpdate, actions, run, Section, Row }: {
             setCheer(true); });
     };
     const phase = update.phase ?? 'idle';
-    const dsh: AboutDsh = update.dsh ?? {};
-    const dshPhase = dsh?.phase ?? 'idle';
-    useEffect(() => { if (phase === 'installed' || dshPhase === 'installed')
-        setCheer(true); }, [phase, dshPhase]);
-    // Same rule as the sidebar card.
-    const dshNew = showsDshRow(dsh, update.app);
-    const dshShown = dshNew && dsh?.available;
+    useEffect(() => { if (phase === 'installed')
+        setCheer(true); }, [phase]);
     const botControl = phase === 'installed' || update.source === 'app' ? null
         : update.available || phase === 'installing'
             ? <button type='button' className='bt-fb-primary' disabled={phase === 'installing'} onClick={() => run(actions.installUpdate())}>{phase === 'installing' ? t('Updating…') : phase === 'failed' ? t('Try again') : t('Update')}</button> : <button type='button' className='bt-soft bt-soft-sm' disabled={checking || update.enabled === false} onClick={check}>{checking ? t('Checking…') : t('Check for updates')}</button>;
-    const dshControl = !dshNew || dshPhase === 'installed' ? null
-        : dsh.kind === 'app'
-            ? dsh.available ? <button type='button' className='bt-soft bt-soft-sm' onClick={() => { actions.openAppUpdates(dsh.verified); }}>{t('Open updates')}</button> : null
-            : dsh.available || dshPhase !== 'idle'
-                ? <button type='button' className='bt-fb-primary' disabled={dshPhase === 'installing'} onClick={() => run(actions.installDshUpdate())}>{dshPhase === 'installing' ? t('Updating…') : dshPhase === 'failed' ? t('Try again') : t('Update')}</button> : null;
     const repo = update.repoUrl;
     return [
-        <div key='hero' className='bt-about-hero'><span className='bt-about-mark'>{h(MoonBotMark, { size: 52 })}</span><div className='bt-about-copy'><span className='bt-about-name'>{productName()}</span>{appVersion || update.current ? <span className='bt-about-version'>{t('Version {version}', { version: appVersion || update.current })}</span> : null}</div>{repo ? <a className='bt-star' href={repo} target='_blank' rel='noopener noreferrer' title={t('Star DS Bot on GitHub')} aria-label={stars === null ? t('Star DS Bot on GitHub') : `${t('Star DS Bot on GitHub')} · ${t('{count} stars', { count: stars })}`}><span className='bt-star-main'><span className='bt-star-icon'>{h(StarLineIcon)}</span>Star</span>{stars === null ? null : <span className='bt-star-count'>{starCount(stars)}</span>}</a> : null}</div>,
-        repo ? <p key='ask' className='bt-about-ask'>{t('If DS Bot helps you, a star on GitHub helps more people find it.')}</p> : null,
-        update.source === 'web' ? h(Section, { key: 'updates', title: t('Updates') }, h(Row, { label: productName(), hint: botHint(update) }), 
-        // Runtime build id stays available but is not framed as a second product.
-        dsh?.current ? h(Row, { label: t('Runtime'), hint: t('Version {version}', { version: dsh.current }) }) : null)
-            : h(Section, { key: 'updates', title: t('Updates') }, appBridge() ? h(AppUpdateRow, { Row, run }) : null, h(EngineRow, { Row, run }), appBridge() ? null : h(Row, { label: productName(), hint: botHint(update) }, botControl, update.available && update.notesUrl ? <a {...linkProps(update.notesUrl)}>{t("What's new")}</a> : null), dsh?.current ? h(Row, { label: t('Runtime'), hint: dshHint(dsh, dshShown) }, dshControl) : null),
+        <div key='hero' className='bt-about-hero'><span className='bt-about-mark'>{h(MoonBotMark, { size: 52 })}</span><div className='bt-about-copy'><span className='bt-about-name'>{productName()}</span>{appVersion || update.current ? <span className='bt-about-version'>{t('Version {version}', { version: appVersion || update.current })}</span> : null}</div>{repo ? <a className='bt-star' href={repo} target='_blank' rel='noopener noreferrer' title={t('Star Moon Bot on GitHub')} aria-label={stars === null ? t('Star Moon Bot on GitHub') : `${t('Star Moon Bot on GitHub')} · ${t('{count} stars', { count: stars })}`}><span className='bt-star-main'><span className='bt-star-icon'>{h(StarLineIcon)}</span>Star</span>{stars === null ? null : <span className='bt-star-count'>{starCount(stars)}</span>}</a> : null}</div>,
+        repo ? <p key='ask' className='bt-about-ask'>{t('If Moon Bot helps you, a star on GitHub helps more people find it.')}</p> : null,
+        update.source === 'web' ? h(Section, { key: 'updates', title: t('Updates') }, h(Row, { label: productName(), hint: botHint(update) }))
+            : h(Section, { key: 'updates', title: t('Updates') }, appBridge() ? h(AppUpdateRow, { Row, run }) : null, h(EngineRow, { Row, run }), appBridge() ? null : h(Row, { label: productName(), hint: botHint(update) }, botControl, update.available && update.notesUrl ? <a {...linkProps(update.notesUrl)}>{t("What's new")}</a> : null)),
         h(Section, { key: 'links', title: t('Links') }, repo ? h(Row, { label: t('Source code'), hint: repo.replace(/^https:\/\//, '') }, <a {...linkProps(repo)}>{h(GitHubMark)}{t('Open')}</a>) : null, update.notesUrl ? h(Row, { label: t('Release notes') }, <a {...linkProps(update.notesUrl)}>{t('Open')}</a>) : null, 
-        // Moon Bot patch: credit the project this app is built on.
+        // The fork's attribution: DS Bot is the project Moon Bot started from.
         h(Row, { label: t('Based on DS Bot'), hint: 'github.com/Fei2411/DeepSeek-Bot · Apache-2.0' }, <a {...linkProps('https://github.com/Fei2411/DeepSeek-Bot')}>{h(GitHubMark)}{t('Open')}</a>), h(Row, { label: t('Report a problem') }, <button type='button' className='bt-soft bt-soft-sm' onClick={() => actions.openSettings('feedback')}>{t('Open')}</button>)),
     ];
 }

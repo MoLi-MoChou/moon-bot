@@ -11,7 +11,7 @@
   "scripts": {
     "build": "vite build && node scripts/build-main.ts",
     "build:main": "node scripts/build-main.ts",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p ui/tsconfig.json",
     "start": "electron .",
     "pack": "electron-builder --dir --publish never",
     "dist": "electron-builder --publish never",
@@ -27,6 +27,7 @@
     "pnpm": "11.7.0"
   },
   "devDependencies": {
+    "@types/react-dom": "^19.3.0",
     "electron": "44.7.0",
     "electron-builder": "26.17.0",
     "esbuild": "0.28.2",

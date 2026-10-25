@@ -5,6 +5,7 @@ import {
   SECRET_NAME,
   canUse,
   envName,
+  LEGACY_ENV_PREFIX,
   normalizeName,
   redactDeep,
   redactor
@@ -216,7 +217,8 @@ function install(rt) {
     for (const secret of store.secrets.values()) {
       if (!canUse(secret, botId)) continue;
       values[envName(secret.name)] = secret.value;
-      if (command.includes(envName(secret.name))) {
+      values[`${LEGACY_ENV_PREFIX}${secret.name}`] = secret.value;
+      if (command.includes(envName(secret.name)) || command.includes(`${LEGACY_ENV_PREFIX}${secret.name}`)) {
         secret.lastUsedAt = Date.now();
         used = true;
       }
@@ -238,7 +240,7 @@ function install(rt) {
       try {
         unregister = sub.shellEnv.register({
           name: "ds-bot-secrets",
-          variables: Object.fromEntries(list.map((secret) => [envName(secret.name), { description: `DS Bot secret ${secret.name}${secret.purpose ? `: ${secret.purpose}` : ""}` }])),
+          variables: Object.fromEntries(list.map((secret) => [envName(secret.name), { description: `Moon Bot secret ${secret.name}${secret.purpose ? `: ${secret.purpose}` : ""}` }])),
           resolve: resolveEnv
         });
       } catch (error) {

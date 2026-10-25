@@ -1,10 +1,13 @@
 // Redaction and naming for the keys a user types into a card for a Bot. A value lives
-// only in secrets.json (mode 600) and in this process; Bots use it as $DSH_SECRET_<NAME>
+// only in secrets.json (mode 600) and in this process; Bots use it as $MOON_BOT_SECRET_<NAME>
+// (the DSH-era $DSH_SECRET_<NAME> keeps working).
 // in their shell, tool results lose it before they are saved, and every model request
 // has it replaced by [secret:<NAME>] before it leaves.
 
 export const SECRET_NAME = /^[A-Z][A-Z0-9_]{0,63}$/
-export const ENV_PREFIX = 'DSH_SECRET_'
+export const ENV_PREFIX = 'MOON_BOT_SECRET_'
+/** The prefix a Bot used before the rename; both resolve. */
+export const LEGACY_ENV_PREFIX = 'DSH_SECRET_'
 // A short value (a PIN, a short password) would also hit ordinary words if it were
 // replaced wherever it appears, so below WHOLE_VALUE it is replaced only where it
 // stands alone: no letter or digit right before or after it.
@@ -40,7 +43,7 @@ export const canUse = (secret: SecretScopeHolder | undefined, botId: string | un
 }
 
 export function normalizeName(raw: unknown): string {
-  return String(raw ?? '').trim().replace(/^\$(env:)?/i, '').replace(/^DSH_SECRET_/i, '').replace(/[\s-]+/g, '_').toUpperCase()
+  return String(raw ?? '').trim().replace(/^\$(env:)?/i, '').replace(/^(?:MOON_BOT|DSH)_SECRET_/i, '').replace(/[\s-]+/g, '_').toUpperCase()
 }
 
 // encodeURIComponent leaves ' as is, but new URL() turns it into %27 in a query, so the

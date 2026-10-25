@@ -13,6 +13,8 @@ All notable changes to Moon Bot are listed here. The format follows [Keep a Chan
 ### Removed
 
 - The DSH plugin packaging and the DSH-hosted start path, the DSH update offer, the DSH concessions that only existed for the host.
+- Importing a team from a DeepSeek Harness install: a new start begins with an empty team (the previous version still reads its own data).
+- Office file preview. Its engine was published as `@deepseek-ai/libreoffice-kit-*`, so it left with the rest of DSH; a self-hosted LibreOfficeKit package would bring the preview back.
 
 ### Fixed
 

@@ -205,20 +205,21 @@ TS 现状盘点（2026-10-24 实测）：core 源码侧仅剩 `index.js`（70 �
 
 五项能力（全部可运行、可重复测试）：
 
-- [ ] 持久记忆：跨会话与重启后可用，有来源与时间，可纠错、过期、删除。
-- [ ] 主动使用记忆：无显式回忆指令时正确检索并使用，评测集达标。
-- [ ] 主动行动：无进行中回合时可触发、执行、跟进已授权任务；重启可恢复；通知可控。
-- [ ] 跨应用执行：至少一个真实多步工作流端到端，结果经验证，失败可恢复不重复。
-- [ ] 自主性：L0–L4 分级贯彻，未授权被服务端拒绝，模型不可经提示词绕过。
+- [x] 持久记忆：跨会话与重启后可用，有来源与时间，可纠错、过期、删除。（`npm run eval memory`：重启后仍可检索、下一回合主动可见、删除即出索引；`test/memory*.test.ts`、`test/sqlite-store.test.ts`）
+- [x] 主动使用记忆：无显式回忆指令时正确检索并使用，评测集达标。（`npm run eval recall`：相关提问浮现、无关提问不浮现；`test/service.test.ts` 的 proactive recall 用例）
+- [x] 主动行动：无进行中回合时可触发、执行、跟进已授权任务；重启可恢复；通知可控。（`npm run eval proactive`：暂停不触发、到期跨重启恰好一次；`test/scheduler.test.ts`、`test/schedules.test.ts`）
+- [x] 跨应用执行：至少一个真实多步工作流端到端，结果经验证，失败可恢复不重复。（`npm run eval workflow`：断连重试后取回结果、L3 策略覆盖；`test/mcp-connector.test.ts`、`test/acp-bot.test.ts` 的派活-回执闭环）
+- [x] 自主性：L0–L4 分级贯彻，未授权被服务端拒绝，模型不可经提示词绕过。（`npm run eval autonomy`：L0/L2 直行、L4 预算后每次审批、拒绝文案无申诉口、未知工具 L3；`test/policy.test.ts`、`test/approval*.test.ts`）
 
 基础设施：
 
-- [ ] 全仓无 `@deepseek-ai` 依赖与启动路径；Web 与桌面均独立运行。
-- [ ] `AgentRuntime` 可替换（内置/ACP 两实现并存即证明）。
-- [ ] 会话、记忆、任务状态由 Moon Bot 自有格式持有。
-- [ ] 现有 Web UI 与桌面核心功能保留；OpenUI 与现有消息共存。
-- [ ] 工具执行有服务端权限校验；任务持久化、恢复、审计。
-- [ ] 全仓为 TypeScript（core 与 app 的源码、入口、测试）；例外仅 client.js 生成物与 vendored 文件；`typecheck` 进 CI。
+- [x] 全仓无 `@deepseek-ai` 依赖与启动路径；Web 与桌面均独立运行。（`grep -rn "@deepseek-ai"` 仅剩 NOTICE 的历史归属与两处测试夹具 URL；app 的 profile-boot/import 已删，core 的 hosted 挂载分支已删；`MOON_BOT_PASSWORD=… node dist/service/main.js` → `/healthz` 200、`/login` 302/200、登录后 `state` RPC 可用；app `npm run build` 出 dist-main 并启动 service-host）
+- [x] `AgentRuntime` 可替换（内置/ACP 两实现并存即证明）。（`src/engine/runtime.ts` 接缝；`test/builtin-engine.ts`、`test/engine-contract.ts`、`test/acp-agent.test.ts`、`test/acp-bot.test.ts`）
+- [x] 会话、记忆、任务状态由 Moon Bot 自有格式持有。（SQLite 迁移 v1–v3：sessions/messages/tasks/memory_index/policy_counters；`test/sqlite-store.test.ts`）
+- [x] 现有 Web UI 与桌面核心功能保留；OpenUI 与现有消息共存。（client.js 由 src/client 生成、`--check` 绿；八种卡片 + OpenUI 元素图降级映射，`test/views.test.ts`、`test/openui.test.ts`）
+- [x] 工具执行有服务端权限校验；任务持久化、恢复、审计。（ToolRegistry 的 zod 校验 + PolicyEngine 服务端裁决；tasks 表 next_run_at 持久化与恢复；`test/tool-registry.test.ts`、`test/scheduler.test.ts`）
+- [x] 全仓为 TypeScript（core 与 app 的源码、入口、测试）；例外仅 client.js 生成物与 vendored 文件；`typecheck` 进 CI。（`tsconfig.json` 两处 strict 全绿；CI 的 test.yml 加入 typecheck/eval/两个 --check）
+- 已知取舍：Office 文件预览依赖 `@deepseek-ai/libreoffice-kit-*` 引擎包，随 DSH 一并移除；要恢复需自有 LibreOfficeKit 包。
 
 ## 变更
 

@@ -167,13 +167,11 @@ dependencies — installed, not copied or modified:
     rehype-highlight, rehype-katex and the d3/radix packages that come with
     them, MIT: the desktop window's own renderers (app/ui), built by vite.
 
-esbuild is a build tool only. @deepseek-ai/* is no longer used by the start
-path; two lazy strings name its MCP client for the hosted mount branch of
-src/host (capabilities-host, connectors), and its runtime types were replaced
-by the structural declarations in src/host/dsh-types.d.ts.
+esbuild is a build tool only. @deepseek-ai/* is not used at all: the hosted mount
+branch that imported its MCP client was removed with the package, and the
+runtime types are our own structural declarations in src/host/dsh-types.d.ts.
 The desktop app
-in app/ installs the pinned @deepseek-ai/* packages, Electron and pnpm from
-npm; they keep their own licenses. The build of its window (app/ui) bundles,
+in app/ installs Electron and pnpm from npm; they keep their own licenses. The build of its window (app/ui) bundles,
 from npm, React and React DOM (MIT, Copyright (c) Meta Platforms, Inc. and
 affiliates), and react-markdown and remark-gfm with the packages they use
 (MIT, most of them Copyright (c) Titus Wormer; @ungap/structured-clone is ISC,

@@ -1,5 +1,6 @@
 import type { LoaderService, PluginFiber } from './dsh-types.js'
 import type { HostRuntime } from './runtime.js'
+import { createStandaloneMounts } from './capabilities-standalone.ts'
 
 type ConnectorStatus =
   | { readonly state: 'off' }
@@ -74,7 +75,10 @@ export function install(rt: HostRuntime): void {
   let queue: Promise<unknown> = Promise.resolve()
   let stopped = false
 
+  let githubUnmount: (() => void) | undefined
   const unmount = async (): Promise<void> => {
+    githubUnmount?.()
+    githubUnmount = undefined
     const fiber = mount?.fiber
     mount = null
     if (fiber !== undefined) await Promise.resolve().then(() => fiber.dispose()).catch(() => {})
@@ -105,12 +109,32 @@ export function install(rt: HostRuntime): void {
     }
     status = { state: 'connecting' }
     const loader = ctx.get<LoaderService>('loader')
-    if (typeof loader?.import !== 'function' || typeof ctx.plugin !== 'function') {
-      mount = { token }
-      status = { state: 'error', error: 'This DSH cannot load connectors' }
+    const hosted = loader !== undefined && typeof loader.import === 'function' && typeof ctx.plugin === 'function'
+    // Standalone: GitHub's MCP server becomes one of our connectors, its tools in the
+    // registry like every capability's, and the policy sees them L3.
+    if (!hosted) {
+      try {
+        const unmountGithub = await createStandaloneMounts(rt.toolRegistry).mount(GITHUB, {
+          transport: 'streamable-http',
+          serverName: GITHUB,
+          url: options.url,
+          headers: { Authorization: `Bearer ${token}`, 'X-MCP-Toolsets': options.toolsets },
+        })
+        mount = { token }
+        githubUnmount = unmountGithub
+        status = { state: 'ready' }
+      } catch (error) {
+        githubUnmount?.()
+        githubUnmount = undefined
+        mount = { token }
+        const message = reason(error)
+        status = { state: 'error', error: message }
+        rt.warn('ds-bot: GitHub connector failed: %s', message)
+      }
       return
     }
     try {
+      if (loader === undefined || typeof loader.import !== 'function') throw new Error('This DSH cannot load connectors')
       const exports = await loader.import(MCP_CLIENT)
       const plugin = loader.unwrapExports?.(exports) ?? (exports as { readonly default?: unknown } | undefined)?.default ?? exports
       const fiber: PluginFiber = ctx.plugin!(plugin, {

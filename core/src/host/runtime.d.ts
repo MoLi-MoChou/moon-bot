@@ -376,6 +376,8 @@ export interface HostRuntime {
   hideBotUnusedTools(agent: Agent): void
   /** One tool on both paths at once: the Zod registry entry and its DSH derivation. */
   registerTool(entry: ToolEntry): void
+  /** The tool registry, for mounts that add tools at run time (capabilities). */
+  readonly toolRegistry?: import('../engine/registry.ts').ToolRegistry | undefined
 
   // --- provided by parts.ts and folders.ts
   displayItems(sessionId: string, events: readonly SessionEvent[]): readonly unknown[]

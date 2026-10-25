@@ -26,8 +26,16 @@ class McpConnector {
   }
   async connect() {
     this.client ??= new Client({ name: "moon-bot", version: "0.1.0" }, { capabilities: {} });
+    const url = this.spec.url;
+    if (url !== void 0 && url !== "") {
+      const { StreamableHTTPClientTransport } = await import("@modelcontextprotocol/sdk/client/streamableHttp.js");
+      await this.client.connect(new StreamableHTTPClientTransport(new URL(url), {
+        ...this.spec.headers !== void 0 ? { requestInit: { headers: { ...this.spec.headers } } } : {}
+      }));
+      return this.client;
+    }
     await this.client.connect(new StdioClientTransport({
-      command: this.spec.command,
+      command: this.spec.command ?? "",
       args: [...this.spec.args ?? []],
       ...this.spec.env !== void 0 ? { env: { ...process.env, ...this.spec.env } } : {}
     }));

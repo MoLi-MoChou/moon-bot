@@ -22,9 +22,12 @@ const RESULT_CHARS = 20_000
 
 export interface McpServerSpec {
   readonly id: string
-  readonly command: string
+  /** stdio servers name a command; http servers name a url instead. */
+  readonly command?: string | undefined
   readonly args?: readonly string[] | undefined
   readonly env?: Readonly<Record<string, string>> | undefined
+  readonly url?: string | undefined
+  readonly headers?: Readonly<Record<string, string>> | undefined
 }
 
 /** One mounted server: its client and the entries it added to the registry. */
@@ -53,8 +56,16 @@ export class McpConnector {
 
   private async connect(): Promise<Client> {
     this.client ??= new Client({ name: 'moon-bot', version: '0.1.0' }, { capabilities: {} })
+    const url = this.spec.url
+    if (url !== undefined && url !== '') {
+      const { StreamableHTTPClientTransport } = await import('@modelcontextprotocol/sdk/client/streamableHttp.js')
+      await this.client.connect(new StreamableHTTPClientTransport(new URL(url), {
+        ...(this.spec.headers !== undefined ? { requestInit: { headers: { ...this.spec.headers } } } : {}),
+      }))
+      return this.client
+    }
     await this.client.connect(new StdioClientTransport({
-      command: this.spec.command,
+      command: this.spec.command ?? '',
       args: [...(this.spec.args ?? [])],
       ...(this.spec.env !== undefined ? { env: { ...process.env, ...this.spec.env } as Record<string, string> } : {}),
     }))

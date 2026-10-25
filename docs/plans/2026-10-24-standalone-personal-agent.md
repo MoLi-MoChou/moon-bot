@@ -292,4 +292,5 @@ TS 现状盘点（2026-10-24 实测）：core 源码侧仅剩 `index.js`（70 �
 - **五项能力评测集已立**（commit 3d0df3f）：`core/test/eval/fixtures/*.json` + `scripts/eval.ts`（`npm run eval`），对真实 wired 服务跑：记忆跨重启并主动可见、可删；相关性浮现只随主题（冻结快照按设计每回合随行）；调度暂停不出、到期跨重启恰好一次；连接器工作流断连重试并受 L3 策略；L0–L4 与预算、无申诉拒绝。**五项全 PASS**。顺带真修复：浮现检索丢弃 <4 字符词——纯语法词的提问不再误浮。
 - **测试全面 .ts**：107 个 .test.js 全部改名 .ts（测试 glob 收敛），tsconfig.test.json 宽松门禁落地；子代理分批清零其中类型错误（进行中，957→约 688）。
 - **DSH 移除第一遍已扫**（commit 4f933e8）：web-search 本地 WebError；client 原语独立版（app 构建仍以其 react-markdown 模块替换）；dsh-update 整特性删除（模块/通道/RPC/测试）；llm 类型入 dsh-types；工具派生恒用本地折参包装；speech 普通包名；诊断不再探测 DSH。**运行时剩余仅两处惰性 seam**（connectors/capabilities-mount 的 dsh-mcp-client，DSH 宿主能力路径）——自研 McpConnector 已在，改接线为独立一步。ambient declare-module 类型仍在 .d.ts。
-- 门禁：core 925/922/0；eval 五项 PASS。
+- **能力挂载不再依赖 DSH**（commit 80e91a9）：capabilities-standalone.ts 用自研连接器把 MCP 能力挂进注册表（L3 策略天然覆盖），capabilities-host.ts 收拢 DSH 宿主 fiber 路径（惰性 import）；按"有无 DSH 插件宿主"选路，独立侧连无 ctx 的桥 agent 也纳入跟踪。测试对真 echo 服务器全链路。GitHub 连接器同样双路（独立走 streamable-http 连接器）。**运行时仅剩两处惰性 @deepseek-ai 引用**（两个 hosted seam 的 MCP client 字符串）。
+- 门禁：core 926/923/0；eval 五项 PASS；typecheck 0；lint ok。

@@ -8,7 +8,7 @@ import { headerNavigation, installHeaderNavigation } from '../src/client/header-
 const bundle = await build({
   entryPoints: [fileURLToPath(new URL('../src/client/header.tsx', import.meta.url))],
   bundle: true, format: 'cjs', platform: 'node', write: false,
-  external: ['react', 'react-dom', '@deepseek-ai/dsh-client-ui-primitives'],
+  external: ['react', 'react-dom'],
 })
 interface PillNode { props: Record<string, unknown> & { onClick?: () => void }, children: PillNode[] }
 const module = { exports: {} as { HeaderPill: (props: Record<string, unknown>) => PillNode } }
@@ -18,7 +18,6 @@ runInNewContext(bundle.outputFiles[0].text, {
     const platform = {
       react: { createElement: (type, props, ...children) => ({ type, props: props ?? {}, children: children.flat(Infinity) }), useState: initial => [initial, () => {}], useEffect: () => {}, useRef: current => ({ current }), useLayoutEffect: () => {}, useMemo: make => make(), useCallback: fn => fn, Fragment: 'fragment' },
       'react-dom': { createPortal: node => node },
-      '@deepseek-ai/dsh-client-ui-primitives': { MarkdownText: () => null },
     }
     if (!(name in platform)) throw new Error(`no platform module ${name}`)
     return platform[name]

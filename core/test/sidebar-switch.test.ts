@@ -8,7 +8,7 @@ import { build } from 'esbuild'
 
 // jsdom comes from the harness that test/harness-resolve.mjs found, like the dsh packages.
 const PLUGIN = dirname(dirname(fileURLToPath(import.meta.url)))
-const { JSDOM } = createRequire(join(process.env.DSH_HARNESS ?? join(PLUGIN, '..', 'deepseek-harness'), 'package.json'))('jsdom')
+const { JSDOM } = await import('jsdom')
 
 // The sidebar and its style sheets import the browser's React; bundle them with a minimal
 // stand-in, as the tool-cell tests do: components run as plain functions. Navigation
@@ -19,7 +19,7 @@ const { outputFiles } = await build({
     resolveDir: PLUGIN,
   },
   bundle: true, format: 'cjs', platform: 'browser', write: false, logLevel: 'silent',
-  external: ['react', 'react-dom', '@deepseek-ai/dsh-client-ui-primitives'],
+  external: ['react', 'react-dom'],
 })
 let renderRefs
 let refIndex = 0

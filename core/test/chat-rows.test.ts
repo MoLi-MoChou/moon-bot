@@ -7,7 +7,7 @@ import { build } from 'esbuild'
 const bundle = await build({
   entryPoints: [fileURLToPath(new URL('../src/client/cells.ts', import.meta.url))],
   bundle: true, format: 'cjs', platform: 'node', write: false,
-  external: ['react', 'react-dom', '@deepseek-ai/dsh-client-ui-primitives'],
+  external: ['react', 'react-dom'],
 })
 // The bundled module's exports, as this test drives them.
 interface Row {
@@ -26,7 +26,6 @@ runInNewContext(bundle.outputFiles[0].text, {
         useLayoutEffect() {}, useEffect() {}, useMemo: make => make(),
       },
       'react-dom': {},
-      '@deepseek-ai/dsh-client-ui-primitives': {},
     }
     if (!(name in platform)) throw new Error(`no platform module ${name}`)
     return platform[name]

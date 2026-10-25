@@ -2,9 +2,8 @@
 import { createHash } from "node:crypto";
 import { configFor } from "./capabilities-config.js";
 import { createStandaloneMounts } from "./capabilities-standalone.js";
-import { HostMounts } from "./capabilities-host.js";
 const ENSURE_TIMEOUT_MS = 15e3;
-function createCapabilityMounts({ ctx, rt, state, library, expand }) {
+function createCapabilityMounts({ rt, state, library, expand }) {
   const agents = /* @__PURE__ */ new Map();
   const mounts = /* @__PURE__ */ new Map();
   const chains = /* @__PURE__ */ new WeakMap();
@@ -96,27 +95,18 @@ function createCapabilityMounts({ ctx, rt, state, library, expand }) {
     await drop();
     statusSet(botId, name, sessionId, { state: "connecting" });
     try {
-      if (agent.ctx?.plugin === void 0) {
-        if (item.kind !== "mcp") throw new Error("Skills need a DSH plugin host.");
-        const drop2 = await standalone.mount(name, config);
-        agentMounts.set(name, { key, fiber: void 0, drop: drop2 });
-        statusSet(botId, name, sessionId, { state: "ready" });
-        return;
-      }
-      const { fiber } = item.kind === "skill" ? await hostMounts.skillMount(agent, name, config) : await hostMounts.mcpMount(agent, name, config);
-      agentMounts.set(name, { key, fiber });
-      if (stopped || agents.get(sessionId)?.deref() !== agent) return;
+      if (item.kind !== "mcp") throw new Error("Only MCP servers can be mounted.");
+      const drop2 = await standalone.mount(name, config);
+      agentMounts.set(name, { key, fiber: void 0, drop: drop2 });
       statusSet(botId, name, sessionId, { state: "ready" });
+      return;
     } catch (error) {
       await drop();
-      const parts = [error, error?.cause].filter(Boolean);
-      const message = rt.redactSecrets(parts.map((part) => String(part?.message ?? part)).join(": ") || "Connection failed").slice(0, 300);
-      statusSet(botId, name, sessionId, { state: "error", error: message });
+      statusSet(botId, name, sessionId, { state: "error", error: rt.redactSecrets(error instanceof Error ? error.message : String(error)).slice(0, 300) });
+      return;
     }
   };
   const standalone = createStandaloneMounts(rt.toolRegistry);
-  const hostMounts = new HostMounts({ ctx });
-  const hosted = () => typeof ctx.get("loader")?.import === "function";
   const reconcileAgent = async (agent, bot) => {
     const sessionId = agent.session.id;
     const desired = bot ? expand(bot.capabilities) : /* @__PURE__ */ new Set();
@@ -224,7 +214,6 @@ function createCapabilityMounts({ ctx, rt, state, library, expand }) {
   const trackAgent = (agent) => {
     const sessionId = agent?.session?.id;
     if (agent === void 0 || typeof sessionId !== "string") return;
-    if (agent.ctx === void 0 && hosted()) return;
     if (agents.get(sessionId)?.deref() === agent) return;
     agents.set(sessionId, new WeakRef(agent));
     agent.ctx?.effect?.(() => () => {

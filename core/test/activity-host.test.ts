@@ -41,12 +41,12 @@ const el = (attrs = {}, ...children) => {
 const bundle = await build({
   entryPoints: [fileURLToPath(new URL('../src/client/activity-row.tsx', import.meta.url))],
   bundle: true, format: 'cjs', platform: 'node', write: false,
-  external: ['react', 'react-dom', '@deepseek-ai/dsh-client-ui-primitives'],
+  external: ['react', 'react-dom'],
 })
 const module = { exports: {} as { runningSlot: (doc: unknown) => unknown, flowRows: (column: unknown) => { attrs: Record<string, unknown> }[] } }
 runInNewContext(bundle.outputFiles[0].text, {
   module, exports: module.exports, setTimeout, clearTimeout,
-  require: name => ({ react: { createElement: () => null }, 'react-dom': { createPortal: () => null }, '@deepseek-ai/dsh-client-ui-primitives': { MarkdownText: () => null } })[name] ?? {},
+  require: name => ({ react: { createElement: () => null }, 'react-dom': { createPortal: () => null } })[name] ?? {},
 })
 const { runningSlot, flowRows } = module.exports
 

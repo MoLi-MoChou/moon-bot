@@ -2,7 +2,6 @@
 import { createStandaloneMounts } from "./capabilities-standalone.js";
 const GITHUB = "github";
 const GITHUB_SECRET = "GITHUB_TOKEN";
-const MCP_CLIENT = "@deepseek-ai/dsh-mcp-client";
 const DEFAULTS = {
   url: "https://api.githubcopilot.com/mcp/",
   api: "https://api.github.com",
@@ -38,10 +37,7 @@ function install(rt) {
   const unmount = async () => {
     githubUnmount?.();
     githubUnmount = void 0;
-    const fiber = mount?.fiber;
     mount = null;
-    if (fiber !== void 0) await Promise.resolve().then(() => fiber.dispose()).catch(() => {
-    });
   };
   const reason = (error) => {
     const text = [error, error?.cause].filter(Boolean).map((part) => String(part?.message ?? part)).join(": ");
@@ -65,46 +61,19 @@ function install(rt) {
       return;
     }
     status = { state: "connecting" };
-    const loader = ctx.get("loader");
-    const hosted = loader !== void 0 && typeof loader.import === "function" && typeof ctx.plugin === "function";
-    if (!hosted) {
-      try {
-        const unmountGithub = await createStandaloneMounts(rt.toolRegistry).mount(GITHUB, {
-          transport: "streamable-http",
-          serverName: GITHUB,
-          url: options.url,
-          headers: { Authorization: `Bearer ${token}`, "X-MCP-Toolsets": options.toolsets }
-        });
-        mount = { token };
-        githubUnmount = unmountGithub;
-        status = { state: "ready" };
-      } catch (error) {
-        githubUnmount?.();
-        githubUnmount = void 0;
-        mount = { token };
-        const message = reason(error);
-        status = { state: "error", error: message };
-        rt.warn("ds-bot: GitHub connector failed: %s", message);
-      }
-      return;
-    }
     try {
-      if (loader === void 0 || typeof loader.import !== "function") throw new Error("This DSH cannot load connectors");
-      const exports = await loader.import(MCP_CLIENT);
-      const plugin = loader.unwrapExports?.(exports) ?? exports?.default ?? exports;
-      const fiber = ctx.plugin(plugin, {
+      const unmountGithub = await createStandaloneMounts(rt.toolRegistry).mount(GITHUB, {
         transport: "streamable-http",
         serverName: GITHUB,
         url: options.url,
-        headers: { Authorization: `Bearer ${token}`, "X-MCP-Toolsets": options.toolsets },
-        failOnStartupError: true
+        headers: { Authorization: `Bearer ${token}`, "X-MCP-Toolsets": options.toolsets }
       });
-      mount = { token, fiber };
-      await fiber.await?.();
-      if (mount?.fiber !== fiber) return;
+      mount = { token };
+      githubUnmount = unmountGithub;
       status = { state: "ready" };
     } catch (error) {
-      await unmount();
+      githubUnmount?.();
+      githubUnmount = void 0;
       mount = { token };
       const message = reason(error);
       status = { state: "error", error: message };

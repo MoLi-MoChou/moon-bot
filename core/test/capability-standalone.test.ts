@@ -10,6 +10,8 @@ import { test } from 'node:test'
 import { createRuntime } from '../index.js'
 import { fakeContext } from './fake-ctx.js'
 import { ruleOf } from '../src/engine/policy.ts'
+import { ToolRegistry } from '../src/engine/registry.ts'
+import { createStandaloneMounts } from '../src/host/capabilities-standalone.ts'
 
 const ECHO = fileURLToPath(new URL('../dev/mcp-echo-server.mjs', import.meta.url))
 
@@ -58,4 +60,18 @@ test('a standalone Bot mounts an MCP capability into the registry, L3 by policy'
   const definition = rt.toolRegistry.definitions([mounted[0] as string])[0]
   const outcome = await definition.execute({ text: 'mounted standalone' }, { sessionId: 'a', callId: 'c1' })
   assert.equal(outcome.content[0]?.type === 'text' ? outcome.content[0].text : '', 'mounted standalone')
+})
+
+test('two Sessions sharing one capability keep their tools until the last one ends', async () => {
+  const registry = new ToolRegistry()
+  const mounts = createStandaloneMounts(registry)
+  const config = { transport: 'stdio', serverName: 'echo', command: process.execPath, args: [ECHO] }
+  const first = await mounts.mount('echo', config)
+  const second = await mounts.mount('echo', config)
+  assert.deepEqual(registry.names(), ['mcp__echo__echo'])
+  first()
+  assert.deepEqual(registry.names(), ['mcp__echo__echo'], 'the other Session still serves the tool')
+  second()
+  assert.deepEqual(registry.names(), [], 'the last mount takes it out')
+  mounts.dispose()
 })

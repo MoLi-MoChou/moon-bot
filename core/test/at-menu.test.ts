@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { formatSessionReferenceMention, parseSessionReferenceText } from '@deepseek-ai/dsh-session-reference'
 import { BOTS_SOURCE, CHATS_SOURCE, atSources, chatRows, mentionRows, sessionMention } from '../src/client/at-menu.ts'
 import { indexRoster } from '../src/client/sources.ts'
 
@@ -14,11 +13,22 @@ const roster = indexRoster({
 }) as unknown as Parameters<typeof mentionRows>[0]
 const names = rows => rows.map(row => row.bot?.name ?? 'everyone')
 
-test('a session mention is the one DSH writes and reads back', () => {
+// The mention format is a contract with what the client already stored: the session id
+// as base64url JSON inside `dsh-session:`, the label escaped for a markdown link text.
+const mentionOf = (id, label) => `@[${label.replace(/[\\\]]/g, mark => `\\${mark}`)}](dsh-session:${Buffer.from(JSON.stringify(id), 'utf8').toString('base64url')})`
+const readMention = text => {
+  const found = /@\[(.*?)\]\(dsh-session:([A-Za-z0-9_-]+)\)/.exec(text)
+  if (found === null) return { text, references: [] }
+  const label = (found[1] ?? '').replace(/\\(.)/g, '$1')
+  const sessionId = JSON.parse(Buffer.from(found[2] ?? '', 'base64url').toString('utf8'))
+  return { text: text.replace(found[0], `@${label}`), references: [{ sessionId, label }] }
+}
+
+test('a session mention is the format this client writes and a reader gets back', () => {
   for (const [id, label] of [['s-1', 'Chat with King'], ['会话/ä"x', 'a ] b \\ c'], ['', '']]) {
     const mention = sessionMention(id, label)
-    assert.equal(mention, formatSessionReferenceMention({ sessionId: id, label }))
-    assert.deepEqual(parseSessionReferenceText(`see ${mention}`), { text: `see @${label}`, references: [{ sessionId: id, label }] })
+    assert.equal(mention, mentionOf(id, label), `the stored format stays the same for ${JSON.stringify(id)}`)
+    assert.deepEqual(readMention(`see ${mention}`), { text: `see @${label}`, references: [{ sessionId: id, label }] })
   }
 })
 

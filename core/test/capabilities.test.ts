@@ -1,11 +1,20 @@
+// Standalone capabilities (plan §阶段 6): with no DSH plugin host, a capability mounts
+// through our own MCP connector into the tool registry the engine serves — the tests drive
+// a real MCP server child over stdio, or a loopback Streamable HTTP server, and never a
+// fake plugin host.
 import assert from 'node:assert/strict'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
+import { fileURLToPath } from 'node:url'
 import { createRuntime } from '../index.js'
 import { expandCapabilityNames, validateCapabilityName } from '../src/host/capabilities.ts'
 import { fakeContext } from './fake-ctx.js'
+import { startMcpHttpServer } from './fixtures/mcp-http-server.ts'
+
+const ECHO = fileURLToPath(new URL('../dev/mcp-echo-server.mjs', import.meta.url))
+const FIXTURE = fileURLToPath(new URL('./fixtures/mcp-test-server.mjs', import.meta.url))
 
 const makeHome = state => {
   const home = mkdtempSync(join(tmpdir(), 'dsb-capabilities-'))
@@ -25,68 +34,95 @@ const team = (): Record<string, unknown> & { bots: Record<string, { capabilities
   exchanges: [],
   exchangeTurns: {},
   questions: {},
+  capabilities: { items: {} as Record<string, Record<string, unknown>> },
   revision: 1,
 })
-const mcp = (name, command = 'node') => ({ name, kind: 'mcp', description: 'Echo service', transport: 'stdio', command, args: [], env: {} })
-const created = env => env.ctx.listeners.get('agent/created').find(listener => listener.name === 'prepareCapabilities')
 
-function testAgent(id, mounts, skillsBySession, { awaitMount = async () => {} }: { awaitMount?: (record: unknown) => Promise<void> } = {}) {
-  const disposers = []
-  const skills = new Map()
-  skillsBySession.set(id, skills)
-  const agentCtx = {
-    effect(execute) {
-      const dispose = execute()
-      if (typeof dispose === 'function') disposers.push(dispose)
+// Every stdio item names the echo server: a mount must never spawn `node` with no script.
+const mcp = (name: string, overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
+  name,
+  kind: 'mcp',
+  description: 'Echo service',
+  transport: 'stdio',
+  command: process.execPath,
+  args: [ECHO],
+  env: {},
+  approved: true,
+  createdBy: 'chief',
+  createdAt: 1,
+  updatedAt: 1,
+  ...overrides,
+})
+
+// A minimal Agent: the mount tracks it and its ctx effect drops the mounts when it goes.
+function fakeAgent(sessionId: string) {
+  const disposers: (() => void)[] = []
+  return {
+    session: { id: sessionId },
+    ctx: {
+      effect(execute: () => unknown) {
+        const dispose = execute()
+        if (typeof dispose === 'function') disposers.push(dispose as () => void)
+      },
+      dispose() { for (const dispose of disposers.splice(0).reverse()) dispose() },
     },
-    plugin(plugin, config) {
-      const record: { plugin: { inject?: readonly string[], apply?: (ctx: unknown) => void } | undefined, config: Record<string, unknown> & { url?: string, serverName?: string }, sessionId: string, disposed: boolean, cleanup?: () => void } = { plugin, config, sessionId: id, disposed: false }
-      mounts.push(record)
-      if (plugin.inject?.includes('skills')) {
-        const c = {
-          skills: { register(skill) { skills.set(skill.name, skill); return () => skills.delete(skill.name) } },
-          effect: execute => { record.cleanup = execute() },
-        }
-        plugin.apply(c)
-      }
-      return {
-        await: () => awaitMount(record),
-        dispose: () => { record.disposed = true; record.cleanup?.() },
-      }
-    },
-    dispose() { for (const dispose of disposers.reverse()) dispose() },
   }
-  return { id, session: { id }, ctx: agentCtx }
 }
 
-async function setup({ state = team(), secret, beforeLoad }: { state?: Record<string, unknown> & { capabilities?: unknown }, secret?: unknown, beforeLoad?: (env: { ctx: { logger: { warn: (...args: unknown[]) => void } }, rt: Record<string, unknown>, mounts?: unknown, skills?: unknown, mcpPlugin?: unknown }) => Promise<void> | void } = {}) {
+async function setup({ state = team(), secrets = [] }: { state?: Record<string, unknown>, secrets?: readonly Record<string, unknown>[] } = {}) {
   const home = makeHome(state)
-  if (secret) writeFileSync(join(home, 'secrets.json'), JSON.stringify({ secrets: [secret] }))
-  const mounts = []
-  const skills = new Map()
-  const mcpPlugin = { name: 'mcp-client', apply() {} }
-  const loader = { import: async () => ({ default: mcpPlugin }), unwrapExports: exports => exports.default }
-  const ctx = fakeContext({ services: { loader } })
+  if (secrets.length > 0) writeFileSync(join(home, 'secrets.json'), JSON.stringify({ secrets }))
+  const ctx = fakeContext()
   const rt = createRuntime(ctx, { home, github: false, diagnosticsFile: false })
   ctx.sessionTitle = { rename: async () => {} }
-  rt.resolveAgent = async sessionId => ({ session: { id: sessionId } })
-  beforeLoad?.({ ctx, rt, mounts, skills, mcpPlugin })
+  const agents = new Map<string, ReturnType<typeof fakeAgent>>()
+  const agentFor = (sessionId: string) => {
+    let agent = agents.get(sessionId)
+    if (agent === undefined) {
+      agent = fakeAgent(sessionId)
+      agents.set(sessionId, agent)
+    }
+    return agent
+  }
+  rt.resolveAgent = async (sessionId: string) => agentFor(sessionId)
   await rt.load()
   return {
     home,
     ctx,
     rt,
-    mounts,
-    skills,
-    mcpPlugin,
+    agentFor,
     async dispose() {
-      ctx.dispose()
-      await rt.scheduleCapabilitiesReconcile()
-      await new Promise(resolve => setImmediate(resolve))
+      await ctx.dispose()
       rmSync(home, { recursive: true, force: true, maxRetries: 5 })
     },
   }
 }
+
+const mcpNames = rt => rt.toolRegistry.names().filter(name => name.startsWith('mcp__'))
+const statusOf = (rt, botId, name) => rt.capabilityStatusesView()[botId]?.[name]
+const textOf = outcome => {
+  const content = outcome?.content ?? []
+  return content[0]?.type === 'text' ? content[0].text ?? '' : ''
+}
+const callTool = async (rt, name, input, sessionId = 'chief') => {
+  const definition = rt.toolRegistry.definitions([name])[0]
+  assert.ok(definition, `${name} is not in the registry`)
+  return definition.execute(input, { sessionId, callId: `call-${name}` })
+}
+
+// A mount starts a real child process, so every wait is bounded and names the observed state.
+const waitFor = async (check: () => boolean, describe: () => unknown, timeoutMs = 15_000): Promise<void> => {
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    if (check()) return
+    await new Promise(resolve => setTimeout(resolve, 25))
+  }
+  assert.fail(`timed out after ${timeoutMs}ms; observed: ${JSON.stringify(describe())}`)
+}
+const waitForState = (rt, botId, name, wanted) => waitFor(
+  () => statusOf(rt, botId, name)?.state === wanted,
+  () => statusOf(rt, botId, name),
+)
 
 test('capability names use the MCP and skill validator intersection', () => {
   assert.equal(validateCapabilityName('a'), 'a')
@@ -110,7 +146,7 @@ test('state migration adds an empty library and Bot attachment lists', async t =
   await env.rt.load()
   assert.deepEqual(env.rt.state.capabilities, { items: {} })
   assert.deepEqual(env.rt.state.bots.chief.capabilities, [])
-  const saved = JSON.parse(await (await import('node:fs/promises')).readFile(join(env.home, 'state.json'), 'utf8'))
+  const saved = JSON.parse(readFileSync(join(env.home, 'state.json'), 'utf8'))
   assert.deepEqual(saved.capabilities, { items: {} })
   assert.deepEqual(saved.bots.chief.capabilities, [])
 })
@@ -127,7 +163,7 @@ test('Bot saves enforce approval and ownership, and deletion cascades', async t 
   await rt.capabilityEndpoint('capability-approve', { name: 'echo' })
   const approved = await rt.capabilitySave({ ...mcp('echo'), description: 'Another description' }, { botId: 'worker' })
   assert.equal(approved.approved, true)
-  const changed = await rt.capabilitySave(mcp('echo', 'node-new'), { botId: 'worker' })
+  const changed = await rt.capabilitySave(mcp('echo', { command: 'node-new' }), { botId: 'worker' })
   assert.equal(changed.approved, false)
   await assert.rejects(
     rt.capabilitySave({ name: 'echo', kind: 'skill', description: 'Other kind', content: 'Instructions' }, { botId: 'worker' }),
@@ -144,7 +180,7 @@ test('Bot saves enforce approval and ownership, and deletion cascades', async t 
   assert.deepEqual(state.bots.worker.capabilities, ['team'])
 })
 
-test('capability Bot tools refuse DSH Agent sessions', async t => {
+test('capability Bot tools refuse sessions that are not Bot chats', async t => {
   const env = await setup()
   t.after(() => env.dispose())
   const list = env.ctx.registeredTools.get('list_capabilities')
@@ -192,36 +228,6 @@ test('read-only secret reload does not requeue capability reconciliation', async
   assert.equal(loads, 1)
 })
 
-test('startup and empty-to-nonempty attachments track existing Bot Agents', async t => {
-  const state = team()
-  state.capabilities = { items: { echo: { ...mcp('echo'), approved: true, createdBy: 'chief', createdAt: 1, updatedAt: 1 } } }
-  state.bots.chief.capabilities = ['echo']
-  const resolved = []
-  const env = await setup({
-    state,
-    beforeLoad: ({ rt, mounts, skills }) => {
-      const existing = Object.fromEntries(['chief', 'room-chief', 'worker', 'helper'].map(id => [id, testAgent(id, mounts, skills)]))
-      rt.chatOf = botId => botId
-      rt.groupSessionsOf = botId => botId === 'chief' ? ['room-chief', 'room-chief'] : []
-      rt.resolveAgent = async sessionId => {
-        if (Object.hasOwn(existing, sessionId)) resolved.push(sessionId)
-        return existing[sessionId]
-      }
-    },
-  })
-  t.after(() => env.dispose())
-  await new Promise(resolve => setImmediate(resolve))
-  await env.rt.scheduleCapabilitiesReconcile()
-  assert.deepEqual(resolved, ['chief', 'room-chief'])
-  assert.deepEqual(env.mounts.map(mount => mount.sessionId), ['chief', 'room-chief'])
-
-  await env.rt.changeCapabilityAttachment('attach', { name: 'echo' }, 'worker')
-  await env.rt.capabilityEndpoint('bot-capability', { botId: 'helper', name: 'echo', attached: true })
-  await env.rt.scheduleCapabilitiesReconcile()
-  assert.deepEqual(resolved, ['chief', 'room-chief', 'worker', 'helper'])
-  assert.deepEqual(env.mounts.filter(mount => !mount.disposed).map(mount => mount.sessionId), ['chief', 'room-chief', 'worker', 'helper'])
-})
-
 test('one-item attach changes keep the other attachments', async t => {
   const env = await setup()
   t.after(() => env.dispose())
@@ -257,111 +263,11 @@ test('a creator that is not a Main Bot cannot change a capability another Bot us
   assert.equal(rt.state.capabilities.items.guide.content, 'Settings edit.')
 })
 
-test('a new Bot Agent waits for its capabilities before creation finishes', async t => {
-  const state = team()
-  state.capabilities = { items: { echo: { ...mcp('echo'), approved: true, createdBy: 'chief', createdAt: 1, updatedAt: 1 } } }
-  state.bots.chief.capabilities = ['echo']
-  let startMount
-  let releaseMount
-  const mountStarted = new Promise(resolve => { startMount = resolve })
-  const mountGate = new Promise(resolve => { releaseMount = resolve })
-  const env = await setup({ state })
-  const agent = testAgent('chief', env.mounts, env.skills, { awaitMount: async () => { startMount(); await mountGate } })
-  t.after(async () => {
-    releaseMount()
-    agent.ctx.dispose()
-    await env.dispose()
-  })
-  let finished = false
-  const creation = created(env)({ agent, source: 'startup' }).then(() => { finished = true })
-  await mountStarted
-  await new Promise(resolve => setImmediate(resolve))
-  assert.equal(finished, false)
-  releaseMount()
-  await creation
-  assert.equal(env.rt.capabilityStatusesView().chief.echo.state, 'ready')
-})
-
-test('a hung mount releases the message after the limit and does not hold up other Bots', async t => {
-  const state = team()
-  state.capabilities = {
-    items: {
-      slow: { ...mcp('slow'), approved: true, createdBy: 'chief', createdAt: 1, updatedAt: 1 },
-      echo: { ...mcp('echo'), approved: true, createdBy: 'chief', createdAt: 1, updatedAt: 1 },
-    },
-  }
-  state.bots.chief.capabilities = ['slow', 'echo']
-  state.bots.worker.capabilities = ['echo']
-  const warnings = []
-  let startMount
-  let releaseMount
-  const mountStarted = new Promise(resolve => { startMount = resolve })
-  const mountGate = new Promise(resolve => { releaseMount = resolve })
-  const hang = async record => {
-    if (record.config.serverName !== 'slow') return
-    startMount()
-    await mountGate
-  }
-  const env = await setup({
-    state,
-    beforeLoad: ({ ctx, rt }) => {
-      ctx.logger.warn = (...args) => warnings.push(args.join(' '))
-      rt.capabilityEnsureTimeoutMs = 20
-    },
-  })
-  const chief = testAgent('chief', env.mounts, env.skills, { awaitMount: hang })
-  const worker = testAgent('worker', env.mounts, env.skills, { awaitMount: hang })
-  env.rt.resolveAgent = async sessionId => ({ chief, worker })[sessionId]
-  t.after(async () => {
-    releaseMount()
-    chief.ctx.dispose()
-    worker.ctx.dispose()
-    await env.dispose()
-  })
-  const timeouts = name => warnings.filter(line => line.includes(`capability mount for ${name} did not finish within 20ms; continuing`)).length
-  await env.rt.ensureCapabilities('chief')
-  await mountStarted
-  assert.equal(timeouts('chief'), 1)
-  assert.equal(env.rt.capabilityStatusesView().chief.slow.state, 'connecting')
-  assert.equal(env.rt.capabilityStatusesView().chief.echo.state, 'ready')
-  await env.rt.ensureCapabilities('chief')
-  await env.rt.ensureCapabilities('worker')
-  assert.equal(timeouts('chief'), 1)
-  assert.equal(timeouts('worker'), 0)
-  assert.equal(env.rt.capabilityStatusesView().worker.echo.state, 'ready')
-  releaseMount()
-  await env.rt.scheduleCapabilitiesReconcile()
-  assert.equal(env.rt.capabilityStatusesView().chief.slow.state, 'ready')
-})
-
-test('unloading the plugin disposes every capability mount', async t => {
-  const state = team()
-  state.capabilities = {
-    items: {
-      echo: { ...mcp('echo'), approved: true, createdBy: 'chief', createdAt: 1, updatedAt: 1 },
-      guide: { name: 'guide', kind: 'skill', description: 'Guide', content: 'Do the work.', createdBy: 'chief', createdAt: 1, updatedAt: 1 },
-    },
-  }
-  state.bots.chief.capabilities = ['echo', 'guide']
-  const env = await setup({ state })
-  t.after(() => env.dispose())
-  const chief = testAgent('chief', env.mounts, env.skills)
-  await created(env)({ agent: chief, source: 'startup' })
-  assert.equal(env.mounts.length, 2)
-  assert.equal(env.skills.get('chief').has('guide'), true)
-  env.ctx.dispose()
-  await new Promise(resolve => setImmediate(resolve))
-  assert.deepEqual(env.mounts.map(mount => mount.disposed), [true, true])
-  assert.equal(env.skills.get('chief').has('guide'), false)
-  await env.rt.scheduleCapabilitiesReconcile()
-  assert.equal(env.mounts.length, 2)
-})
-
 test('unset capability statuses are omitted from the view and tool listing', async t => {
   const env = await setup()
   t.after(() => env.dispose())
   const { rt, ctx } = env
-  await rt.capabilitySave({ ...mcp('echo'), approved: true }, { botId: 'chief' })
+  await rt.capabilitySave(mcp('echo'), { botId: 'chief' })
   await rt.capabilitySave({ name: 'guide', kind: 'skill', description: 'Guide', content: 'Instructions' }, { botId: 'chief' })
   await rt.capabilitySave({ name: 'team', kind: 'pack', items: ['echo', 'guide'] }, { botId: 'chief' })
   rt.state.bots.chief.capabilities = ['echo', 'team']
@@ -372,104 +278,184 @@ test('unset capability statuses are omitted from the view and tool listing', asy
   assert.doesNotMatch(listed, /attached to you \(connecting\)/)
 })
 
-test('mounts agent-only MCP and skills, remounts changed config, resolves scoped secrets and reports missing secrets', async t => {
-  const env = await setup({ secret: { name: 'TOKEN', value: 'fake-secret-value', purpose: '', scope: ['chief'], requestedBy: null, createdAt: 1, updatedAt: 1 } })
+test('a new Bot Agent mounts its MCP capability before creation finishes', async t => {
+  const state = team()
+  state.capabilities = { items: { echo: mcp('echo') } }
+  state.bots.chief.capabilities = ['echo']
+  const env = await setup({ state })
   t.after(() => env.dispose())
-  const { ctx, rt, mounts, skills, mcpPlugin } = env
-  await rt.capabilitySave({ ...mcp('echo'), transport: 'streamable-http', url: 'https://example.test/mcp', headers: { Authorization: 'Bearer $DSH_SECRET_TOKEN' } }, { botId: 'chief' })
-  await rt.capabilitySave({ name: 'guide', kind: 'skill', description: 'How to work', content: 'Capability marker.' }, { botId: 'chief' })
-  await rt.capabilitySave({ name: 'team', kind: 'pack', items: ['echo', 'guide'] }, { botId: 'chief' })
-  await rt.changeCapabilityAttachment('attach', { name: 'team' }, 'chief')
-  await rt.changeCapabilityAttachment('attach', { name: 'team', bot: 'Worker' }, 'chief')
-  await assert.rejects(rt.changeCapabilityAttachment('attach', { name: 'team', bot: 'Chief' }, 'worker'), /Main Bot/)
-  await assert.rejects(rt.changeCapabilityAttachment('detach', { name: 'team', bot: 'Chief' }, 'worker'), /Main Bot/)
-  await rt.capabilitySave(mcp('blocked'), { botId: 'worker' })
-  await rt.changeCapabilityAttachment('attach', { name: 'blocked' }, 'worker')
-  const chief = testAgent('chief', mounts, skills)
-  const room = testAgent('room-chief', mounts, skills)
-  const worker = testAgent('worker', mounts, skills)
-  const dsh = testAgent('outside', mounts, skills)
-  for (const agent of [chief, room, worker, dsh]) ctx.emit('agent/created', { agent })
-  await rt.scheduleCapabilitiesReconcile()
-  assert.equal(mounts.filter(mount => mount.plugin === mcpPlugin).length, 2)
-  assert.equal(mounts.find(mount => mount.config?.serverName === 'echo').config.headers.Authorization, 'Bearer fake-secret-value')
-  assert.equal(skills.get('chief').has('guide'), true)
-  assert.deepEqual(mounts.filter(mount => mount.plugin === mcpPlugin).map(mount => mount.sessionId), ['chief', 'room-chief'])
-  assert.equal(JSON.stringify(rt.state.capabilities).includes('fake-secret-value'), false)
-  assert.equal(JSON.stringify(rt.capabilityLibraryView()).includes('fake-secret-value'), false)
-  assert.equal(rt.capabilityStatusesView().chief.team.state, 'ready')
-  assert.equal(rt.capabilityStatusesView().worker.team.state, 'error')
-  assert.equal(rt.capabilityStatusesView().worker.blocked.state, 'needs-approval')
-  assert.equal(mounts.some(mount => mount.config?.serverName === 'blocked'), false)
-  await rt.capabilityEndpoint('capability-approve', { name: 'blocked' })
-  await rt.scheduleCapabilitiesReconcile()
-  assert.equal(mounts.some(mount => mount.config?.serverName === 'blocked' && mount.sessionId === 'worker'), true)
-  const first = mounts.find(mount => mount.config?.serverName === 'echo')
-  const firstSkill = mounts.find(mount => mount.sessionId === 'chief' && mount.plugin.inject?.includes('skills'))
-  await rt.capabilitySave({ ...mcp('echo'), transport: 'streamable-http', url: 'https://example.test/mcp', headers: { Authorization: 'Bearer changed' } }, { botId: 'chief' })
-  await rt.capabilitySave({ name: 'guide', kind: 'skill', description: 'How to work', content: 'Changed capability marker.' }, { botId: 'chief' })
-  await rt.scheduleCapabilitiesReconcile()
-  assert.equal(first.disposed, true)
-  assert.equal(firstSkill.disposed, true)
-  assert.equal(skills.get('chief').get('guide').content, 'Changed capability marker.')
-  assert.equal(mounts.filter(mount => mount.plugin === mcpPlugin && mount.config.serverName === 'echo').length, 5)
-  assert.equal(rt.capabilityStatusesView().worker.team.state, 'ready')
-  await rt.capabilitySave({ ...mcp('missing-secret'), transport: 'streamable-http', url: 'https://example.test/mcp', headers: { Authorization: '$DSH_SECRET_TOKEN' } }, { botId: 'worker' })
-  await rt.changeCapabilityAttachment('attach', { name: 'missing-secret' }, 'worker')
-  await rt.scheduleCapabilitiesReconcile()
-  assert.equal(rt.capabilityStatusesView().worker['missing-secret'].state, 'error')
-  assert.match(rt.capabilityStatusesView().worker['missing-secret'].error, /TOKEN/)
-  await rt.changeCapabilityAttachment('detach', { name: 'team' }, 'chief')
-  await rt.scheduleCapabilitiesReconcile()
-  assert.equal(first.disposed, true)
-  assert.equal([...mounts].reverse().find(mount => mount.sessionId === 'chief' && mount.plugin.inject?.includes('skills')).disposed, true)
-  assert.equal(rt.capabilityStatusesView().chief.team, undefined)
+  const prepare = env.ctx.listeners.get('agent/created').find(listener => listener.name === 'prepareCapabilities')
+  assert.ok(prepare, 'the capability listener is registered')
+  await prepare({ agent: env.agentFor('chief'), source: 'startup' })
+  await waitForState(env.rt, 'chief', 'echo', 'ready')
+  assert.equal(statusOf(env.rt, 'chief', 'echo')?.state, 'ready')
+  assert.deepEqual(mcpNames(env.rt), ['mcp__echo__echo'])
+  const outcome = await callTool(env.rt, 'mcp__echo__echo', { text: 'mounted standalone' })
+  assert.equal(textOf(outcome), 'mounted standalone')
 })
 
-const exaSecret = (value, scope = ['chief']) => ({ name: 'EXA_API_KEY', value, purpose: '', scope, requestedBy: null, createdAt: 1, updatedAt: 1 })
-async function mountUrlCapability(t, { value, url, bots = ['chief'], awaitMount }: { value: string, url: string, bots?: string[], awaitMount?: (record: unknown) => Promise<void> }) {
-  const env = await setup({ secret: exaSecret(value) })
+test('reconcile picks up a capability attached after the Agent existed', async t => {
+  const env = await setup()
   t.after(() => env.dispose())
-  const { ctx, rt, mounts, skills } = env
-  await rt.capabilitySave({ name: 'exa', kind: 'mcp', description: '', transport: 'streamable-http', url, headers: {} }, { botId: 'chief' })
-  for (const bot of bots) await rt.changeCapabilityAttachment('attach', { name: 'exa', bot: rt.state.bots[bot].name }, 'chief')
-  for (const bot of bots) ctx.emit('agent/created', { agent: testAgent(bot, mounts, skills, { awaitMount }) })
-  await rt.scheduleCapabilitiesReconcile()
-  const mountFor = bot => mounts.find(mount => mount.sessionId === bot && mount.config?.serverName === 'exa')
-  return { ...env, mountFor }
-}
+  env.ctx.emit('agent/created', { agent: env.agentFor('chief') })
+  await env.rt.scheduleCapabilitiesReconcile()
+  assert.deepEqual(mcpNames(env.rt), [])
+  assert.deepEqual(env.rt.capabilityStatusesView().chief, {})
 
-test('secret references in an HTTP MCP URL are resolved, and an unavailable one is an error', async t => {
-  const env = await mountUrlCapability(t, { value: 'fake-exa-key', url: 'https://mcp.exa.test/mcp?apiKey=$DSH_SECRET_EXA_API_KEY', bots: ['chief', 'worker'] })
-  const { rt, mountFor } = env
-  assert.equal(mountFor('chief').config.url, 'https://mcp.exa.test/mcp?apiKey=fake-exa-key')
-  assert.equal(rt.capabilityStatusesView().chief.exa.state, 'ready')
-  assert.equal(JSON.stringify(rt.state.capabilities).includes('fake-exa-key'), false)
-  assert.equal(mountFor('worker'), undefined)
-  assert.equal(rt.capabilityStatusesView().worker.exa.state, 'error')
-  assert.match(rt.capabilityStatusesView().worker.exa.error, /EXA_API_KEY/)
+  await env.rt.capabilitySave(mcp('echo'), { ui: true })
+  await env.rt.changeCapabilityAttachment('attach', { name: 'echo' }, 'chief')
+  await env.rt.scheduleCapabilitiesReconcile()
+  await waitForState(env.rt, 'chief', 'echo', 'ready')
+  assert.deepEqual(mcpNames(env.rt), ['mcp__echo__echo'])
+  const outcome = await callTool(env.rt, 'mcp__echo__echo', { text: 'added later' })
+  assert.equal(textOf(outcome), 'added later')
 })
 
-test('a secret in an HTTP MCP URL query is encoded as one parameter value', async t => {
+test('an unapproved stdio MCP server shows needs-approval and mounts nothing until allowed', async t => {
+  const state = team()
+  state.capabilities = { items: { echo: mcp('echo', { approved: false }) } }
+  state.bots.chief.capabilities = ['echo']
+  const env = await setup({ state })
+  t.after(() => env.dispose())
+  env.ctx.emit('agent/created', { agent: env.agentFor('chief') })
+  await env.rt.scheduleCapabilitiesReconcile()
+  await waitForState(env.rt, 'chief', 'echo', 'needs-approval')
+  assert.deepEqual(mcpNames(env.rt), [])
+
+  await env.rt.capabilityEndpoint('capability-approve', { name: 'echo' })
+  await env.rt.scheduleCapabilitiesReconcile()
+  await waitForState(env.rt, 'chief', 'echo', 'ready')
+  assert.deepEqual(mcpNames(env.rt), ['mcp__echo__echo'])
+})
+
+test('a skill can be saved and attached but not mounted', async t => {
+  const state = team()
+  state.capabilities = { items: { guide: { name: 'guide', kind: 'skill', description: 'Guide', content: 'Do the work.', createdBy: 'chief', createdAt: 1, updatedAt: 1 } } }
+  state.bots.chief.capabilities = ['guide']
+  const env = await setup({ state })
+  t.after(() => env.dispose())
+  env.ctx.emit('agent/created', { agent: env.agentFor('chief') })
+  await env.rt.scheduleCapabilitiesReconcile()
+  await waitForState(env.rt, 'chief', 'guide', 'error')
+  assert.equal(statusOf(env.rt, 'chief', 'guide').error, 'Only MCP servers can be mounted.')
+  assert.deepEqual(mcpNames(env.rt), [])
+})
+
+test('the status is connecting while a slow server starts, then ready', async t => {
+  const state = team()
+  state.capabilities = { items: { slow: mcp('slow', { args: [FIXTURE], env: { MCP_TEST_INIT_DELAY_MS: '400' } }) } }
+  state.bots.chief.capabilities = ['slow']
+  const env = await setup({ state })
+  t.after(() => env.dispose())
+  const running = env.rt.ensureCapabilities('chief')
+  await waitForState(env.rt, 'chief', 'slow', 'connecting')
+  await running
+  await waitForState(env.rt, 'chief', 'slow', 'ready')
+  assert.equal(statusOf(env.rt, 'chief', 'slow')?.state, 'ready')
+  assert.deepEqual(mcpNames(env.rt), ['mcp__slow__echo', 'mcp__slow__env', 'mcp__slow__argv'])
+})
+
+test('a mount that cannot start surfaces an error status and no tools', async t => {
+  const state = team()
+  state.capabilities = { items: { broken: mcp('broken', { args: ['-e', 'process.exit(1)'] }) } }
+  state.bots.chief.capabilities = ['broken']
+  const env = await setup({ state })
+  t.after(() => env.dispose())
+  env.ctx.emit('agent/created', { agent: env.agentFor('chief') })
+  await env.rt.scheduleCapabilitiesReconcile()
+  await waitForState(env.rt, 'chief', 'broken', 'error')
+  const status = statusOf(env.rt, 'chief', 'broken')
+  assert.ok(typeof status.error === 'string' && status.error.length > 0, `error: ${JSON.stringify(status)}`)
+  assert.equal(status.error.includes('process.exit'), false)
+  assert.deepEqual(mcpNames(env.rt), [])
+})
+
+test('secret references in a stdio env are resolved for the Bot that may use them', async t => {
+  const state = team()
+  state.capabilities = { items: { echo: mcp('echo', { args: [FIXTURE], env: { MCP_SECRET: '$DSH_SECRET_TOKEN' } }) } }
+  state.bots.chief.capabilities = ['echo']
+  state.bots.worker.capabilities = ['echo']
+  const secret = { name: 'TOKEN', value: 'fake-secret-value', purpose: '', scope: ['chief'], requestedBy: null, createdAt: 1, updatedAt: 1 }
+  const env = await setup({ state, secrets: [secret] })
+  t.after(() => env.dispose())
+  env.ctx.emit('agent/created', { agent: env.agentFor('chief') })
+  env.ctx.emit('agent/created', { agent: env.agentFor('worker') })
+  await env.rt.scheduleCapabilitiesReconcile()
+  await waitForState(env.rt, 'chief', 'echo', 'ready')
+  await waitForState(env.rt, 'worker', 'echo', 'error')
+  await waitFor(() => mcpNames(env.rt).includes('mcp__echo__env'), () => mcpNames(env.rt))
+
+  const reported = JSON.parse(textOf(await callTool(env.rt, 'mcp__echo__env', { names: ['MCP_SECRET'] })))
+  assert.deepEqual(reported, { MCP_SECRET: 'fake-secret-value' })
+  assert.match(statusOf(env.rt, 'worker', 'echo').error, /TOKEN/)
+  const saved = readFileSync(join(env.home, 'state.json'), 'utf8')
+  assert.equal(saved.includes('fake-secret-value'), false)
+  assert.equal(JSON.stringify(env.rt.capabilityLibraryView()).includes('fake-secret-value'), false)
+  assert.equal(JSON.stringify(env.rt.capabilityStatusesView()).includes('fake-secret-value'), false)
+})
+
+test('secret references in an HTTP MCP URL resolve to one encoded query value', async t => {
+  const server = await startMcpHttpServer()
   const value = "mock key/+&?=#'!()* 中文"
-  const env = await mountUrlCapability(t, { value, url: 'https://mcp.exa.test/mcp?apiKey=$DSH_SECRET_EXA_API_KEY&mode=test' })
-  const url = new URL(env.mountFor('chief').config.url)
-  assert.equal(url.searchParams.get('apiKey'), value)
-  assert.equal(url.searchParams.get('mode'), 'test')
-  assert.equal([...url.searchParams].length, 2)
+  const state = team()
+  state.capabilities = {
+    items: {
+      exa: {
+        name: 'exa', kind: 'mcp', description: '', transport: 'streamable-http',
+        url: `${server.url}?apiKey=$DSH_SECRET_EXA&mode=test`, headers: {}, approved: true,
+        createdBy: 'chief', createdAt: 1, updatedAt: 1,
+      },
+    },
+  }
+  state.bots.chief.capabilities = ['exa']
+  state.bots.worker.capabilities = ['exa']
+  const secret = { name: 'EXA', value, purpose: '', scope: ['chief'], requestedBy: null, createdAt: 1, updatedAt: 1 }
+  const env = await setup({ state, secrets: [secret] })
+  t.after(async () => {
+    await env.dispose()
+    await server.close()
+  })
+  env.ctx.emit('agent/created', { agent: env.agentFor('chief') })
+  env.ctx.emit('agent/created', { agent: env.agentFor('worker') })
+  await env.rt.scheduleCapabilitiesReconcile()
+  await waitForState(env.rt, 'chief', 'exa', 'ready')
+  await waitForState(env.rt, 'worker', 'exa', 'error')
+  assert.equal(statusOf(env.rt, 'worker', 'exa').state, 'error')
+  assert.match(statusOf(env.rt, 'worker', 'exa').error, /EXA/)
+
+  const posted = server.requests.filter(request => request.method === 'POST')
+  assert.ok(posted.length > 0, 'the connector reached the HTTP MCP server')
+  for (const request of posted) {
+    const url = new URL(request.url, server.url)
+    assert.equal(url.searchParams.get('apiKey'), value)
+    assert.equal(url.searchParams.get('mode'), 'test')
+    assert.equal([...url.searchParams].length, 2)
+  }
+  const outcome = await callTool(env.rt, 'mcp__exa__echo', { text: 'over http' })
+  assert.equal(textOf(outcome), 'over http')
   const saved = JSON.stringify(env.rt.state.capabilities)
   assert.equal(saved.includes(value), false)
   assert.equal(saved.includes(encodeURIComponent(value)), false)
+  assert.equal(JSON.stringify(env.rt.capabilityLibraryView()).includes(value), false)
+  assert.equal(JSON.stringify(env.rt.capabilityStatusesView()).includes(value), false)
 })
 
-test('a failed HTTP MCP mount does not show the encoded secret from its URL', async t => {
-  const value = "mock key/+&?=#'!()* 中文"
-  const env = await mountUrlCapability(t, {
-    value,
-    url: 'https://mcp.exa.test/mcp?apiKey=$DSH_SECRET_EXA_API_KEY',
-    awaitMount: async (mount: { config: { url?: string } }) => { throw new Error('Connection failed', { cause: new Error(`fetch ${mount.config.url}`) }) },
-  })
-  const status = env.rt.capabilityStatusesView().chief.exa
-  assert.equal(status.state, 'error')
-  assert.equal(status.error, 'Connection failed: fetch https://mcp.exa.test/mcp?apiKey=[secret:EXA_API_KEY]')
+test('disposing the runtime stops reconciliation and clears capability statuses', async t => {
+  const state = team()
+  state.capabilities = { items: { echo: mcp('echo') } }
+  state.bots.chief.capabilities = ['echo']
+  const env = await setup({ state })
+  t.after(() => env.dispose())
+  env.ctx.emit('agent/created', { agent: env.agentFor('chief') })
+  await env.rt.scheduleCapabilitiesReconcile()
+  await waitForState(env.rt, 'chief', 'echo', 'ready')
+  const mounted = mcpNames(env.rt)
+  assert.deepEqual(mounted, ['mcp__echo__echo'])
+
+  await env.ctx.dispose()
+  assert.deepEqual(env.rt.capabilityStatusesView().chief, {})
+  await env.rt.scheduleCapabilitiesReconcile()
+  // Disposal takes the mounted tools out of the registry, so nothing is served from a
+  // stopped runtime; a later reconcile has no agents left to mount for.
+  assert.deepEqual(mcpNames(env.rt), [])
 })

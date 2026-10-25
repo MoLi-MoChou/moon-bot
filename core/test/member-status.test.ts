@@ -7,7 +7,7 @@ import { build } from 'esbuild'
 const bundle = await build({
   entryPoints: [fileURLToPath(new URL('../src/client/member-status.tsx', import.meta.url))],
   bundle: true, format: 'cjs', platform: 'node', write: false,
-  external: ['react', 'react-dom', '@deepseek-ai/dsh-client-ui-primitives'],
+  external: ['react', 'react-dom'],
 })
 const module = { exports: {} as {
   busyMembers: (room: unknown, work: unknown, roster: unknown) => { botId: string, bot: { name: string }, state: string, [key: string]: unknown }[]
@@ -22,7 +22,6 @@ runInNewContext(bundle.outputFiles[0].text, {
     const platform = {
       react: { createElement: (type, props, ...children) => ({ type, props: props ?? {}, children: children.flat(Infinity) }), useState: initial => [initial, () => {}], useEffect: () => {}, useRef: initial => ({ current: initial }), useLayoutEffect: () => {}, Fragment: 'fragment' },
       'react-dom': {},
-      '@deepseek-ai/dsh-client-ui-primitives': {},
     }
     if (!(name in platform)) throw new Error(`no platform module ${name}`)
     return platform[name]

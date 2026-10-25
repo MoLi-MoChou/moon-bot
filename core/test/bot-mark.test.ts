@@ -8,7 +8,7 @@ import { build } from 'esbuild'
 const bundle = await build({
   stdin: { contents: "export { botState, BotAvatar, BotMark } from './src/client/mark.tsx'\nexport { SHELL_CSS } from './src/client/design/index.ts'", resolveDir: dirname(dirname(fileURLToPath(import.meta.url))) },
   bundle: true, format: 'cjs', platform: 'node', write: false, logLevel: 'silent',
-  external: ['react', 'react-dom', '@deepseek-ai/dsh-client-ui-primitives'],
+  external: ['react', 'react-dom'],
 })
 interface MarkNode { type: unknown, props: Record<string, unknown> & { onError?: () => void }, children: MarkNode[] }
 const module = { exports: {} as {

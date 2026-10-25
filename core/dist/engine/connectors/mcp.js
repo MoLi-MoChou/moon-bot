@@ -86,14 +86,21 @@ class McpConnector {
       }
     }
   }
-  /** Mounts this server's tools into a registry; the disposer unmounts them. */
+  /** Mounts this server's tools into a registry; the disposer takes them out again. */
   async mount(registry) {
     const entries = await this.entries();
     for (const entry of entries) registry.register(entry);
     this.names = entries.map((entry) => entry.name);
     return () => {
-      void this.tools.close();
+      for (const name of this.names ?? []) registry.unregister(name);
+      this.names = [];
+      void this.close();
     };
+  }
+  /** Closes the server connection, mounted or still starting. */
+  async close() {
+    await this.tools.close().catch(() => {
+    });
   }
   get mountedNames() {
     return this.names;

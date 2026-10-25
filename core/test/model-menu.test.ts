@@ -7,7 +7,7 @@ import { build } from 'esbuild'
 const bundle = await build({
   entryPoints: [fileURLToPath(new URL('../src/client/model-menu.tsx', import.meta.url))],
   bundle: true, format: 'cjs', platform: 'node', write: false,
-  external: ['react', 'react-dom', '@deepseek-ai/dsh-client-ui-primitives'],
+  external: ['react', 'react-dom'],
 })
 const module = { exports: {} as {
   groupModels: (models: { ref: string, [key: string]: unknown }[]) => Map<string, { ref: string, [key: string]: unknown }[]>
@@ -24,7 +24,6 @@ runInNewContext(bundle.outputFiles[0].text, {
         useEffect: () => {},
       },
       'react-dom': {},
-      '@deepseek-ai/dsh-client-ui-primitives': {},
     }
     if (!(name in platform)) throw new Error(`no platform module ${name}`)
     return platform[name]

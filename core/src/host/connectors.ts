@@ -1,4 +1,3 @@
-import type { LoaderService, PluginFiber } from './dsh-types.js'
 import type { HostRuntime } from './runtime.js'
 import { createStandaloneMounts } from './capabilities-standalone.ts'
 
@@ -10,7 +9,6 @@ type ConnectorStatus =
 
 interface ConnectorMount {
   readonly token: string | undefined
-  readonly fiber?: PluginFiber
 }
 
 interface SignInOptions {
@@ -38,7 +36,6 @@ type ConnectorEndpoint = (body: ConnectorBody) => Promise<unknown>
 
 export const GITHUB = 'github'
 export const GITHUB_SECRET = 'GITHUB_TOKEN'
-const MCP_CLIENT = '@deepseek-ai/dsh-mcp-client'
 const DEFAULTS = {
   url: 'https://api.githubcopilot.com/mcp/',
   api: 'https://api.github.com',
@@ -79,9 +76,7 @@ export function install(rt: HostRuntime): void {
   const unmount = async (): Promise<void> => {
     githubUnmount?.()
     githubUnmount = undefined
-    const fiber = mount?.fiber
     mount = null
-    if (fiber !== undefined) await Promise.resolve().then(() => fiber.dispose()).catch(() => {})
   }
 
   // The MCP client wraps the server's answer (a 401, say) as the cause.
@@ -108,48 +103,22 @@ export function install(rt: HostRuntime): void {
       return
     }
     status = { state: 'connecting' }
-    const loader = ctx.get<LoaderService>('loader')
-    const hosted = loader !== undefined && typeof loader.import === 'function' && typeof ctx.plugin === 'function'
-    // Standalone: GitHub's MCP server becomes one of our connectors, its tools in the
-    // registry like every capability's, and the policy sees them L3.
-    if (!hosted) {
-      try {
-        const unmountGithub = await createStandaloneMounts(rt.toolRegistry).mount(GITHUB, {
-          transport: 'streamable-http',
-          serverName: GITHUB,
-          url: options.url,
-          headers: { Authorization: `Bearer ${token}`, 'X-MCP-Toolsets': options.toolsets },
-        })
-        mount = { token }
-        githubUnmount = unmountGithub
-        status = { state: 'ready' }
-      } catch (error) {
-        githubUnmount?.()
-        githubUnmount = undefined
-        mount = { token }
-        const message = reason(error)
-        status = { state: 'error', error: message }
-        rt.warn('ds-bot: GitHub connector failed: %s', message)
-      }
-      return
-    }
+    // GitHub's MCP server becomes one of our connectors: its tools join the tool
+    // registry like every connector's, and the policy sees them L3. The token rides
+    // the request headers only — never a file, never a Bot's shell.
     try {
-      if (loader === undefined || typeof loader.import !== 'function') throw new Error('This DSH cannot load connectors')
-      const exports = await loader.import(MCP_CLIENT)
-      const plugin = loader.unwrapExports?.(exports) ?? (exports as { readonly default?: unknown } | undefined)?.default ?? exports
-      const fiber: PluginFiber = ctx.plugin!(plugin, {
+      const unmountGithub = await createStandaloneMounts(rt.toolRegistry).mount(GITHUB, {
         transport: 'streamable-http',
         serverName: GITHUB,
         url: options.url,
         headers: { Authorization: `Bearer ${token}`, 'X-MCP-Toolsets': options.toolsets },
-        failOnStartupError: true,
       })
-      mount = { token, fiber }
-      await fiber.await?.()
-      if (mount?.fiber !== fiber) return
+      mount = { token }
+      githubUnmount = unmountGithub
       status = { state: 'ready' }
     } catch (error) {
-      await unmount()
+      githubUnmount?.()
+      githubUnmount = undefined
       mount = { token }
       const message = reason(error)
       status = { state: 'error', error: message }

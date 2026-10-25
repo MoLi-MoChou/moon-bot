@@ -72,13 +72,25 @@ export function zodTool<TInput>(entry: ToolEntry<TInput>): ToolDefinition<TInput
 /** The registry the host fills and the engine serves from. */
 export class ToolRegistry {
   private readonly entries = new Map<string, ToolEntry>()
+  // How many live mounts serve each name: a Bot's chat and its group Sessions can mount
+  // the same capability, so one Session ending must not take the other's tools away.
+  private readonly refs = new Map<string, number>()
 
   register(entry: ToolEntry): void {
     this.entries.set(entry.name, entry)
+    this.refs.set(entry.name, (this.refs.get(entry.name) ?? 0) + 1)
   }
 
   get(name: string): ToolEntry | undefined {
     return this.entries.get(name)
+  }
+
+  /** Releases one mount's claim; the tool goes when the last claim does. */
+  unregister(name: string): void {
+    const left = (this.refs.get(name) ?? 1) - 1
+    if (left > 0) { this.refs.set(name, left); return }
+    this.refs.delete(name)
+    this.entries.delete(name)
   }
 
   names(): readonly string[] {

@@ -13,21 +13,41 @@ const specOf = (name, config) => {
   return { id, url: String(config.url ?? ""), headers: config.headers ?? {} };
 };
 function createStandaloneMounts(registry) {
-  const mounted = /* @__PURE__ */ new Map();
+  const mounted = /* @__PURE__ */ new Set();
+  const pending = /* @__PURE__ */ new Set();
+  let closed = false;
   return {
     async mount(name, config) {
       if (registry === void 0) throw new Error("This runtime has no tool registry to mount into.");
-      const unmount = await new McpConnector(specOf(name, config)).mount(registry);
-      mounted.set(name, unmount);
-      return () => {
-        const entry = mounted.get(name);
-        if (entry === void 0) return;
-        mounted.delete(name);
-        entry();
-      };
+      if (closed) throw new Error("This runtime is shutting down.");
+      const connector = new McpConnector(specOf(name, config));
+      pending.add(connector);
+      try {
+        const unmount = await connector.mount(registry);
+        pending.delete(connector);
+        if (closed) {
+          unmount();
+          throw new Error("This runtime is shutting down.");
+        }
+        mounted.add(unmount);
+        let dropped = false;
+        return () => {
+          if (dropped) return;
+          dropped = true;
+          mounted.delete(unmount);
+          unmount();
+        };
+      } catch (error) {
+        pending.delete(connector);
+        void connector.close();
+        throw error;
+      }
     },
     dispose() {
-      for (const unmount of mounted.values()) unmount();
+      closed = true;
+      for (const connector of pending) void connector.close();
+      pending.clear();
+      for (const unmount of mounted) unmount();
       mounted.clear();
     }
   };

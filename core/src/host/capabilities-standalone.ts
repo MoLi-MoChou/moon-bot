@@ -25,21 +25,45 @@ const specOf = (name: string, config: Readonly<Record<string, unknown>>): { id: 
 }
 
 export function createStandaloneMounts(registry: ToolRegistry | undefined): StandaloneMounts {
-  const mounted = new Map<string, () => void>()
+  // One entry per live mount, not per capability name: a Bot's chat and each group
+  // Session mount the same capability, and keying by name would overwrite the earlier
+  // unmount — closing the wrong connector and leaking a process.
+  const mounted = new Set<() => void>()
+  // A server may still be starting when the runtime shuts down; close those too.
+  const pending = new Set<McpConnector>()
+  let closed = false
   return {
     async mount(name, config) {
       if (registry === undefined) throw new Error('This runtime has no tool registry to mount into.')
-      const unmount = await new McpConnector(specOf(name, config)).mount(registry)
-      mounted.set(name, unmount)
-      return () => {
-        const entry = mounted.get(name)
-        if (entry === undefined) return
-        mounted.delete(name)
-        entry()
+      if (closed) throw new Error('This runtime is shutting down.')
+      const connector = new McpConnector(specOf(name, config))
+      pending.add(connector)
+      try {
+        const unmount = await connector.mount(registry)
+        pending.delete(connector)
+        if (closed) {
+          unmount()
+          throw new Error('This runtime is shutting down.')
+        }
+        mounted.add(unmount)
+        let dropped = false
+        return () => {
+          if (dropped) return
+          dropped = true
+          mounted.delete(unmount)
+          unmount()
+        }
+      } catch (error) {
+        pending.delete(connector)
+        void connector.close()
+        throw error
       }
     },
     dispose() {
-      for (const unmount of mounted.values()) unmount()
+      closed = true
+      for (const connector of pending) void connector.close()
+      pending.clear()
+      for (const unmount of mounted) unmount()
       mounted.clear()
     },
   }

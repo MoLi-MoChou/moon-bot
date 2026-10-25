@@ -21,11 +21,25 @@ function zodTool(entry) {
 }
 class ToolRegistry {
   entries = /* @__PURE__ */ new Map();
+  // How many live mounts serve each name: a Bot's chat and its group Sessions can mount
+  // the same capability, so one Session ending must not take the other's tools away.
+  refs = /* @__PURE__ */ new Map();
   register(entry) {
     this.entries.set(entry.name, entry);
+    this.refs.set(entry.name, (this.refs.get(entry.name) ?? 0) + 1);
   }
   get(name) {
     return this.entries.get(name);
+  }
+  /** Releases one mount's claim; the tool goes when the last claim does. */
+  unregister(name) {
+    const left = (this.refs.get(name) ?? 1) - 1;
+    if (left > 0) {
+      this.refs.set(name, left);
+      return;
+    }
+    this.refs.delete(name);
+    this.entries.delete(name);
   }
   names() {
     return [...this.entries.keys()];

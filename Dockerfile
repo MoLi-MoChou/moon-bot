@@ -10,9 +10,9 @@ WORKDIR /opt/moon-bot
 COPY app/package.json app/package-lock.json app/.npmrc app/
 COPY app/vite.config.js app/
 COPY app/ui/ app/ui/
-COPY core/package.json core/
-COPY core/src/client/ core/src/client/
-COPY core/tsconfig.json core/
+COPY core/package.json core/tsconfig.json core/
+# Client pulls shared (+ siblings); copy whole src tree for the vite UI stage.
+COPY core/src/ core/src/
 # Vite UI only — skip electron main (scripts/build-main). moon-bot-core is file:../core.
 RUN cd app && npm ci --no-audit --no-fund && npx vite build && rm -rf node_modules
 

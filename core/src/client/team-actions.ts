@@ -35,7 +35,7 @@ interface RosterReader {
   getSnapshot: () => RosterSnapshot
 }
 // One live entry of a turn: a tool or thinking note, with the time it began.
-interface LiveEntry { at?: number; text?: string; thinking?: boolean; relay?: boolean; label?: string; state?: string; [key: string]: unknown }
+interface LiveEntry { at?: number; text?: true; thinking?: true; relay?: true; label?: string | null; state?: string; [key: string]: unknown }
 type Cards = Record<string, Record<string, number>>
 type TurnClock = Record<string, Record<string, Record<string, number | string | undefined>>>
 export interface TeamActionsDeps {

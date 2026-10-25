@@ -71,7 +71,7 @@ export function ProvidersPage({ actions, run, Section }: {
     if (view === null)
         return null;
     if (!view.available)
-        return <p className='bt-set-hint'>{t('This DSH cannot set up model providers.')}</p>;
+        return <p className='bt-set-hint'>{t('Model providers cannot be set up here.')}</p>;
     return [
         h(Section, { key: 'list', title: t('Model providers · {count}', { count: view.providers.length }) }, view.providers.map(provider => h(ProviderRow, {
             key: provider.id, provider, apply, actions,
@@ -88,7 +88,7 @@ function keyState(key: Provider['key']): [
         return null;
     if (!key.configured)
         return ['missing', t('Needs an API key')];
-    return key.writable ? ['set', t('Key set')] : ['outside', t('Key set outside DS Bot')];
+    return key.writable ? ['set', t('Key set')] : ['outside', t('Key set outside Moon Bot')];
 }
 function ProviderRow({ provider, apply, actions, open, onToggle }: {
     provider: Provider;
@@ -103,7 +103,7 @@ function ProviderRow({ provider, apply, actions, open, onToggle }: {
     const state = keyState(provider.key);
     const shown = provider.models.slice(0, SHOWN_MODELS);
     const hint = provider.error ?? (provider.models.length === 0 ? t('No models') : t('{count} models', { count: provider.models.length }));
-    return <div className='bt-secret-item bt-provider' data-open={open ? '' : undefined}><button type='button' className='bt-set-row bt-secret-summary' aria-expanded={open} onClick={onToggle}><span className='bt-set-copy'><span className='bt-secret-title'>{provider.name}{provider.name !== provider.id ? <span className='bt-provider-id'>{provider.id}</span> : null}</span><span className='bt-set-hint' data-error={provider.error ? '' : undefined}>{hint}</span></span>{state ? <span className='bt-set-control'><span className='bt-provider-state' data-state={state[0]}>{state[1]}</span></span> : null}</button>{open ? <div className='bt-secret-edit'>{provider.key?.writable ? h(KeyEditor, { provider, apply, actions }) : null}{provider.key && !provider.key.writable ? <div className='bt-set-hint'>{t('This key comes from outside DS Bot, such as an environment variable, and cannot be changed here.')}</div> : null}{provider.models.length > 0 ? <div className='bt-secret-edit-block'><div className='bt-secret-edit-label'>{t('Models')}</div><div className='bt-provider-models'>{shown.map(model => <span key={model.ref} className='bt-tag' title={model.ref}>{model.name}</span>)}{provider.models.length > shown.length ? <span className='bt-set-hint'>{t('and {count} more', { count: provider.models.length - shown.length })}</span> : null}</div></div> : null}{provider.removable ? <div className='bt-secret-row-actions'>{confirm
+    return <div className='bt-secret-item bt-provider' data-open={open ? '' : undefined}><button type='button' className='bt-set-row bt-secret-summary' aria-expanded={open} onClick={onToggle}><span className='bt-set-copy'><span className='bt-secret-title'>{provider.name}{provider.name !== provider.id ? <span className='bt-provider-id'>{provider.id}</span> : null}</span><span className='bt-set-hint' data-error={provider.error ? '' : undefined}>{hint}</span></span>{state ? <span className='bt-set-control'><span className='bt-provider-state' data-state={state[0]}>{state[1]}</span></span> : null}</button>{open ? <div className='bt-secret-edit'>{provider.key?.writable ? h(KeyEditor, { provider, apply, actions }) : null}{provider.key && !provider.key.writable ? <div className='bt-set-hint'>{t('This key comes from outside Moon Bot, such as an environment variable, and cannot be changed here.')}</div> : null}{provider.models.length > 0 ? <div className='bt-secret-edit-block'><div className='bt-secret-edit-label'>{t('Models')}</div><div className='bt-provider-models'>{shown.map(model => <span key={model.ref} className='bt-tag' title={model.ref}>{model.name}</span>)}{provider.models.length > shown.length ? <span className='bt-set-hint'>{t('and {count} more', { count: provider.models.length - shown.length })}</span> : null}</div></div> : null}{provider.removable ? <div className='bt-secret-row-actions'>{confirm
         ? [
             <span key='q' className='bt-set-hint'>{t('Remove {name}? Bots on its models need another model.', { name: provider.name })}</span>,
             <button key='no' type='button' className='bt-soft bt-soft-sm' onClick={() => setConfirm(false)}>{t('Keep')}</button>,

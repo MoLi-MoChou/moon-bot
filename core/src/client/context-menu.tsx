@@ -142,7 +142,7 @@ function AgentMenu({ menu, roster, actions, leaving }: {
                 [agent.pinned ? t('Unpin') : t('Pin'), PinIcon, () => actions.setFlags(agent.id, { pinned: !agent.pinned })],
             ],
             [
-                [t('Remove DSH Agent'), TrashIcon, () => actions.removeAgent(agent.id), true],
+                [t('Remove Agent'), TrashIcon, () => actions.removeAgent(agent.id), true],
             ],
         ]
         : [
@@ -153,5 +153,5 @@ function AgentMenu({ menu, roster, actions, leaving }: {
                 [t('Archive'), TrashIcon, () => actions.archiveAgentSession(agent.id, menu.id), true],
             ],
         ];
-    return <div ref={ref} className='bt-menu' role='menu' aria-label={menu.kind === 'agent' ? 'DSH Agent' : t('Session actions')} style={place} data-leaving={leaving || undefined}>{groups.map((group, index) => <>{index > 0 ? <div className='bt-menu-sep' role='separator'/> : null}{group.map(([label, Icon, run, danger]) => <button key={label} type='button' role='menuitem' className={danger ? 'bt-danger' : undefined} onClick={() => { actions.closeMenu(); void Promise.resolve(run()).catch(error => console.warn('[ds-bot]', error)); }}>{h(Icon)}{label}</button>)}</>)}</div>;
+    return <div ref={ref} className='bt-menu' role='menu' aria-label={menu.kind === 'agent' ? 'Agent' : t('Session actions')} style={place} data-leaving={leaving || undefined}>{groups.map((group, index) => <>{index > 0 ? <div className='bt-menu-sep' role='separator'/> : null}{group.map(([label, Icon, run, danger]) => <button key={label} type='button' role='menuitem' className={danger ? 'bt-danger' : undefined} onClick={() => { actions.closeMenu(); void Promise.resolve(run()).catch(error => console.warn('[ds-bot]', error)); }}>{h(Icon)}{label}</button>)}</>)}</div>;
 }

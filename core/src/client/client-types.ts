@@ -4,7 +4,6 @@
 // `client-boot.ts` rather than inside it leaves the boot file to the wiring it does.
 
 import type { BotBrowsers, BrowserPages, BrowserTabsMap } from './bot-browsers.ts'
-import type { DshState } from './dsh-offer.ts'
 import type { ReactionMap, SharedMap } from './shared-map.ts'
 import type { Source } from './sources.ts'
 import type { SurfaceMode } from './surface.ts'
@@ -15,6 +14,27 @@ import type { UiState } from './team-actions.ts'
 
 // A Bot's row as the team state sends it: the id and name every view reads, and the
 // rest passed through for the panel that owns it.
+/** A pending secret request as the cards read it (the shape of the card's `SecretRequest`). */
+export interface ClientSecretRequest {
+  readonly id: string
+  readonly callId?: string | undefined
+  readonly sessionId?: string | undefined
+  readonly name: string
+  readonly purpose?: string | undefined
+  readonly kind: 'fill' | 'allow'
+  readonly [key: string]: unknown
+}
+
+/** A secret row as the cards read it (the shape of the card's `SecretEntry`). */
+export interface ClientSecret {
+  readonly name: string
+  readonly purpose?: string | undefined
+  readonly scope: 'all' | string[]
+  readonly requestedBy?: string | null | undefined
+  readonly createdAt?: number | undefined
+  readonly lastUsedAt?: number | undefined
+}
+
 export interface ClientBot {
   readonly id: string
   readonly name: string
@@ -50,11 +70,11 @@ export interface ClientRosterSnapshot {
   rooms: ClientRoom[]
   agents: ClientAgent[]
   exchangeTurns: Record<string, number[]>
-  questions: Record<string, unknown>
-  secrets: unknown[]
+  questions: Record<string, { id: string, callId?: string | undefined } | undefined>
+  secrets: readonly ClientSecret[]
   capabilities: unknown[]
   capabilityStatuses: Record<string, unknown>
-  secretRequests: Record<string, unknown>
+  secretRequests: Record<string, readonly ClientSecretRequest[] | undefined>
   models: unknown[]
   defaultModel: unknown
   modelsKey: string | null
@@ -120,10 +140,10 @@ export interface ClientUiState extends UiState {
 // to it without a cast.
 export interface LiveEntry {
   at?: number
-  text?: string
-  thinking?: boolean
-  relay?: boolean
-  label?: string
+  text?: true
+  thinking?: true
+  relay?: true
+  label?: string | null
   state?: string
   [key: string]: unknown
 }
@@ -131,14 +151,9 @@ export type LiveState = Record<string, Record<string, LiveEntry>>
 export type CardsState = Record<string, Record<string, number>>
 export type TurnClockState = Record<string, Record<string, Record<string, number | string | undefined>>>
 
-// The plugin update check's answer, and the Desktop updater's beside it.
-export interface UpdateDsh extends DshState {
-  phase?: string
-}
 export interface UpdateState {
   available?: boolean
   phase?: string
-  dsh?: UpdateDsh | undefined
   app?: DshAppUpdate | undefined
   [key: string]: unknown
 }

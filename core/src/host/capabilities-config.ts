@@ -3,7 +3,7 @@
 import { encodeUrlComponent } from './secrets.ts'
 import type { CapabilityItem, HostRuntime } from './runtime.js'
 
-const SECRET_REFERENCE = /\$DSH_SECRET_([A-Z][A-Z0-9_]*)/g
+const SECRET_REFERENCE = /\$(?:MOON_BOT|DSH)_SECRET_([A-Z][A-Z0-9_]*)/g
 
 export function secretFor(rt: HostRuntime, name: string, botId: string): string {
   const value = rt.canUseSecret?.(name, botId) ? rt.secretValue(name) : undefined

@@ -9,6 +9,7 @@ import {
   SECRET_NAME,
   canUse,
   envName,
+  LEGACY_ENV_PREFIX,
   normalizeName,
   redactDeep,
   redactor,
@@ -280,7 +281,8 @@ export function install(rt: HostRuntime): void {
     for (const secret of store.secrets.values()) {
       if (!canUse(secret, botId)) continue
       values[envName(secret.name)] = secret.value
-      if (command.includes(envName(secret.name))) {
+      values[`${LEGACY_ENV_PREFIX}${secret.name}`] = secret.value // the DSH-era name still works
+      if (command.includes(envName(secret.name)) || command.includes(`${LEGACY_ENV_PREFIX}${secret.name}`)) {
         secret.lastUsedAt = Date.now()
         used = true
       }

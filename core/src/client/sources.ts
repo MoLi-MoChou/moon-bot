@@ -41,7 +41,8 @@ export const EMPTY_ROSTER = {
   rooms: [] as RoomLike[],
   agents: [] as AgentLike[],
   exchangeTurns: {} as Record<string, number[]>,
-  questions: {} as Record<string, unknown>,
+  // The pending question of each Session: the cells read its id and call.
+  questions: {} as Record<string, { id: string, callId?: string | undefined } | undefined>,
   secrets: [] as unknown[],
   capabilities: [] as unknown[],
   capabilityStatuses: {} as Record<string, unknown>,

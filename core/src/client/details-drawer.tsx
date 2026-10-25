@@ -102,7 +102,7 @@ function BrowserCards({ bot, sessionId, roster, actions, useBrowserTabs, useBrow
     const pages: PanelPages = useBrowserPages(map => map);
     useEffect(() => { actions.browserEnsure?.(bot.id); }, [bot.id]);
     if (roster.browser !== true || !actions.browserShow) {
-        return <div className='bt-muted'>{t('The browser is in the DSH Desktop app.')}</div>;
+        return <div className='bt-muted'>{t('The browser is in the desktop app.')}</div>;
     }
     if (state.ids.length === 0) {
         return h(EmptyState, {

@@ -154,7 +154,7 @@ export function createClientState(ctx: ClientContext): ClientState {
     if (Object.keys(seenAt).length === 0) leaveVisits([...value.bots, ...value.rooms].map(entry => entry.id))
     // `indexRoster` only adds the id maps: the host's own rows pass through unchanged,
     // and the local view names the fields the team surface reads from them.
-    roster.set(indexRoster(value) as ClientRosterSnapshot)
+    roster.set(indexRoster(value) as unknown as ClientRosterSnapshot)
     try {
       const ids = (value.agents ?? []).flatMap(agent => agent.sessions ?? [])
       localStorage.setItem(STORAGE.agentSessions, JSON.stringify(ids))
@@ -227,15 +227,15 @@ export function createClientState(ctx: ClientContext): ClientState {
       const value = await call<UpdateState>('update-check', { fresh: false }).catch(() => null)
       if (stopped) return
       if (value) update.set(previous => ({ ...value, app: previous.app }))
-      timer = setTimeout(loop, value?.phase === 'installing' || value?.dsh?.phase === 'installing' ? 2000 : 60 * 60_000)
+      timer = setTimeout(loop, value?.phase === 'installing' ? 2000 : 60 * 60_000)
     }
     updateWake = () => { void loop() }
     void loop()
     return () => { stopped = true; clearTimeout(timer); updateWake = () => {} }
   }, 'ds-bot: update check')
 
-  // A packaged DSH updates through its own updater; what that updater found is
-  // kept beside the host's answer so the card can match it to the verified DSH.
+  // The packaged app updates through its own updater; what that updater found is kept
+  // beside the service's answer so one card can show both.
   const appUpdates = window.dshDesktop?.protocolVersion === 1 ? window.dshDesktop.updates ?? null : null
   if (appUpdates?.status && appUpdates.subscribe) {
     ctx.effect(() => {

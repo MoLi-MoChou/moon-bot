@@ -224,7 +224,7 @@ function AutomationOff({ actions }: {
 }) {
     return <div className='bt-set-card bt-task-off'>{h(EmptyState, {
         icon: h(ClockIcon),
-        title: t('Turn on Automation tasks in DSH'),
+        title: t('Turn on scheduled tasks'),
         hint: t('Switch on Automation tasks on the Plugins page in Harness settings.'),
         ...(actions.openHarnessSettings ? { action: { label: t('Open Harness settings'), onClick: actions.openHarnessSettings } } : {}),
     })}</div>;

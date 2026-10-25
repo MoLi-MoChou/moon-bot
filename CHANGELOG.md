@@ -38,8 +38,14 @@ All notable changes to Moon Bot are listed here. The format follows [Keep a Chan
 - The fork is now called Moon Bot: new name in every language, app id `com.molimochou.moonbot`, data folder `~/.moon-bot` (an existing `~/.mochou` or `~/.dsh-bot` is still used), `MOON_BOT_*` settings (the `MOCHOU_*` and `DSH_BOT_*` names still work), plugin folder `core/` and package `moon-bot-core` (profiles that list `ds-bot` or `mochou-core` move over by themselves).
 - The Main Bot is a lilac moon sprite instead of DS Bot's whale (a Chief still wearing the blue whale switches once); the whale is no longer in the avatar picker. The app icon, favicon, login page and About page show the matching Moon Bot tile.
 - New default theme, Moon (soft lilac, light and dark). DeepSeek, Claude and Grok Bot stay in Settings > General.
+- **The window is TypeScript.** `app/ui/src/*.js` became `.ts`/`.tsx` (`main.tsx`, `app.tsx`, `chat.tsx`, `team.ts`, `api.ts`, `locale.ts`, `primitives.tsx`), checked by its own strict project (`npm run typecheck` now covers the main process and the window), and the entry is `index.html → src/main.tsx`.
+- **The style sheets are one tested list.** `ui/src/sheets.ts` names every group the plugin host installed — shell, sidebar, conversation, secrets, providers, models, usage, schedules, feedback, about, members, user-messages, widgets, browser, work-process (with the empty state, welcome, process, retry, starters and files sheets) and return — and `app/test/ui-sheets.test.mjs` compares it with the plugin's own list, so a sheet cannot be dropped again the way `EMPTY_STATE_CSS` was.
+- **The theme paints Moon by default and says so.** `ui/src/theme.ts` resolves the saved theme (Moon when none is saved or the id is unknown), writes `body[data-bt-theme]` before the first state arrives, repaints when the team's preference changes, and follows the system's light or dark mode.
+- **User-facing copy speaks Moon Bot.** DeepSeek Harness, DSH and DS Bot are gone from the interface (settings, about, updates, schedules, secrets, diagnostics, feedback), in English and Chinese; the runtime row of the DSH update flow, its RPC and its offer rule are removed. `Based on DS Bot` in About stays on purpose: it is the fork's attribution, not a leftover.
+- **Secrets read `$MOON_BOT_SECRET_<NAME>`.** The shell exports the new name and the DSH-era `$DSH_SECRET_<NAME>` beside it, capability configs accept both, and the tool descriptions name the new one, so an older instruction or a saved capability keeps working.
 
 ## [0.2.0] - 2026-10-21
+
 
 ### Added
 

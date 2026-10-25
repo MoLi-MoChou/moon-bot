@@ -141,7 +141,7 @@ export function ownerFace(owner: UsageOwner, roster: UsageRoster): Face {
     }
     if (owner.kind === 'agent') {
         return {
-            kind: 'agent', name: owner.name || 'DSH Agent', sub: owner.deleted ? t('Deleted') : '',
+            kind: 'agent', name: owner.name || 'Agent', sub: owner.deleted ? t('Deleted') : '',
             paint: 'var(--bt-us-rest)', glyph: size => glyphBox(size, ChatsIcon),
         };
     }

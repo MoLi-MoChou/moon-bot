@@ -586,7 +586,7 @@ var ZH = {
   Command: "命令",
   "Arguments (one per line)": "参数（每行一个）",
   "Environment (JSON)": "环境变量（JSON）",
-  '{"API_KEY": "$DSH_SECRET_MY_KEY"}': '{"API_KEY": "$DSH_SECRET_MY_KEY"}',
+  '{"API_KEY": "$MOON_BOT_SECRET_MY_KEY"}': '{"API_KEY": "$MOON_BOT_SECRET_MY_KEY"}',
   URL: "URL",
   "Headers (JSON)": "请求头（JSON）",
   "Skill instructions": "技能说明",
@@ -616,7 +616,6 @@ var ZH = {
   "GitHub did not say who this token belongs to": "GitHub 没有返回这个 token 的账号",
   "Paste a token first": "请先粘贴 token",
   "GitHub addresses must start with https://": "GitHub 地址必须以 https:// 开头",
-  "This DSH cannot load connectors": "这个 DSH 不能加载连接器",
   "No such connector": "没有这个连接器",
   "Classic Agent mode": "经典 Agent 模式",
   "Switch": "切换",
@@ -632,16 +631,16 @@ var ZH = {
   "An API key has no spaces or special characters": "API key 里不能有空格或特殊字符",
   "Another provider": "其他服务商",
   // Models page
-  "This DSH cannot set up model providers.": "这个 DSH 不能设置模型服务商。",
-  "This DSH cannot set up model providers": "这个 DSH 不能设置模型服务商",
+  "Model providers cannot be set up here.": "这里不能设置模型服务商。",
+  "Model providers cannot be set up here": "这里不能设置模型服务商",
   "Model providers · {count}": "模型服务商 · {count}",
   "Add a provider": "添加服务商",
   "Needs an API key": "需要 API key",
   "Key set": "已设置 key",
-  "Key set outside DS Bot": "key 在 Moon Bot 之外设置",
+  "Key set outside Moon Bot": "key 在 Moon Bot 之外设置",
   "No models": "没有模型",
   "{count} models": "{count} 个模型",
-  "This key comes from outside DS Bot, such as an environment variable, and cannot be changed here.": "这个 key 来自 Moon Bot 之外（例如环境变量），这里改不了。",
+  "This key comes from outside Moon Bot, such as an environment variable, and cannot be changed here.": "这个 key 来自 Moon Bot 之外（例如环境变量），这里改不了。",
   "and {count} more": "还有 {count} 个",
   "Remove {name}? Bots on its models need another model.": "删除 {name}？用它的模型的 Bot 要换一个模型。",
   "Remove provider": "删除服务商",
@@ -673,7 +672,7 @@ var ZH = {
   "Sign in to DeepSeek": "登录 DeepSeek 账号",
   "Enter a DeepSeek API key": "填入 DeepSeek API key",
   "Open settings to set up a custom model": "打开设置配置自定义模型",
-  "DS Bot": "Moon Bot",
+  "Moon Bot": "Moon Bot",
   // Header
   "Message {name}": "给 {name} 发消息",
   Message: "发消息",
@@ -739,7 +738,7 @@ var ZH = {
   Rename: "重命名",
   "Add instructions in Bot settings": "在 Bot 设置里添加说明",
   "No scheduled tasks yet. To add one, tell the Bot in its chat what to do and when.": "还没有定时任务。要添加，在对话里告诉 Bot 做什么、什么时候做。",
-  "The browser is in the DSH Desktop app.": "浏览器在 DSH 桌面版应用里。",
+  "The browser is in the desktop app.": "浏览器在桌面版应用里。",
   "New tab": "新标签页",
   "Close tab": "关闭标签页",
   "Open {title}": "打开 {title}",
@@ -908,7 +907,7 @@ var ZH = {
   "No group chats yet.": "还没有群聊。",
   "A group chat lets several Bots work on one thing with you.": "在群聊里，几个 Bot 和你一起做一件事。",
   "Back to group chats": "返回群聊列表",
-  "DS Bot settings": "Moon Bot 设置",
+  "Moon Bot settings": "Moon Bot 设置",
   "Settings pages": "设置页面",
   "Models, providers, and the rest of DeepSeek Harness": "模型、服务商和 DeepSeek Harness 的其他设置",
   "Harness settings": "Harness 设置",
@@ -925,10 +924,10 @@ var ZH = {
   "Copy conversation ID": "复制对话 ID",
   "Hide from sidebar": "从侧栏隐藏",
   "{name} actions": "{name} 的操作",
-  // The DSH Agent's own row and Session list. "DSH Agent" is a product name and
+  // The Agent's own row and Session list. "Agent" is a product name and
   // stays in English.
-  "Add DSH Agent": "添加 DSH Agent",
-  "Remove DSH Agent": "移除 DSH Agent",
+  "Add Agent": "添加 Agent",
+  "Remove Agent": "移除 Agent",
   "New session": "新会话",
   Archive: "归档",
   "Session actions": "会话操作",
@@ -938,23 +937,22 @@ var ZH = {
   "{n} h": "{n} 小时",
   "{n} d": "{n} 天",
   // Plugin updates
-  "DS Bot {version} is available": "Moon Bot {version} 可以更新",
-  "Updating DS Bot…": "正在更新 Moon Bot…",
-  "DS Bot {version} is installed. Restart DSH to use it.": "Moon Bot {version} 已安装，重启 DSH 后生效",
-  "DS Bot update": "Moon Bot 更新",
-  "DS Bot {version}": "Moon Bot {version}",
+  "Moon Bot {version} is available": "Moon Bot {version} 可以更新",
+  "Updating Moon Bot…": "正在更新 Moon Bot…",
+  "Moon Bot {version} is installed. Restart to use it.": "Moon Bot {version} 已安装，重启后生效",
+  "Moon Bot update": "Moon Bot 更新",
+  "Add a provider and a model in Moon Bot first, or pick one in the Bot's chat later.": "先在 Moon Bot 里添加服务商和模型，稍后也可以在 Bot 的聊天里选择。",
+  "No models are set up yet.": "还没有设置模型。",
+  "Models, providers, and the rest of Moon Bot": "模型、服务商，以及 Moon Bot 的其他设置",
+  "Moon Bot is up to date": "Moon Bot 已是最新版本",
+  "Moon Bot {version}": "Moon Bot {version}",
   "Update installed": "更新已安装",
-  "Restart DSH to start using DS Bot {version}.": "重启 DSH 后开始使用 Moon Bot {version}。",
+  "Restart to start using Moon Bot {version}.": "重启 Moon Bot 后开始使用 Moon Bot {version}。",
   "You have {version}.": "当前版本 {version}。",
   "The update did not finish: {reason}": "更新没有完成：{reason}",
   "What's new": "更新说明",
   "Updating…": "正在更新…",
-  "DSH {version} is available": "DSH {version} 可以更新",
-  "Updating DSH…": "正在更新 DSH…",
-  "DSH update": "DSH 更新",
-  "DSH {version}": "DSH {version}",
-  "Restart DSH to start using DSH {version}.": "重启 DSH 后开始使用 DSH {version}。",
-  "Update DS Bot {version} first.": "先更新 Moon Bot {version}。",
+  "Update Moon Bot {version} first.": "先更新 Moon Bot {version}。",
   "Open updates": "打开更新",
   // Command palette
   Messages: "消息",
@@ -1344,11 +1342,11 @@ var ZH = {
   "Compared with the {count} days before": "与再往前 {count} 天相比",
   "{share}% of all usage from {span}": "占 {span} 全部用量的 {share}%",
   // About
-  "About DS Bot": "关于 Moon Bot",
+  "About Moon Bot": "关于 Moon Bot",
   "Version {version}": "版本 {version}",
-  "Star DS Bot on GitHub": "在 GitHub 上给 Moon Bot 点 Star",
+  "Star Moon Bot on GitHub": "在 GitHub 上给 Moon Bot 点 Star",
   "{count} stars": "{count} 个 Star",
-  "If DS Bot helps you, a star on GitHub helps more people find it.": "如果 Moon Bot 对你有用，欢迎在 GitHub 上点个 Star，让更多人看到它。",
+  "If Moon Bot helps you, a star on GitHub helps more people find it.": "如果 Moon Bot 对你有用，欢迎在 GitHub 上点个 Star，让更多人看到它。",
   Updates: "更新",
   Runtime: "运行时",
   "Check for updates": "检查更新",
@@ -1375,7 +1373,7 @@ var ZH = {
   Show: "查看",
   Hide: "收起",
   "GitHub issue": "GitHub issue",
-  "Opens a new issue in the DS Bot repository with all of this filled in. Nothing is sent until you submit it there.": "在 Moon Bot 仓库新建一个 issue，并填好以上内容。你在 GitHub 上提交之前，什么都不会发出。",
+  "Opens a new issue in the Moon Bot repository with all of this filled in. Nothing is sent until you submit it there.": "在 Moon Bot 仓库新建一个 issue，并填好以上内容。你在 GitHub 上提交之前，什么都不会发出。",
   "Report on GitHub": "在 GitHub 上报告",
   "Copied the diagnostics.": "已复制诊断信息。",
   "Could not copy. Select the text below and copy it.": "无法复制。请选中下面的文字手动复制。",
@@ -1387,14 +1385,14 @@ var ZH = {
   "Recent errors": "最近的错误",
   "Recent errors · {count}": "最近的错误 · {count}",
   "No errors recorded.": "没有错误记录。",
-  "Failed model calls and DS Bot problems show here, newest first.": "模型调用失败和 Moon Bot 的问题会显示在这里，最新的在前。",
+  "Failed model calls and Moon Bot problems show here, newest first.": "模型调用失败和 Moon Bot 的问题会显示在这里，最新的在前。",
   "Model call": "模型调用",
   "This window": "这个窗口",
   "Error log": "错误日志",
   "Kept on this computer across restarts, up to about 1 MB.": "保存在这台电脑上，重启后仍在，最多约 1 MB。",
   Clear: "清空",
   "Settings → Feedback has the details.": "详情见 设置 → 反馈。",
-  "Could not reach DSH. Check that it is still running.": "连不上 DSH，请确认它还在运行。",
+  "Could not reach the service. Check that it is still running.": "连不上服务，请确认它还在运行。",
   "{name} could not answer: {reason}": "{name} 没能回答：{reason}",
   "Unknown error": "未知错误",
   "The API key was rejected": "API 密钥无效",
@@ -1455,13 +1453,13 @@ var ZH = {
   "How many": "数量",
   Unit: "单位",
   "Create task": "创建任务",
-  "Turn on Automation tasks in DSH": "在 DSH 里打开「自动化任务」",
+  "Turn on scheduled tasks": "打开「定时任务」",
   "Switch on Automation tasks on the Plugins page in Harness settings.": "在 Harness 设置的插件页启用「自动化任务」。",
   "Open Harness settings": "打开 Harness 设置",
   "New task": "新建任务",
   "No scheduled tasks yet.": "还没有定时任务。",
   "No scheduled tasks yet. Add one": "还没有定时任务，去添加",
-  "Automation tasks are off in DSH": "DSH 的「自动化任务」没有打开",
+  "Scheduled tasks are off": "「定时任务」没有打开",
   "No such Bot": "没有这个 Bot",
   "No such Bot or group chat": "没有这个 Bot 或群聊",
   "Give the task a name": "给任务起个名字",
@@ -2187,6 +2185,7 @@ var EMPTY_ROSTER = {
   rooms: [],
   agents: [],
   exchangeTurns: {},
+  // The pending question of each Session: the cells read its id and call.
   questions: {},
   secrets: [],
   capabilities: [],
@@ -2320,7 +2319,7 @@ function SecretCard({ sessionId, bot, request, roster, actions, inline = false }
   }, onEnter: save, label: t("Value of {name}", { name: request.name }), autoFocus: replacing })), request.kind === "fill" ? (0, import_react6.createElement)(ScopeSwitch, { value: scope, onChange: (next) => {
     hold();
     setScope(next);
-  }, bot }) : null) : null, /* @__PURE__ */ (0, import_react6.createElement)("div", { className: "bt-secret-note", id: noteId }, t("{bot} never sees the value. It reaches {bot}'s shell as ", { bot: bot.name }), /* @__PURE__ */ (0, import_react6.createElement)("code", null, `$DSH_SECRET_${request.name}`), ".", filling && value !== "" && !long ? t(" At least {count} characters.", { count: MIN_VALUE }) : ""), warn, error ? /* @__PURE__ */ (0, import_react6.createElement)("div", { className: "bt-secret-error", role: "alert" }, error) : null, /* @__PURE__ */ (0, import_react6.createElement)("div", { className: "bt-q-foot" }, request.kind === "allow" && !replacing ? /* @__PURE__ */ (0, import_react6.createElement)("button", { type: "button", className: "bt-q-btn", disabled: busy, onClick: () => {
+  }, bot }) : null) : null, /* @__PURE__ */ (0, import_react6.createElement)("div", { className: "bt-secret-note", id: noteId }, t("{bot} never sees the value. It reaches {bot}'s shell as ", { bot: bot.name }), /* @__PURE__ */ (0, import_react6.createElement)("code", null, `$MOON_BOT_SECRET_${request.name}`), ".", filling && value !== "" && !long ? t(" At least {count} characters.", { count: MIN_VALUE }) : ""), warn, error ? /* @__PURE__ */ (0, import_react6.createElement)("div", { className: "bt-secret-error", role: "alert" }, error) : null, /* @__PURE__ */ (0, import_react6.createElement)("div", { className: "bt-q-foot" }, request.kind === "allow" && !replacing ? /* @__PURE__ */ (0, import_react6.createElement)("button", { type: "button", className: "bt-q-btn", disabled: busy, onClick: () => {
     hold();
     setReplacing(true);
   } }, t("Replace value")) : null, /* @__PURE__ */ (0, import_react6.createElement)("button", { type: "button", className: "bt-q-btn", disabled: busy, onClick: cancel }, t("Cancel")), filling ? /* @__PURE__ */ (0, import_react6.createElement)("button", { type: "button", className: "bt-q-submit", disabled: !long || busy, onClick: save }, busy ? t("Saving…") : t("Save")) : /* @__PURE__ */ (0, import_react6.createElement)("button", { type: "button", className: "bt-q-submit", disabled: busy, onClick: allow }, busy ? t("Allowing…") : t("Allow"))));
@@ -2447,7 +2446,7 @@ var clearClientErrors = () => {
 var clientErrors = () => entries.map((entry) => entry.count !== void 0 && entry.count > 1 ? { ...entry, text: `${entry.text} (×${entry.count})` } : { ...entry });
 function clientFacts() {
   return {
-    surface: window.dshDesktop ? "DSH Desktop" : "DSH Web",
+    surface: window.dshDesktop ? "Desktop" : "Web",
     language: language(),
     userAgent: navigator.userAgent
   };
@@ -2472,8 +2471,8 @@ function failureLabel(code, message) {
 }
 var URL_LIMIT = 7e3;
 var WHAT_MAX = 2e3;
-var PASTE_NOTE = "DS Bot copied the diagnostics to the clipboard. Paste them here.";
-var REST_NOTE = "The recent errors do not fit in the link. DS Bot copied the diagnostics to the clipboard: paste them below this line.";
+var PASTE_NOTE = "Moon Bot copied the diagnostics to the clipboard. Paste them here.";
+var REST_NOTE = "The recent errors do not fit in the link. Moon Bot copied the diagnostics to the clipboard: paste them below this line.";
 function issueUrl(base, { what = "", diagnostics }) {
   const text = what.trim().slice(0, WHAT_MAX);
   const title = text.split("\n")[0]?.slice(0, 80) ?? "";
@@ -2509,7 +2508,7 @@ function entrySummary(entry) {
     return failureLabel(entry.code ?? "", entry.text);
   return entry.text;
 }
-var SOURCES = { turn: "Model call", host: "DS Bot", api: "DS Bot", browser: "This window" };
+var SOURCES = { turn: "Model call", host: "Moon Bot", api: "Moon Bot", browser: "This window" };
 function issueWindow() {
   if (window.dshDesktop !== void 0)
     return { go: (url) => {
@@ -2576,9 +2575,9 @@ function FeedbackPage({ actions, run, Section, Row: Row3 }) {
   const total = (report?.total ?? 0) + browserErrors.length;
   const shown = entries2.slice(0, 8);
   return [
-    (0, import_react8.createElement)(Section, { key: "report", title: t("Report a problem") }, /* @__PURE__ */ (0, import_react8.createElement)("div", { className: "bt-set-row bt-set-paste bt-fb-what" }, /* @__PURE__ */ (0, import_react8.createElement)("label", { className: "bt-set-copy", htmlFor: "bt-fb-what" }, /* @__PURE__ */ (0, import_react8.createElement)("span", null, t("What happened?")), /* @__PURE__ */ (0, import_react8.createElement)("span", { className: "bt-set-hint" }, t("What you did, what you expected, and what happened instead. It goes into the issue."))), /* @__PURE__ */ (0, import_react8.createElement)("textarea", { id: "bt-fb-what", className: "bt-input bt-input-area", value: what, maxLength: WHAT_MAX, placeholder: t("For example: I asked Writer in the group chat and it showed an error."), onChange: (event) => setWhat(event.target.value) })), (0, import_react8.createElement)(Row3, { label: t("Diagnostics"), hint: t("Versions, system, models, and the latest errors. Saved keys, tokens, and your home folder are hidden.") }, /* @__PURE__ */ (0, import_react8.createElement)("button", { type: "button", className: "bt-soft bt-soft-sm", onClick: () => setPreview(!preview), "aria-expanded": preview }, preview ? t("Hide") : t("Show")), /* @__PURE__ */ (0, import_react8.createElement)("button", { type: "button", className: "bt-soft bt-soft-sm", onClick: copyReport }, t("Copy"))), preview ? /* @__PURE__ */ (0, import_react8.createElement)("div", { className: "bt-set-row bt-fb-preview" }, /* @__PURE__ */ (0, import_react8.createElement)("pre", { tabIndex: 0, "aria-label": t("Diagnostics") }, report?.markdown || t("Loading…"))) : null, (0, import_react8.createElement)(Row3, { label: t("GitHub issue"), hint: t("Opens a new issue in the DS Bot repository with all of this filled in. Nothing is sent until you submit it there.") }, /* @__PURE__ */ (0, import_react8.createElement)("button", { type: "button", className: "bt-fb-primary", onClick: openIssue }, t("Report on GitHub")))),
+    (0, import_react8.createElement)(Section, { key: "report", title: t("Report a problem") }, /* @__PURE__ */ (0, import_react8.createElement)("div", { className: "bt-set-row bt-set-paste bt-fb-what" }, /* @__PURE__ */ (0, import_react8.createElement)("label", { className: "bt-set-copy", htmlFor: "bt-fb-what" }, /* @__PURE__ */ (0, import_react8.createElement)("span", null, t("What happened?")), /* @__PURE__ */ (0, import_react8.createElement)("span", { className: "bt-set-hint" }, t("What you did, what you expected, and what happened instead. It goes into the issue."))), /* @__PURE__ */ (0, import_react8.createElement)("textarea", { id: "bt-fb-what", className: "bt-input bt-input-area", value: what, maxLength: WHAT_MAX, placeholder: t("For example: I asked Writer in the group chat and it showed an error."), onChange: (event) => setWhat(event.target.value) })), (0, import_react8.createElement)(Row3, { label: t("Diagnostics"), hint: t("Versions, system, models, and the latest errors. Saved keys, tokens, and your home folder are hidden.") }, /* @__PURE__ */ (0, import_react8.createElement)("button", { type: "button", className: "bt-soft bt-soft-sm", onClick: () => setPreview(!preview), "aria-expanded": preview }, preview ? t("Hide") : t("Show")), /* @__PURE__ */ (0, import_react8.createElement)("button", { type: "button", className: "bt-soft bt-soft-sm", onClick: copyReport }, t("Copy"))), preview ? /* @__PURE__ */ (0, import_react8.createElement)("div", { className: "bt-set-row bt-fb-preview" }, /* @__PURE__ */ (0, import_react8.createElement)("pre", { tabIndex: 0, "aria-label": t("Diagnostics") }, report?.markdown || t("Loading…"))) : null, (0, import_react8.createElement)(Row3, { label: t("GitHub issue"), hint: t("Opens a new issue in the Moon Bot repository with all of this filled in. Nothing is sent until you submit it there.") }, /* @__PURE__ */ (0, import_react8.createElement)("button", { type: "button", className: "bt-fb-primary", onClick: openIssue }, t("Report on GitHub")))),
     note ? /* @__PURE__ */ (0, import_react8.createElement)("div", { key: "note", className: "bt-note bt-fb-note", role: "status" }, note, issueLink ? [" ", /* @__PURE__ */ (0, import_react8.createElement)("a", { key: "link", href: issueLink, target: "_blank", rel: "noopener noreferrer" }, t("Open the issue"))] : null) : null,
-    (0, import_react8.createElement)(Section, { key: "errors", title: report ? t("Recent errors · {count}", { count: total }) : t("Recent errors") }, shown.length === 0 ? (0, import_react8.createElement)(Row3, { label: t("No errors recorded."), hint: t("Failed model calls and DS Bot problems show here, newest first.") }) : shown.map((entry, index) => /* @__PURE__ */ (0, import_react8.createElement)("div", { key: `${entry.time}-${index}`, className: "bt-set-row bt-fb-entry", title: entry.text }, /* @__PURE__ */ (0, import_react8.createElement)("span", { className: "bt-fb-dot", "data-level": entry.level, "aria-hidden": true }), /* @__PURE__ */ (0, import_react8.createElement)("div", { className: "bt-set-copy" }, /* @__PURE__ */ (0, import_react8.createElement)("span", { className: "bt-fb-text" }, entrySummary(entry)), /* @__PURE__ */ (0, import_react8.createElement)("span", { className: "bt-set-hint" }, [whenText(entry.time), entry.bot, entry.where, t(SOURCES[entry.source] ?? "DS Bot")].filter(Boolean).join(" · "))), entry.code ? /* @__PURE__ */ (0, import_react8.createElement)("span", { className: "bt-tag bt-fb-code" }, entry.status ? `${entry.code} ${entry.status}` : entry.code) : null)), (0, import_react8.createElement)(Row3, { label: t("Error log"), hint: t("Kept on this computer across restarts, up to about 1 MB.") }, /* @__PURE__ */ (0, import_react8.createElement)("button", { type: "button", className: "bt-soft bt-soft-sm", onClick: downloadLog }, t("Download")), /* @__PURE__ */ (0, import_react8.createElement)("button", { type: "button", className: "bt-soft bt-soft-sm", onClick: clearLog, disabled: !report || total === 0 }, t("Clear"))))
+    (0, import_react8.createElement)(Section, { key: "errors", title: report ? t("Recent errors · {count}", { count: total }) : t("Recent errors") }, shown.length === 0 ? (0, import_react8.createElement)(Row3, { label: t("No errors recorded."), hint: t("Failed model calls and Moon Bot problems show here, newest first.") }) : shown.map((entry, index) => /* @__PURE__ */ (0, import_react8.createElement)("div", { key: `${entry.time}-${index}`, className: "bt-set-row bt-fb-entry", title: entry.text }, /* @__PURE__ */ (0, import_react8.createElement)("span", { className: "bt-fb-dot", "data-level": entry.level, "aria-hidden": true }), /* @__PURE__ */ (0, import_react8.createElement)("div", { className: "bt-set-copy" }, /* @__PURE__ */ (0, import_react8.createElement)("span", { className: "bt-fb-text" }, entrySummary(entry)), /* @__PURE__ */ (0, import_react8.createElement)("span", { className: "bt-set-hint" }, [whenText(entry.time), entry.bot, entry.where, t(SOURCES[entry.source] ?? "DS Bot")].filter(Boolean).join(" · "))), entry.code ? /* @__PURE__ */ (0, import_react8.createElement)("span", { className: "bt-tag bt-fb-code" }, entry.status ? `${entry.code} ${entry.status}` : entry.code) : null)), (0, import_react8.createElement)(Row3, { label: t("Error log"), hint: t("Kept on this computer across restarts, up to about 1 MB.") }, /* @__PURE__ */ (0, import_react8.createElement)("button", { type: "button", className: "bt-soft bt-soft-sm", onClick: downloadLog }, t("Download")), /* @__PURE__ */ (0, import_react8.createElement)("button", { type: "button", className: "bt-soft bt-soft-sm", onClick: clearLog, disabled: !report || total === 0 }, t("Clear"))))
   ];
 }
 var TOAST_MS = 6e3;
@@ -2630,29 +2629,19 @@ var FEEDBACK_CSS = `
 @media (prefers-reduced-motion:reduce){.bt-toast{animation:none}.bt-toast[data-leaving]{transition:none}}
 `;
 
-// src/client/dsh-offer.ts
-var APP_OFFER = /* @__PURE__ */ new Set(["available", "downloading", "verifying", "installing", "ready"]);
-var bare = (value) => String(value ?? "").trim().replace(/^v/i, "").split("+")[0] ?? "";
-var sameVersion = (a, b) => bare(a) !== "" && bare(a) === bare(b);
-function showsDshRow(dsh, app) {
-  if (!dsh?.verified || !dsh.current || sameVersion(dsh.verified, dsh.current)) return false;
-  if (dsh.kind === "npm") return true;
-  return dsh.kind === "app" && app?.phase !== void 0 && APP_OFFER.has(app.phase) && sameVersion(app.version, dsh.verified);
-}
-
 // src/client/about.tsx
 var import_react9 = require("react");
 var CHEER_MS = 1800;
 var starCount = (count) => new Intl.NumberFormat(dateLocale(), { notation: "compact", maximumFractionDigits: 1 }).format(count);
 function botHint(update) {
   if (update.phase === "installing")
-    return t("Updating DS Bot…");
+    return t("Updating Moon Bot…");
   if (update.phase === "installed")
-    return t("Restart DSH to start using DS Bot {version}.", { version: update.installed ?? update.latest });
+    return t("Restart to start using Moon Bot {version}.", { version: update.installed ?? update.latest });
   if (update.phase === "failed")
     return t("The update did not finish: {reason}", { reason: hostText(update.error ?? "") });
   if (update.available)
-    return t("DS Bot {version} is available", { version: update.latest });
+    return t("Moon Bot {version} is available", { version: update.latest });
   if (update.source === "app")
     return t("Updates come with the DeepSeek Bot app.");
   if (update.source === "web")
@@ -2667,19 +2656,6 @@ function botHint(update) {
     return t("Updates are not offered for this install.");
   const checked = t("Checked {time}", { time: whenText(update.checkedAt) });
   return `${update.latest ? t("Up to date") : t("Could not check for updates.")} · ${checked}`;
-}
-function dshHint(dsh, shown) {
-  if (dsh.phase === "installing")
-    return t("Updating DSH…");
-  if (dsh.phase === "installed")
-    return t("Restart DSH to start using DSH {version}.", { version: dsh.installed ?? dsh.verified });
-  if (dsh.phase === "failed")
-    return t("The update did not finish: {reason}", { reason: hostText(dsh.error ?? "") });
-  if (dsh.available === false && dsh.blockedBy)
-    return t("Update DS Bot {version} first.", { version: dsh.blockedBy });
-  if (shown)
-    return t("DSH {version} is available", { version: dsh.verified });
-  return t("Version {version}", { version: dsh.current });
 }
 var RELEASES_PAGE = "https://github.com/MoLi-MoChou/moon-bot/releases";
 var appBridge = () => typeof window === "undefined" ? null : window.dsBotApp?.updates ?? null;
@@ -2799,35 +2775,22 @@ function AboutPage({ useUpdate, actions, run, Section, Row: Row3 }) {
     });
   };
   const phase = update.phase ?? "idle";
-  const dsh = update.dsh ?? {};
-  const dshPhase = dsh?.phase ?? "idle";
   (0, import_react9.useEffect)(() => {
-    if (phase === "installed" || dshPhase === "installed")
+    if (phase === "installed")
       setCheer(true);
-  }, [phase, dshPhase]);
-  const dshNew = showsDshRow(dsh, update.app);
-  const dshShown = dshNew && dsh?.available;
+  }, [phase]);
   const botControl = phase === "installed" || update.source === "app" ? null : update.available || phase === "installing" ? /* @__PURE__ */ (0, import_react9.createElement)("button", { type: "button", className: "bt-fb-primary", disabled: phase === "installing", onClick: () => run(actions.installUpdate()) }, phase === "installing" ? t("Updating…") : phase === "failed" ? t("Try again") : t("Update")) : /* @__PURE__ */ (0, import_react9.createElement)("button", { type: "button", className: "bt-soft bt-soft-sm", disabled: checking || update.enabled === false, onClick: check }, checking ? t("Checking…") : t("Check for updates"));
-  const dshControl = !dshNew || dshPhase === "installed" ? null : dsh.kind === "app" ? dsh.available ? /* @__PURE__ */ (0, import_react9.createElement)("button", { type: "button", className: "bt-soft bt-soft-sm", onClick: () => {
-    actions.openAppUpdates(dsh.verified);
-  } }, t("Open updates")) : null : dsh.available || dshPhase !== "idle" ? /* @__PURE__ */ (0, import_react9.createElement)("button", { type: "button", className: "bt-fb-primary", disabled: dshPhase === "installing", onClick: () => run(actions.installDshUpdate()) }, dshPhase === "installing" ? t("Updating…") : dshPhase === "failed" ? t("Try again") : t("Update")) : null;
   const repo = update.repoUrl;
   return [
-    /* @__PURE__ */ (0, import_react9.createElement)("div", { key: "hero", className: "bt-about-hero" }, /* @__PURE__ */ (0, import_react9.createElement)("span", { className: "bt-about-mark" }, (0, import_react9.createElement)(MoonBotMark, { size: 52 })), /* @__PURE__ */ (0, import_react9.createElement)("div", { className: "bt-about-copy" }, /* @__PURE__ */ (0, import_react9.createElement)("span", { className: "bt-about-name" }, productName()), appVersion || update.current ? /* @__PURE__ */ (0, import_react9.createElement)("span", { className: "bt-about-version" }, t("Version {version}", { version: appVersion || update.current })) : null), repo ? /* @__PURE__ */ (0, import_react9.createElement)("a", { className: "bt-star", href: repo, target: "_blank", rel: "noopener noreferrer", title: t("Star DS Bot on GitHub"), "aria-label": stars === null ? t("Star DS Bot on GitHub") : `${t("Star DS Bot on GitHub")} · ${t("{count} stars", { count: stars })}` }, /* @__PURE__ */ (0, import_react9.createElement)("span", { className: "bt-star-main" }, /* @__PURE__ */ (0, import_react9.createElement)("span", { className: "bt-star-icon" }, (0, import_react9.createElement)(StarLineIcon)), "Star"), stars === null ? null : /* @__PURE__ */ (0, import_react9.createElement)("span", { className: "bt-star-count" }, starCount(stars))) : null),
-    repo ? /* @__PURE__ */ (0, import_react9.createElement)("p", { key: "ask", className: "bt-about-ask" }, t("If DS Bot helps you, a star on GitHub helps more people find it.")) : null,
-    update.source === "web" ? (0, import_react9.createElement)(
-      Section,
-      { key: "updates", title: t("Updates") },
-      (0, import_react9.createElement)(Row3, { label: productName(), hint: botHint(update) }),
-      // Runtime build id stays available but is not framed as a second product.
-      dsh?.current ? (0, import_react9.createElement)(Row3, { label: t("Runtime"), hint: t("Version {version}", { version: dsh.current }) }) : null
-    ) : (0, import_react9.createElement)(Section, { key: "updates", title: t("Updates") }, appBridge() ? (0, import_react9.createElement)(AppUpdateRow, { Row: Row3, run }) : null, (0, import_react9.createElement)(EngineRow, { Row: Row3, run }), appBridge() ? null : (0, import_react9.createElement)(Row3, { label: productName(), hint: botHint(update) }, botControl, update.available && update.notesUrl ? /* @__PURE__ */ (0, import_react9.createElement)("a", { ...linkProps(update.notesUrl) }, t("What's new")) : null), dsh?.current ? (0, import_react9.createElement)(Row3, { label: t("Runtime"), hint: dshHint(dsh, dshShown) }, dshControl) : null),
+    /* @__PURE__ */ (0, import_react9.createElement)("div", { key: "hero", className: "bt-about-hero" }, /* @__PURE__ */ (0, import_react9.createElement)("span", { className: "bt-about-mark" }, (0, import_react9.createElement)(MoonBotMark, { size: 52 })), /* @__PURE__ */ (0, import_react9.createElement)("div", { className: "bt-about-copy" }, /* @__PURE__ */ (0, import_react9.createElement)("span", { className: "bt-about-name" }, productName()), appVersion || update.current ? /* @__PURE__ */ (0, import_react9.createElement)("span", { className: "bt-about-version" }, t("Version {version}", { version: appVersion || update.current })) : null), repo ? /* @__PURE__ */ (0, import_react9.createElement)("a", { className: "bt-star", href: repo, target: "_blank", rel: "noopener noreferrer", title: t("Star Moon Bot on GitHub"), "aria-label": stars === null ? t("Star Moon Bot on GitHub") : `${t("Star Moon Bot on GitHub")} · ${t("{count} stars", { count: stars })}` }, /* @__PURE__ */ (0, import_react9.createElement)("span", { className: "bt-star-main" }, /* @__PURE__ */ (0, import_react9.createElement)("span", { className: "bt-star-icon" }, (0, import_react9.createElement)(StarLineIcon)), "Star"), stars === null ? null : /* @__PURE__ */ (0, import_react9.createElement)("span", { className: "bt-star-count" }, starCount(stars))) : null),
+    repo ? /* @__PURE__ */ (0, import_react9.createElement)("p", { key: "ask", className: "bt-about-ask" }, t("If Moon Bot helps you, a star on GitHub helps more people find it.")) : null,
+    update.source === "web" ? (0, import_react9.createElement)(Section, { key: "updates", title: t("Updates") }, (0, import_react9.createElement)(Row3, { label: productName(), hint: botHint(update) })) : (0, import_react9.createElement)(Section, { key: "updates", title: t("Updates") }, appBridge() ? (0, import_react9.createElement)(AppUpdateRow, { Row: Row3, run }) : null, (0, import_react9.createElement)(EngineRow, { Row: Row3, run }), appBridge() ? null : (0, import_react9.createElement)(Row3, { label: productName(), hint: botHint(update) }, botControl, update.available && update.notesUrl ? /* @__PURE__ */ (0, import_react9.createElement)("a", { ...linkProps(update.notesUrl) }, t("What's new")) : null)),
     (0, import_react9.createElement)(
       Section,
       { key: "links", title: t("Links") },
       repo ? (0, import_react9.createElement)(Row3, { label: t("Source code"), hint: repo.replace(/^https:\/\//, "") }, /* @__PURE__ */ (0, import_react9.createElement)("a", { ...linkProps(repo) }, (0, import_react9.createElement)(GitHubMark), t("Open"))) : null,
       update.notesUrl ? (0, import_react9.createElement)(Row3, { label: t("Release notes") }, /* @__PURE__ */ (0, import_react9.createElement)("a", { ...linkProps(update.notesUrl) }, t("Open"))) : null,
-      // Moon Bot patch: credit the project this app is built on.
+      // The fork's attribution: DS Bot is the project Moon Bot started from.
       (0, import_react9.createElement)(Row3, { label: t("Based on DS Bot"), hint: "github.com/Fei2411/DeepSeek-Bot · Apache-2.0" }, /* @__PURE__ */ (0, import_react9.createElement)("a", { ...linkProps("https://github.com/Fei2411/DeepSeek-Bot") }, (0, import_react9.createElement)(GitHubMark), t("Open"))),
       (0, import_react9.createElement)(Row3, { label: t("Report a problem") }, /* @__PURE__ */ (0, import_react9.createElement)("button", { type: "button", className: "bt-soft bt-soft-sm", onClick: () => actions.openSettings("feedback") }, t("Open")))
     )
@@ -3062,6 +3025,10 @@ function atSources({ roster, sessions, launched, iconFor }) {
   };
   return [bots, chats];
 }
+
+// src/client/update-state.ts
+var bare = (value) => String(value ?? "").trim().replace(/^v/iu, "").split("+")[0] ?? "";
+var sameVersion = (a, b) => bare(a) !== "" && bare(a) === bare(b);
 
 // src/client/shell-quiet.ts
 var userAsked = false;
@@ -9256,9 +9223,9 @@ function AgentRow({ agent, actions, useSessions, useSessionStatus, useUi, wide, 
   const unread = sessions.some((session) => session.unread === true) || marked === true && !active;
   useMarkedUnread(agent.id, active, marked, actions);
   const preview = sessions[0]?.title ?? t("New session");
-  const label = ["DSH Agent", running ? t("Working") : "", unread ? t("Unread activity") : ""].filter(Boolean).join(", ");
+  const label = ["Agent", running ? t("Working") : "", unread ? t("Unread activity") : ""].filter(Boolean).join(", ");
   const open = active && wide;
-  return /* @__PURE__ */ (0, import_react25.createElement)("div", { className: "bt-agent" }, /* @__PURE__ */ (0, import_react25.createElement)("button", { type: "button", className: running ? "bt-row bt-busy" : "bt-row", "aria-label": label, "aria-current": active ? "page" : void 0, "data-agent-id": agent.id, title: wide ? void 0 : "DSH Agent", onClick: () => actions.openAgent(agent.id), onContextMenu: (event) => {
+  return /* @__PURE__ */ (0, import_react25.createElement)("div", { className: "bt-agent" }, /* @__PURE__ */ (0, import_react25.createElement)("button", { type: "button", className: running ? "bt-row bt-busy" : "bt-row", "aria-label": label, "aria-current": active ? "page" : void 0, "data-agent-id": agent.id, title: wide ? void 0 : "Agent", onClick: () => actions.openAgent(agent.id), onContextMenu: (event) => {
     event.preventDefault();
     actions.openMenu({ kind: "agent", id: agent.id, x: event.clientX, y: event.clientY });
   } }, /* @__PURE__ */ (0, import_react25.createElement)("span", { className: `bt-agent-ava${running ? " bt-run" : ""}` }, (0, import_react25.createElement)(FishLogo, { size: 22 })), wide ? /* @__PURE__ */ (0, import_react25.createElement)("span", { className: "bt-row-body" }, /* @__PURE__ */ (0, import_react25.createElement)("span", { className: "bt-row-name" }, "DSH Agent"), preview ? /* @__PURE__ */ (0, import_react25.createElement)("span", { className: "bt-row-preview" }, preview) : null) : null, wide && unread && !active ? /* @__PURE__ */ (0, import_react25.createElement)("span", { className: "bt-unread", "aria-hidden": true }) : null), /* @__PURE__ */ (0, import_react25.createElement)("div", { className: "bt-agent-sub", "data-open": open || void 0 }, /* @__PURE__ */ (0, import_react25.createElement)("div", { className: "bt-agent-sub-in" }, /* @__PURE__ */ (0, import_react25.createElement)("button", { type: "button", className: "bt-agent-sub-row bt-agent-new", style: { "--i": 0 }, onClick: () => {
@@ -9517,7 +9484,7 @@ function BotReturn({ wide, useSurface, actions }) {
   const mode = useSurface((value) => value.mode);
   if (mode !== "agent")
     return null;
-  return /* @__PURE__ */ (0, import_react26.createElement)("button", { type: "button", className: "bt-return", "aria-label": t("DS Bot"), title: t("DS Bot"), onClick: () => actions.setSurface("bot") }, (0, import_react26.createElement)(MoonBotMark, { size: 20 }), wide ? /* @__PURE__ */ (0, import_react26.createElement)("span", { className: "bt-return-name" }, t("DS Bot")) : null);
+  return /* @__PURE__ */ (0, import_react26.createElement)("button", { type: "button", className: "bt-return", "aria-label": t("Moon Bot"), title: t("Moon Bot"), onClick: () => actions.setSurface("bot") }, (0, import_react26.createElement)(MoonBotMark, { size: 20 }), wide ? /* @__PURE__ */ (0, import_react26.createElement)("span", { className: "bt-return-name" }, t("Moon Bot")) : null);
 }
 function BrandMark({ size = 24 }) {
   return /* @__PURE__ */ (0, import_react26.createElement)("span", { className: "bt-brand-whale" }, (0, import_react26.createElement)(MoonBotMark, { size }));
@@ -9705,7 +9672,6 @@ function UpdateButton({ useUpdate, actions }) {
   const [open, setOpen] = (0, import_react27.useState)(false);
   const [box, setBox] = (0, import_react27.useState)(null);
   const [error, setError] = (0, import_react27.useState)("");
-  const [dshError, setDshError] = (0, import_react27.useState)("");
   const button = (0, import_react27.useRef)(null);
   (0, import_react27.useEffect)(() => {
     if (!open)
@@ -9732,14 +9698,11 @@ function UpdateButton({ useUpdate, actions }) {
   if (update === null)
     return null;
   const phase = update.phase ?? "idle";
-  const dsh = update.dsh ?? {};
-  const dshPhase = dsh.phase ?? "idle";
-  const dshRow = showsDshRow(dsh, update.app);
   if (update.source === "web")
     return null;
-  if (!update.available && !dshRow && phase === "idle" && dshPhase === "idle")
+  if (!update.available && phase === "idle")
     return null;
-  const cloudPhase = phase === "installing" || dshPhase === "installing" ? "installing" : phase !== "idle" ? phase : dshPhase;
+  const cloudPhase = phase;
   const toggle = () => {
     const rect = button.current?.getBoundingClientRect();
     if (rect)
@@ -9750,16 +9713,9 @@ function UpdateButton({ useUpdate, actions }) {
     setError("");
     void actions.installUpdate().catch((failure) => setError(hostText(failure?.message ?? String(failure))));
   };
-  const startDsh = () => {
-    setDshError("");
-    void actions.installDshUpdate().catch((failure) => setDshError(hostText(failure?.message ?? String(failure))));
-  };
-  const label = phase === "installing" ? t("Updating DS Bot…") : dshPhase === "installing" ? t("Updating DSH…") : phase === "installed" ? t("DS Bot {version} is installed. Restart DSH to use it.", { version: update.installed ?? update.latest }) : dshPhase === "installed" ? t("Restart DSH to start using DSH {version}.", { version: dsh.installed ?? dsh.verified }) : update?.available ? t("DS Bot {version} is available", { version: update.latest }) : t("DSH {version} is available", { version: dsh?.verified });
+  const label = phase === "installing" ? t("Updating Moon Bot…") : phase === "installed" ? t("Moon Bot {version} is installed. Restart to use it.", { version: update.installed ?? update.latest }) : update?.available ? t("Moon Bot {version} is available", { version: update.latest }) : t("Moon Bot is up to date");
   const message = error || (phase === "failed" ? update.error : "");
-  const dshMessage = dshError || (dshPhase === "failed" ? dsh?.error : "");
-  const dshText = dshPhase === "installed" ? t("Restart DSH to start using DSH {version}.", { version: dsh.installed ?? dsh.verified }) : dsh?.available === false && dsh?.blockedBy ? t("Update DS Bot {version} first.", { version: dsh.blockedBy }) : t("You have {version}.", { version: dsh?.current });
-  return /* @__PURE__ */ (0, import_react27.createElement)(import_react27.Fragment, null, /* @__PURE__ */ (0, import_react27.createElement)("button", { ref: button, type: "button", className: "bt-round bt-update", "data-phase": cloudPhase, "aria-label": label, title: label, "aria-haspopup": "dialog", "aria-expanded": open, onClick: toggle }, (0, import_react27.createElement)(CloudDownloadIcon, { done: phase === "installed" }), phase === "failed" || dshPhase === "failed" ? /* @__PURE__ */ (0, import_react27.createElement)("span", { className: "bt-update-dot", "aria-hidden": true }) : null), open && box ? (0, import_react_dom4.createPortal)(/* @__PURE__ */ (0, import_react27.createElement)("div", { className: "bt-update-pop", role: "dialog", "aria-label": update?.available || phase !== "idle" ? t("DS Bot update") : t("DSH update"), style: box }, update?.available || phase !== "idle" ? /* @__PURE__ */ (0, import_react27.createElement)(import_react27.Fragment, null, /* @__PURE__ */ (0, import_react27.createElement)("div", { className: "bt-update-title" }, phase === "installed" ? t("Update installed") : t("DS Bot {version}", { version: update.latest })), /* @__PURE__ */ (0, import_react27.createElement)("div", { className: "bt-update-text" }, phase === "installed" ? t("Restart DSH to start using DS Bot {version}.", { version: update.installed ?? update.latest }) : t("You have {version}.", { version: update.current })), message ? /* @__PURE__ */ (0, import_react27.createElement)("div", { className: "bt-update-error", role: "alert" }, t("The update did not finish: {reason}", { reason: message })) : null, /* @__PURE__ */ (0, import_react27.createElement)("div", { className: "bt-update-actions" }, update.notesUrl ? /* @__PURE__ */ (0, import_react27.createElement)("a", { className: "bt-update-notes", href: update.notesUrl, target: "_blank", rel: "noopener noreferrer" }, t("What's new")) : null, phase === "installed" ? null : /* @__PURE__ */ (0, import_react27.createElement)("button", { type: "button", className: "bt-update-go", disabled: phase === "installing", onClick: start }, phase === "installing" ? t("Updating…") : phase === "failed" ? t("Try again") : t("Update")))) : null, dshRow ? /* @__PURE__ */ (0, import_react27.createElement)("div", { className: "bt-update-dsh" }, /* @__PURE__ */ (0, import_react27.createElement)("div", { className: "bt-update-title" }, t("DSH {version}", { version: dsh.verified })), /* @__PURE__ */ (0, import_react27.createElement)("div", { className: "bt-update-text" }, dshText), dshMessage ? /* @__PURE__ */ (0, import_react27.createElement)("div", { className: "bt-update-error", role: "alert" }, t("The update did not finish: {reason}", { reason: dshMessage })) : null, /* @__PURE__ */ (0, import_react27.createElement)("div", { className: "bt-update-actions" }, dsh.kind === "app" ? dsh.available ? /* @__PURE__ */ (0, import_react27.createElement)("button", { type: "button", className: "bt-update-go", onClick: () => void actions.openAppUpdates(dsh.verified).catch(() => {
-  }) }, t("Open updates")) : null : !dsh.available && dshPhase === "idle" ? null : dshPhase === "installed" ? null : /* @__PURE__ */ (0, import_react27.createElement)("button", { type: "button", className: "bt-update-go", disabled: dshPhase === "installing", onClick: startDsh }, dshPhase === "installing" ? t("Updating…") : dshPhase === "failed" ? t("Try again") : t("Update")))) : null), document.body) : null);
+  return /* @__PURE__ */ (0, import_react27.createElement)(import_react27.Fragment, null, /* @__PURE__ */ (0, import_react27.createElement)("button", { ref: button, type: "button", className: "bt-round bt-update", "data-phase": cloudPhase, "aria-label": label, title: label, "aria-haspopup": "dialog", "aria-expanded": open, onClick: toggle }, (0, import_react27.createElement)(CloudDownloadIcon, { done: phase === "installed" }), phase === "failed" ? /* @__PURE__ */ (0, import_react27.createElement)("span", { className: "bt-update-dot", "aria-hidden": true }) : null), open && box ? (0, import_react_dom4.createPortal)(/* @__PURE__ */ (0, import_react27.createElement)("div", { className: "bt-update-pop", role: "dialog", "aria-label": t("Moon Bot update"), style: box }, /* @__PURE__ */ (0, import_react27.createElement)("div", { className: "bt-update-title" }, phase === "installed" ? t("Update installed") : t("Moon Bot {version}", { version: update.latest })), /* @__PURE__ */ (0, import_react27.createElement)("div", { className: "bt-update-text" }, phase === "installed" ? t("Restart to start using Moon Bot {version}.", { version: update.installed ?? update.latest }) : t("You have {version}.", { version: update.current })), message ? /* @__PURE__ */ (0, import_react27.createElement)("div", { className: "bt-update-error", role: "alert" }, t("The update did not finish: {reason}", { reason: message })) : null, /* @__PURE__ */ (0, import_react27.createElement)("div", { className: "bt-update-actions" }, update.notesUrl ? /* @__PURE__ */ (0, import_react27.createElement)("a", { className: "bt-update-notes", href: update.notesUrl, target: "_blank", rel: "noopener noreferrer" }, t("What's new")) : null, phase === "installed" ? null : /* @__PURE__ */ (0, import_react27.createElement)("button", { type: "button", className: "bt-update-go", disabled: phase === "installing", onClick: start }, phase === "installing" ? t("Updating…") : phase === "failed" ? t("Try again") : t("Update")))), document.body) : null);
 }
 function ConnectPlugins({ wide, actions }) {
   if (!wide)
@@ -10382,12 +10338,6 @@ function createActions({ ctx, client, after, partFor, show, atMenu }) {
     installUpdate: async () => {
       const value = await call("update-install");
       update.set((previous) => ({ ...previous, ...value }));
-      client.wakeUpdate();
-    },
-    // The DSH the newest released DS Bot verified installs the same way.
-    installDshUpdate: async () => {
-      const dsh = await call("dsh-update-install");
-      update.set((previous) => ({ ...previous, dsh }));
       client.wakeUpdate();
     },
     // The app's panel installs whatever its updater found by now, so it opens only
@@ -11530,7 +11480,7 @@ function createClientState(ctx) {
       const value = await call("update-check", { fresh: false }).catch(() => null);
       if (stopped) return;
       if (value) update.set((previous) => ({ ...value, app: previous.app }));
-      timer = setTimeout(loop, value?.phase === "installing" || value?.dsh?.phase === "installing" ? 2e3 : 60 * 6e4);
+      timer = setTimeout(loop, value?.phase === "installing" ? 2e3 : 60 * 6e4);
     };
     updateWake = () => {
       void loop();
@@ -14538,7 +14488,7 @@ function ModelMenu(props) {
       event.preventDefault();
       toggle();
     }
-  } }, /* @__PURE__ */ (0, import_react35.createElement)("span", { className: "bt-model-copy" }, /* @__PURE__ */ (0, import_react35.createElement)("span", { className: "bt-model-name" }, shown?.name ?? t("Choose a model")), shown ? /* @__PURE__ */ (0, import_react35.createElement)("span", { className: "bt-model-provider" }, shown.served || models.length === 0 ? effortLabel === void 0 ? shown.provider : `${shown.provider} · ${effortLabel}` : t("{provider} · not available", { provider: shown.provider })) : null), (0, import_react35.createElement)(Caret)), shownPlace ? (0, import_react_dom8.createPortal)(/* @__PURE__ */ (0, import_react35.createElement)("div", { ref: menu, className: `bt-menu bt-model-menu${shownPlace.bottom !== void 0 ? " bt-menu-up" : ""}`, role: "menu", "aria-label": t("Model for {name}", { name: bot.name }), style: shownPlace, "data-leaving": leaving || void 0 }, context ? (0, import_react35.createElement)(ContextGauge, { context }) : null, context ? /* @__PURE__ */ (0, import_react35.createElement)("div", { className: "bt-menu-sep", role: "separator" }) : null, models.length > 0 ? (0, import_react35.createElement)(ModelRows, { roster, current, onPick: pick2 }) : /* @__PURE__ */ (0, import_react35.createElement)("div", { className: "bt-model-none" }, t("No models are set up in DeepSeek Harness yet.")), effortRows(reasoning).length > 0 ? (0, import_react35.createElement)(EffortRows, { reasoning, current: picked, onPick: pickEffort }) : null, manage ? /* @__PURE__ */ (0, import_react35.createElement)("div", { className: "bt-menu-sep", role: "separator" }) : null, manage ? /* @__PURE__ */ (0, import_react35.createElement)("button", { type: "button", role: "menuitem", onClick: () => {
+  } }, /* @__PURE__ */ (0, import_react35.createElement)("span", { className: "bt-model-copy" }, /* @__PURE__ */ (0, import_react35.createElement)("span", { className: "bt-model-name" }, shown?.name ?? t("Choose a model")), shown ? /* @__PURE__ */ (0, import_react35.createElement)("span", { className: "bt-model-provider" }, shown.served || models.length === 0 ? effortLabel === void 0 ? shown.provider : `${shown.provider} · ${effortLabel}` : t("{provider} · not available", { provider: shown.provider })) : null), (0, import_react35.createElement)(Caret)), shownPlace ? (0, import_react_dom8.createPortal)(/* @__PURE__ */ (0, import_react35.createElement)("div", { ref: menu, className: `bt-menu bt-model-menu${shownPlace.bottom !== void 0 ? " bt-menu-up" : ""}`, role: "menu", "aria-label": t("Model for {name}", { name: bot.name }), style: shownPlace, "data-leaving": leaving || void 0 }, context ? (0, import_react35.createElement)(ContextGauge, { context }) : null, context ? /* @__PURE__ */ (0, import_react35.createElement)("div", { className: "bt-menu-sep", role: "separator" }) : null, models.length > 0 ? (0, import_react35.createElement)(ModelRows, { roster, current, onPick: pick2 }) : /* @__PURE__ */ (0, import_react35.createElement)("div", { className: "bt-model-none" }, t("No models are set up yet.")), effortRows(reasoning).length > 0 ? (0, import_react35.createElement)(EffortRows, { reasoning, current: picked, onPick: pickEffort }) : null, manage ? /* @__PURE__ */ (0, import_react35.createElement)("div", { className: "bt-menu-sep", role: "separator" }) : null, manage ? /* @__PURE__ */ (0, import_react35.createElement)("button", { type: "button", role: "menuitem", onClick: () => {
     close();
     manage();
   } }, (0, import_react35.createElement)(SlidersIcon), /* @__PURE__ */ (0, import_react35.createElement)("span", { className: "bt-menu-label" }, t("Models and providers…"))) : null), document.body) : null);
@@ -14782,15 +14732,15 @@ function CommandPalette({ start, token, roster, actions, useSessions }) {
   ];
   if (people.length)
     sections.push([t("Bots"), people]);
-  const agents = (roster.agents ?? []).filter(() => matchesName("DSH Agent")).map((agent) => ({
+  const agents = (roster.agents ?? []).filter(() => matchesName("Agent")).map((agent) => ({
     key: agent.id,
     avatar: /* @__PURE__ */ (0, import_react37.createElement)("span", { className: "bt-palette-agent" }, (0, import_react37.createElement)(FishLogo, { size: 18 })),
-    title: "DSH Agent",
+    title: "Agent",
     subtitle: t("Plain dsh session"),
     run: () => actions.openAgent(agent.id)
   }));
   if (agents.length)
-    sections.push(["DSH Agent", agents]);
+    sections.push(["Agent", agents]);
   const messages = JSON.parse(found).map(([id, turn, snippet]) => {
     const bot = roster.byId[id];
     const room2 = roster.roomsById[id];
@@ -15103,7 +15053,7 @@ function TaskForm({ roster, actions, start, onDone, onCancel }) {
 function AutomationOff({ actions }) {
   return /* @__PURE__ */ (0, import_react39.createElement)("div", { className: "bt-set-card bt-task-off" }, (0, import_react39.createElement)(EmptyState, {
     icon: (0, import_react39.createElement)(ClockIcon),
-    title: t("Turn on Automation tasks in DSH"),
+    title: t("Turn on scheduled tasks"),
     hint: t("Switch on Automation tasks on the Plugins page in Harness settings."),
     ...actions.openHarnessSettings ? { action: { label: t("Open Harness settings"), onClick: actions.openHarnessSettings } } : {}
   }));
@@ -15249,7 +15199,7 @@ function CapabilityForm({ draft, setDraft, items, actions, onClose }) {
     }
   };
   const available = items.filter((item) => item.name !== draft.name && ["mcp", "skill"].includes(item.kind));
-  return /* @__PURE__ */ (0, import_react40.createElement)("form", { className: "bt-connector-form", onSubmit: submit }, (0, import_react40.createElement)(Field, { label: "Name", value: draft.name, disabled: draft.originalName !== void 0, onChange: (value) => set("name", value), placeholder: "my-tool" }), /* @__PURE__ */ (0, import_react40.createElement)("label", { className: "bt-set-row bt-bs-row bt-bs-stack" }, /* @__PURE__ */ (0, import_react40.createElement)("span", { className: "bt-set-copy" }, /* @__PURE__ */ (0, import_react40.createElement)("span", { className: "bt-bs-label" }, t("Type"))), /* @__PURE__ */ (0, import_react40.createElement)("select", { className: "bt-input", value: draft.kind, disabled: draft.originalName !== void 0, onChange: (event) => set("kind", event.target.value) }, ["mcp", "skill", "pack"].map((kind) => /* @__PURE__ */ (0, import_react40.createElement)("option", { key: kind, value: kind }, t(kind === "mcp" ? "MCP server" : kind === "skill" ? "Skill" : "Pack"))))), (0, import_react40.createElement)(Field, { label: "Description", value: draft.description, onChange: (value) => set("description", value) }), draft.kind === "mcp" ? /* @__PURE__ */ (0, import_react40.createElement)("label", { className: "bt-set-row bt-bs-row bt-bs-stack" }, /* @__PURE__ */ (0, import_react40.createElement)("span", { className: "bt-set-copy" }, /* @__PURE__ */ (0, import_react40.createElement)("span", { className: "bt-bs-label" }, t("Connection"))), /* @__PURE__ */ (0, import_react40.createElement)("select", { className: "bt-input", value: draft.transport, onChange: (event) => set("transport", event.target.value) }, /* @__PURE__ */ (0, import_react40.createElement)("option", { value: "stdio" }, t("Local command")), /* @__PURE__ */ (0, import_react40.createElement)("option", { value: "streamable-http" }, t("HTTP server")))) : null, draft.kind === "mcp" && draft.transport === "stdio" ? /* @__PURE__ */ (0, import_react40.createElement)("div", null, (0, import_react40.createElement)(Field, { label: "Command", value: draft.command, onChange: (value) => set("command", value) }), (0, import_react40.createElement)(Field, { label: "Arguments (one per line)", value: draft.argsText, onChange: (value) => set("argsText", value), multiline: true }), (0, import_react40.createElement)(Field, { label: "Environment (JSON)", value: draft.envText, onChange: (value) => set("envText", value), multiline: true, placeholder: t('{"API_KEY": "$DSH_SECRET_MY_KEY"}') })) : null, draft.kind === "mcp" && draft.transport === "streamable-http" ? /* @__PURE__ */ (0, import_react40.createElement)("div", null, (0, import_react40.createElement)(Field, { label: "URL", value: draft.url, onChange: (value) => set("url", value) }), (0, import_react40.createElement)(Field, { label: "Headers (JSON)", value: draft.headersText, onChange: (value) => set("headersText", value), multiline: true, placeholder: t('{"API_KEY": "$DSH_SECRET_MY_KEY"}') })) : null, draft.kind === "skill" ? (0, import_react40.createElement)(Field, { label: "Skill instructions", value: draft.content, onChange: (value) => set("content", value), multiline: true }) : null, draft.kind === "pack" ? /* @__PURE__ */ (0, import_react40.createElement)("div", { className: "bt-set-card" }, available.length === 0 ? /* @__PURE__ */ (0, import_react40.createElement)("div", { className: "bt-set-row" }, /* @__PURE__ */ (0, import_react40.createElement)("span", { className: "bt-set-hint" }, t("Save an MCP server or skill first."))) : available.map((item) => /* @__PURE__ */ (0, import_react40.createElement)("label", { key: item.name, className: "bt-set-row bt-bs-row" }, /* @__PURE__ */ (0, import_react40.createElement)("span", { className: "bt-set-copy" }, /* @__PURE__ */ (0, import_react40.createElement)("span", { className: "bt-bs-label" }, item.name)), /* @__PURE__ */ (0, import_react40.createElement)("input", { type: "checkbox", checked: draft.items.includes(item.name), onChange: (event) => set("items", event.target.checked ? [...draft.items, item.name] : draft.items.filter((name) => name !== item.name)) })))) : null, error ? /* @__PURE__ */ (0, import_react40.createElement)("div", { className: "bt-connector-error", role: "alert" }, error) : null, /* @__PURE__ */ (0, import_react40.createElement)("div", { className: "bt-connector-form-row" }, /* @__PURE__ */ (0, import_react40.createElement)("button", { type: "button", className: "bt-soft bt-soft-sm", onClick: onClose }, t("Cancel")), /* @__PURE__ */ (0, import_react40.createElement)("button", { type: "submit", className: "bt-soft bt-soft-sm" }, draft.originalName ? t("Save changes") : t("Add capability"))));
+  return /* @__PURE__ */ (0, import_react40.createElement)("form", { className: "bt-connector-form", onSubmit: submit }, (0, import_react40.createElement)(Field, { label: "Name", value: draft.name, disabled: draft.originalName !== void 0, onChange: (value) => set("name", value), placeholder: "my-tool" }), /* @__PURE__ */ (0, import_react40.createElement)("label", { className: "bt-set-row bt-bs-row bt-bs-stack" }, /* @__PURE__ */ (0, import_react40.createElement)("span", { className: "bt-set-copy" }, /* @__PURE__ */ (0, import_react40.createElement)("span", { className: "bt-bs-label" }, t("Type"))), /* @__PURE__ */ (0, import_react40.createElement)("select", { className: "bt-input", value: draft.kind, disabled: draft.originalName !== void 0, onChange: (event) => set("kind", event.target.value) }, ["mcp", "skill", "pack"].map((kind) => /* @__PURE__ */ (0, import_react40.createElement)("option", { key: kind, value: kind }, t(kind === "mcp" ? "MCP server" : kind === "skill" ? "Skill" : "Pack"))))), (0, import_react40.createElement)(Field, { label: "Description", value: draft.description, onChange: (value) => set("description", value) }), draft.kind === "mcp" ? /* @__PURE__ */ (0, import_react40.createElement)("label", { className: "bt-set-row bt-bs-row bt-bs-stack" }, /* @__PURE__ */ (0, import_react40.createElement)("span", { className: "bt-set-copy" }, /* @__PURE__ */ (0, import_react40.createElement)("span", { className: "bt-bs-label" }, t("Connection"))), /* @__PURE__ */ (0, import_react40.createElement)("select", { className: "bt-input", value: draft.transport, onChange: (event) => set("transport", event.target.value) }, /* @__PURE__ */ (0, import_react40.createElement)("option", { value: "stdio" }, t("Local command")), /* @__PURE__ */ (0, import_react40.createElement)("option", { value: "streamable-http" }, t("HTTP server")))) : null, draft.kind === "mcp" && draft.transport === "stdio" ? /* @__PURE__ */ (0, import_react40.createElement)("div", null, (0, import_react40.createElement)(Field, { label: "Command", value: draft.command, onChange: (value) => set("command", value) }), (0, import_react40.createElement)(Field, { label: "Arguments (one per line)", value: draft.argsText, onChange: (value) => set("argsText", value), multiline: true }), (0, import_react40.createElement)(Field, { label: "Environment (JSON)", value: draft.envText, onChange: (value) => set("envText", value), multiline: true, placeholder: t('{"API_KEY": "$MOON_BOT_SECRET_MY_KEY"}') })) : null, draft.kind === "mcp" && draft.transport === "streamable-http" ? /* @__PURE__ */ (0, import_react40.createElement)("div", null, (0, import_react40.createElement)(Field, { label: "URL", value: draft.url, onChange: (value) => set("url", value) }), (0, import_react40.createElement)(Field, { label: "Headers (JSON)", value: draft.headersText, onChange: (value) => set("headersText", value), multiline: true, placeholder: t('{"API_KEY": "$MOON_BOT_SECRET_MY_KEY"}') })) : null, draft.kind === "skill" ? (0, import_react40.createElement)(Field, { label: "Skill instructions", value: draft.content, onChange: (value) => set("content", value), multiline: true }) : null, draft.kind === "pack" ? /* @__PURE__ */ (0, import_react40.createElement)("div", { className: "bt-set-card" }, available.length === 0 ? /* @__PURE__ */ (0, import_react40.createElement)("div", { className: "bt-set-row" }, /* @__PURE__ */ (0, import_react40.createElement)("span", { className: "bt-set-hint" }, t("Save an MCP server or skill first."))) : available.map((item) => /* @__PURE__ */ (0, import_react40.createElement)("label", { key: item.name, className: "bt-set-row bt-bs-row" }, /* @__PURE__ */ (0, import_react40.createElement)("span", { className: "bt-set-copy" }, /* @__PURE__ */ (0, import_react40.createElement)("span", { className: "bt-bs-label" }, item.name)), /* @__PURE__ */ (0, import_react40.createElement)("input", { type: "checkbox", checked: draft.items.includes(item.name), onChange: (event) => set("items", event.target.checked ? [...draft.items, item.name] : draft.items.filter((name) => name !== item.name)) })))) : null, error ? /* @__PURE__ */ (0, import_react40.createElement)("div", { className: "bt-connector-error", role: "alert" }, error) : null, /* @__PURE__ */ (0, import_react40.createElement)("div", { className: "bt-connector-form-row" }, /* @__PURE__ */ (0, import_react40.createElement)("button", { type: "button", className: "bt-soft bt-soft-sm", onClick: onClose }, t("Cancel")), /* @__PURE__ */ (0, import_react40.createElement)("button", { type: "submit", className: "bt-soft bt-soft-sm" }, draft.originalName ? t("Save changes") : t("Add capability"))));
 }
 function CapabilityRow({ item, onEdit, onDelete, onApprove, confirming }) {
   const detail = item.kind === "pack" ? `${t("Pack")}: ${(item.items ?? []).join(", ") || t("No items")}` : item.kind === "mcp" ? item.transport === "stdio" ? t("Local command") : t("HTTP server") : t("Skill");
@@ -15898,7 +15848,7 @@ function CreateBot({ roster, actions, start, brief = "", onBack, canGoBack, onCr
   } }), problem ? /* @__PURE__ */ (0, import_react44.createElement)("span", { className: "bt-note bt-danger" }, hostText(problem)) : clash ? /* @__PURE__ */ (0, import_react44.createElement)("span", { className: "bt-note bt-danger" }, t("A Bot named {name} already exists", { name: finalName })) : null), /* @__PURE__ */ (0, import_react44.createElement)("div", { className: "bt-field" }, /* @__PURE__ */ (0, import_react44.createElement)("span", { className: "bt-field-label" }, t("Model")), (0, import_react44.createElement)(ModelMenu, { bot: { id: "new-bot", name: finalName, model: model || void 0, effort }, roster, actions, wide: true, onPick: (ref) => {
     setModel(ref);
     setEffort(void 0);
-  }, onPickEffort: setEffort }), /* @__PURE__ */ (0, import_react44.createElement)("span", { className: "bt-note" }, (roster.models ?? []).length > 0 ? t("The Bot runs on this model. You can change it later in its details.") : t("Add a provider and a model in DeepSeek Harness first, or pick one in the Bot's chat later."))), error ? /* @__PURE__ */ (0, import_react44.createElement)("div", { className: "bt-error", role: "alert", style: { padding: 0 } }, error) : null, /* @__PURE__ */ (0, import_react44.createElement)("div", { className: "bt-create-foot" }, /* @__PURE__ */ (0, import_react44.createElement)("button", { type: "button", className: "bt-soft", onClick: onBack }, canGoBack ? t("Back") : t("Cancel")), /* @__PURE__ */ (0, import_react44.createElement)("button", { type: "button", className: "bt-send bt-create-go", disabled: busy || clash || Boolean(problem), onClick: () => void create() }, busy ? t("Creating…") : t("Create"))));
+  }, onPickEffort: setEffort }), /* @__PURE__ */ (0, import_react44.createElement)("span", { className: "bt-note" }, (roster.models ?? []).length > 0 ? t("The Bot runs on this model. You can change it later in its details.") : t("Add a provider and a model in Moon Bot first, or pick one in the Bot's chat later."))), error ? /* @__PURE__ */ (0, import_react44.createElement)("div", { className: "bt-error", role: "alert", style: { padding: 0 } }, error) : null, /* @__PURE__ */ (0, import_react44.createElement)("div", { className: "bt-create-foot" }, /* @__PURE__ */ (0, import_react44.createElement)("button", { type: "button", className: "bt-soft", onClick: onBack }, canGoBack ? t("Back") : t("Cancel")), /* @__PURE__ */ (0, import_react44.createElement)("button", { type: "button", className: "bt-send bt-create-go", disabled: busy || clash || Boolean(problem), onClick: () => void create() }, busy ? t("Creating…") : t("Create"))));
   if (inline)
     return /* @__PURE__ */ (0, import_react44.createElement)("div", { ref: frame, className: "bt-create-inline", role: "group", "aria-label": t("Create Bot") }, card);
   return /* @__PURE__ */ (0, import_react44.createElement)("div", { className: "bt-create", role: "dialog", "aria-label": t("Create Bot") }, /* @__PURE__ */ (0, import_react44.createElement)("div", { className: "bt-create-head" }, canGoBack ? /* @__PURE__ */ (0, import_react44.createElement)("button", { type: "button", className: "bt-icon-btn", "aria-label": t("Back to new chat"), onClick: onBack }, (0, import_react44.createElement)(ChevronLeftIcon)) : /* @__PURE__ */ (0, import_react44.createElement)("span", { className: "bt-create-gap" }), /* @__PURE__ */ (0, import_react44.createElement)("span", { className: "bt-create-title" }, t("Create Bot")), /* @__PURE__ */ (0, import_react44.createElement)("button", { type: "button", className: "bt-icon-btn", "aria-label": t("Close"), onClick: () => actions.closeOverlay() }, (0, import_react44.createElement)(CloseIcon))), /* @__PURE__ */ (0, import_react44.createElement)("div", { className: "bt-create-body" }, card));
@@ -16018,7 +15968,7 @@ function NewChat({ mode, roster, actions }) {
         inputRef.current?.focus();
       } });
     if (LEAN.dshAgent && (roster.agents ?? []).length === 0 && actions.addAgent !== void 0) {
-      options.push({ key: "agent", icon: (0, import_react45.createElement)(FishLogo, { size: 16 }), label: t("Add DSH Agent"), run: () => run(async () => {
+      options.push({ key: "agent", icon: (0, import_react45.createElement)(FishLogo, { size: 16 }), label: t("Add Agent"), run: () => run(async () => {
         await actions.addAgent?.();
         close();
       }) });
@@ -16631,7 +16581,7 @@ function SecretsPage({ roster, actions, run, Section }) {
   useEscape(() => setOpen(null), open !== null && !adding);
   const secrets = roster.secrets ?? [];
   return [
-    /* @__PURE__ */ (0, import_react50.createElement)("p", { key: "about", className: "bt-secret-about" }, t("Keys your Bots asked for. Bots never see the values: they use them as "), /* @__PURE__ */ (0, import_react50.createElement)("code", null, "$DSH_SECRET_NAME"), t(" in their shell, and every value is replaced by "), /* @__PURE__ */ (0, import_react50.createElement)("code", null, "[secret:NAME]"), t(" before anything goes to a model.")),
+    /* @__PURE__ */ (0, import_react50.createElement)("p", { key: "about", className: "bt-secret-about" }, t("Keys your Bots asked for. Bots never see the values: they use them as "), /* @__PURE__ */ (0, import_react50.createElement)("code", null, "$MOON_BOT_SECRET_NAME"), t(" in their shell, and every value is replaced by "), /* @__PURE__ */ (0, import_react50.createElement)("code", null, "[secret:NAME]"), t(" before anything goes to a model.")),
     (0, import_react50.createElement)(Section, { key: "list", title: t("Secrets · {count}", { count: secrets.length }) }, secrets.length === 0 && !adding ? /* @__PURE__ */ (0, import_react50.createElement)("div", { className: "bt-set-row" }, /* @__PURE__ */ (0, import_react50.createElement)("span", { className: "bt-set-hint" }, t("No keys yet. When a Bot needs one, it shows a card in its chat."))) : null, secrets.map((secret) => (0, import_react50.createElement)(SecretRow, { key: secret.name, secret, roster, actions, run, open: open === secret.name, onToggle: () => setOpen(open === secret.name ? null : secret.name) })), adding ? (0, import_react50.createElement)(AddSecret, { actions, run, onDone: () => setAdding(false) }) : null),
     adding ? null : /* @__PURE__ */ (0, import_react50.createElement)("div", { key: "add", className: "bt-actions" }, /* @__PURE__ */ (0, import_react50.createElement)("button", { type: "button", className: "bt-soft bt-soft-sm", onClick: () => setAdding(true) }, t("Add a key")))
   ];
@@ -16893,7 +16843,7 @@ function ownerFace(owner, roster) {
   if (owner.kind === "agent") {
     return {
       kind: "agent",
-      name: owner.name || "DSH Agent",
+      name: owner.name || "Agent",
       sub: owner.deleted ? t("Deleted") : "",
       paint: "var(--bt-us-rest)",
       glyph: (size) => glyphBox(size, ChatsIcon)
@@ -17292,7 +17242,7 @@ function ProvidersPage({ actions, run, Section }) {
   if (view === null)
     return null;
   if (!view.available)
-    return /* @__PURE__ */ (0, import_react54.createElement)("p", { className: "bt-set-hint" }, t("This DSH cannot set up model providers."));
+    return /* @__PURE__ */ (0, import_react54.createElement)("p", { className: "bt-set-hint" }, t("Model providers cannot be set up here."));
   return [
     (0, import_react54.createElement)(Section, { key: "list", title: t("Model providers · {count}", { count: view.providers.length }) }, view.providers.map((provider) => (0, import_react54.createElement)(ProviderRow, {
       key: provider.id,
@@ -17310,7 +17260,7 @@ function keyState(key) {
     return null;
   if (!key.configured)
     return ["missing", t("Needs an API key")];
-  return key.writable ? ["set", t("Key set")] : ["outside", t("Key set outside DS Bot")];
+  return key.writable ? ["set", t("Key set")] : ["outside", t("Key set outside Moon Bot")];
 }
 function ProviderRow({ provider, apply: apply2, actions, open, onToggle }) {
   const [confirm, setConfirm] = (0, import_react54.useState)(false);
@@ -17321,7 +17271,7 @@ function ProviderRow({ provider, apply: apply2, actions, open, onToggle }) {
   const state = keyState(provider.key);
   const shown = provider.models.slice(0, SHOWN_MODELS);
   const hint = provider.error ?? (provider.models.length === 0 ? t("No models") : t("{count} models", { count: provider.models.length }));
-  return /* @__PURE__ */ (0, import_react54.createElement)("div", { className: "bt-secret-item bt-provider", "data-open": open ? "" : void 0 }, /* @__PURE__ */ (0, import_react54.createElement)("button", { type: "button", className: "bt-set-row bt-secret-summary", "aria-expanded": open, onClick: onToggle }, /* @__PURE__ */ (0, import_react54.createElement)("span", { className: "bt-set-copy" }, /* @__PURE__ */ (0, import_react54.createElement)("span", { className: "bt-secret-title" }, provider.name, provider.name !== provider.id ? /* @__PURE__ */ (0, import_react54.createElement)("span", { className: "bt-provider-id" }, provider.id) : null), /* @__PURE__ */ (0, import_react54.createElement)("span", { className: "bt-set-hint", "data-error": provider.error ? "" : void 0 }, hint)), state ? /* @__PURE__ */ (0, import_react54.createElement)("span", { className: "bt-set-control" }, /* @__PURE__ */ (0, import_react54.createElement)("span", { className: "bt-provider-state", "data-state": state[0] }, state[1])) : null), open ? /* @__PURE__ */ (0, import_react54.createElement)("div", { className: "bt-secret-edit" }, provider.key?.writable ? (0, import_react54.createElement)(KeyEditor, { provider, apply: apply2, actions }) : null, provider.key && !provider.key.writable ? /* @__PURE__ */ (0, import_react54.createElement)("div", { className: "bt-set-hint" }, t("This key comes from outside DS Bot, such as an environment variable, and cannot be changed here.")) : null, provider.models.length > 0 ? /* @__PURE__ */ (0, import_react54.createElement)("div", { className: "bt-secret-edit-block" }, /* @__PURE__ */ (0, import_react54.createElement)("div", { className: "bt-secret-edit-label" }, t("Models")), /* @__PURE__ */ (0, import_react54.createElement)("div", { className: "bt-provider-models" }, shown.map((model) => /* @__PURE__ */ (0, import_react54.createElement)("span", { key: model.ref, className: "bt-tag", title: model.ref }, model.name)), provider.models.length > shown.length ? /* @__PURE__ */ (0, import_react54.createElement)("span", { className: "bt-set-hint" }, t("and {count} more", { count: provider.models.length - shown.length })) : null)) : null, provider.removable ? /* @__PURE__ */ (0, import_react54.createElement)("div", { className: "bt-secret-row-actions" }, confirm ? [
+  return /* @__PURE__ */ (0, import_react54.createElement)("div", { className: "bt-secret-item bt-provider", "data-open": open ? "" : void 0 }, /* @__PURE__ */ (0, import_react54.createElement)("button", { type: "button", className: "bt-set-row bt-secret-summary", "aria-expanded": open, onClick: onToggle }, /* @__PURE__ */ (0, import_react54.createElement)("span", { className: "bt-set-copy" }, /* @__PURE__ */ (0, import_react54.createElement)("span", { className: "bt-secret-title" }, provider.name, provider.name !== provider.id ? /* @__PURE__ */ (0, import_react54.createElement)("span", { className: "bt-provider-id" }, provider.id) : null), /* @__PURE__ */ (0, import_react54.createElement)("span", { className: "bt-set-hint", "data-error": provider.error ? "" : void 0 }, hint)), state ? /* @__PURE__ */ (0, import_react54.createElement)("span", { className: "bt-set-control" }, /* @__PURE__ */ (0, import_react54.createElement)("span", { className: "bt-provider-state", "data-state": state[0] }, state[1])) : null), open ? /* @__PURE__ */ (0, import_react54.createElement)("div", { className: "bt-secret-edit" }, provider.key?.writable ? (0, import_react54.createElement)(KeyEditor, { provider, apply: apply2, actions }) : null, provider.key && !provider.key.writable ? /* @__PURE__ */ (0, import_react54.createElement)("div", { className: "bt-set-hint" }, t("This key comes from outside Moon Bot, such as an environment variable, and cannot be changed here.")) : null, provider.models.length > 0 ? /* @__PURE__ */ (0, import_react54.createElement)("div", { className: "bt-secret-edit-block" }, /* @__PURE__ */ (0, import_react54.createElement)("div", { className: "bt-secret-edit-label" }, t("Models")), /* @__PURE__ */ (0, import_react54.createElement)("div", { className: "bt-provider-models" }, shown.map((model) => /* @__PURE__ */ (0, import_react54.createElement)("span", { key: model.ref, className: "bt-tag", title: model.ref }, model.name)), provider.models.length > shown.length ? /* @__PURE__ */ (0, import_react54.createElement)("span", { className: "bt-set-hint" }, t("and {count} more", { count: provider.models.length - shown.length })) : null)) : null, provider.removable ? /* @__PURE__ */ (0, import_react54.createElement)("div", { className: "bt-secret-row-actions" }, confirm ? [
     /* @__PURE__ */ (0, import_react54.createElement)("span", { key: "q", className: "bt-set-hint" }, t("Remove {name}? Bots on its models need another model.", { name: provider.name })),
     /* @__PURE__ */ (0, import_react54.createElement)("button", { key: "no", type: "button", className: "bt-soft bt-soft-sm", onClick: () => setConfirm(false) }, t("Keep")),
     /* @__PURE__ */ (0, import_react54.createElement)("button", { key: "yes", type: "button", className: "bt-soft bt-soft-sm bt-secret-danger", onClick: () => apply2(actions.removeProvider(provider.id)) }, t("Remove"))
@@ -17569,7 +17519,7 @@ function SettingsDialog({ page, id, roster, actions, useUpdate, leaving = false 
   if (shown === "usage" && !usageOpened)
     setUsageOpened(true);
   const errorLine = error ? /* @__PURE__ */ (0, import_react55.createElement)("div", { className: "bt-error", role: "alert", style: { padding: 0 } }, error) : null;
-  return /* @__PURE__ */ (0, import_react55.createElement)("div", { className: "bt-settings-layer", "data-leaving": leaving || void 0 }, /* @__PURE__ */ (0, import_react55.createElement)("div", { className: "bt-scrim", onMouseDown: close }), /* @__PURE__ */ (0, import_react55.createElement)("div", { className: "bt-settings", role: "dialog", "aria-modal": true, "aria-label": t("DS Bot settings") }, /* @__PURE__ */ (0, import_react55.createElement)("nav", { ref: nav.box, className: "bt-settings-nav", "aria-label": t("Settings pages") }, /* @__PURE__ */ (0, import_react55.createElement)("span", { ref: nav.thumb, className: "bt-thumb", "aria-hidden": true }), pages.map(([key, text]) => /* @__PURE__ */ (0, import_react55.createElement)("button", { key, type: "button", className: "bt-settings-item", "aria-current": shown === key ? "page" : void 0, onClick: () => actions.openSettings(key) }, (0, import_react55.createElement)(PAGE_ICONS[key] ?? InfoIcon), t(text))), actions.openHarnessSettings ? /* @__PURE__ */ (0, import_react55.createElement)("button", { type: "button", className: "bt-settings-item bt-settings-shell", title: t("Models, providers, and the rest of DeepSeek Harness"), onClick: () => {
+  return /* @__PURE__ */ (0, import_react55.createElement)("div", { className: "bt-settings-layer", "data-leaving": leaving || void 0 }, /* @__PURE__ */ (0, import_react55.createElement)("div", { className: "bt-scrim", onMouseDown: close }), /* @__PURE__ */ (0, import_react55.createElement)("div", { className: "bt-settings", role: "dialog", "aria-modal": true, "aria-label": t("Moon Bot settings") }, /* @__PURE__ */ (0, import_react55.createElement)("nav", { ref: nav.box, className: "bt-settings-nav", "aria-label": t("Settings pages") }, /* @__PURE__ */ (0, import_react55.createElement)("span", { ref: nav.thumb, className: "bt-thumb", "aria-hidden": true }), pages.map(([key, text]) => /* @__PURE__ */ (0, import_react55.createElement)("button", { key, type: "button", className: "bt-settings-item", "aria-current": shown === key ? "page" : void 0, onClick: () => actions.openSettings(key) }, (0, import_react55.createElement)(PAGE_ICONS[key] ?? InfoIcon), t(text))), actions.openHarnessSettings ? /* @__PURE__ */ (0, import_react55.createElement)("button", { type: "button", className: "bt-settings-item bt-settings-shell", title: t("Models, providers, and the rest of Moon Bot"), onClick: () => {
     close();
     actions.openHarnessSettings?.();
   } }, (0, import_react55.createElement)(SlidersIcon), t("Harness settings")) : null), /* @__PURE__ */ (0, import_react55.createElement)("div", { className: "bt-settings-main" }, /* @__PURE__ */ (0, import_react55.createElement)("div", { className: "bt-settings-head" }, back ? /* @__PURE__ */ (0, import_react55.createElement)("button", { type: "button", className: "bt-icon-btn", "aria-label": back, title: back, onClick: () => actions.openSettings(shown) }, (0, import_react55.createElement)(ChevronLeftIcon)) : null, /* @__PURE__ */ (0, import_react55.createElement)("h2", { key: bot?.id ?? room2?.id ?? shown }, bot?.name ?? room2?.name ?? label)), shown === "usage" ? null : /* @__PURE__ */ (0, import_react55.createElement)("div", { key: pageKey, className: "bt-settings-scroll bt-settings-page", "data-move": last.current.move }, errorLine, shown === "general" ? (0, import_react55.createElement)(GeneralPage, { roster, actions, run }) : null, shown === "models" ? (0, import_react55.createElement)(ProvidersPage, { actions, run, Section: SetSection }) : null, bot ? /* @__PURE__ */ (0, import_react55.createElement)("div", { className: "bt-settings-form" }, (0, import_react55.createElement)(BotSettingsForm, { key: bot.id, bot, roster, actions, run })) : null, shown === "bots" && !bot ? (0, import_react55.createElement)(BotsPage, { roster, actions, run }) : null, room2 ? /* @__PURE__ */ (0, import_react55.createElement)("div", { className: "bt-settings-form" }, (0, import_react55.createElement)(GroupSettingsForm, { key: room2.id, room: room2, roster, actions, run })) : null, shown === "groups" && !room2 ? (0, import_react55.createElement)(GroupsPage, { roster, actions, run }) : null, shown === "connectors" ? (0, import_react55.createElement)(ConnectorsPage, { roster, actions }) : null, shown === "capabilities" ? (0, import_react55.createElement)(CapabilitiesPage, { roster, actions, run }) : null, shown === "schedules" ? (0, import_react55.createElement)(SchedulesPage, { roster, actions, start: id ?? void 0 }) : null, shown === "secrets" ? (0, import_react55.createElement)(SecretsPage, { roster, actions, run, Section: SetSection }) : null, shown === "feedback" ? (0, import_react55.createElement)(FeedbackPage, { actions, run, Section: SetSection, Row: SetRow }) : null, shown === "about" ? (0, import_react55.createElement)(AboutPage, { useUpdate, actions, run, Section: SetSection, Row: SetRow }) : null), usageOpened ? /* @__PURE__ */ (0, import_react55.createElement)("div", { key: "usage", className: "bt-settings-scroll bt-settings-usage", "data-off": shown === "usage" ? void 0 : "", "aria-hidden": shown === "usage" ? void 0 : true }, shown === "usage" ? errorLine : null, (0, import_react55.createElement)(UsagePage, { roster, actions, focusId: usageFocus })) : null), /* @__PURE__ */ (0, import_react55.createElement)("button", { type: "button", className: "bt-settings-close", "aria-label": t("Close settings"), onClick: close }, (0, import_react55.createElement)(CloseIcon))));
@@ -17653,7 +17603,7 @@ function AgentMenu({ menu, roster, actions, leaving }) {
       [agent.pinned ? t("Unpin") : t("Pin"), PinIcon, () => actions.setFlags(agent.id, { pinned: !agent.pinned })]
     ],
     [
-      [t("Remove DSH Agent"), TrashIcon, () => actions.removeAgent(agent.id), true]
+      [t("Remove Agent"), TrashIcon, () => actions.removeAgent(agent.id), true]
     ]
   ] : [
     [
@@ -17663,7 +17613,7 @@ function AgentMenu({ menu, roster, actions, leaving }) {
       [t("Archive"), TrashIcon, () => actions.archiveAgentSession(agent.id, menu.id), true]
     ]
   ];
-  return /* @__PURE__ */ (0, import_react56.createElement)("div", { ref, className: "bt-menu", role: "menu", "aria-label": menu.kind === "agent" ? "DSH Agent" : t("Session actions"), style: place, "data-leaving": leaving || void 0 }, groups.map((group, index) => /* @__PURE__ */ (0, import_react56.createElement)(import_react56.Fragment, null, index > 0 ? /* @__PURE__ */ (0, import_react56.createElement)("div", { className: "bt-menu-sep", role: "separator" }) : null, group.map(([label, Icon, run, danger]) => /* @__PURE__ */ (0, import_react56.createElement)("button", { key: label, type: "button", role: "menuitem", className: danger ? "bt-danger" : void 0, onClick: () => {
+  return /* @__PURE__ */ (0, import_react56.createElement)("div", { ref, className: "bt-menu", role: "menu", "aria-label": menu.kind === "agent" ? "Agent" : t("Session actions"), style: place, "data-leaving": leaving || void 0 }, groups.map((group, index) => /* @__PURE__ */ (0, import_react56.createElement)(import_react56.Fragment, null, index > 0 ? /* @__PURE__ */ (0, import_react56.createElement)("div", { className: "bt-menu-sep", role: "separator" }) : null, group.map(([label, Icon, run, danger]) => /* @__PURE__ */ (0, import_react56.createElement)("button", { key: label, type: "button", role: "menuitem", className: danger ? "bt-danger" : void 0, onClick: () => {
     actions.closeMenu();
     void Promise.resolve(run()).catch((error) => console.warn("[ds-bot]", error));
   } }, (0, import_react56.createElement)(Icon), label)))));
@@ -17740,7 +17690,7 @@ function BrowserCards({ bot, sessionId, roster, actions, useBrowserTabs, useBrow
     actions.browserEnsure?.(bot.id);
   }, [bot.id]);
   if (roster.browser !== true || !actions.browserShow) {
-    return /* @__PURE__ */ (0, import_react57.createElement)("div", { className: "bt-muted" }, t("The browser is in the DSH Desktop app."));
+    return /* @__PURE__ */ (0, import_react57.createElement)("div", { className: "bt-muted" }, t("The browser is in the desktop app."));
   }
   if (state.ids.length === 0) {
     return (0, import_react57.createElement)(EmptyState, {

@@ -44,7 +44,7 @@ export const clientErrors = (): ClientErrorEntry[] => entries.map(entry => (entr
 
 export function clientFacts(): Record<string, string> {
   return {
-    surface: window.dshDesktop ? 'DSH Desktop' : 'DSH Web',
+    surface: window.dshDesktop ? 'Desktop' : 'Web',
     language: language(),
     userAgent: navigator.userAgent,
   }
@@ -74,8 +74,8 @@ export function failureLabel(code: string, message?: string): string {
 // GitHub refuses very long addresses; past this the diagnostics go by the clipboard.
 const URL_LIMIT = 7000
 export const WHAT_MAX = 2000
-const PASTE_NOTE = 'DS Bot copied the diagnostics to the clipboard. Paste them here.'
-const REST_NOTE = 'The recent errors do not fit in the link. DS Bot copied the diagnostics to the clipboard: paste them below this line.'
+const PASTE_NOTE = 'Moon Bot copied the diagnostics to the clipboard. Paste them here.'
+const REST_NOTE = 'The recent errors do not fit in the link. Moon Bot copied the diagnostics to the clipboard: paste them below this line.'
 
 export function issueUrl(base: string, { what = '', diagnostics }: { what?: string; diagnostics: string }): { url: string; inline: boolean } {
   const text = what.trim().slice(0, WHAT_MAX)

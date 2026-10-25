@@ -102,7 +102,7 @@ const memoryDriver: Driver = async note => {
   return checks
 }
 
-const recallDriver: Driver = async note => {
+const recallDriver: Driver = async () => {
   const home = mkdtempSync(join(tmpdir(), 'eval-recall-'))
   const checks: Check[] = []
   try {
@@ -182,7 +182,7 @@ const workflowDriver: Driver = async note => {
     let calls = 0
     const connector = new McpConnector({ id: 'files', command: 'x' }, {
       list: async () => ({ tools: [{ name: 'read_plan', description: 'read the plan file' }] }),
-      callTool: async input => {
+      callTool: async () => {
         calls += 1
         if (calls === 1) throw new Error('connection dropped')
         return { content: [{ type: 'text', text: 'step 1 prepare; step 2 verify; step 3 ship' }] }

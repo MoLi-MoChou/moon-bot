@@ -12,9 +12,7 @@ import { test } from 'node:test'
 import { fakeContext } from './fake-ctx.js'
 import { wireService } from '../src/service/engine.ts'
 import { FileSettings } from '../src/service/settings.ts'
-import { FileCredentials } from '../src/service/credentials.ts'
 import type { StandaloneLlm } from '../src/service/llm.ts'
-import type { EngineEvent } from '../src/engine/events.ts'
 import type { BridgeAgent } from '../src/engine/builtin/bridge.ts'
 
 const NL = String.fromCharCode(10)

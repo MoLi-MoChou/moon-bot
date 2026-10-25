@@ -43,7 +43,7 @@ export function install(rt: HostRuntime): void {
     pendingRestrict.add(agent)
     if (retryTimer === undefined) {
       retryTimer = setInterval(() => {
-        for (const waiting of [...pendingRestrict]) void restrictTeamTools(waiting)
+        for (const waiting of pendingRestrict) void restrictTeamTools(waiting)
         if (pendingRestrict.size === 0) stopRetry()
       }, RETRY_MS)
       retryTimer.unref()

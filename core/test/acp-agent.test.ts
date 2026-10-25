@@ -4,7 +4,6 @@
 // opencode. Two AgentRuntime implementations now exist — the plan's own proof that the
 // seam is replaceable.
 import assert from 'node:assert/strict'
-import { spawn } from 'node:child_process'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'

@@ -94,7 +94,10 @@ class AcpRuntime {
     await this.request("session/update", { sessionId: session.acpId, update: { sessionUpdate: "user_message" } }).catch(() => void 0);
     return true;
   }
-  async cancelTurn(sessionId, _reason = "user") {
+  // The protocol carries no reason: cancel is cancel, and the interface's reason is a
+  // hint the host uses, not something to send.
+  async cancelTurn(sessionId, reason = "user") {
+    void reason;
     const session = this.sessions.get(sessionId);
     if (session === void 0) return;
     await this.notify("session/cancel", { sessionId: session.acpId }).catch(() => void 0);

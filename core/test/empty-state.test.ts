@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { createRequire } from 'node:module'
-import { dirname, join } from 'node:path'
+import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { runInNewContext } from 'node:vm'
 import { build } from 'esbuild'
@@ -33,7 +32,6 @@ const react = {
 }
 
 // The bundled module's exports, as this test drives them: view components and helpers.
-interface ViewNode { type: unknown, props: Record<string, unknown> & { children?: unknown }, [key: string]: unknown }
 interface BundleExports {
   EmptyState: (props: Record<string, unknown>) => unknown
   welcomeCopy: (roster: unknown, id: string) => { title: string, hint: string } | null

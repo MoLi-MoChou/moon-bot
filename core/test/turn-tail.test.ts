@@ -9,7 +9,6 @@ const bundle = await build({
   bundle: true, format: 'cjs', platform: 'node', write: false,
   external: ['react', 'react-dom'],
 })
-function MarkdownText() { return null }
 const effects = []
 const module = { exports: {} as { AssistantCell: (props: Record<string, unknown>) => unknown, TurnTailCell: (props: Record<string, unknown>) => unknown } }
 runInNewContext(bundle.outputFiles[0].text, {

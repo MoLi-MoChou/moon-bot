@@ -134,7 +134,10 @@ export class AcpRuntime implements AgentRuntime {
     return true
   }
 
-  async cancelTurn(sessionId: string, _reason: CancelReason = 'user'): Promise<void> {
+  // The protocol carries no reason: cancel is cancel, and the interface's reason is a
+  // hint the host uses, not something to send.
+  async cancelTurn(sessionId: string, reason: CancelReason = 'user'): Promise<void> {
+    void reason
     const session = this.sessions.get(sessionId)
     if (session === undefined) return
     await this.notify('session/cancel', { sessionId: session.acpId }).catch(() => undefined)

@@ -13,7 +13,7 @@ function createSource(initial) {
       const resolved = typeof next === 'function' ? next(value) : next
       if (resolved === value) return
       value = resolved
-      for (const listener of [...listeners]) listener()
+      for (const listener of listeners) listener()
     },
   }
 }

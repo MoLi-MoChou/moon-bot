@@ -67,7 +67,7 @@ const memoryScopesOf = (runtime: Runtime, sessionId: string): readonly string[] 
 const surfacedMemories = (runtime: Runtime, store: Store, sync: MemorySync, sessionId: string, query: string | undefined): readonly string[] => {
   // Words of real length only: a question made of grammar words ("what is the…")
   // surfaces nothing, while a term that names the subject does.
-  const terms = (query ?? '').replace(/[\[\]{}()#>*`|]/g, ' ').split(/\s+/).filter(term => term.length >= 4)
+  const terms = (query ?? '').replace(/[[\]{}()#>*`|]/g, ' ').split(/\s+/).filter(term => term.length >= 4)
   if (terms.length === 0) return []
   try {
     sync.syncChanged(memoryScopesOf(runtime, sessionId))

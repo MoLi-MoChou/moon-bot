@@ -33,7 +33,7 @@ test('a mounted server\'s tools join the registry and answer through the SDK', a
   assert.equal(outcome.isError, undefined)
 })
 
-test('results are bounded, errors keep their flag, and a dropped connection retries once', async (t) => {
+test('results are bounded, errors keep their flag, and a dropped connection retries once', async () => {
   // A scripted surface: a huge result, an erroring tool, then a dead-then-alive one.
   let flakyCalls = 0
   const connector = new McpConnector({ id: 'stub', command: 'x' }, {

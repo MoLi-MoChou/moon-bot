@@ -29,9 +29,7 @@ class McpConnector {
     const url = this.spec.url;
     if (url !== void 0 && url !== "") {
       const { StreamableHTTPClientTransport } = await import("@modelcontextprotocol/sdk/client/streamableHttp.js");
-      await this.client.connect(new StreamableHTTPClientTransport(new URL(url), {
-        ...this.spec.headers !== void 0 ? { requestInit: { headers: { ...this.spec.headers } } } : {}
-      }));
+      await this.client.connect(new StreamableHTTPClientTransport(new URL(url), this.spec.headers !== void 0 ? { requestInit: { headers: { ...this.spec.headers } } } : {}));
       return this.client;
     }
     await this.client.connect(new StdioClientTransport({

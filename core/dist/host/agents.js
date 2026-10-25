@@ -28,7 +28,7 @@ function install(rt) {
     pendingRestrict.add(agent);
     if (retryTimer === void 0) {
       retryTimer = setInterval(() => {
-        for (const waiting of [...pendingRestrict]) void restrictTeamTools(waiting);
+        for (const waiting of pendingRestrict) void restrictTeamTools(waiting);
         if (pendingRestrict.size === 0) stopRetry();
       }, RETRY_MS);
       retryTimer.unref();

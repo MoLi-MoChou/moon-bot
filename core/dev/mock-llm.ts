@@ -348,7 +348,7 @@ function decide(body) {
     if ((ask = /把\s*(\S+?)\s*踢出群/.exec(userLine))) return [tool('update_group', { group: room, remove_members: [ask[1]] })]
     if ((ask = /群名改成\s*(\S+)/.exec(userLine))) return [tool('update_group', { group: room, name: ask[1] })]
     if (/报.{0,3}数|count off/i.test(userLine)) return [text(String((said.length ? Math.max(...said) : 0) + 1))]
-    if (/^User: 撑爆/.test(userLine)) return 'overflow'
+    if (userLine.startsWith('User: 撑爆')) return 'overflow'
     if ((ask = /^User: 报错(?:\s+(\S+))?/.exec(userLine)) && (!ask[1] || ask[1] === me)) return 'auth'
     // Context-line tests in a group Session: grow it, or check what is still in it.
     if ((ask = /长文\s*(\d+)/.exec(userLine))) return [text(filler(Number(ask[1]) * 1000, `${me}群长文`))]

@@ -208,7 +208,7 @@ export const shellTokens = ({ light, dark, tokens }: { light: ThemeMode; dark: T
   '--dsw-alias-label-primary-foreground': { light: accentInk(light.accent), dark: accentInk(dark.accent) },
   '--dsw-focus-ring-color': { light: rgba(light.accent, 0.45), dark: rgba(dark.accent, 0.45) },
   '--dsw-alias-link': { light: light.accent, dark: dark.accent },
-  ...(tokens ?? {}),
+  ...tokens,
   '--dsw-specific-sidebar-fill': { light: light.sidebar, dark: dark.sidebar },
   '--dsw-specific-input-major': { light: light.bg, dark: dark.sidebar },
   '--dsw-alias-label-primary': { light: light.text, dark: dark.text },

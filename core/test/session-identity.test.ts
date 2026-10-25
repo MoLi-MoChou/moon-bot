@@ -47,7 +47,7 @@ function start() {
   const bench = {
     tokens: 0,
     compacted: 0,
-    respond: (options?: { model?: string }) => '',
+    respond: () => '',
     requests: [] as { model?: string, sessionId?: string, purpose?: string, messages?: { content: { type: string, text?: string }[] }[] }[],
   }
   const compaction = {

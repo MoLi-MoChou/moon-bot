@@ -1766,7 +1766,7 @@ function BotMark({ bot, look: given, size = 36, state = "idle", live = false, ga
     "aria-hidden": label ? void 0 : true,
     onClick: pokeable ? () => setPoked(true) : void 0,
     onAnimationEnd: poked ? (event) => {
-      if (/^bt-poke/.test(event.animationName))
+      if (event.animationName.startsWith("bt-poke"))
         setPoked(false);
     } : void 0
   };
@@ -9801,7 +9801,7 @@ function setEntry(map, id, value) {
   return { ...map, [id]: value };
 }
 function toggleReaction(reactions, key, index, emoji) {
-  const entry = { ...reactions[key] ?? {} };
+  const entry = { ...reactions[key] };
   const list = entry[String(index)] ?? [];
   entry[String(index)] = list.includes(emoji) ? list.filter((item) => item !== emoji) : [...list, emoji];
   if (entry[String(index)]?.length === 0) delete entry[String(index)];
@@ -12994,7 +12994,7 @@ var shellTokens = ({ light, dark, tokens }) => ({
   "--dsw-alias-label-primary-foreground": { light: accentInk(light.accent), dark: accentInk(dark.accent) },
   "--dsw-focus-ring-color": { light: rgba(light.accent, 0.45), dark: rgba(dark.accent, 0.45) },
   "--dsw-alias-link": { light: light.accent, dark: dark.accent },
-  ...tokens ?? {},
+  ...tokens,
   "--dsw-specific-sidebar-fill": { light: light.sidebar, dark: dark.sidebar },
   "--dsw-specific-input-major": { light: light.bg, dark: dark.sidebar },
   "--dsw-alias-label-primary": { light: light.text, dark: dark.text },
@@ -13685,7 +13685,7 @@ function useRowEntrances(replacing) {
     let column = null;
     let frame = 0;
     const settle = (event) => {
-      if (event.target !== event.currentTarget || !/^bt-row/.test(event.animationName))
+      if (event.target !== event.currentTarget || !event.animationName.startsWith("bt-row"))
         return;
       const row = event.currentTarget;
       delete row.dataset.btEnter;
@@ -15668,7 +15668,7 @@ function AvatarEditor({ bot, actions, run, onClose }) {
   const storedShape = bot.avatar?.shape;
   const upload = (file) => {
     if (file)
-      void run(avatarImage(file).then((image) => actions.updateBot(bot.id, { avatar: { ...bot.avatar ?? {}, image } })));
+      void run(avatarImage(file).then((image) => actions.updateBot(bot.id, { avatar: { ...bot.avatar, image } })));
   };
   (0, import_react43.useEffect)(() => {
     const onDown = (event) => {
@@ -18549,7 +18549,10 @@ var STARTERS_CSS = `
 // src/client/user-message.tsx
 var import_react62 = require("react");
 var ui = {
-  projectUserText: (text, ..._rest) => text,
+  projectUserText: (text, ..._rest) => {
+    void _rest;
+    return text;
+  },
   fileExtension: (name) => name.split(".").at(-1),
   fileSizeText: (bytes) => bytes === void 0 ? void 0 : bytes < 1024 ? `${String(bytes)} B` : `${String(Math.round(bytes / 1024))} KB`,
   FileTypeIcon: null,

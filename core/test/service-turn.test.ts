@@ -62,7 +62,7 @@ test('a message over HTTP runs its turn on the engine and answers on the feed', 
   t.after(() => service.close())
   const base = service.url
 
-  const call = async (endpoint: string, payload: Record<string, unknown>): Promise<any> =>
+  const call = async (endpoint: string, payload: Record<string, unknown>): Promise<Record<string, unknown>> =>
     (await fetch(`${base}/api/bot`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ endpoint, payload }) })).json()
 
   // The feed before the turn, so its events are read from the start.
@@ -70,8 +70,9 @@ test('a message over HTTP runs its turn on the engine and answers on the feed', 
   t.after(() => feedAbort.abort())
   const feed = await fetch(`${base}/api/bot/feed`, { signal: feedAbort.signal })
   const reader = feed.body!.getReader()
-  const events: { event: string, data: any }[] = []
-  const pump = (async () => {
+  const events: { event: string, data: Record<string, unknown> }[] = []
+  // The feed is read in the background; the test polls `events` and aborts it at the end.
+  void (async (): Promise<void> => {
     const decoder = new TextDecoder()
     let buffer = ''
     for (;;) {
@@ -86,7 +87,7 @@ test('a message over HTTP runs its turn on the engine and answers on the feed', 
         if (data !== undefined) events.push({ event: kind, data: JSON.parse(data) })
       }
     }
-  })().catch(() => { /* the aborted feed closes the pump */ })
+  })().catch(() => { /* the aborted feed closes the reader */ })
 
   const sent = await call('send', { sessionId: 'a', text: 'prepare the plan' })
   assert.equal(sent.ok, true, JSON.stringify(sent))
@@ -140,7 +141,7 @@ test('a relevant memory surfaces itself into the next request, unprompted', asyn
   mock.reply('On it — I will follow the checklist.')
   const service = await startService({ home })
   t.after(() => service.close())
-  const call = async (endpoint: string, payload: Record<string, unknown>): Promise<any> =>
+  const call = async (endpoint: string, payload: Record<string, unknown>): Promise<Record<string, unknown>> =>
     (await fetch(`${service.url}/api/bot`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ endpoint, payload }) })).json()
 
   await call('send', { sessionId: 'a', text: 'prepare the launch checklist' })

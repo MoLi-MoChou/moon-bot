@@ -95,7 +95,7 @@ function useRowEntrances(replacing: () => boolean): void {
         let column: Element | null = null;
         let frame = 0;
         const settle = (event: AnimationEvent): void => {
-            if (event.target !== event.currentTarget || !/^bt-row/.test(event.animationName))
+            if (event.target !== event.currentTarget || !event.animationName.startsWith('bt-row'))
                 return;
             const row = event.currentTarget as HTMLElement;
             delete row.dataset.btEnter;

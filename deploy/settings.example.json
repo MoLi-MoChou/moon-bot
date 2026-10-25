@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "revision": 0,
+  "sections": {
+    "llm-pi-ai": {
+      "providers": {
+        "sensenova": {
+          "displayName": "SenseNova",
+          "api": "openai-completions",
+          "baseURL": "https://token.sensenova.cn/v1",
+          "apiKeyEnv": "SENSENOVA_API_KEY",
+          "models": [{ "id": "sensenova-6.7-flash-lite" }]
+        }
+      }
+    }
+  }
+}

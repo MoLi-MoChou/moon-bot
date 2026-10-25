@@ -156,10 +156,10 @@ test('a request cut off by a restart goes on under the same exchange; own-chat w
   await settle(() => second.agentOf('b').calls.length === 1 && second.agentOf('a').calls.length === 1)
   const request = second.agentOf('b').calls[0]
   assert.deepEqual([request.source.role, request.source.exchangeId, request.source.senderSessionId, request.source.resumed], ['request', 'x1', 'a', true])
-  assert.match(text(request), /^\[Message from Chief · DeepSeek Harness restarted while you were working on it\]/)
+  assert.match(text(request), /^\[Message from Chief · Moon Bot restarted while you were working on it\]/)
   const own = second.agentOf('a').calls[0]
   assert.deepEqual([own.source.role, own.source.resumed], ['resume', true])
-  assert.match(text(own), /^\[DeepSeek Harness restarted while you were working\]/)
+  assert.match(text(own), /^\[Moon Bot restarted while you were working\]/)
   const state = JSON.parse(readFileSync(join(home, 'state.json'), 'utf8'))
   assert.equal(state.exchanges.length, 0)
 })

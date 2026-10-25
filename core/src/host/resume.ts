@@ -58,7 +58,7 @@ const QUEUED_KEPT_MS = 24 * 60 * 60 * 1000
 const QUEUED_MAX = 50
 
 export const resumeText = (record: TurnNote): string => [
-  'DeepSeek Harness restarted while you were working on this, so your last turn stopped before it finished.',
+  'Moon Bot restarted while you were working on this, so your last turn stopped before it finished.',
   record.approval ? `You were waiting for the user's approval to run ${record.approval.tool || 'a tool'}${record.approval.reason ? ` (${record.approval.reason})` : ''}; that request is gone, so ask again if you still need it.` : '',
   'Check what is already done (files, commands, messages) before you repeat anything, then finish the task and give your reply.',
 ].filter(Boolean).join(' ')

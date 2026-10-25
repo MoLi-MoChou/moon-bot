@@ -10,7 +10,7 @@ const speakerOfLine = (line) => {
 };
 const lineText = (line, text = line.text) => {
   if (line.kind === "lookup") return `[${speakerOfLine(line)} looked up its own chat${line.text ? ` for "${line.text}"` : ""}]`;
-  if (line.kind === "resumed") return `[${speakerOfLine(line)}'s work here was cut off when DeepSeek Harness restarted; it is picking it back up and posts when done]`;
+  if (line.kind === "resumed") return `[${speakerOfLine(line)}'s work here was cut off when Moon Bot restarted; it is picking it back up and posts when done]`;
   if (line.kind === "cut") return `[${speakerOfLine(line)}'s work here was cut off by a restart again, so it stopped; ask it to go on if it still matters]`;
   if (line.kind === "stopped") return `[The user stopped ${speakerOfLine(line)}'s work here]`;
   if (line.kind === "done") return `[${speakerOfLine(line)} finished the work it was asked for]`;

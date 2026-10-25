@@ -17,8 +17,8 @@ function install(rt) {
     if (deferred && role === "report") return `[Group chat "${roomName}" \xB7 replies to your post \xB7 you read them during your last task; go on with the work they are for now${goesOn}]`;
     if (deferred) return `[Message from ${fromName} \xB7 you read it during your last task; answer it now]`;
     if (retried && role !== "room") return "[Your last reply wrote a tool call as text, so nothing ran]";
-    if (resumed && role === "resume") return "[DeepSeek Harness restarted while you were working]";
-    if (resumed && role !== "room") return `[Message from ${fromName} \xB7 DeepSeek Harness restarted while you were working on it]`;
+    if (resumed && role === "resume") return "[Moon Bot restarted while you were working]";
+    if (resumed && role !== "room") return `[Message from ${fromName} \xB7 Moon Bot restarted while you were working on it]`;
     if (role === "reply") return `[Reply from ${fromName}${goesOn}]`;
     if (role === "stopped") return `[Stopped by ${fromName}]`;
     if (role === "room") return `[Group chat "${roomName}" \xB7 ${note}]`;

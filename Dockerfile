@@ -10,6 +10,7 @@ WORKDIR /opt/moon-bot
 # One root lockfile for both workspaces: the manifests come first, so the install layer
 # caches while the sources change.
 COPY package.json package-lock.json ./
+COPY scripts/ scripts/
 COPY core/package.json core/tsconfig.json core/
 COPY app/package.json app/vite.config.js app/
 COPY app/ui/ app/ui/
@@ -29,8 +30,10 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt/moon-bot
-# The manifests again, so the runtime install layer caches on its own.
+# The manifests again, so the runtime install layer caches on its own. The root
+# postinstall script rides along: the install runs it to build core's artifacts.
 COPY package.json package-lock.json ./
+COPY scripts/ scripts/
 COPY core/package.json core/tsconfig.json core/
 COPY app/package.json app/
 # Host/service ship as TypeScript sources; Node will not strip types under node_modules.

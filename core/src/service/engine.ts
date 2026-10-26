@@ -84,15 +84,22 @@ export function wireService(options: WireOptions): WiredService {
   // The attachments store serves the host's file surfaces; a caller's own service of
   // the same name still wins.
   const attachments = new FileAttachments(options.home)
+  // The approval bridge answers through the same ctx.get as every other service: it is
+  // built with the context's emit, which exists once the constructor has run.
+  let emitRequest: (request: unknown, next: unknown) => void = () => {}
+  const approval = new ServiceApproval((request, next) => { emitRequest(request, next) })
   const context = new ServiceContext({
     services: {
       ...(options.services === undefined ? {} : options.services),
       attachments,
+      approval,
     },
+    // The providers and models modules read the LLM service through the context; the
+    // standalone one (settings + credentials + discovery) is the same instance the
+    // engine's adapters resolve through.
+    llm: options.llm,
   })
-  // The approval bridge needs the context's emit; it goes on after the construction.
-  const approval = new ServiceApproval((request, next) => { context.emit('approval/request', request, next) })
-  context.get = ((name: string) => name === 'approval' ? approval : undefined) as typeof context.get
+  emitRequest = (request, next) => { context.emit('approval/request', request, next) }
   const runtime = createRuntime(context as unknown as DshContext, { home: options.home }) as unknown as Runtime
   const store = openStore(options.home)
   // The policy engine over the store's ledger.
@@ -242,7 +249,7 @@ ${task.prompt}` }],
       source: { kind: 'schedule' },
     })
   })
-  context.get = ((name: string) => name === 'approval' ? approval : name === 'schedule' ? scheduler : undefined) as typeof context.get
+  context.provide('schedule', scheduler)
   context.effect(() => scheduler.start(), 'moon-bot: schedule poll')
 
   context.resolveAgentWith(agentOf)

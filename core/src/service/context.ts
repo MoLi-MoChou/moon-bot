@@ -35,6 +35,8 @@ export interface FetchRoute {
 export interface ServiceContextOptions {
   /** Service implementations by name, for the ctx.get surface (attachments, approval…). */
   readonly services?: Readonly<Record<string, unknown>> | undefined
+  /** The LLM service the host modules read (providers, models); absent, a stub answers. */
+  readonly llm?: unknown | undefined
   /** The engine-backed agents, for sessionController.resolveAgent. */
   readonly resolveAgent?: (sessionId: string) => Promise<unknown> | unknown
 }
@@ -42,6 +44,15 @@ export interface ServiceContextOptions {
 interface Listener {
   readonly name: string
   readonly run: (payload: unknown, second: unknown) => unknown
+}
+
+/** The LLM surface the host modules call; the real one comes from the wiring. */
+export interface LlmServiceLike {
+  listProviders(): readonly unknown[]
+  listModels(provider: string): Promise<readonly unknown[]>
+  resolveModelInfo(provider: string, model: string): Promise<Record<string, unknown>>
+  listConfigurableProviders?(): readonly unknown[]
+  [key: string]: unknown
 }
 
 export class ServiceContext {
@@ -58,10 +69,20 @@ export class ServiceContext {
   constructor(options: ServiceContextOptions = {}) {
     this.services = options.services ?? {}
     this.agentOf = options.resolveAgent
+    this.llm = (options.llm as LlmServiceLike | undefined) ?? {
+      listProviders: (): readonly unknown[] => [],
+      listModels: async (): Promise<readonly unknown[]> => [],
+      resolveModelInfo: async (): Promise<Record<string, unknown>> => ({}),
+    }
   }
 
   // Bound arrow properties: host modules extract these (const on = ctx.on), so they
   // must not lose their receiver the way a class method would.
+  /** Registers one more named service, for what the wiring builds after construction. */
+  provide(name: string, service: unknown): void {
+    ;(this.services as Record<string, unknown>)[name] = service
+  }
+
   get = <T>(name: string): T | undefined => this.services[name] as T | undefined
 
   on = (name: string, listener: (payload: unknown, second: unknown) => unknown, options?: { readonly prepend?: boolean }): Disposer => {
@@ -121,11 +142,7 @@ export class ServiceContext {
     },
   }
 
-  readonly llm = {
-    listProviders: (): readonly string[] => [],
-    listModels: async (): Promise<readonly unknown[]> => [],
-    resolveModelInfo: async (): Promise<Record<string, unknown>> => ({}),
-  }
+  readonly llm: LlmServiceLike
 
   /** The engine-backed agent resolver, installed by the wiring once it exists. */
   resolveAgentWith(resolver: (sessionId: string) => unknown): void {

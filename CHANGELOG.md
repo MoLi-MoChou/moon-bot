@@ -6,6 +6,7 @@ All notable changes to Moon Bot are listed here. The format follows [Keep a Chan
 
 ### Changed
 
+- **The generated artifacts are no longer committed.** `core/client.js`, `core/index.js`, `core/web-search.js` and `core/dist/` are built — the root postinstall makes them on every install, `npm run build` after a change — and gone from git, so a pull request's diff shows only what was written. The staleness test keeps the build honest (`client.js is the build of src/client`), the desktop pack refuses to run without the build, and the leak scan's archive shrinks by the two-megabyte bundle.
 - **One npm workspace.** The repository is `core/` and `app/` under a root `package.json` (`workspaces`, `engines.node >= 22.18`, and the root scripts `build`/`typecheck`/`test`/`lint`/`eval`): one `package-lock.json` at the root replaces the two per-package ones, the app takes `moon-bot-core` as `*` — npm links it to the workspace by name — instead of `file:../core`, and `app/.npmrc`'s `install-links` (a copy, from the DSH era) is gone with the `file:` protocol. The root `allowScripts` names the five packages whose install scripts may run, for npm 11.5+'s gating. CI and the Dockerfile install at the root; the desktop pack materializes the workspace link into the package files (`beforePack`), so electron-builder never packs a symlink. The web image keeps only core's runtime: after the build it prunes dev dependencies and the desktop-only `pnpm` and updater.
 ### Added
 

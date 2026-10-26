@@ -25,3 +25,10 @@ node_modules/
 /docker/.env
 /.env
 /docker-compose.override.yml
+
+# core's generated artifacts (built by the root postinstall and `npm run build`; never
+# committed — see scripts/postinstall.mjs).
+/core/client.js
+/core/index.js
+/core/web-search.js
+/core/dist/

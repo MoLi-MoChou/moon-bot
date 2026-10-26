@@ -23,26 +23,25 @@ The Bot team:
 1. **Keep the runtime our own.** Bot features go through the host services and the `AgentRuntime` seam; a kernel stays behind it (the built-in engine, or an ACP adapter), never called from host code. `@deepseek-ai` is gone from `core/`; do not add it back. The desktop app still carries the profile-boot path used by its import-from-DSH feature, and that is the only place the name may appear.
 2. **No secrets.** Never write, print or commit API keys, tokens, cookies or the data folder’s secrets. Use the mock model (`core/dev/mock-llm.ts`) for tests; it needs no key.
 3. **Only original material.** Do not copy code, text, icons, logos or graphics from other products or websites. Code under a license compatible with Apache 2.0 is the only exception: say where it comes from and add its notice to the `NOTICE` file.
-4. **`client.js` is generated.** Change `core/src/client/`, then run `npm run build` and commit both files. Never edit `client.js` by hand.
+4. **`client.js` and `dist/` are generated, not committed.** The root postinstall builds them on install; change `core/src/`, then run `npm run build` (`cd core && npm run build`). Never edit the artifacts by hand, and never commit them.
 5. **Do not touch the user's own data.** The app keeps the team in its own data folder (`~/.moon-bot`); tests keep theirs in a temp folder and delete it. Never point a test at a real install's data.
 
 ## Commands
 
-The repository is two npm workspaces (`core/` = `moon-bot-core`, `app/` = `moon-bot`) under one root lockfile: install once at the root (`npm ci`), then run a package's scripts in its folder or from the root with `-w` (`npm test -w moon-bot-core`). Node 22.18+ runs the .ts sources directly (native type stripping); nothing needs a build step except the two committed artifacts.
+The repository is two npm workspaces (`core/` = `moon-bot-core`, `app/` = `moon-bot`) under one root lockfile: install once at the root (`npm ci`), then run a package's scripts in its folder or from the root with `-w` (`npm test -w moon-bot-core`). Node 22.18+ runs the .ts sources directly (native type stripping); the generated artifacts (`core/client.js`, `core/dist/`) are built by the postinstall of the install and by `npm run build`, never committed.
 The root `allowScripts` names the packages whose install scripts may run (the SQLite prebuilt, esbuild's binary); npm 11.5+ gates every other one.
 
 ```sh
-npm ci                                 # build tool and types only
-npm run build                          # src/client → client.js, and dist/ for the packaged host
-node scripts/build-client.ts --check   # client.js matches src/client
-npm test                               # unit tests (also fail if client.js is stale)
+npm ci                                 # installs both workspaces, then builds client.js and dist/
+npm run build                          # rebuilds the artifacts after a source change
+npm test                               # unit tests (one asserts client.js is fresh)
 npm run typecheck                      # tsc --noEmit, strict
 npm run lint                           # oxlint + the architecture/size/floating-promise gates
 npm run eval                           # the five-capability evaluation set
 npm run web                            # the standalone service (MOON_BOT_UI serves the built UI)
 ```
 
-A change is done when `npm test`, `npm run typecheck`, the `--check` and `npm run lint` pass; CI runs them on every pull request. The bench in `dev/bench.sh` still runs a DSH-hosted profile for comparison; it is not part of the product's start path. Use a free port for each bench, and stop every bench and process that you started.
+A change is done when `npm test`, `npm run typecheck` and `npm run lint` pass; CI runs them on every pull request. The bench in `dev/bench.sh` still runs a DSH-hosted profile for comparison; it is not part of the product's start path. Use a free port for each bench, and stop every bench and process that you started.
 
 ## Branches, pull requests and issues
 
@@ -58,7 +57,7 @@ The full workflow is in [CONTRIBUTING.md](CONTRIBUTING.md#how-we-work). The part
 
 ## Layout
 
-- `core/src/index.ts`: the plugin entry (module order and the runtime object). `core/index.js` is its generated re-export.
+- `core/src/index.ts`: the plugin entry (module order and the runtime object). `core/index.js`, `core/client.js` and `core/dist/` are generated (never committed).
 - `core/src/host/`: the host services (roster and store, tools and the capability registry, turns and delivery, groups, parts, memory, schedules, secrets, images, the browser bridge, the `api/bot` channel, the live feed).
 - `core/src/engine/`: the `AgentRuntime` interface and events, the built-in engine (`builtin/`: pi adapter, runtime, bridge, services), the ACP adapter (`acp/`), the tool registry and the policy engine, the MCP connector.
 - `core/src/store/`: the SQLite store — migrations, sessions and messages, tasks, the memory index, the policy counters.

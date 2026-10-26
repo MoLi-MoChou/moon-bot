@@ -12,10 +12,11 @@
   },
   "scripts": {
     "build": "npm run build --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present",
+    "eval": "npm run eval -w moon-bot-core",
     "lint": "npm run lint -w moon-bot-core",
-    "eval": "npm run eval -w moon-bot-core"
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "postinstall": "node scripts/postinstall.mjs"
   },
   "allowScripts": {
     "better-sqlite3": true,

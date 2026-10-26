@@ -37,8 +37,6 @@ jobs:
         working-directory: .
       - run: npm test
       - run: npm run typecheck
-      - run: node scripts/build-client.ts --check
-      - run: node scripts/build-host.mjs --check
       - run: npm run lint
       - run: npm run eval
 

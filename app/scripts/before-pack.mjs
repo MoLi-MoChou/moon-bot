@@ -17,7 +17,28 @@ export function archProblem({ target, platform, host = process.arch, targets = [
   return `This Node runs on ${host}, so npm installed ${host} native modules, and an ${target} app with them would not start. Install the dependencies and build ${where}.`
 }
 
+// npm workspaces link moon-bot-core to ../../core, outside the app folder this hook packs
+// from. The packaged app needs the package's own files, so the link becomes the copy the
+// package would install (its "files" list) before electron-builder collects node_modules.
+async function materializeCoreLink() {
+  const { lstat, rm, cp, mkdir } = await import('node:fs/promises')
+  const { dirname, join, resolve } = await import('node:path')
+  const { fileURLToPath } = await import('node:url')
+  const app = dirname(dirname(fileURLToPath(import.meta.url)))
+  const link = join(app, 'node_modules', 'moon-bot-core')
+  const info = await lstat(link).catch(() => null)
+  if (info === null || !info.isSymbolicLink()) return
+  const core = resolve(app, '..', 'core')
+  await rm(link, { recursive: true, force: true })
+  await mkdir(dirname(link), { recursive: true })
+  // The package's published files, as core/package.json lists them (plus the manifest).
+  for (const entry of ['package.json', 'index.js', 'client.js', 'web-search.js', 'dist', 'README.md', 'LICENSE']) {
+    await cp(join(core, entry), join(link, entry), { recursive: true }).catch(() => {})
+  }
+}
+
 export async function beforePack(context) {
+  await materializeCoreLink()
   const targets = []
   for (const archToNames of context.packager?.packagerOptions?.targets?.values() ?? [])
     for (const arch of archToNames.keys()) targets.push(Arch[arch])

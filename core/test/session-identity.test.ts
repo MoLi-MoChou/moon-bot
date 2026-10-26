@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { createRuntime } from '../index.js'
-import { fakeContext } from './fake-ctx.js'
+import { fakeContext } from './fake-ctx.ts'
 
 // Some routes (OpenCode Go among them) turn down every model request that names no
 // Session. DS Bot's own requests name the Session they serve, and the hooks that act

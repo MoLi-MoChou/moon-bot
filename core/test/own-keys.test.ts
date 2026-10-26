@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { apply } from '../index.js'
-import { fakeContext } from './fake-ctx.js'
+import { fakeContext } from './fake-ctx.ts'
 
 // Ids that name an inherited property: a lookup that misses Object.hasOwn would find
 // these on every table and could write onto Object.prototype.

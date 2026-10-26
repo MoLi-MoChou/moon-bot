@@ -9,7 +9,7 @@ import { join } from 'node:path'
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
 import { createRuntime } from '../index.js'
-import { fakeContext } from './fake-ctx.js'
+import { fakeContext } from './fake-ctx.ts'
 
 // The fixture is a real MCP server: its `argv` and `env` tools report what the spawned
 // process actually received.

@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { createRuntime } from '../index.js'
-import { fakeAttachments, fakeContext } from './fake-ctx.js'
+import { fakeAttachments, fakeContext } from './fake-ctx.ts'
 
 // A fake team of two Bots in one group; member answers are played back through the
 // session/event listener, so a round runs with no model. Prompts land in the

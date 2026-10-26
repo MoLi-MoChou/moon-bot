@@ -9,7 +9,7 @@ import {
   looksSecret, matchEntries, parseAsk, parseMemory, parseReview, reviewEntries, removeLink, splitMeta, writtenIn,
 } from '../src/host/memory.ts'
 import { latestMemoryChange, summaryBlocks } from '../src/client/text.ts'
-import { fakeContext } from './fake-ctx.js'
+import { fakeContext } from './fake-ctx.ts'
 
 test('entries carry their metadata at the end of the line, as Agent Memory Repo writes it', () => {
   assert.deepEqual(splitMeta('Prefers tea [source: part 2 #14; by: Chief; added: 2026-10-09]'), {

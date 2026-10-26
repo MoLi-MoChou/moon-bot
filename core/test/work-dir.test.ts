@@ -6,7 +6,7 @@ import { test } from 'node:test'
 import { apply } from '../index.js'
 import { dshHomeOf } from '../src/host/folders.ts'
 import { escapeRegExp } from '../src/host/text.ts'
-import { fakeContext } from './fake-ctx.js'
+import { fakeContext } from './fake-ctx.ts'
 
 // A Main Bot and a Bot, with the Bot in the group Ops through its group Session 'gb'.
 const TEAM = {

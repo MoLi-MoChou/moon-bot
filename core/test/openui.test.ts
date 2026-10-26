@@ -10,7 +10,7 @@ import { test } from 'node:test'
 import { lowerOpenUi } from '../src/shared/openui.ts'
 import { checkShownView } from '../src/shared/views.ts'
 import { createRuntime } from '../index.js'
-import { fakeContext } from './fake-ctx.js'
+import { fakeContext } from './fake-ctx.ts'
 
 const spec = (elements: Record<string, unknown>, root?: string) => ({ ...(root === undefined ? {} : { root }), elements })
 

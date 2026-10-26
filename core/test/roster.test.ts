@@ -7,7 +7,7 @@ import { join } from 'node:path'
 import { test } from 'node:test'
 import { format } from 'node:util'
 import { apply } from '../index.js'
-import { fakeContext } from './fake-ctx.js'
+import { fakeContext } from './fake-ctx.ts'
 
 // Enough of the dsh services for the roster to make Sessions; kickoff messages are dropped.
 function start(team = undefined, { models = [], reasoning = {}, archiveError }: { models?: unknown[], reasoning?: Record<string, unknown>, archiveError?: Error } = {}) {

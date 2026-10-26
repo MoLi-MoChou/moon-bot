@@ -1,10 +1,10 @@
 // The shapes the details drawer reads from the roster, the action bag, and the store
 // hooks the panel forwards. Kept apart from the view so `details-drawer.ts` stays
 // inside the 350-line logic limit.
-import type { BrowserPagesHook, BrowserTabsHook, ForwardedHook, PanelActions, PanelBot, PanelRoster } from './browser-pane.tsx'
+import type { BrowserPagesHook, BrowserTabsHook, ForwardedHook, PanelActions, PanelBot, PanelRoster } from './features/browser/index.ts'
 import type { FolderMenuActions } from './folder-menu.tsx'
-import type { MemoryActions } from './memory-panel.tsx'
-import type { PresetCatalog } from './permission-picker.tsx'
+import type { MemoryActions } from './features/memory/index.ts'
+import type { PresetCatalog } from './features/settings/permission-picker.tsx'
 import type { RunStatsValues, TokenUsage } from './text.ts'
 
 // A turn outline entry as the session projections carry it.

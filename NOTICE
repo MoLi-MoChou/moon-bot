@@ -17,18 +17,18 @@ change is listed here (Apache-2.0 section 4(b)); code changes carry a
      package is moon-bot-core. DS Bot's whale is replaced by Moon Bot's own
      lilac moon sprite, as the Main Bot's avatar and in the app icon, and a
      "Moon" theme (the default) joins DeepSeek, Claude and Grok Bot.
-  2. Slim product (core/src/client/lean.js): group chats, scheduled /
+  2. Slim product (core/src/client/lean.ts): group chats, scheduled /
      automation tasks, the "Add DSH Agent" entry and the classic Agent mode
      switch are not offered (menus, settings pages, details drawer). The code
      stays; one flag brings each back.
-  3. Work steps (core/src/client/work-process.js): DS Bot's inline thinking
+  3. Work steps (core/src/client/features/conversation/work-process.tsx): DS Bot's inline thinking
      row is replaced by one line per finished turn, "已工作 Xs · N 步"; it opens
      a side panel with the turn's thinking, tool calls (input, output) and
      replies in order.
   4. Cards discoverable: starter chips over a fresh chat's composer
-     (core/src/client/starters.js), one prompt line that maps comparison,
+     (core/src/client/starters.tsx), one prompt line that maps comparison,
      to-do and "give me options" asks to show_view cards
-     (core/src/host/prompt.js), and matching replies in the dev mock model.
+     (core/src/host/prompt.ts), and matching replies in the dev mock model.
   5. Updates: the Linux AppImage updates itself like the Windows installer;
      releases are GitHub pre-releases (allowPrerelease); Settings > About shows
      the app's own updater (check, download progress, restart to update) via
@@ -121,16 +121,19 @@ MIT License, Copyright (c) 2026 DeepSeek
 open-claude-ui (https://github.com/Caho1/open-claude-ui)
 MIT License, Copyright (c) 2026 Caho1
 
-  - core/src/client/ime-guard.js follows code-examples/ChatComposer.tsx and
+  - core/src/client/ime-guard.ts follows code-examples/ChatComposer.tsx and
     RichComposerWithMentions.tsx: the isComposing / keyCode 229 Enter guard and
     the stray Enter after compositionend.
-  - The thinking dots (styles.js), the context ring in the model menu
-    (model-menu.js, after ModelSwitcherWithTokenGauge.tsx), the scroll-edge
-    fade (styles.js, after ScrollFadeContainer.tsx), the 0fr to 1fr fold of the
-    work line (work-process.js, after ThinkingAccordion.tsx), drag to reorder
-    in the sidebar (sidebar.js, after DraggableSessionList.tsx) and the retry
-    countdown (retry-cell.js, after useRateLimitBackoff.ts) adapt their code.
-  - The "Claude" theme in core/src/client/themes.js takes its colors, surface
+  - The thinking dots (core/src/client/motion.tsx), the context ring in the
+    model menu (core/src/client/model-menu.tsx, after
+    ModelSwitcherWithTokenGauge.tsx), the scroll-edge fade (core/src/client/fold.tsx,
+    after ScrollFadeContainer.tsx), the 0fr to 1fr fold of the work line
+    (core/src/client/features/conversation/work-process.tsx, after
+    ThinkingAccordion.tsx), drag to reorder in the sidebar
+    (core/src/client/features/sidebar/sidebar.tsx, after DraggableSessionList.tsx)
+    and the retry countdown (core/src/client/retry-cell.tsx, after
+    useRateLimitBackoff.ts) adapt their code.
+  - The "Claude" theme in core/src/client/themes.ts takes its colors, surface
     ladder and radii from code-examples/cds-theme.css. No logos or marks.
 
   The MIT license text above applies, with this copyright notice.
@@ -138,9 +141,9 @@ MIT License, Copyright (c) 2026 Caho1
 framer-motion (https://github.com/motiondivision/motion)
 MIT License, Copyright (c) 2018 Framer B.V.
 
-  - core/src/client/vendor/framer-motion.js is a tree-shaken bundle of
-    framer-motion 12 (motion, AnimatePresence, Reorder), made by
-    core/scripts/build-vendor.mjs. The MIT license text above applies.
+  - core/package.json depends on framer-motion 12 and the client imports its
+    motion primitives directly from the package. The MIT license text above
+    applies.
 
 No other third-party code is copied into this repository. At run time the
 plugin uses the @deepseek-ai/* packages of the DeepSeek Harness install it

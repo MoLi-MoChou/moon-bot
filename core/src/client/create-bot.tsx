@@ -1,6 +1,6 @@
 import { createElement as h, useEffect, useRef, useState } from 'react';
 import { BotMark } from './mark.tsx';
-import { CharacterGrid, avatarImage } from './bot-settings.tsx';
+import { CharacterGrid, avatarImage } from './features/settings/bot-settings.tsx';
 import { DEFAULT_SHAPES, DEFAULT_COLORS } from './characters.ts';
 import { ChevronLeftIcon, CloseIcon } from './icons.tsx';
 import { useEscape } from './overlay-hooks.ts';

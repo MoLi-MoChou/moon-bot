@@ -101,6 +101,13 @@ export function teamActions({ call, after, partFor, roster, ui, live, cards, hel
     createRoom: (members: readonly string[], options: Record<string, unknown> = {}) => after(call('create-room', { members, ...options })),
     updateBot: (id: string, patch: Record<string, unknown>) => after(call('update-bot', { id, ...patch })),
     refreshModels: () => after(call('models')).catch(() => {}),
+    // Windows without DSH's own settings use the Bot settings page for providers.
+    providers: () => call('providers'),
+    setProviderKey: (provider: string | undefined, value: string | null) => after(call('provider-key', { provider, value })),
+    addProvider: (body: Record<string, unknown>) => after(call('provider-add', body)),
+    providerModels: (body: Record<string, unknown>) => call('provider-models', body),
+    removeProvider: (provider: string) => after(call('provider-remove', { provider })),
+    openModels: () => { ui.set(state => ({ ...state, settings: { page: 'models', id: null }, menu: null, palette: null, newChat: null })) },
     efforts: (ref: string) => call('efforts', { ref }),
     runStats: (botId: string) => call('run-stats', { botId }),
     folders: () => call('folders'),

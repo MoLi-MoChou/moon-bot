@@ -7,7 +7,7 @@ import { elapsedLabel, isHiddenTurn, relayPart, relaysBefore } from './text.ts';
 import type { RelayContext } from './text.ts';
 import { turnReasoning, thinkingStep } from './turn-reasoning.ts';
 import { FOLD_HUGE } from './fold.tsx';
-import { WorkLine } from './work-process.tsx';
+import { WorkLine } from './features/conversation/index.ts';
 import { Bubbles } from './cells-bubbles.tsx';
 import type { CellActions, CellsUiState, ChatBot, ChatRoster, LiveNote, NodeLocation, StoreHook, TurnInfo } from './cells-bubbles.tsx';
 import { Elapsed, EventLine } from './cells-chat.tsx';

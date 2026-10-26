@@ -1,5 +1,5 @@
 // Every form that hides a promise from a bare `work()` statement. Each function is one case,
-// and test/lint-gates.test.js asserts the line that is reported for each of them.
+// and test/lint-gates.test.ts asserts the line that is reported for each of them.
 async function work(): Promise<number> {
   return 1
 }

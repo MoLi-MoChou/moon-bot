@@ -110,7 +110,10 @@ export function setupChoices(actions: ModelMenuOptionalActions): [
     ] | null)[] = [
         actions.canSignIn?.() ? [t('Sign in to DeepSeek'), () => actions.signIn?.()] : null,
         actions.openHarnessOnboarding ? [t('Enter a DeepSeek API key'), () => actions.openHarnessOnboarding?.('deepseek-official')] : null,
-        actions.openHarnessSettings ? [t('Open settings to set up a custom model'), () => actions.openHarnessSettings?.('models')] : null,
+        actions.openHarnessSettings || actions.openModels ? [t('Open settings to set up a custom model'), () => {
+            if (actions.openModels) actions.openModels();
+            else actions.openHarnessSettings?.('models');
+        }] : null,
     ];
     return choices.filter((choice): choice is [
         string,

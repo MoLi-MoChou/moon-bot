@@ -3,7 +3,7 @@
 // These are types only, plus the empty roster a window starts with; keeping them beside
 // `client-boot.ts` rather than inside it leaves the boot file to the wiring it does.
 
-import type { BotBrowsers, BrowserPages, BrowserTabsMap } from './bot-browsers.ts'
+import type { BotBrowsers, BrowserPages, BrowserTabsMap } from './features/browser/index.ts'
 import type { DshState } from './dsh-offer.ts'
 import type { ReactionMap, SharedMap } from './shared-map.ts'
 import type { Source } from './sources.ts'

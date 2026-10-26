@@ -4,7 +4,7 @@
 import { DEFAULT_MASK, SHAPES, lookOf, maskOf } from './characters.ts'
 import type { ClientContext, Disposer, DshBotHub, DshBotTask } from './client-ctx.js'
 import type { ClientState } from './client-types.ts'
-import { installStyles } from './design/index.ts'
+import { installStyles } from './ui/design/index.ts'
 import { noteClientError } from './diagnostics.ts'
 import { isHex, inkText, paintCss } from './inks.ts'
 import { STORAGE } from './storage.ts'

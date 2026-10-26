@@ -1,0 +1,20 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noCheck": true,
+    "strict": false,
+    "exactOptionalPropertyTypes": false,
+    "noImplicitAny": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "allowJs": true
+  },
+  "include": [
+    "test/**/*.ts",
+    "test/**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "test/fixtures/**"
+  ]
+}

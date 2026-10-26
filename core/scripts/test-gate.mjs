@@ -21,19 +21,18 @@ if (!existsSync(HARNESS)) {
   process.exit(1)
 }
 
-const run = spawnSync(process.execPath, ['--import', './test/harness-resolve.mjs', '--test', 'test/*.test.js'], {
+const run = spawnSync(process.execPath, ['--import', './test/harness-resolve.mjs', '--test', 'test/*.test.ts'], {
   cwd: CORE, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024,
 })
 const output = `${run.stdout ?? ''}\n${run.stderr ?? ''}`
 
 const numberAfter = (label) => {
-  const match = new RegExp(`^\u2139 ${label} (\\d+)$`, 'm').exec(output)
+  const match = new RegExp(`^(?:\u2139|#) ${label} (\\d+)$`, 'm').exec(output)
   return match ? Number(match[1]) : undefined
 }
 const failures = [...new Set(output.split('\n')
-  .filter(line => line.startsWith('\u2716 '))
-  .map(line => line.slice(2).replace(/ \(\d+(?:\.\d+)?ms\)$/, ''))
-  .filter(name => name !== 'failing tests:'))].sort()
+  .map(line => /^(?:\u2716|not ok \d+ -)\s+(.+?)(?: \(\d+(?:\.\d+)?ms\))?$/.exec(line)?.[1])
+  .filter(name => name && name !== 'failing tests:'))].sort()
 
 const counts = { tests: numberAfter('tests'), pass: numberAfter('pass'), fail: numberAfter('fail'), cancelled: numberAfter('cancelled') }
 const known = JSON.parse(readFileSync(KNOWN, 'utf8'))

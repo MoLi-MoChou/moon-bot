@@ -4,8 +4,8 @@
 // over what it returns.
 
 import { call } from './api.ts'
-import { createBotBrowsers, serveBrowserReads } from './bot-browsers.ts'
-import type { BrowserPages, BrowserTabsMap } from './bot-browsers.ts'
+import { createBotBrowsers, serveBrowserReads } from './features/browser/index.ts'
+import type { BrowserPages, BrowserTabsMap } from './features/browser/index.ts'
 import { markupCache } from './characters.ts'
 import type { ClientContext, Disposer } from './client-ctx.js'
 import { EMPTY_SNAPSHOT } from './client-types.ts'

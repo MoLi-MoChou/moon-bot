@@ -3,17 +3,17 @@
     "about.tsx": {
       "#e3a008": 2
     },
-    "bot-browsers-guest.ts": {
+    "features/browser/bot-browsers-guest.ts": {
       "#fff": 1
     },
-    "bot-settings.tsx": {
+    "features/settings/bot-settings.tsx": {
       "#fff": 1
     },
-    "browser-pane-css.ts": {
+    "features/browser/browser-pane-css.ts": {
       "#4d6bfe": 3,
       "#fff": 1
     },
-    "design/composer.ts": {
+    "ui/design/composer.ts": {
       "#ff3e51": 1,
       "#fff": 6,
       "rgba(20,20,20,.05)": 1,
@@ -22,7 +22,7 @@
       "rgba(255,62,81,.35)": 1,
       "rgba(255,62,81,0)": 1
     },
-    "design/conversation.ts": {
+    "ui/design/conversation.ts": {
       "#fff": 1,
       "rgba(20,20,20,.035)": 1,
       "rgba(20,20,20,.04)": 1,
@@ -30,10 +30,10 @@
       "rgba(255,255,255,.12)": 1,
       "rgba(255,255,255,.16)": 1
     },
-    "design/marks.ts": {
+    "ui/design/marks.ts": {
       "#fff": 1
     },
-    "design/overlays.ts": {
+    "ui/design/overlays.ts": {
       "#00c972": 1,
       "#1cc3b0": 1,
       "#2a92fe": 1,
@@ -43,7 +43,7 @@
       "#ffaf38": 1,
       "rgba(228,228,228,.04)": 1
     },
-    "design/shell.ts": {
+    "ui/design/shell.ts": {
       "#777": 2,
       "#e02135": 1,
       "#ff3e51": 1,
@@ -70,31 +70,31 @@
       "#f59e0b": 1,
       "rgba(20,20,20,.08)": 1
     },
-    "settings.tsx": {
+    "features/settings/settings.tsx": {
       "#4d6bfe": 1
     },
-    "sidebar-css.ts": {
+    "features/sidebar/sidebar-css.ts": {
       "#4d6bfe": 3,
       "#e5484d": 1,
       "#fff": 1,
       "rgba(127,127,127,.14)": 1
     },
-    "usage-page-css.ts": {
+    "features/usage/usage-page-css.ts": {
       "#fff": 2
     }
   },
   "radii": {
-    "browser-pane-css.ts": {
+    "features/browser/browser-pane-css.ts": {
       "2px": 1,
       "3px": 2,
       "5px": 1,
       "7px": 1,
       "9px": 3
     },
-    "design/panels.ts": {
+    "ui/design/panels.ts": {
       "9999px": 2
     },
-    "design/shell.ts": {
+    "ui/design/shell.ts": {
       "1px": 1
     },
     "member-status.tsx": {
@@ -103,10 +103,10 @@
     "secret-card-css.ts": {
       "5px": 1
     },
-    "sidebar-css.ts": {
+    "features/sidebar/sidebar-css.ts": {
       "14px": 1
     },
-    "usage-page-css.ts": {
+    "features/usage/usage-page-css.ts": {
       "14px": 5,
       "30%": 1,
       "3px": 1,

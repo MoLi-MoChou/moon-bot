@@ -38,6 +38,13 @@ export async function bundleClient() {
     jsxFactory: 'h',
     jsxFragment: 'Fragment',
     external: PLATFORM_MODULES,
+    // framer-motion imports React's JSX runtime and an optional emotion helper;
+    // the DSH shell only seeds React itself, so keep both inside the bundle.
+    alias: {
+      'react/jsx-runtime': './scripts/jsx-shim.js',
+      'react/jsx-dev-runtime': './scripts/jsx-shim.js',
+      '@emotion/is-prop-valid': './scripts/empty-shim.js',
+    },
     // Moon Bot patch: the app's version, for the settings line that names it.
     define: { __MOON_BOT_VERSION__: JSON.stringify(JSON.parse(readFileSync(join(PLUGIN, 'package.json'), 'utf8')).version) },
     // Every source declaration ships, used or not, as in the hand-written bundle.
@@ -54,7 +61,10 @@ export async function bundleClient() {
     '  id: \'moon-bot-core\',',
     '  factory: (require) => {',
     'const module = { exports: {} }',
-    result.outputFiles[0].text.trimEnd(),
+    // framer-motion discovers this optional helper through a dynamic require;
+    // DSH does not provide it, and motion components work without prop filtering.
+    result.outputFiles[0].text.trimEnd()
+      .replaceAll('loadExternalIsValidProp(require(emotionPkg).default);', 'loadExternalIsValidProp(() => true);'),
     // The loader gets a plain exports object tagged as a module, as the tsdown preset
     // emits, rather than esbuild's getter-based `__esModule` object.
     'return Object.defineProperty({ ...module.exports }, Symbol.toStringTag, { value: \'Module\' })',

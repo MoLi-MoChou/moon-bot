@@ -1,0 +1,6 @@
+export { SettingsDialog } from './settings.tsx'
+export { BotSettingsForm } from './bot-settings.tsx'
+export { GroupSettingsForm, NewGroupForm } from './group-settings.tsx'
+export { CapabilitiesPage } from './capability-settings.tsx'
+export { ProvidersPage } from './providers-page.tsx'
+export { SecretsPage } from './secrets-page.tsx'

@@ -13,6 +13,7 @@ import {
 import { installTeamTools } from './tools/team-tools.ts'
 import { installChatTools } from './tools/chat-tools.ts'
 import { installCapabilityTools } from './tools/capability-tools.ts'
+import { installWebSearchTool } from './tools/web-search-tool.ts'
 
 export { GROUP_REF, output } from './tools/shared.ts'
 
@@ -76,6 +77,7 @@ export function install(rt: HostRuntime): void {
 
   installTeamTools(rt, shared)
   installChatTools(rt, shared)
+  installWebSearchTool(rt, shared)
 
   // dsh's own question tool holds the turn open until the user answers, and every
   // message from another Bot or a group round queues behind it. Bot Sessions ask

@@ -18,6 +18,9 @@ All notable changes to Moon Bot are listed here. The format follows [Keep a Chan
 
 ### Fixed
 
+- Host and model-facing copy that still said DS Bot / DeepSeek Harness (goal refusal, long-message send, avatar data path, pause/handoff sender, workspace title, Chinese read-only line, capability allow hints, memory/steward prompts) now says Moon Bot.
+- Standalone Bots get a `web_search` tool again (keyless Bing/DuckDuckGo fallback when the model route has no native search — SenseNova included). No server model-config change.
+
 - Restart notices and group resume lines name Moon Bot instead of DeepSeek Harness.
 - About (desktop path): update rows label Moon Bot and Runtime, matching the web About.
 - Error hints and a few host-error Chinese lines no longer say DS Bot / DeepSeek Harness when the UI brands Moon Bot.

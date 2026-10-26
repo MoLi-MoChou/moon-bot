@@ -11,6 +11,7 @@ import {
 import { installTeamTools } from "./tools/team-tools.js";
 import { installChatTools } from "./tools/chat-tools.js";
 import { installCapabilityTools } from "./tools/capability-tools.js";
+import { installWebSearchTool } from "./tools/web-search-tool.js";
 import { GROUP_REF, output } from "./tools/shared.js";
 function install(rt) {
   const { ctx } = rt;
@@ -40,6 +41,7 @@ function install(rt) {
   };
   installTeamTools(rt, shared);
   installChatTools(rt, shared);
+  installWebSearchTool(rt, shared);
   const botSession = (exec) => {
     const id = exec.agent?.id;
     return id !== void 0 && rt.isBotSession(id);

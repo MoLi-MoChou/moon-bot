@@ -1,20 +1,22 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { runInNewContext } from 'node:vm'
 import { bundleClient } from '../scripts/build-client.ts'
 
-const committed = () => readFileSync(new URL('../client.js', import.meta.url), 'utf8')
+// client.js is built, not committed; the root postinstall makes it on install.
+const built = () => readFileSync(new URL('../client.js', import.meta.url), 'utf8')
+const builtOnce = existsSync(new URL('../client.js', import.meta.url))
 
-test('client.js is the build of src/client', async () => {
-  assert.equal(await bundleClient(), committed(), 'client.js is stale: run `npm run build` and commit it')
+test('client.js is the build of src/client', { skip: builtOnce ? false : 'run npm run build (or npm ci) to make client.js' }, async () => {
+  assert.equal(await bundleClient(), built(), 'client.js is stale: run `npm run build`')
 })
 
 // dsh runs client.js as a classic script that hands a factory to the module loader; the
 // factory's `require` answers only the shell's platform modules.
 test('client.js registers a factory that exports apply and inject', () => {
   const registrations = []
-  runInNewContext(committed(), { window: { __ModuleLoader__: { load: registration => registrations.push(registration) } } })
+  runInNewContext(built(), { window: { __ModuleLoader__: { load: registration => registrations.push(registration) } } })
   assert.equal(registrations.length, 1)
   const [{ id, factory, ...rest }] = registrations
   assert.equal(id, 'moon-bot-core')

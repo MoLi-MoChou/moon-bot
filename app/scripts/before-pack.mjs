@@ -29,6 +29,10 @@ async function materializeCoreLink() {
   const info = await lstat(link).catch(() => null)
   if (info === null || !info.isSymbolicLink()) return
   const core = resolve(app, '..', 'core')
+  const { access } = await import('node:fs/promises')
+  await access(join(core, 'dist', 'service', 'server.js')).catch(() => {
+    throw new Error('core/dist is missing: run npm run build (or npm ci) before packing the app')
+  })
   await rm(link, { recursive: true, force: true })
   await mkdir(dirname(link), { recursive: true })
   // The package's published files, as core/package.json lists them (plus the manifest).

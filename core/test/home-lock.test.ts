@@ -7,7 +7,7 @@ import { join } from 'node:path'
 import { test } from 'node:test'
 import { apply } from '../index.js'
 import { homeLock } from '../src/host/home-lock.ts'
-import { fakeContext } from './fake-ctx.js'
+import { fakeContext } from './fake-ctx.ts'
 
 const tempHome = (t) => {
   const home = mkdtempSync(join(tmpdir(), 'ds-bot-lock-'))

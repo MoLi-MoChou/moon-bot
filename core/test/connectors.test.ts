@@ -11,7 +11,7 @@ import { join } from 'node:path'
 import { test } from 'node:test'
 import { createRuntime } from '../index.js'
 import { signIn } from '../src/host/connectors.ts'
-import { fakeContext } from './fake-ctx.js'
+import { fakeContext } from './fake-ctx.ts'
 
 const fresh = () => `ghp_${randomBytes(16).toString('hex')}`
 const answer = (status: number, body: unknown): Response => ({ status, ok: status >= 200 && status < 300, json: async () => body }) as unknown as Response

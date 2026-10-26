@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { install } from '../src/host/time-context.ts'
 import { historyEntry } from '../src/host/parts.ts'
-import { fakeContext } from './fake-ctx.js'
+import { fakeContext } from './fake-ctx.ts'
 
 const NOW = Date.UTC(2026, 9, 12, 4, 30)
 const reading = (time, kind = 'ds-bot-time-context') => ({ type: 'user/message', time, data: { source: { kind } } })

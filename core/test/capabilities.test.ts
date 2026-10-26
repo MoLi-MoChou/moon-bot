@@ -10,7 +10,7 @@ import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
 import { createRuntime } from '../index.js'
 import { expandCapabilityNames, validateCapabilityName } from '../src/host/capabilities.ts'
-import { fakeContext } from './fake-ctx.js'
+import { fakeContext } from './fake-ctx.ts'
 import { startMcpHttpServer } from './fixtures/mcp-http-server.ts'
 
 const ECHO = fileURLToPath(new URL('../dev/mcp-echo-server.mjs', import.meta.url))

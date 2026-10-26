@@ -105,7 +105,7 @@ export function createStoreLock({ home, statePath, warn }: StoreLockOptions): St
       stuck = undefined
       return parsed
     }
-    stuck = 'saved by a newer version; update Moon Bot'
+    stuck = 'saved by a newer Moon Bot; update Moon Bot'
     return undefined
   }
 

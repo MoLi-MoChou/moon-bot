@@ -285,7 +285,7 @@ export function createShared(host: HostRuntime, registry: ToolRegistry = new Too
     return [rt.workOf(turn?.info), ...(turn?.joined ?? []).map(joined => rt.workOf(joined.info))]
       .filter((id): id is string => id !== undefined)
   }
-  const tooLong = (text: string): string => `Not sent: the message has ${text.length} characters, more than ${MESSAGE_INLINE_MAX}, and this window cannot send it as a file. Write it to a file in your working folder and send its path instead.`
+  const tooLong = (text: string): string => `Not sent: the message has ${text.length} characters, more than ${MESSAGE_INLINE_MAX}, and Moon Bot cannot send it as a file. Write it to a file in your working folder and send its path instead.`
 
   // Work for a group stays in it: from a group Session, message_bot calls a member there
   // exactly as an "@Name" line would, and never reaches a Bot outside the group.

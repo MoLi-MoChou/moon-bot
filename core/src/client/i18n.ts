@@ -47,7 +47,7 @@ const HOST_ERRORS: readonly (readonly [RegExp, string])[] = [
   [/^A key must have at least (\d+) characters$/, '密钥至少 $1 个字符'],
   [/^A key can have at most (\d+) characters$/, '密钥最多 $1 个字符'],
   [/^(.+) is not saved yet$/, '$1 还没有保存'],
-  [/^The Bot team in (.+) is open in another Moon Bot \((.+)\)\. This window shows the team but cannot change it; close the other one and reload\.$/, '$1 里的 Bot 团队已在另一个 dsh 中打开（$2）。这个窗口只能查看，不能修改；关掉另一个后刷新。'],
+  [/^The Bot team in (.+) is open in another Moon Bot \((.+)\)\. This window shows the team but cannot change it; close the other one and reload\.$/, '$1 里的 Bot 团队已在另一个 Moon Bot 中打开（$2）。这个窗口只能查看，不能修改；关掉另一个后刷新。'],
   [/^HTTP (\d+)$/, '请求失败（HTTP $1）'],
   [/^GitHub answered (\d+)$/, 'GitHub 返回了 $1'],
   [/^Keep the name under (\d+) characters$/, '名字不能超过 $1 个字'],

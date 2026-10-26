@@ -83,7 +83,7 @@ function createShared(host, registry = new ToolRegistry()) {
     const turn = liveEntry(context.sessionId);
     return [rt.workOf(turn?.info), ...(turn?.joined ?? []).map((joined) => rt.workOf(joined.info))].filter((id) => id !== void 0);
   };
-  const tooLong = (text) => `Not sent: the message has ${text.length} characters, more than ${MESSAGE_INLINE_MAX}, and this window cannot send it as a file. Write it to a file in your working folder and send its path instead.`;
+  const tooLong = (text) => `Not sent: the message has ${text.length} characters, more than ${MESSAGE_INLINE_MAX}, and Moon Bot cannot send it as a file. Write it to a file in your working folder and send its path instead.`;
   const callInGroup = async (context, room, sender, target, message) => {
     if (!(room.members ?? []).includes(target.id)) {
       const add = rt.isMain(sender.id) || rt.isAdminOf(room, sender.id) ? ", or add it yourself with update_group first" : "";

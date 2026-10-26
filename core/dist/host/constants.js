@@ -58,7 +58,8 @@ const TEAM_TOOLS = [
   "save_capability",
   "delete_capability",
   "attach_capability",
-  "detach_capability"
+  "detach_capability",
+  "web_search"
 ];
 const ROOM_LATE_ROUNDS = 10;
 const ROOM_WORK_GRACE_MS = 15e3;

@@ -1,15 +1,20 @@
-// The `auto` search provider over injected effects, so tests run it without a host.
-/** The web seam's error, as the callers read it: a name and a code. */
-export class WebError extends Error {
-  constructor(message: string, readonly code: string, options?: { readonly cause?: unknown }) {
-    super(message, options)
-    this.name = 'WebError'
-  }
-}
 import { resolveConfig } from './config.ts'
 import { ENGINES, type Engine } from './engines.ts'
 import { planNative, type Candidate, type Route } from './native.ts'
 import { clip, isRecord, reasonOf, seconds, str, type Source } from './source.ts'
+
+// The `auto` search provider over injected effects, so tests run it without a host.
+
+/** The web seam's error, as the callers read it: a name and a code. */
+export class WebError extends Error {
+  readonly code: string
+
+  constructor(message: string, code: string, options?: { readonly cause?: unknown }) {
+    super(message, options)
+    this.name = 'WebError'
+    this.code = code
+  }
+}
 
 export const AUTO_PROVIDER_ID = 'auto'
 

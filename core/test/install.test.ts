@@ -58,6 +58,7 @@ test('apply registers listeners, tools, and effects in a fixed order', (t) => {
     'tool post_to_group',
     'tool ask_user',
     'tool show_view',
+    'tool web_search',
     'tools guard',
     // Moon Bot patch: the LEAN guard (hidden features' tools refuse in Bot Sessions).
     'tools guard',

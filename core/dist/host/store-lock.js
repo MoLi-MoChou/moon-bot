@@ -70,7 +70,7 @@ function createStoreLock({ home, statePath, warn }) {
       stuck = void 0;
       return parsed;
     }
-    stuck = "saved by a newer version; update Moon Bot";
+    stuck = "saved by a newer Moon Bot; update Moon Bot";
     return void 0;
   };
   return {

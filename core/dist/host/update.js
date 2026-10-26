@@ -181,7 +181,7 @@ function install(rt) {
   }
   function start() {
     if (status.phase === "installing") return view();
-    if (target === null) throw new Error("No DS Bot update is available");
+    if (target === null) throw new Error("No Moon Bot update is available");
     const service = manager();
     if (typeof service?.installBundle !== "function") throw new Error("The DSH plugin manager is not available in this profile");
     const chosen = target;

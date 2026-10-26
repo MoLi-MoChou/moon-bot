@@ -18,7 +18,7 @@ const OVERFLOW = 'CONTEXT_WINDOW_EXCEEDED'
 // A failed connection says nothing about the conversation, so it never moves a part on.
 const STUCK_CODES = ['INVALID_REQUEST', 'IMAGE_OFFLOAD_REQUIRED']
 const SWITCH_ATTEMPTS = 5
-const PAUSE_NOTE = 'DS Bot paused your turn for a context check. Go on with it now from where you stopped.'
+const PAUSE_NOTE = 'Moon Bot paused your turn for a context check. Go on with it now from where you stopped.'
 
 /** The runtime surface the switch lifecycle calls. */
 export interface PartSwitchRuntime extends PartMoveRuntime {
@@ -126,7 +126,7 @@ export function createPartSwitch(options: PartSwitchOptions): PartSwitch {
           // The local DSH shim types a new user message without the id the runtime gives it.
           back.unshift(createUserMessage({
             content: [{ type: 'text', text: PAUSE_NOTE }],
-            source: job.info ? { ...job.info, ...carried } : { kind: SOURCE_KIND, form: 'relay', role: 'resume', exchangeId: randomUUID(), senderName: 'DS Bot', ...carried },
+            source: job.info ? { ...job.info, ...carried } : { kind: SOURCE_KIND, form: 'relay', role: 'resume', exchangeId: randomUUID(), senderName: 'Moon Bot', ...carried },
           }) as unknown as SwitchMessage)
         }
         await move.forward(job, back).then(() => {

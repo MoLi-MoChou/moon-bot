@@ -67,7 +67,7 @@ async function readLocal(path: string, baseDir: string | undefined, isData: Avat
     throw new Error(`Cannot read the image at ${full}: ${codeOf(error) === 'EACCES' ? 'permission denied' : messageOf(error)}`)
   }
   if (!info.isFile()) throw new Error(`${full} is not an image file. Pass the path of an image file.`)
-  if (await isData?.(real)) throw new Error(`${full} is in DeepSeek Harness data, so it cannot be a Bot's photo. Pass an image from another folder.`)
+  if (await isData?.(real)) throw new Error(`${full} is in Moon Bot data, so it cannot be a Bot's photo. Pass an image from another folder.`)
   if (info.size > MAX_BYTES) throw new Error(tooLarge(info.size))
   let bytes: Buffer
   try {

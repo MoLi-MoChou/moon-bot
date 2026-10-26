@@ -8,7 +8,7 @@ import { FOLDER_RETRY_MS, createPartMove } from "./parts-switch-move.js";
 const OVERFLOW = "CONTEXT_WINDOW_EXCEEDED";
 const STUCK_CODES = ["INVALID_REQUEST", "IMAGE_OFFLOAD_REQUIRED"];
 const SWITCH_ATTEMPTS = 5;
-const PAUSE_NOTE = "DS Bot paused your turn for a context check. Go on with it now from where you stopped.";
+const PAUSE_NOTE = "Moon Bot paused your turn for a context check. Go on with it now from where you stopped.";
 function createPartSwitch(options) {
   const { ctx, rt, state, placeOf, tokensOf, contextLines, condense, decide, adoptCompaction, readOnly, recentTokens, noteTimeoutMs, noteCooldownMs } = options;
   const { writeNote, handoffLines, handoffPackage, handoffSource, partsOf } = options;
@@ -58,7 +58,7 @@ function createPartSwitch(options) {
         const carried = job.joined?.length ? { joined: job.joined } : {};
         back.unshift(createUserMessage({
           content: [{ type: "text", text: PAUSE_NOTE }],
-          source: job.info ? { ...job.info, ...carried } : { kind: SOURCE_KIND, form: "relay", role: "resume", exchangeId: randomUUID(), senderName: "DS Bot", ...carried }
+          source: job.info ? { ...job.info, ...carried } : { kind: SOURCE_KIND, form: "relay", role: "resume", exchangeId: randomUUID(), senderName: "Moon Bot", ...carried }
         }));
       }
       await move.forward(job, back).then(() => {

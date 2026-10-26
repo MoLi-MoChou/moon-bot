@@ -164,7 +164,7 @@ function install(rt) {
     }
   });
   const handoffSource = (job, resume) => ({
-    ...resume && job.info ? job.info : { kind: SOURCE_KIND, form: "relay", role: "handoff", senderName: "DS Bot" },
+    ...resume && job.info ? job.info : { kind: SOURCE_KIND, form: "relay", role: "handoff", senderName: "Moon Bot" },
     exchangeId: job.info?.exchangeId ?? randomUUID(),
     handoff: true,
     ...resume ? { resume: true } : {},

@@ -4,6 +4,9 @@ All notable changes to Moon Bot are listed here. The format follows [Keep a Chan
 
 ## [Unreleased]
 
+### Changed
+
+- **One npm workspace.** The repository is `core/` and `app/` under a root `package.json` (`workspaces`, `engines.node >= 22.18`, and the root scripts `build`/`typecheck`/`test`/`lint`/`eval`): one `package-lock.json` at the root replaces the two per-package ones, the app takes `moon-bot-core` as `*` — npm links it to the workspace by name — instead of `file:../core`, and `app/.npmrc`'s `install-links` (a copy, from the DSH era) is gone with the `file:` protocol. The root `allowScripts` names the five packages whose install scripts may run, for npm 11.5+'s gating. CI and the Dockerfile install at the root; the desktop pack materializes the workspace link into the package files (`beforePack`), so electron-builder never packs a symlink. The web image keeps only core's runtime: after the build it prunes dev dependencies and the desktop-only `pnpm` and updater.
 ### Added
 
 - **Personal Agent layer** on top of the Bot team: memory that surfaces itself for the turn's own words (BM25 relevance combined with freshness and confidence, expired entries dropped), schedules that survive a restart and fire exactly once, MCP connectors whose tools run inside the policy budget, and generated interfaces — an OpenUI element map lowers onto the existing cards, with unknown nodes degrading to text.

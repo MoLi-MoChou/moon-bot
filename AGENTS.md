@@ -28,7 +28,8 @@ The Bot team:
 
 ## Commands
 
-Run in `core/`. Node 22.18+ runs the .ts sources directly (native type stripping); nothing needs a build step except the two committed artifacts.
+The repository is two npm workspaces (`core/` = `moon-bot-core`, `app/` = `moon-bot`) under one root lockfile: install once at the root (`npm ci`), then run a package's scripts in its folder or from the root with `-w` (`npm test -w moon-bot-core`). Node 22.18+ runs the .ts sources directly (native type stripping); nothing needs a build step except the two committed artifacts.
+The root `allowScripts` names the packages whose install scripts may run (the SQLite prebuilt, esbuild's binary); npm 11.5+ gates every other one.
 
 ```sh
 npm ci                                 # build tool and types only

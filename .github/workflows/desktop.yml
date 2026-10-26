@@ -35,7 +35,9 @@ jobs:
       - name: Check the tag matches app/package.json
         if: startsWith(github.ref, 'refs/tags/v')
         run: test "v$(node -p "require('./package.json').version")" = "$GITHUB_REF_NAME"
+      # One root lockfile for both workspaces: install at the root, run in the workspace.
       - run: npm ci --no-fund --no-audit
+        working-directory: .
       # The app's unit tests run on Linux (as in DS Bot's test.yml); one file-lock test expects POSIX.
       - run: npx electron-builder --win --publish never
       - name: Check the packaged app
@@ -77,7 +79,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+      # One root lockfile for both workspaces: install at the root, run in the workspace.
       - run: npm ci --no-fund --no-audit
+        working-directory: .
       - run: npm test
       - run: npx electron-builder --linux AppImage --publish never
       - name: Check the packaged app

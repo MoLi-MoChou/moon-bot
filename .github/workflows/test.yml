@@ -32,7 +32,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
+      # One root lockfile for both workspaces: install at the root, run in the workspace.
       - run: npm ci --no-fund --no-audit
+        working-directory: .
       - run: npm test
       - run: npm run typecheck
       - run: node scripts/build-client.ts --check
@@ -66,8 +68,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      # The test composes the profile and starts no window, so it needs no Electron binary.
+      # One root lockfile: install at the root, run in the workspace. The test composes
+      # the profile and starts no window, so it needs no Electron binary.
       - run: npm ci --no-fund --no-audit
+        working-directory: .
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
       - run: npm test
@@ -88,6 +92,7 @@ jobs:
         with:
           node-version: 24
       - run: npm ci --no-fund --no-audit
+        working-directory: .
       - run: npm run dist
       - name: Check the packaged app
         run: node scripts/check-packed.mjs

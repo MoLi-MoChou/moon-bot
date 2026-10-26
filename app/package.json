@@ -23,7 +23,7 @@
   },
   "dependencies": {
     "electron-updater": "6.8.10",
-    "moon-bot-core": "file:../core",
+    "moon-bot-core": "*",
     "pnpm": "11.7.0"
   },
   "devDependencies": {

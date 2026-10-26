@@ -7,14 +7,18 @@ FROM node:22-bookworm-slim AS ui
 
 # The window's UI: the same React surface the desktop app loads, built by vite.
 WORKDIR /opt/moon-bot
-COPY app/package.json app/package-lock.json app/.npmrc app/
-COPY app/vite.config.js app/
-COPY app/ui/ app/ui/
+# One root lockfile for both workspaces: the manifests come first, so the install layer
+# caches while the sources change.
+COPY package.json package-lock.json ./
 COPY core/package.json core/tsconfig.json core/
-# Client pulls shared (+ siblings); copy whole src tree for the vite UI stage.
+COPY app/package.json app/vite.config.js app/
+COPY app/ui/ app/ui/
+# The window compiles the Bot views from core's TypeScript sources.
 COPY core/src/ core/src/
-# Vite UI only — skip electron main (scripts/build-main). moon-bot-core is file:../core.
-RUN cd app && npm ci --no-audit --no-fund && npx vite build && rm -rf node_modules
+# npm ci cannot focus one workspace, so the whole tree installs; the electron binary is
+# never fetched here, and the node_modules leave with the stage.
+RUN ELECTRON_SKIP_BINARY_DOWNLOAD=1 npm ci --no-audit --no-fund \
+ && cd app && npx vite build && rm -rf node_modules ../node_modules core/node_modules
 
 FROM node:22-bookworm-slim
 
@@ -25,15 +29,21 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt/moon-bot
-COPY core/ core/
+# The manifests again, so the runtime install layer caches on its own.
+COPY package.json package-lock.json ./
+COPY core/package.json core/tsconfig.json core/
+COPY app/package.json app/
 # Host/service ship as TypeScript sources; Node will not strip types under node_modules.
-# Emit plain JS into core/dist, then install the runtime deps (better-sqlite3 needs its
-# install script for the prebuilt binding).
-RUN cd core \
- && npm install --no-save --no-audit --no-fund --ignore-scripts esbuild@0.28.2 typescript@5.9.3 @types/better-sqlite3 \
- && node scripts/build-host.mjs \
- && rm -rf node_modules \
- && npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
+# The build needs the dev dependencies (esbuild, typescript), so the tree installs once
+# whole; a second, production-only install replaces it, and the desktop-only packages
+# (pnpm, the updater) leave with it: the web service runs core alone.
+COPY core/ core/
+RUN ELECTRON_SKIP_BINARY_DOWNLOAD=1 npm ci --no-audit --no-fund \
+ && node core/scripts/build-host.mjs \
+ && rm -rf node_modules core/node_modules app/node_modules \
+ && ELECTRON_SKIP_BINARY_DOWNLOAD=1 npm ci --omit=dev --no-audit --no-fund \
+ && rm -rf app/node_modules/pnpm app/node_modules/electron-updater \
+ && npm cache clean --force
 COPY --from=ui /opt/moon-bot/app/ui/dist/ app/ui/dist/
 COPY NOTICE LICENSE ./
 

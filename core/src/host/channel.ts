@@ -130,6 +130,10 @@ export interface ChannelRuntime extends HostRuntime {
   workspaceDownload(path: unknown): Promise<WorkspaceDownload>
   workspaceDescribe(path: unknown): Promise<WorkspaceDescription>
 
+  /** Deliverables (2026-10-28 files-and-library): the files a turn left behind. */
+  deliverablesOf?(sessionId: string, turn: number): readonly { readonly name: string; readonly path: string; readonly size: number; readonly createdAt: number }[]
+  libraryOf?(options: { readonly since?: number | undefined; readonly limit?: number | undefined }): readonly { readonly sessionId: string; readonly turn: number | null; readonly ownerId: string | null; readonly name: string; readonly path: string; readonly size: number; readonly createdAt: number }[]
+
   noteFailure(entry: FailureNote): void
   diagnostics: DiagnosticsService
 

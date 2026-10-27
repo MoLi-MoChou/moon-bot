@@ -186,6 +186,17 @@ export function teamHandlers(rt: ChannelRuntime, locale: LocaleState): ChannelHa
       await rt.load()
       return ok(await rt.workspaceDownload(body.path))
     },
+    // The files a turn left behind (2026-10-28 files-and-library): the chat's cards and
+    // the library page. Reads only — the scan at turn end is what writes.
+    'turn-files': async (body) => {
+      const files = rt.deliverablesOf?.(String(body.sessionId ?? ''), Number(body.turn)) ?? []
+      return ok({ files })
+    },
+    'library': async (body) => {
+      const since = typeof body.since === 'number' ? body.since : undefined
+      const limit = typeof body.limit === 'number' ? body.limit : undefined
+      return ok({ items: rt.libraryOf?.({ ...(since !== undefined ? { since } : {}), ...(limit !== undefined ? { limit } : {}) }) ?? [] })
+    },
     'workspace-describe': async (body) => {
       await rt.load()
       return ok(await rt.workspaceDescribe(body.path))

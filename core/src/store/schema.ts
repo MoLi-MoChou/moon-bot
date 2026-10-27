@@ -119,11 +119,30 @@ CREATE TABLE relay_invites (
 );
 `
 
+// v5 — deliverables (2026-10-28 files-and-library): the files a turn left behind in the
+// Bot's workspace, collected at turn end. A side table, not a message field: the chat
+// reads it by session and turn, the library page reads it across sessions, and the
+// messages' shape stays untouched.
+const V5 = `
+CREATE TABLE deliverables (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+  turn INTEGER,
+  name TEXT NOT NULL,
+  path TEXT NOT NULL,            -- workspace-relative; the UI never sees an absolute path
+  size INTEGER NOT NULL,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX deliverables_turn ON deliverables(session_id, turn);
+CREATE INDEX deliverables_age ON deliverables(created_at);
+`
+
 export const MIGRATIONS: readonly Migration[] = [
   { name: 'v1 standalone store', sql: V1 },
   { name: 'v2 raw kernel messages', sql: V2 },
   { name: 'v3 policy counters', sql: V3 },
   { name: 'v4 relay invites', sql: V4 },
+  { name: 'v5 deliverables', sql: V5 },
 ]
 
 /** The type the table modules see: a better-sqlite3 connection. */

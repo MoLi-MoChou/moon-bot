@@ -168,6 +168,10 @@ export interface BotChannelRpcMap {
   exchange: { request: { a: string; b: string }; response: readonly ExchangeTurn[] }
   'exchange-text': { request: { id: string }; response: { readonly text: string; readonly whole: boolean } }
   'file-text': { request: { file: Record<string, unknown> }; response: { readonly text: string; readonly whole: boolean } }
+  // The files a turn left behind (2026-10-28 files-and-library): cards in the chat,
+  // and the library page across sessions. Paths are workspace-relative.
+  'turn-files': { request: { sessionId: string; turn: number }; response: { readonly files: readonly { readonly name: string; readonly path: string; readonly size: number; readonly createdAt: number }[] } }
+  'library': { request: { since?: number; limit?: number }; response: { readonly items: readonly { readonly sessionId: string; readonly turn: number | null; readonly ownerId: string | null; readonly name: string; readonly path: string; readonly size: number; readonly createdAt: number }[] } }
   'workspace-download': { request: { path: string; sessionId?: string }; response: { readonly name: string; readonly mime: string; readonly size: number; readonly data: string; readonly folder?: boolean } }
   'workspace-describe': { request: { path: string; sessionId?: string }; response: { readonly name: string; readonly size: number; readonly folder: boolean; readonly mime: string; readonly modified: string; readonly downloadable: boolean } }
   'run-stats': { request: { sessionId: string }; response: RunnerStats }

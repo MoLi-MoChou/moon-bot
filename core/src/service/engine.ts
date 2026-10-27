@@ -28,6 +28,7 @@ import { PolicyEngine } from '../engine/policy.ts'
 import { LocalRunner } from '../engine/runner.ts'
 import { localEngineCatalog } from '../engine/acp/discovery.ts'
 import { RelayRegistry } from './relay.ts'
+import { collectDeliverables } from '../host/deliverables.ts'
 import type { StandaloneLlm } from './llm.ts'
 
 /** The host runtime's own shape, as the wiring reads it. */
@@ -35,6 +36,9 @@ interface Runtime {
   botOf(id: string | undefined): { model?: string, appliedModel?: string, effort?: string, appliedEffort?: string, engine?: unknown, runtimeId?: string } | undefined
   selfOf(sessionId: string): string | undefined
   toolRegistry: { names(): readonly string[], definitions(names?: readonly string[]): readonly unknown[] }
+  /** Where a Bot works, as the folders module resolves it; the deliverables scan needs it. */
+  workDirOf?(input: { readonly botId?: string | undefined, readonly roomId?: string | undefined }): string | undefined
+  groupOwners?: Map<string, { readonly roomId?: string | undefined }>
 }
 
 export interface WiredService {
@@ -111,6 +115,11 @@ export function wireService(options: WireOptions): WiredService {
   // this one registry, so a revoke cuts the live connection the same second.
   const relay = new RelayRegistry(store.relayInvites)
   context.provide('relayRegistry', relay)
+  // The deliverables the channel reads: the same store the turn-end scan writes.
+  Object.assign(runtime, {
+    deliverablesOf: (sessionId: string, turn: number) => store.deliverables.forTurn(sessionId, turn).map(row => ({ name: row.name, path: row.path, size: row.size, createdAt: row.createdAt })),
+    libraryOf: (options: { since?: number, limit?: number }) => store.deliverables.list(options).map(row => ({ sessionId: row.sessionId, turn: row.turn, ownerId: row.ownerId, name: row.name, path: row.path, size: row.size, createdAt: row.createdAt })),
+  })
   // The policy engine over the store's ledger.
   const policy = new PolicyEngine({ countersOf: async (sessionId, level, spend) => store.policy.spend(sessionId, level, spend) })
   // The memory mirror: Markdown stays the source of truth; the index syncs lazily.
@@ -210,9 +219,33 @@ export function wireService(options: WireOptions): WiredService {
     get: () => runtime.toolRegistry.definitions(toolsFor()),
   })
 
+  // Deliverables (2026-10-28 files-and-library): the turn's clock runs on the emit
+  // fanout, so both engines are covered alike. When a turn ends, whatever it left in
+  // the Bot's workspace is scanned in the background and stored; the chat's file cards
+  // and the library page read the table, the messages' shape stays untouched.
+  const turnStartedAt = new Map<string, number>()
+  const noteTurnEvent = (sessionId: string, event: EngineEvent): void => {
+    if (event.type === 'turn/start') {
+      turnStartedAt.set(sessionId, Date.now())
+      return
+    }
+    if (event.type !== 'turn/end') return
+    const since = turnStartedAt.get(sessionId) ?? Date.now() - 5 * 60_000
+    turnStartedAt.delete(sessionId)
+    const botId = runtime.selfOf(sessionId)
+    const roomId = runtime.groupOwners?.get(sessionId)?.roomId
+    const root = runtime.workDirOf?.({ ...(botId !== undefined ? { botId } : {}), ...(roomId !== undefined ? { roomId } : {}) })
+    if (root === undefined || root === '') return
+    const turn = typeof (event as { turn?: unknown }).turn === 'number' ? (event as { turn: number }).turn : null
+    const until = Date.now()
+    void collectDeliverables(root, { since, until }).then(({ files }) => {
+      if (files.length > 0) store.deliverables.add(sessionId, turn, files)
+    }).catch(() => undefined)
+  }
   const emitEvent = (sessionId: string, event: EngineEvent): void => {
     // The session/event envelope: a type plus its data, as the DSH runtime delivered it.
     context.emit('session/event', { id: sessionId }, { type: event.type, data: event })
+    noteTurnEvent(sessionId, event)
   }
   const engine = new BuiltinRuntime({ services, emit: emitEvent })
 

@@ -106,6 +106,37 @@ test('without DSH\'s own settings, the choice offers no way into them', () => {
   assert.deepEqual(buttons(dock([], { harness: false }).tree), [])
 })
 
+test('a window with its own Models page offers that as the empty-catalog setup', () => {
+  const buttons = tree => nodes(tree, node => node.type === 'button').map(button => button.children[0])
+  const opened: string[] = []
+  const bot = { id: 'chief', name: 'Chief' }
+  const tree = ModelChoiceDock({
+    sessionId: bot.id,
+    useRoster: select => select({ ready: true, byId: { chief: bot }, models: [] }),
+    actions: {
+      updateBot: () => Promise.resolve(),
+      openModels: () => { opened.push('models') },
+    },
+  })
+  assert.deepEqual(buttons(tree), ['Open settings to set up a custom model'])
+  buttons(tree)[0] // ensure shape
+  const [chip] = nodes(tree, node => node.type === 'button')
+  chip.props.onClick()
+  assert.deepEqual(opened, ['models'])
+  // openModels wins over a leftover shell onboarding chip (standalone must not show DeepSeek).
+  const mixed = ModelChoiceDock({
+    sessionId: bot.id,
+    useRoster: select => select({ ready: true, byId: { chief: bot }, models: [] }),
+    actions: {
+      updateBot: () => Promise.resolve(),
+      openModels: () => {},
+      openShellOnboardingPanel: () => {},
+      openShellSettingsPanel: () => {},
+    },
+  })
+  assert.deepEqual(buttons(mixed), ['Open settings to set up a custom model'])
+})
+
 test('the Thinking section always offers Default, so a picked level can be cleared', () => {
   const efforts = [{ id: 'low', name: 'Low' }, { id: 'high', name: 'High' }]
   // Array.from: the rows come from the bundle's realm, whose arrays are not this one's.

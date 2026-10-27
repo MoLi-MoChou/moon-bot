@@ -96,21 +96,29 @@ export function ModelKeyCard({ model, actions }: {
     };
     return <div className='bt-q bt-model-key' role='group' aria-label={label}><div className='bt-model-key-title'>{h(KeyIcon)}{label}</div><label className='bt-q-field bt-secret-field'>{h(MaskedInput, { value, onChange: setValue, onEnter: save, label, autoFocus: true })}</label>{error ? <div className='bt-secret-error' role='alert'>{error}</div> : null}<div className='bt-q-foot'>{actions.openModels ? <button type='button' className='bt-q-btn bt-model-key-other' onClick={actions.openModels}>{t('Another provider')}</button> : null}<button type='button' className='bt-q-submit' disabled={!ready} onClick={save}>{busy ? t('Saving…') : t('Save')}</button></div></div>;
 }
-// Where the providers are set up: the window's own Models page, else DSH's settings.
-// Ways to get a first model. The DeepSeek sign-in exists only where the shell carries
-// its account plugin (the Desktop); the API key and custom models use the shell's
-// own editors.
+// Ways to get a first model when the catalog is empty.
+// Standalone Moon Bot opens its own Models page (openModels). The DeepSeek sign-in
+// and shell onboarding editors exist only where the DSH Desktop shell carries them;
+// never offer those chips when the window already has openModels, or they would be
+// dead ends beside the real path.
 export function setupChoices(actions: ModelMenuOptionalActions): [
     string,
     () => unknown
 ][] {
+    const openModels = actions.openModels
+        ? [t('Open settings to set up a custom model'), () => { actions.openModels?.(); }] as [string, () => unknown]
+        : actions.openShellSettingsPanel
+            ? [t('Open settings to set up a custom model'), () => { actions.openShellSettingsPanel?.('models'); }] as [string, () => unknown]
+            : null;
     const choices: ([
         string,
         () => unknown
     ] | null)[] = [
-        actions.canSignIn?.() ? [t('Sign in to DeepSeek'), () => actions.signIn?.()] : null,
-        actions.openShellOnboardingPanel ? [t('Enter a DeepSeek API key'), () => actions.openShellOnboardingPanel?.('deepseek-official')] : null,
-        actions.openShellSettingsPanel ? [t('Open settings to set up a custom model'), () => actions.openShellSettingsPanel?.('models')] : null,
+        actions.canSignIn?.() ? [t('Sign in to DeepSeek'), () => { actions.signIn?.(); }] : null,
+        !actions.openModels && actions.openShellOnboardingPanel
+            ? [t('Enter a DeepSeek API key'), () => { actions.openShellOnboardingPanel?.('deepseek-official'); }]
+            : null,
+        openModels,
     ];
     return choices.filter((choice): choice is [
         string,

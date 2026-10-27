@@ -17,6 +17,7 @@ import { AssistantCell, TriggerCell, TurnProcessCell, Nothing, TurnTailCell, Too
 import { ChatWelcome, WELCOME_CSS } from './chat-welcome.tsx'
 import { ComposerPlus, ComposerVoice, menuIcons } from './composer.tsx'
 import { CONVERSATION_CSS, SHELL_CSS, installCompiledStyles } from './design/index.ts'
+import { DELIVER_CSS } from './deliver-cards-css.ts'
 import { quietly } from './diagnostics.ts'
 import { EMPTY_STATE_CSS } from './empty-state.tsx'
 import { ErrorToast, FEEDBACK_CSS } from './feedback.tsx'
@@ -175,7 +176,7 @@ export function apply(ctx: ClientContext): void {
     () => installCompiledStyles(MEMBER_CSS, 'members'),
     () => installCompiledStyles(USER_MESSAGE_CSS, 'user-messages'),
     () => installCompiledStyles(WIDGET_CSS, 'widgets'),
-    () => installCompiledStyles(EMPTY_STATE_CSS + WELCOME_CSS + PROCESS_CSS + RETRY_CSS + STARTERS_CSS + FILES_PANEL_CSS, 'work-process'),
+    () => installCompiledStyles(EMPTY_STATE_CSS + WELCOME_CSS + PROCESS_CSS + RETRY_CSS + STARTERS_CSS + FILES_PANEL_CSS + DELIVER_CSS, 'work-process'),
     ...(client.browsers ? [() => installCompiledStyles(BROWSER_CSS, 'browser')] : []),
     () => installTheme({ ctx, client }),
     () => shadow('sidebar.workspaces', { priority: BOT_PRIORITY, inject: face }, TeamSidebar),

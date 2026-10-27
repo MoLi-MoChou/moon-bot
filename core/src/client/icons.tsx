@@ -82,6 +82,24 @@ export const SlidersIcon = lineIcon(['M4 6.5h5M12.5 6.5H16M4 13.5h4M11.5 13.5H16
 export const MemoryIcon = lineIcon(['M5.5 3.5h8A1.5 1.5 0 0 1 15 5v10a1.5 1.5 0 0 1-1.5 1.5h-8z', 'M5.5 3.5v13', 'M8.5 7.5h3.5M8.5 10.5h2.5', 'M12 3.5v4l1-.8 1 .8']);
 export const SidePanelIcon = lineIcon(['M4.5 4h11A1.5 1.5 0 0 1 17 5.5v9a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 3 14.5v-9A1.5 1.5 0 0 1 4.5 4z', 'M12.5 4v12']);
 export const FolderIcon = lineIcon(['M3 6A1.5 1.5 0 0 1 4.5 4.5h3.2l1.8 2h6A1.5 1.5 0 0 1 17 8v6.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 3 14.5z']);
+// The kinds of files a turn delivers, as the cards and the library page group them.
+export type DeliverKind = 'image' | 'document' | 'sheet' | 'code' | 'media' | 'other';
+const KIND_PATHS: Record<DeliverKind, readonly string[]> = {
+    image: ['M4 3.5h12A1.5 1.5 0 0 1 17.5 5v10a1.5 1.5 0 0 1-1.5 1.5H4A1.5 1.5 0 0 1 2.5 15V5A1.5 1.5 0 0 1 4 3.5z', 'M2.9 13l4.1-4.1 3.3 3.3 2.6-2.6 4.3 4.3', 'M13.2 6.9h.01'],
+    document: ['M5.5 2.5h6l4 4v10a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-13a1 1 0 0 1 1-1z', 'M11.5 2.5v4h4', 'M8 11.5h4', 'M8 14.5h4'],
+    sheet: ['M4 3.5h12A1.5 1.5 0 0 1 17.5 5v10a1.5 1.5 0 0 1-1.5 1.5H4A1.5 1.5 0 0 1 2.5 15V5A1.5 1.5 0 0 1 4 3.5z', 'M2.5 8.2h15', 'M2.5 12.4h15', 'M8.2 3.5v13'],
+    code: ['M7 6.5L3.5 10L7 13.5', 'M13 6.5L16.5 10L13 13.5', 'M11.4 4.5L8.6 15.5'],
+    media: ['M4 4.5h12A1.5 1.5 0 0 1 17.5 6v8a1.5 1.5 0 0 1-1.5 1.5H4A1.5 1.5 0 0 1 2.5 14V6A1.5 1.5 0 0 1 4 4.5z', 'M8.2 7.6l4.4 2.4-4.4 2.4z'],
+    other: ['M5.5 2.5h6l4 4v10a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-13a1 1 0 0 1 1-1z', 'M11.5 2.5v4h4'],
+};
+export function FileKindIcon({ kind, size = 15 }: {
+    kind: DeliverKind;
+    size?: number;
+}) {
+    return <svg width={size} height={size} viewBox='0 0 20 20' fill='none' stroke='currentColor' strokeWidth={1.5} strokeLinecap='round' strokeLinejoin='round' aria-hidden>{KIND_PATHS[kind].map((d, index) => <path key={index} d={d}/>)}</svg>;
+}
+// A shelf of books: everything the team has handed over, kept in one place.
+export const LibraryIcon = lineIcon(['M4 4.5h3.2v11H4z', 'M8.7 4.5h3.2v11H8.7z', 'M14.6 5.2l2.2.5-2.1 10.3-2.2-.5z']);
 // Defined here, after the icons: SettingsDialog only reads them at render time.
 // Two speech bubbles, the back one peeking out: a group chat.
 export const ChatsIcon = lineIcon(['M3.5 5.5A1.5 1.5 0 0 1 5 4h7a1.5 1.5 0 0 1 1.5 1.5V10A1.5 1.5 0 0 1 12 11.5H8L5 14v-2.5A1.5 1.5 0 0 1 3.5 10z', 'M13.5 7.5H15A1.5 1.5 0 0 1 16.5 9v4.5A1.5 1.5 0 0 1 15 15v2l-2.5-2h-3A1.5 1.5 0 0 1 8 13.5V13']);

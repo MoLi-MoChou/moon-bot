@@ -2,6 +2,7 @@ import { Fragment, createElement as h, useEffect, useLayoutEffect } from 'react'
 import { t } from './i18n.ts';
 import { clockLabel, commRunOf, contentText, isHiddenTurn, isRelayContext, reminderPrompts, stripHeader } from './text.ts';
 import { stripLongNote } from './fold.tsx';
+import { FileCards, useTurnFiles } from './deliver-cards.tsx';
 import { GroupMessage } from './cells-bubbles.tsx';
 import { EventLine, GroupEvent } from './cells-chat.tsx';
 import type { CellActions, CellsUiState, ChatBot, ChatRoster, NodeLocation, StoreHook, Visit } from './cells-bubbles.tsx';
@@ -271,9 +272,12 @@ export function TurnTailCell({ turn: location, sessionId, useTurnClock, useUi, a
         const start = nextTurnStart(state[sessionId] ?? {}, turn);
         return start !== undefined && start > visit.seen && start <= visit.entered;
     });
-    if (!label && !fresh)
+    // The cards of the files this turn delivered sit after its last message.
+    const files = useTurnFiles(sessionId, turn);
+    const cards = files !== null && files.length > 0 ? h(FileCards, { files, sessionId }) : null;
+    if (!label && !fresh && !cards)
         return null;
-    return <>{label ? <div className='bt-time-sep' role='separator'>{label}</div> : null}{fresh ? h(NewDivider) : null}</>;
+    return <>{cards}{label ? <div className='bt-time-sep' role='separator'>{label}</div> : null}{fresh ? h(NewDivider) : null}</>;
 }
 // The calls ToolCell draws. A PTC program (`run_code`) dispatches the real tools as
 // its sub-calls, so a call draws by its own name wherever it sits in the tree.

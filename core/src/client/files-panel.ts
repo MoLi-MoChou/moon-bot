@@ -123,12 +123,13 @@ const FOLDER = ['M3 6a1.5 1.5 0 0 1 1.5-1.5h3.6l1.7 1.8h5.7A1.5 1.5 0 0 1 17 7.8
 const FILE = ['M5.5 2.5h6l4 4v10a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-13a1 1 0 0 1 1-1z', 'M11.5 2.5v4h4']
 const ARCHIVE = [...FILE, 'M9 5.5h1M9 8h1M9 10.5h1', 'M8.5 12.5h2v2h-2z']
 
-const toBlob = ({ data, mime }: DownloadFile): Blob => {
+export const toBytes = (data: string): Uint8Array<ArrayBuffer> => {
   const binary = atob(data)
   const bytes = new Uint8Array(binary.length)
   for (let index = 0; index < binary.length; index++) bytes[index] = binary.charCodeAt(index)
-  return new Blob([bytes], { type: mime })
+  return bytes
 }
+export const toBlob = ({ data, mime }: DownloadFile): Blob => new Blob([toBytes(data)], { type: mime })
 export function saveBlob(blob: Blob, name: string): void {
   const url = URL.createObjectURL(blob)
   const link = Object.assign(document.createElement('a'), { href: url, download: name })

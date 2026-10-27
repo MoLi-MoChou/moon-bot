@@ -11,9 +11,13 @@ const STARTERS = [
   ['Give me options to pick', '周末去哪儿玩？给我几个选项选'],
 ] as const
 
-const DONE_KEY = 'dsh-bot:starters-done'
+const DONE_KEY = 'moon-bot:starters-done'
+const LEGACY_DONE_KEY = 'dsh-bot:starters-done'
 const doneSet = (): Set<string> => {
-  try { return new Set(JSON.parse(localStorage.getItem(DONE_KEY) ?? '[]') as string[]) } catch { return new Set() }
+  try {
+    const raw = localStorage.getItem(DONE_KEY) ?? localStorage.getItem(LEGACY_DONE_KEY) ?? '[]'
+    return new Set(JSON.parse(raw) as string[])
+  } catch { return new Set() }
 }
 
 // The roster and turn clock the plugin hands every injected view; only what this

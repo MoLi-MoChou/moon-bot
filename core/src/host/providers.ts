@@ -234,7 +234,10 @@ export function install(rt: HostRuntime): void {
         ...(model.name ? { name: model.name } : spec.name ? { name: spec.name } : {}),
         ...(model.contextWindow ? { contextWindow: model.contextWindow } : spec.contextWindow ? { contextWindow: spec.contextWindow } : {}),
         ...(model.maxTokens ? { maxTokens: model.maxTokens } : spec.maxTokens ? { maxTokens: spec.maxTokens } : {}),
-        ...(model.inputModalities ? { inputModalities: [...model.inputModalities] } : spec.inputModalities ? { inputModalities: [...spec.inputModalities] } : {}),
+        // A spec fills a field only when it recognizes the model (`name`, as the route
+        // merge above rules): the heuristics must not invent modalities an endpoint
+        // did not report.
+        ...(model.inputModalities ? { inputModalities: [...model.inputModalities] } : spec.name !== undefined && spec.inputModalities ? { inputModalities: [...spec.inputModalities] } : {}),
         ...((model as { reasoning?: boolean }).reasoning ? { reasoning: true } : spec.reasoning ? { reasoning: true } : {}),
       }
     })

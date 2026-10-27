@@ -58,7 +58,7 @@ export function parseWindowMark(id: string): { base: string, window?: number } {
   const unit = (match[2] ?? '').toLowerCase()
   const multiplier = unit === 'm' ? 1_000_000 : unit === 'k' ? 1_000 : 1
   const window = Math.round(num * multiplier)
-  return { base: id.slice(0, idx), window: window > 0 ? window : undefined }
+  return { base: id.slice(0, idx), ...(window > 0 ? { window } : {}) }
 }
 
 const BEDROCK_GEOS = ['global.', 'us.', 'us-gov.', 'eu.', 'apac.', 'jp.', 'au.', 'ca.', 'in.']

@@ -146,20 +146,24 @@ export class StandaloneLlm {
           ...(typeof view.name === 'string' ? { name: view.name } : spec.name ? { name: spec.name } : {}),
           ...(typeof view.contextWindow === 'number' ? { contextWindow: view.contextWindow } : spec.contextWindow ? { contextWindow: spec.contextWindow } : {}),
           ...(typeof view.maxTokens === 'number' ? { maxTokens: view.maxTokens } : spec.maxTokens ? { maxTokens: spec.maxTokens } : {}),
-          input: Array.isArray(view.input) ? (view.input as string[]) : spec.inputModalities ? [...spec.inputModalities] : undefined,
+          ...(Array.isArray(view.input) ? { input: view.input as string[] } : spec.inputModalities ? { input: [...spec.inputModalities] } : {}),
           ...(spec.reasoning ? { reasoning: true } : {}),
         }]
       })
       : []
     const defaultModels = (known?.models ?? []).map(model => {
       const spec = resolveModelSpec(model.id)
+      const contextWindow = model.contextWindow ?? spec.contextWindow
+      const maxTokens = model.maxTokens ?? spec.maxTokens
+      const input = model.inputModalities ?? (spec.inputModalities ? [...spec.inputModalities] : undefined)
+      const reasoning = model.reasoning ?? spec.reasoning
       return {
         id: model.id,
         name: model.name ?? spec.name ?? model.id,
-        contextWindow: model.contextWindow ?? spec.contextWindow,
-        maxTokens: model.maxTokens ?? spec.maxTokens,
-        input: model.inputModalities ?? (spec.inputModalities ? [...spec.inputModalities] : undefined),
-        reasoning: model.reasoning ?? spec.reasoning,
+        ...(contextWindow !== undefined ? { contextWindow } : {}),
+        ...(maxTokens !== undefined ? { maxTokens } : {}),
+        ...(input !== undefined ? { input } : {}),
+        ...(reasoning !== undefined ? { reasoning } : {}),
       }
     })
     return {
@@ -184,12 +188,15 @@ export class StandaloneLlm {
       return route.models.map(model => {
         const spec = resolveModelSpec(model.id)
         const isReasoning = DIRECTORY.find(entry => entry.id === provider)?.models.find(known => known.id === model.id)?.reasoning === true || spec.reasoning === true
+        const contextWindow = model.contextWindow ?? spec.contextWindow
+        const maxTokens = model.maxTokens ?? spec.maxTokens
+        const inputModalities = model.input ?? (spec.inputModalities ? [...spec.inputModalities] : undefined)
         return {
           ...model,
           name: model.name ?? spec.name ?? model.id,
-          contextWindow: model.contextWindow ?? spec.contextWindow,
-          maxTokens: model.maxTokens ?? spec.maxTokens,
-          inputModalities: model.input ?? (spec.inputModalities ? [...spec.inputModalities] : ['text']),
+          ...(contextWindow !== undefined ? { contextWindow } : {}),
+          ...(maxTokens !== undefined ? { maxTokens } : {}),
+          ...(inputModalities !== undefined ? { inputModalities } : {}),
           ...(isReasoning ? { reasoning: true } : {}),
         }
       })

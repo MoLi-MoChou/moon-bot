@@ -1,15 +1,25 @@
-# Moon Bot web on a server: docker compose up -d --build (run from the repository root
-# copy, with .env beside this file: MOON_BOT_PASSWORD and the model provider keys).
+# Moon Bot web on a server: a published image, never built here.
+#
+#   cp .env.example .env      # MOON_BOT_PASSWORD and the model provider keys
+#   ./update.sh               # pull + up -d + health check (auto rollback)
+#   ./rollback.sh             # back to the tag update.sh replaced
+#
+# The tag comes from .env's MOON_BOT_TAG (update.sh rewrites it); `latest` follows `main`.
 services:
   moon-bot:
-    build: { context: .., dockerfile: Dockerfile }
-    image: moon-bot:latest
+    image: ${MOON_BOT_REGISTRY:-ghcr.io/moli-mochou/moon-bot}:${MOON_BOT_TAG:-latest}
     container_name: moon-bot
     restart: unless-stopped
     env_file: .env
     ports:
-      - "8290:8290"
+      - "${MOON_BOT_PORT:-8290}:8290"
     volumes:
       - ./data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8290/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
     # Docker's default seccomp profile blocks the user namespaces bubblewrap needs; DSH
     # then confines the Bots' commands with Landlock instead. No extra privileges.

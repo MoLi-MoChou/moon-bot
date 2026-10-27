@@ -50,7 +50,17 @@ RUN ELECTRON_SKIP_BINARY_DOWNLOAD=1 npm ci --no-audit --no-fund \
 COPY --from=ui /opt/moon-bot/app/ui/dist/ app/ui/dist/
 COPY NOTICE LICENSE ./
 
+# The commit the image was built from (plan 阶段 A): the release workflow passes the
+# short sha, so an image says what it is without a hand-written file, and update/rollback
+# can compare the running container against the tag they meant to deploy.
+ARG REVISION=unknown
+LABEL org.opencontainers.image.revision=$REVISION \
+      org.opencontainers.image.title="Moon Bot" \
+      org.opencontainers.image.source="https://github.com/MoLi-MoChou/moon-bot"
+RUN echo "$REVISION" > /opt/moon-bot/REVISION
+
 ENV NODE_ENV=production \
+    MOON_BOT_REVISION=$REVISION \
     MOON_BOT_DATA=/data \
     MOON_BOT_WORKSPACE=/data/workspace \
     MOON_BOT_UI=/opt/moon-bot/app/ui/dist \

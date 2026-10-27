@@ -1,0 +1,86 @@
+name: Web image
+
+# Moon Bot web, as an image servers pull instead of build (plan 阶段 A):
+#   - the browser check runs first; the image is only published when it is green
+#   - main → :main and :latest, a short sha is always pushed, a v* tag → that version
+#   - the server side is deploy/update.sh and deploy/rollback.sh
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: web-image-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: Browser end-to-end (mock model)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install
+        run: ELECTRON_SKIP_BINARY_DOWNLOAD=1 npm ci --no-audit --no-fund
+      - name: Install the browser
+        run: npx playwright install --with-deps chromium
+      - name: Build the artifacts
+        run: npm run build
+      - name: Start the mock bench
+        run: |
+          MOON_BOT_PASSWORD=bench core/dev/bench.sh e2e 3100 8790 reset
+          MOON_BOT_PASSWORD=bench core/dev/bench.sh e2e 3100 8790 start
+      - name: Drive the browser
+        run: MOON_BOT_PASSWORD=bench node core/dev/e2e-web.mjs http://127.0.0.1:3100 --mock-url http://127.0.0.1:8790/v1 --out "$RUNNER_TEMP/e2e-shots"
+      - name: Keep the screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-shots
+          path: ${{ runner.temp }}/e2e-shots
+          if-no-files-found: ignore
+      - name: Stop the bench
+        if: always()
+        run: MOON_BOT_PASSWORD=bench core/dev/bench.sh e2e 3100 8790 stop || true
+
+  image:
+    name: Publish the image
+    needs: e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Work out the tags
+        id: meta
+        run: |
+          image="ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')"
+          short=$(echo '${{ github.sha }}' | cut -c1-7)
+          tags="$image:$short"
+          if [ '${{ github.ref_type }}' = 'tag' ]; then tags="$tags,$image:${{ github.ref_name }}"; fi
+          if [ '${{ github.ref }}' = 'refs/heads/main' ]; then tags="$tags,$image:main,$image:latest"; fi
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+          echo "tags=$tags" >> "$GITHUB_OUTPUT"
+          echo "short=$short" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          build-args: |
+            REVISION=${{ steps.meta.outputs.short }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

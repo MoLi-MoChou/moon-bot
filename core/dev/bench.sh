@@ -39,8 +39,9 @@ stop_one() {
 
 start_mock() {
   alive mock && return 0
-  node "$PLUGIN/dev/mock-llm.ts" --port "$MOCK_PORT" > "$HOME_DIR/mock.log" 2>&1 &
-  echo $! > "$HOME_DIR/mock.pid"
+  # setsid: the process leads its own group, so stop_one can signal the whole tree.
+  # The shell writes its own pid before exec, so the file names the leader, not a subshell.
+  MOCK_PORT="$MOCK_PORT" setsid sh -c 'echo $$ > "$1"; exec node "$2"' _ "$HOME_DIR/mock.pid" "$PLUGIN/dev/mock-llm.ts" > "$HOME_DIR/mock.log" 2>&1 &
   i=0
   while [ $i -lt 50 ]; do
     if curl -sf "http://127.0.0.1:$MOCK_PORT/v1/models" > /dev/null 2>&1; then return 0; fi
@@ -59,8 +60,7 @@ start_service() {
   LLM_BASE_URL="http://127.0.0.1:$MOCK_PORT/v1" \
   CONTEXT_WINDOW="${CONTEXT_WINDOW:-}" \
   CHECK_RATIO="${CHECK_RATIO:-}" \
-    node "$PLUGIN/dist/service/main.js" > "$HOME_DIR/service.log" 2>&1 &
-  echo $! > "$HOME_DIR/service.pid"
+    setsid sh -c 'echo $$ > "$1"; exec node "$2"' _ "$HOME_DIR/service.pid" "$PLUGIN/dist/service/main.js" > "$HOME_DIR/service.log" 2>&1 &
   i=0
   while [ $i -lt 100 ]; do
     if curl -sf "http://127.0.0.1:$WEB_PORT/healthz" > /dev/null 2>&1; then return 0; fi

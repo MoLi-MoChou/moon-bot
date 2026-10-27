@@ -32,3 +32,6 @@ node_modules/
 /core/index.js
 /core/web-search.js
 /core/dist/
+
+# The mock bench (dev/bench.sh) keeps its team beside the checkout.
+/.moon-bot-test-*/

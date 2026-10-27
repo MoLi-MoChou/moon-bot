@@ -106,10 +106,24 @@ CREATE TABLE policy_counters (
 );
 `
 
+// v4 — relay invites (2026-10-27 remote-agents): one row per remote agent ever invited.
+// The token itself is never stored, only its hash; a revoked invite stays for the audit
+// trail, and the same agentId can be invited again after a revoke.
+const V4 = `
+CREATE TABLE relay_invites (
+  agent_id TEXT PRIMARY KEY,
+  token_hash TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  revoked_at INTEGER,
+  last_seen_at INTEGER
+);
+`
+
 export const MIGRATIONS: readonly Migration[] = [
   { name: 'v1 standalone store', sql: V1 },
   { name: 'v2 raw kernel messages', sql: V2 },
   { name: 'v3 policy counters', sql: V3 },
+  { name: 'v4 relay invites', sql: V4 },
 ]
 
 /** The type the table modules see: a better-sqlite3 connection. */

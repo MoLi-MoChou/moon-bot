@@ -1,9 +1,7 @@
-// The ACP wire (plan §阶段 5): JSON-RPC 2.0 over the child's stdio, one message per
-// line. We are the client: we initialize, open sessions, and prompt; the agent answers
-// requests and streams session/update notifications that the adapter maps to engine
-// events. The shapes here are the protocol's own vocabulary.
-import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
-
+// The ACP wire (plan §阶段 5): JSON-RPC 2.0 over a transport, one message per line. We
+// are the client: we initialize, open sessions, and prompt; the agent answers requests
+// and streams session/update notifications that the adapter maps to engine events. The
+// shapes here are the protocol's own vocabulary.
 export interface JsonRpcRequest {
   readonly jsonrpc: '2.0'
   readonly id: number
@@ -69,10 +67,4 @@ export class LineProtocol {
   }
 }
 
-/** Spawns an agent and wires its stdio to the line protocol. */
-export const spawnAgent = (command: string, args: readonly string[], protocol: LineProtocol): ChildProcessWithoutNullStreams => {
-  const child = spawn(command, args, { stdio: ['pipe', 'pipe', 'pipe'] })
-  child.stdout.setEncoding('utf8')
-  child.stdout.on('data', (chunk: string) => protocol.feed(chunk))
-  return child as ChildProcessWithoutNullStreams
-}
+

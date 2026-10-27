@@ -27,6 +27,7 @@ import { TaskScheduler } from './scheduler.ts'
 import { PolicyEngine } from '../engine/policy.ts'
 import { LocalRunner } from '../engine/runner.ts'
 import { localEngineCatalog } from '../engine/acp/discovery.ts'
+import { RelayRegistry } from './relay.ts'
 import type { StandaloneLlm } from './llm.ts'
 
 /** The host runtime's own shape, as the wiring reads it. */
@@ -41,6 +42,8 @@ export interface WiredService {
   readonly runtime: Runtime
   readonly store: Store
   readonly engine: BuiltinRuntime
+  /** The remote-agent relay: live connections the runner and the route share. */
+  readonly relay: RelayRegistry
   agentOf(sessionId: string): unknown
   emitEvent(sessionId: string, event: EngineEvent): void
   close(): Promise<void>
@@ -104,6 +107,10 @@ export function wireService(options: WireOptions): WiredService {
   emitRequest = (request, next) => { context.emit('approval/request', request, next) }
   const runtime = createRuntime(context as unknown as DshContext, { home: options.home }) as unknown as Runtime
   const store = openStore(options.home)
+  // The relay over the store's invites; the channel ops and the WebSocket route share
+  // this one registry, so a revoke cuts the live connection the same second.
+  const relay = new RelayRegistry(store.relayInvites)
+  context.provide('relayRegistry', relay)
   // The policy engine over the store's ledger.
   const policy = new PolicyEngine({ countersOf: async (sessionId, level, spend) => store.policy.spend(sessionId, level, spend) })
   // The memory mirror: Markdown stays the source of truth; the index syncs lazily.
@@ -212,7 +219,7 @@ export function wireService(options: WireOptions): WiredService {
   const agents = new Map<string, ReturnType<typeof engineAgentOf>>()
   // The host only knows the runner boundary. LocalRunner is today's in-process
   // implementation; a headless daemon can replace it without changing delivery.
-  const runner = new LocalRunner({ builtin: engine, emit: emitEvent })
+  const runner = new LocalRunner({ builtin: engine, emit: emitEvent, relay })
   const runtimeOf = (sessionId: string) => runner.runtimeFor(sessionId, runtime.botOf(runtime.selfOf(sessionId)))
 
   const agentOf = (sessionId: string): unknown => {
@@ -272,10 +279,11 @@ ${task.prompt}` }],
   })
 
   return {
-    context, runtime, store, engine, agentOf, emitEvent,
+    context, runtime, store, engine, relay, agentOf, emitEvent,
     close: async () => {
       await engine.stop()
       await runner.stop()
+      relay.closeAll()
       await context.dispose()
       store.close()
     },

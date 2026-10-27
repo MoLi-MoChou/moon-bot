@@ -4,16 +4,17 @@
 // replaceable: the host's roster, groups and deliveries treat an ACP Bot exactly like a
 // built-in one. What the protocol does not cover (the plan's degradation matrix) simply
 // does not happen here: no frozen-memory injection beyond the prompt text we send, no
-// gating of calls the agent makes on its own.
+// gating of calls the agent makes on its own. The wire itself is a transport (2026-10-27
+// remote-agents): a spawned child's stdio, or a relay connection to another machine.
 import { randomUUID } from 'node:crypto'
 import type { EngineEvent } from '../events.ts'
 import type { AgentRuntime, CancelReason, TurnInput, TurnMessage } from '../runtime.ts'
-import { LineProtocol, UPDATE_OF, spawnAgent, type Inbound, type JsonRpcNotification } from './protocol.ts'
+import { LineProtocol, UPDATE_OF, type Inbound, type JsonRpcNotification } from './protocol.ts'
+import type { AcpTransport } from './transport.ts'
 
 export interface AcpAgentOptions {
-  /** The agent command and its arguments, as a profile would name them. */
-  readonly command: string
-  readonly args?: readonly string[] | undefined
+  /** The wire to the agent: local stdio or a relay connection. */
+  readonly transport: AcpTransport
   /** The client's own name, as the agent sees it in initialize. */
   readonly clientName?: string | undefined
   readonly clientVersion?: string | undefined
@@ -38,7 +39,6 @@ export class AcpRuntime implements AgentRuntime {
   private nextId = 1
   private readonly pending = new Map<number, Waiter>()
   private readonly sessions = new Map<string, AgentSession>()
-  private child: ReturnType<typeof spawnAgent> | undefined
   private started: Promise<void> | undefined
 
   private readonly options: AcpAgentOptions
@@ -49,8 +49,8 @@ export class AcpRuntime implements AgentRuntime {
 
   private get protocol(): LineProtocol {
     this.wire ??= new LineProtocol(
-      line => { this.child?.stdin.write(`${line}\n`) },
-      message => this.receive(message),
+      line => { this.options.transport.write(line) },
+      message => { this.receive(message) },
     )
     return this.wire
   }
@@ -58,29 +58,50 @@ export class AcpRuntime implements AgentRuntime {
   private wire: LineProtocol | undefined
 
   async start(): Promise<void> {
-    this.started ??= (async () => {
-      this.child = spawnAgent(this.options.command, this.options.args ?? [], this.protocol)
-      this.child.stdin.on('error', () => { /* a closed agent is a failed request, not a crash */ })
-      const result = await this.request('initialize', {
-        protocolVersion: 1,
-        clientCapabilities: { fs: { read: false, write: false } },
-        clientInfo: { name: this.options.clientName ?? 'moon-bot', version: this.options.clientVersion ?? '0.1.0' },
-      }) as { sessionId?: unknown } | null
-      void result
-      await this.notify('initialized', {})
-    })()
+    if (this.started === undefined) {
+      this.started = (async () => {
+        // The transport hands over complete lines; the protocol's own framing is
+        // newline-terminated chunks, so the terminator goes back on here.
+        this.options.transport.onLine(line => { this.protocol.feed(`${line}\n`) })
+        this.options.transport.onClosed(() => {
+          const error = new Error('the agent connection closed')
+          for (const waiter of [...this.pending.values()]) waiter.reject(error)
+          this.pending.clear()
+          // The agent on the other end is gone; its session ids died with it. A
+          // reconnected agent gets fresh sessions on the next turn.
+          this.sessions.clear()
+        })
+        await this.options.transport.open()
+        const result = await this.request('initialize', {
+          protocolVersion: 1,
+          clientCapabilities: { fs: { read: false, write: false } },
+          clientInfo: { name: this.options.clientName ?? 'moon-bot', version: this.options.clientVersion ?? '0.1.0' },
+        }) as { sessionId?: unknown } | null
+        void result
+        await this.notify('initialized', {})
+      })()
+      // A start that failed (the agent was offline) must not poison every later
+      // turn: the next turn tries the wire again.
+      this.started.catch(() => { this.started = undefined })
+    }
     return this.started
   }
 
   async stop(): Promise<void> {
     for (const session of this.sessions.values()) session.stop?.()
     this.sessions.clear()
-    this.child?.kill()
-    this.child = undefined
+    this.options.transport.dispose()
   }
 
   async *runTurn(input: TurnInput): AsyncIterable<EngineEvent> {
-    await this.start()
+    try {
+      await this.start()
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      yield { type: 'turn/start', turn: 1 }
+      yield { type: 'turn/end', turn: 1, reason: { kind: 'error', error: { message } } }
+      return
+    }
     const acpId = await this.openSession(input)
     const session = this.sessions.get(input.sessionId)
     if (session === undefined) {

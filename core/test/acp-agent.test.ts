@@ -8,9 +8,9 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
-import { AcpRuntime } from '../src/engine/acp/runtime.ts'
+import { AcpRuntime, eventsOfUpdate } from '../src/engine/acp/runtime.ts'
+import { StdioTransport } from '../src/engine/acp/transport.ts'
 import { LineProtocol } from '../src/engine/acp/protocol.ts'
-import { eventsOfUpdate } from '../src/engine/acp/runtime.ts'
 import type { EngineEvent } from '../src/engine/events.ts'
 
 // A scripted ACP agent: answers initialize/session-new/session-prompt and streams the
@@ -63,7 +63,7 @@ test('a turn on an ACP agent: handshake, updates as engine events, prompt resolv
     JSON.stringify({ sessionUpdate: 'agent_message', content: [{ type: 'text', text: 'The launch is Friday.' }] }),
   ])
   const fanout: EngineEvent[] = []
-  const runtime = new AcpRuntime({ command, args, emit: (_id, event) => fanout.push(event) })
+  const runtime = new AcpRuntime({ transport: new StdioTransport(command, args), emit: (_id, event) => fanout.push(event) })
   t.after(() => runtime.stop())
   const events = await run(runtime, 'b1', 'when is the launch?')
   const kinds = events.map(event => event.type)
@@ -97,7 +97,7 @@ test('an agent that dies takes its turn to an error end, not a hang', async (t) 
   const dir = mkdtempSync(join(tmpdir(), 'acp-die-'))
   t.after(() => rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }))
   writeFileSync(join(dir, 'agent.cjs'), 'process.stdin.resume()\n')
-  const runtime = new AcpRuntime({ command: process.execPath, args: [join(dir, 'agent.cjs')], emit: () => {} })
+  const runtime = new AcpRuntime({ transport: new StdioTransport(process.execPath, [join(dir, 'agent.cjs')]), emit: () => {} })
   t.after(() => runtime.stop())
   // The handshake never answers; the adapter keeps its start promise pending, so the
   // turn is ended by the caller's own timeout — here we just prove no crash escapes.

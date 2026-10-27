@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { openStore } from '../src/store/db.ts'
+import { MIGRATIONS } from '../src/store/schema.ts'
 
 const freshStore = (t) => {
   const home = mkdtempSync(join(tmpdir(), 'ds-bot-store-'))
@@ -20,10 +21,10 @@ test('the schema opens with user_version at the migration count, and reopens har
   const home = mkdtempSync(join(tmpdir(), 'ds-bot-store-'))
   t.after(() => rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }))
   const first = openStore(home)
-  assert.equal(first.raw.pragma('user_version', { simple: true }), 3)
+  assert.equal(first.raw.pragma('user_version', { simple: true }), MIGRATIONS.length)
   first.close()
   const second = openStore(home)
-  assert.equal(second.raw.pragma('user_version', { simple: true }), 3)
+  assert.equal(second.raw.pragma('user_version', { simple: true }), MIGRATIONS.length)
   second.close()
 })
 

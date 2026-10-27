@@ -142,45 +142,8 @@ export function teamHandlers(rt: ChannelRuntime, locale: LocaleState): ChannelHa
       return ok({ modelsKey: modelsKey() })
     },
     efforts: async (body) => ok(await rt.reasoningOf(String(body.ref ?? '')) ?? { efforts: [] }),
-    engines: async () => {
-      await rt.load()
-      const catalog = rt.ctx.get<{ list(): readonly { id: string; label: string; command: string; args: readonly string[]; key: string; kind: string; path?: string; version?: string; reason?: string }[] }>('engineCatalog')
-      const entries = new Map<string, Record<string, unknown>>([['builtin', { id: 'builtin', label: 'Moon Bot built-in', kind: 'builtin', selectable: true }]])
-      for (const agent of catalog?.list() ?? []) {
-        entries.set(agent.id, {
-          id: agent.id, label: agent.label, kind: agent.kind, command: agent.command, args: agent.args, key: agent.key,
-          selectable: agent.kind === 'acp', ...(agent.path === undefined ? {} : { path: agent.path }),
-          ...(agent.version === undefined ? {} : { version: agent.version }), ...(agent.reason === undefined ? {} : { reason: agent.reason }),
-        })
-      }
-      const of: Record<string, string> = {}
-      for (const bot of Object.values(state.bots)) {
-        const engine = bot.engine
-        of[bot.id] = engine?.kind === 'acp' && typeof engine.key === 'string' ? engine.key : engine?.kind === 'acp' && typeof engine.command === 'string' ? engine.command : 'builtin'
-      }
-      return ok({ engines: [...entries.values()], of })
-    },
-    'engine-set': async (body) => {
-      await rt.load()
-      const botId = String(body.botId ?? '')
-      const engineId = String(body.engine ?? '')
-      const bot = rt.botOf(botId)
-      if (bot === undefined) return fail('Unknown Bot', 'bot/not-found')
-      if (engineId === 'builtin') {
-        await rt.updateBot(botId, { engine: { kind: 'builtin' }, runtimeId: null })
-      } else {
-        const catalog = rt.ctx.get<{ list(): readonly { id: string; command: string; args: readonly string[]; key: string; kind: string }[] }>('engineCatalog')
-        const source = catalog?.list().find(candidate => candidate.id === engineId && candidate.kind === 'acp')
-        if (source === undefined) return fail('Unknown engine', 'bot/not-found')
-        await rt.updateBot(botId, { engine: { kind: 'acp', command: source.command, args: source.args, key: source.key }, runtimeId: source.key })
-      }
-      const of: Record<string, string> = {}
-      for (const candidate of Object.values(state.bots)) {
-        if (candidate.engine?.kind === 'acp') of[candidate.id] = candidate.engine.key ?? candidate.engine.command ?? ''
-        else of[candidate.id] = 'builtin'
-      }
-      return ok({ of })
-    },
+    // The engines list and engine-set live in ops-engines.ts (local ACP and remote agents).
+    // here picks their invites up through the same registry.
     // A Turn's exact thinking time, from the timed stream in its events; `ms`
     // omitted when the stream carries no reasoning records.
     thinking: async (body) => {

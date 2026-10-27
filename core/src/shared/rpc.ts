@@ -125,6 +125,15 @@ export interface StateRequest {
   readonly locale?: string
 }
 
+/** One relay invite, as the settings page reads it (2026-10-27 remote-agents). */
+export interface RelayInviteView {
+  readonly agentId: string
+  readonly createdAt: number
+  readonly revokedAt: number | null
+  readonly lastSeenAt: number | null
+  readonly online: boolean
+}
+
 // -----------------------------------------------------------------__________
 // The endpoint map
 
@@ -146,6 +155,12 @@ export interface BotChannelRpcMap {
   // ACP agent registered as a Bot. The list reads; `engine-set` moves one Bot.
   engines: { request: Record<string, never>; response: { readonly engines: readonly { readonly id: string; readonly label: string; readonly kind: string }[]; readonly of: Readonly<Record<string, string>> } }
   'engine-set': { request: { botId: string; engine: string }; response: { readonly of: Readonly<Record<string, string>> } }
+
+  // Remote agents (2026-10-27 remote-agents): invites for the relay, and who is online.
+  // The create answer carries the token once — the UI shows it, the store keeps a hash.
+  'relay-invites': { request: Record<string, never>; response: { readonly invites: readonly RelayInviteView[] } }
+  'relay-invite-create': { request: { agentId: string }; response: { readonly agentId: string; readonly token: string } }
+  'relay-invite-revoke': { request: { agentId: string }; response: { readonly invites: readonly RelayInviteView[] } }
 
   // Conversations
   chat: { request: { botId: string; cursor?: ChatCursor }; response: ChatPage }

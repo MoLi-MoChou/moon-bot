@@ -45,8 +45,13 @@ interface UpdateBotPatch {
 const cleanEngine = (value: unknown): StoredBotEngine | undefined => {
   if (value === null || value === undefined) return undefined
   if (typeof value !== 'object' || Array.isArray(value)) throw new Error('Invalid Bot engine')
-  const input = value as { kind?: unknown, command?: unknown, args?: unknown, key?: unknown }
+  const input = value as { kind?: unknown, command?: unknown, args?: unknown, key?: unknown, agentId?: unknown }
   if (input.kind === 'builtin') return { kind: 'builtin' }
+  if (input.kind === 'acp-remote') {
+    // The agentId names a relay invite; the runner resolves it to a live connection.
+    if (typeof input.agentId !== 'string' || input.agentId.trim() === '') throw new Error('A remote ACP engine needs an agentId')
+    return { kind: 'acp-remote', agentId: input.agentId.trim().slice(0, 120) }
+  }
   if (input.kind !== 'acp' || typeof input.command !== 'string' || input.command.trim() === '') throw new Error('An ACP engine needs a command')
   const args = input.args === undefined ? [] : Array.isArray(input.args) && input.args.every(arg => typeof arg === 'string') ? input.args.map(arg => arg.slice(0, 400)) : undefined
   if (args === undefined) throw new Error('ACP engine arguments must be a list of strings')

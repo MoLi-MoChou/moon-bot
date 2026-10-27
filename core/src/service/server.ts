@@ -12,7 +12,11 @@ import { FileCredentials } from './credentials.ts'
 import { FileSettings } from './settings.ts'
 import { StandaloneLlm } from './llm.ts'
 import { ModelsDevSync } from './models-dev.ts'
+import { RELAY_CLOSE_UNAUTHORIZED } from './relay.ts'
 import type { FetchRoute } from './context.ts'
+
+/** The relay's WebSocket endpoint; remote agents dial in here with an invite token. */
+const RELAY_PATH = '/api/bot/relay'
 
 export interface ServiceOptions {
   /** The team home directory (state.json, store.sqlite3 live under it). */
@@ -106,7 +110,8 @@ export async function startService(options: ServiceOptions): Promise<StandaloneS
 
   app.addHook('onRequest', async (request, reply) => {
     const path = request.url.split('?')[0] ?? request.url
-    if (path === '/login' || path === '/login/check' || path === '/healthz') return
+    // The relay authenticates with its own invite token, not the UI cookie.
+    if (path === '/login' || path === '/login/check' || path === '/healthz' || path === RELAY_PATH) return
     if (!authenticated(request)) {
       const accept = String(request.headers.accept ?? '')
       if (request.method === 'GET' && accept.includes('text/html')) {
@@ -118,6 +123,19 @@ export async function startService(options: ServiceOptions): Promise<StandaloneS
   })
 
   app.get('/healthz', async () => ({ ok: true }))
+
+  // The remote-agent relay (2026-10-27 remote-agents): one WebSocket per connected
+  // agent, carrying the ACP wire as text frames. Token in the query string; an invalid
+  // or revoked token closes the socket with 4401 before anything is carried.
+  await app.register((await import('@fastify/websocket')).default)
+  app.get(RELAY_PATH, { websocket: true }, (socket, request) => {
+    const query = request.query as Record<string, unknown>
+    const token = String(query['token'] ?? '')
+    if (wired.relay.admit(socket, token) === undefined) {
+      socket.close(RELAY_CLOSE_UNAUTHORIZED, 'unknown or revoked invite')
+      return
+    }
+  })
 
   // Password page for browsers (the desktop web.ts wrapper also has one; Docker runs this service directly).
   const loginHtml = (note: string): string => `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">

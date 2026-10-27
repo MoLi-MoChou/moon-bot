@@ -39,10 +39,12 @@ export interface HostDefaults {
 
 /** The runtime selected for one Bot's turns. */
 export interface StoredBotEngine {
-  readonly kind: 'builtin' | 'acp'
+  readonly kind: 'builtin' | 'acp' | 'acp-remote'
   readonly command?: string
   readonly args?: readonly string[]
   readonly key?: string
+  /** `acp-remote`: the relay invite this Bot's agent dials in under. */
+  readonly agentId?: string
 }
 
 /** A Bot as `state.json` stores it. */

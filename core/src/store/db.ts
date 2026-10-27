@@ -14,6 +14,7 @@ import { Sessions } from './sessions.ts'
 import { Tasks } from './tasks.ts'
 import { MemoryIndex } from './memory-index.ts'
 import { PolicyCounters } from './policy-counters.ts'
+import { RelayInvites } from './relay.ts'
 
 export interface Store {
   readonly raw: Database.Database
@@ -21,6 +22,7 @@ export interface Store {
   readonly tasks: Tasks
   readonly memory: MemoryIndex
   readonly policy: PolicyCounters
+  readonly relayInvites: RelayInvites
   close(): void
 }
 
@@ -54,6 +56,7 @@ export function openStore(home: string, options: { readonly file?: string; reado
     tasks: new Tasks(db),
     memory: new MemoryIndex(db),
     policy: new PolicyCounters(db),
+    relayInvites: new RelayInvites(db),
     close: () => db.close(),
   }
 }

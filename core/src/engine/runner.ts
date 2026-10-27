@@ -4,6 +4,7 @@
 import type { AgentRuntime } from './runtime.ts'
 import { AcpRuntime } from './acp/runtime.ts'
 import { localEngineCatalog, type EngineCatalog, type LocalAgent } from './acp/discovery.ts'
+import { StdioTransport, RelayTransport, type RelayPort } from './acp/transport.ts'
 
 export interface RunnerBotSpec {
   readonly runtimeId?: unknown
@@ -14,6 +15,8 @@ export interface RunnerOptions {
   readonly builtin: AgentRuntime
   readonly emit: (sessionId: string, event: import('./events.ts').EngineEvent) => void
   readonly catalog?: EngineCatalog
+  /** The relay's live connections; an `acp-remote` Bot turns to one of these. */
+  readonly relay?: RelayPort | undefined
 }
 
 export interface ExecutionRunner {
@@ -33,11 +36,26 @@ export class LocalRunner implements ExecutionRunner {
   }
 
   runtimeFor(_sessionId: string, bot: RunnerBotSpec | undefined): AgentRuntime {
+    const configured = bot?.engine
+    if (configured !== null && typeof configured === 'object' && (configured as { kind?: unknown }).kind === 'acp-remote') {
+      const agentId = (configured as { agentId?: unknown }).agentId
+      // One runtime per agentId, shared by every Bot and session that names it: the
+      // JSON-RPC ids live in the runtime, so two runtimes on one wire would collide.
+      if (typeof agentId === 'string' && agentId !== '') {
+        const key = `remote:${agentId}`
+        let remote = this.acp.get(key)
+        if (remote === undefined) {
+          if (this.options.relay === undefined) return this.options.builtin
+          remote = new AcpRuntime({ transport: new RelayTransport(this.options.relay, agentId), emit: this.options.emit })
+          this.acp.set(key, remote)
+        }
+        return remote
+      }
+    }
     const localAgents = this.discovered ?? (this.discovered = this.catalog.list())
     const discovered = typeof bot?.runtimeId === 'string'
       ? localAgents.find(entry => entry.id === bot.runtimeId && entry.kind === 'acp')
       : undefined
-    const configured = bot?.engine
     const spec = discovered ?? (configured !== null && typeof configured === 'object' && (configured as { kind?: unknown }).kind === 'acp'
       ? configured as { command?: unknown; args?: readonly string[]; key?: unknown }
       : undefined)
@@ -47,8 +65,7 @@ export class LocalRunner implements ExecutionRunner {
     let runtime = this.acp.get(key)
     if (runtime === undefined) {
       runtime = new AcpRuntime({
-        command,
-        ...(Array.isArray(spec?.args) ? { args: spec.args } : {}),
+        transport: new StdioTransport(command, Array.isArray(spec?.args) ? spec.args : []),
         emit: this.options.emit,
       })
       this.acp.set(key, runtime)

@@ -91,6 +91,7 @@ jobs:
           node-version: 24
       - run: npm ci --no-fund --no-audit
         working-directory: .
+      - run: npm run build -w moon-bot
       - run: npm run dist
       - name: Check the packaged app
         run: node scripts/check-packed.mjs

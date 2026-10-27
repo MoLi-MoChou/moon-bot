@@ -135,7 +135,7 @@ export function FeedbackPage({ actions, run, Section, Row }: FeedbackPageProps) 
         }));
     };
     const downloadLog = (): Promise<unknown> => run(actions.diagnosticsLog().then((text) => {
-        download('ds-bot-diagnostics.log', text || 'No entries.\n');
+        download('moon-bot-diagnostics.log', text || 'No entries.\n');
         setNote(t('Downloaded the log. Keys, tokens, and your home folder are hidden in it.'));
     }));
     const clearLog = (): Promise<unknown> => run(actions.diagnosticsClear().then(clearClientErrors).then(load).then(() => { setNote(t('Cleared the error log.')); }));

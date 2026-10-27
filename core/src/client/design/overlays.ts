@@ -12,6 +12,16 @@ export const OVERLAYS_CSS = `
 .bt-menu-sep{height:.5px;flex:none;background:var(--bt-line-2);margin:4px 8px}
 .bt-menu-up{--bt-origin:bottom left;animation-name:bt-pop-lift,bt-veil-in}
 .bt-menu[data-leaving]{pointer-events:none;animation:bt-pop-out ${MENU_EXIT_MS}ms ${EASE_IN} forwards}
+.bt-menu[data-leaving]>*{animation:none}
+.bt-menu>*{animation:bt-menu-row .18s cubic-bezier(.2,.8,.2,1) backwards}
+.bt-menu>*:nth-child(2){animation-delay:.018s}
+.bt-menu>*:nth-child(3){animation-delay:.036s}
+.bt-menu>*:nth-child(4){animation-delay:.054s}
+.bt-menu>*:nth-child(5){animation-delay:.072s}
+.bt-menu>*:nth-child(6){animation-delay:.09s}
+.bt-menu>*:nth-child(7){animation-delay:.108s}
+.bt-menu>*:nth-child(n+8){animation-delay:.12s}
+@keyframes bt-menu-row{from{opacity:0;transform:translateY(-3px)}}
 .bt-menu-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bt-menu-hint{flex:none;color:var(--bt-ink-3);font-size:12px;font-variant-numeric:tabular-nums}
 .bt-palette-layer{position:fixed;inset:var(--dsh-frame-chrome-top,0px) 0 0;z-index:70;pointer-events:auto;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif}
@@ -118,4 +128,5 @@ body[data-ds-dark-theme] .bt-theme-chip i{background:var(--da)}
 .bt-seg[data-glide] button[aria-pressed=true]{background:transparent;box-shadow:none}
 @keyframes bt-rise{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.bt-addlist{animation:none}}
+@media (prefers-reduced-motion:reduce){.bt-menu>*{animation:none}}
 `

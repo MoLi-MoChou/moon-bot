@@ -6,6 +6,8 @@ export const MODEL_CSS = `
 .bt-ctx[data-tone=mid] svg{color:var(--bt-warn)}
 .bt-ctx[data-tone=high] svg{color:var(--bt-danger)}
 .bt-ctx-arc{transition:stroke-dashoffset .5s cubic-bezier(.2,.8,.2,1)}
+.bt-ctx-pct{display:inline-block;animation:bt-ctx-num .32s cubic-bezier(.2,.8,.2,1)}
+@keyframes bt-ctx-num{from{opacity:.25;transform:translateY(5px)}}
 .bt-ctx-n{margin-left:auto;color:var(--bt-ink-3)}
 .bt-model-trigger{display:inline-flex;align-items:center;gap:8px;max-width:100%;min-width:0;height:auto;min-height:32px;padding:4px 8px 4px 10px;border:0;border-radius:8px;background:var(--bt-hover);color:var(--bt-ink);font:inherit;text-align:left;cursor:pointer;transition:background-color .12s ease}
 .bt-model-trigger:hover,.bt-model-trigger[aria-expanded=true]{background:var(--bt-active)}
@@ -45,5 +47,5 @@ export const MODEL_CSS = `
 @keyframes bt-model-in{from{opacity:0;transform:translateY(6px)}}
 .bt-model-spin{flex:none;width:14px;height:14px;border-radius:50%;border:1.5px solid var(--bt-line-2);border-top-color:var(--bt-ink-2);animation:bt-model-spin .7s linear infinite}
 @keyframes bt-model-spin{to{transform:rotate(360deg)}}
-@media (prefers-reduced-motion:reduce){.bt-model-dock{animation:none}.bt-model-spin{animation-duration:2s}.bt-model-caret{transition:none}.bt-model-tick svg{animation:none}}
+@media (prefers-reduced-motion:reduce){.bt-model-dock{animation:none}.bt-model-spin{animation-duration:2s}.bt-model-caret{transition:none}.bt-model-tick svg{animation:none}.bt-ctx-pct{animation:none}}
 `

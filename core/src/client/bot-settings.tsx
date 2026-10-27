@@ -6,6 +6,7 @@ import { isMainOf } from './sources.ts';
 import { PencilIcon, ChevronRightIcon } from './icons.tsx';
 import { lookOf, BotMark } from './mark.tsx';
 import { ModelMenu, modelOf } from './model-menu.tsx';
+import { EngineMenu } from './engine-menu.tsx';
 import { FolderMenu } from './folder-menu.tsx';
 import { BotSchedules } from './schedules.tsx';
 import { BotCapabilitiesCard } from './capability-settings.tsx';
@@ -201,16 +202,9 @@ function EngineCard({ bot, save, refreshEngines }: { bot: SettingsBot; save: (pa
         void refreshEngines().then(result => { if (alive) setAvailable(result.engines); });
         return () => { alive = false; };
     }, [refreshEngines, bot.id]);
-    const selected = acp ? (bot.runtimeId ?? bot.engine?.key ?? command) : 'builtin';
-    const discovered = available.filter(entry => entry.kind === 'acp' && entry.selectable !== false);
-    const unsupported = available.filter(entry => entry.kind !== 'acp');
-    const currentMissing = acp && !discovered.some(entry => entry.id === selected) ? [{ id: selected, label: `${command} (${t('Current configuration')})`, kind: 'acp', command, args: bot.engine?.args ?? [], key: selected, selectable: true } satisfies SettingsEngineOption] : [];
-    const pick = (id: string): void => {
-        if (id === 'builtin') { void save({ engine: null, runtimeId: null }); return; }
-        const entry = [...discovered, ...currentMissing].find(item => item.id === id);
-        if (entry?.command) void save({ engine: engineFrom(entry.command, (entry.args ?? []).join('\n'), entry.key ?? entry.id), runtimeId: entry.id });
-    };
-    return h(Card, { title: t('Execution engine') }, h(Row, { label: t('Engine'), hint: acp ? t('Runs this Bot through an external ACP agent.') : t('Runs this Bot through Moon Bot built-in runtime.') }, <select className='bt-input' value={selected} aria-label={t('Engine')} onChange={event => pick(event.target.value)}><option value='builtin'>{t('Built-in')}</option>{discovered.map(entry => <option key={entry.id} value={entry.id}>{entry.label}{entry.version ? ` · ${entry.version}` : ''}</option>)}{currentMissing.map(entry => <option key={entry.id} value={entry.id}>{entry.label}</option>)}{unsupported.length > 0 ? <optgroup label={t('Detected but not supported')}>{unsupported.map(entry => <option key={entry.id} disabled>{entry.label}{entry.version ? ` · ${entry.version}` : ''}</option>)}</optgroup> : null}</select>), acp ? h(Row, { label: t('ACP command'), hint: t('Executable available on this computer, for example opencode or claude.') }, h(InlineText, { label: t('ACP command'), value: command, placeholder: 'opencode', required: true, maxLength: 400, onSave: next => save({ engine: engineFrom(next, args, bot.engine?.key), runtimeId: null }) })) : null, acp ? h(Row, { label: t('ACP arguments'), hint: t('One argument per line.') }, h(InlineText, { label: t('ACP arguments'), value: args, multiline: true, onSave: next => save({ engine: engineFrom(command, next, bot.engine?.key), runtimeId: null }) })) : null, discovered.length === 0 ? <div className='bt-set-hint'>{t('No compatible local ACP agents detected. Install one and refresh the Bot settings.')}</div> : null);
+    const remote = bot.engine?.kind === 'acp-remote';
+    const localCount = available.filter(entry => entry.kind === 'acp' && entry.selectable !== false).length;
+    return h(Card, { title: t('Execution engine') }, h(Row, { label: t('Engine'), hint: acp ? t('Runs this Bot through an external ACP agent.') : remote ? t('Runs this Bot through a remote agent invited over the relay.') : t('Runs this Bot through Moon Bot built-in runtime.') }, h(EngineMenu, { bot, save, refreshEngines })), acp ? h(Row, { label: t('ACP command'), hint: t('Executable available on this computer, for example opencode or claude.') }, h(InlineText, { label: t('ACP command'), value: command, placeholder: 'opencode', required: true, maxLength: 400, onSave: next => save({ engine: engineFrom(next, args, bot.engine?.key), runtimeId: null }) })) : null, acp ? h(Row, { label: t('ACP arguments'), hint: t('One argument per line.') }, h(InlineText, { label: t('ACP arguments'), value: args, multiline: true, onSave: next => save({ engine: engineFrom(command, next, bot.engine?.key), runtimeId: null }) })) : null, remote ? h(Row, { label: t('Agent ID'), hint: t('The invite names this agent; it answers when its CLI is connected.') }, <code className='bt-bs-input' style={{ textAlign: 'left' }}>{bot.engine?.agentId ?? ''}</code>) : null, acp && localCount === 0 ? <div className='bt-set-hint'>{t('No compatible local ACP agents detected. Install one and refresh the Bot settings.')}</div> : null);
 }
 // A Bot's settings as grouped cards: who it is (avatar, name, label), what it runs on
 // (model), what it does (instructions), its memory and tasks, its Main Bot role, its

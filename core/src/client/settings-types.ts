@@ -20,12 +20,14 @@ export interface SettingsEngineOption {
   version?: string
   selectable?: boolean
   reason?: string
+  online?: boolean
 }
 export interface SettingsBotEngine {
-  kind: 'builtin' | 'acp'
+  kind: 'builtin' | 'acp' | 'acp-remote'
   command?: string
   args?: readonly string[]
   key?: string
+  agentId?: string
 }
 export interface SettingsBot {
   id: string

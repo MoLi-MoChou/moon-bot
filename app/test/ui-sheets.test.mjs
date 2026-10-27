@@ -64,7 +64,7 @@ test('the empty state and welcome sheets ride with the work-process group', asyn
   const { SHEET_GROUPS } = await bundleOf('ui/src/sheets.ts')
   const group = SHEET_GROUPS.find(entry => entry.tag === 'work-process')
   assert.ok(group !== undefined)
-  assert.deepEqual([...group.parts], ['EMPTY_STATE_CSS', 'WELCOME_CSS', 'PROCESS_CSS', 'RETRY_CSS', 'STARTERS_CSS', 'FILES_PANEL_CSS'])
+  assert.deepEqual([...group.parts], ['EMPTY_STATE_CSS', 'WELCOME_CSS', 'PROCESS_CSS', 'RETRY_CSS', 'STARTERS_CSS', 'FILES_PANEL_CSS', 'DELIVER_CSS'])
 })
 
 test('a window with no saved theme paints Moon', async () => {

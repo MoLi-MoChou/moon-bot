@@ -17,6 +17,7 @@ import { AssistantCell, TriggerCell, TurnProcessCell, Nothing, TurnTailCell, Too
 import { ChatWelcome, WELCOME_CSS } from './chat-welcome.tsx'
 import { ComposerPlus, ComposerVoice, menuIcons } from './composer.tsx'
 import { CONVERSATION_CSS, SHELL_CSS, installCompiledStyles } from './design/index.ts'
+import { DELIVER_CSS } from './deliver-cards-css.ts'
 import { quietly } from './diagnostics.ts'
 import { EMPTY_STATE_CSS } from './empty-state.tsx'
 import { ErrorToast, FEEDBACK_CSS } from './feedback.tsx'
@@ -49,6 +50,7 @@ import { GROUP_SETTINGS_CSS } from './group-settings.tsx'
 import { FOLDER_CSS } from './folder-menu.tsx'
 import { ENGINE_CSS } from './engine-menu.tsx'
 import { MARKET_CSS } from './connector-market.tsx'
+import { RELAY_PAGE_CSS } from './relay-page.tsx'
 import { PROCESS_CSS } from './work-process.tsx'
 
 export const inject = ['sessions', 'uiWorkspace', 'uiConversation', 'slots', 'theme', 'layout']
@@ -167,7 +169,7 @@ export function apply(ctx: ClientContext): void {
     () => installCompiledStyles(SHELL_CSS, 'shell'),
     () => installCompiledStyles(SIDEBAR_CSS, 'sidebar'),
     () => installCompiledStyles(SECRET_CSS, 'secrets'),
-    () => installCompiledStyles(MODEL_CSS + FOLDER_CSS + ENGINE_CSS + BOT_SETTINGS_CSS + GROUP_SETTINGS_CSS + MARKET_CSS, 'models'),
+    () => installCompiledStyles(MODEL_CSS + FOLDER_CSS + ENGINE_CSS + BOT_SETTINGS_CSS + GROUP_SETTINGS_CSS + MARKET_CSS + RELAY_PAGE_CSS, 'models'),
     () => installCompiledStyles(USAGE_CSS, 'usage'),
     () => installCompiledStyles(SCHEDULE_CSS, 'schedules'),
     () => installCompiledStyles(FEEDBACK_CSS, 'feedback'),
@@ -175,7 +177,7 @@ export function apply(ctx: ClientContext): void {
     () => installCompiledStyles(MEMBER_CSS, 'members'),
     () => installCompiledStyles(USER_MESSAGE_CSS, 'user-messages'),
     () => installCompiledStyles(WIDGET_CSS, 'widgets'),
-    () => installCompiledStyles(EMPTY_STATE_CSS + WELCOME_CSS + PROCESS_CSS + RETRY_CSS + STARTERS_CSS + FILES_PANEL_CSS, 'work-process'),
+    () => installCompiledStyles(EMPTY_STATE_CSS + WELCOME_CSS + PROCESS_CSS + RETRY_CSS + STARTERS_CSS + FILES_PANEL_CSS + DELIVER_CSS, 'work-process'),
     ...(client.browsers ? [() => installCompiledStyles(BROWSER_CSS, 'browser')] : []),
     () => installTheme({ ctx, client }),
     () => shadow('sidebar.workspaces', { priority: BOT_PRIORITY, inject: face }, TeamSidebar),

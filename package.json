@@ -5,7 +5,8 @@
   "description": "Moon Bot: the core package and the desktop/web app, as npm workspaces.",
   "workspaces": [
     "core",
-    "app"
+    "app",
+    "connect"
   ],
   "engines": {
     "node": ">=22.18"

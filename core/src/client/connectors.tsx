@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 import { useMorph } from './motion.tsx';
 import { MaskedInput } from './secret-card.tsx';
 import { t } from './i18n.ts';
+import { ConnectorCatalog, type MarketActions } from './connector-market.tsx';
 const TOKEN_URL = 'https://github.com/settings/personal-access-tokens/new';
 // One connector as Settings shows it: what the host reports about its link.
 export interface Connector {
@@ -54,14 +55,15 @@ function ConnectorRow({ connector, actions }: {
     return <div ref={row} className='bt-connector' data-state={connector.state}><div className='bt-connector-head'><span className='bt-connector-mark'>{Mark ? h(Mark) : null}</span><span className='bt-connector-text'><span className='bt-connector-name'>{connector.name}</span><span className='bt-connector-status'>{statusText(connector)}</span></span><span className='bt-connector-actions'>{connector.state === 'error' ? <button type='button' className='bt-soft bt-soft-sm' disabled={busy} onClick={() => void run(actions.connectorRetry(connector.id))}>{t('Try again')}</button> : null}{on
         ? <button type='button' className='bt-soft bt-soft-sm' disabled={busy} onClick={() => void run(actions.connectorDisconnect(connector.id))}>{t('Disconnect')}</button> : form ? null : <button type='button' className='bt-soft bt-soft-sm' onClick={() => setForm(true)}>{t('Connect')}</button>}</span></div>{!on && form ? <div className='bt-connector-form'><label className='bt-q-field bt-secret-field'>{h(MaskedInput, { value: token, onChange: setToken, onEnter: connect, label: t('GitHub token'), autoFocus: true })}</label><div className='bt-connector-form-row'><a className='bt-connector-link' href={TOKEN_URL} target='_blank' rel='noopener noreferrer'>{t('Create a token on GitHub')}</a><button type='button' className='bt-soft bt-soft-sm' disabled={busy} onClick={() => { setForm(false); setToken(''); setError(null); }}>{t('Cancel')}</button><button type='button' className='bt-soft bt-soft-sm' disabled={busy || token.trim() === ''} onClick={connect}>{busy ? t('Connecting…') : t('Connect')}</button></div></div> : null}{error ? <div className='bt-connector-error' role='alert'>{error}</div> : null}</div>;
 }
-// Settings → Connectors: one row per connector.
-export function ConnectorsPage({ roster, actions }: {
+// Settings → Connectors: the linked connectors above, the catalog below.
+export function ConnectorsPage({ roster, actions, market }: {
     roster?: {
         connectors?: Connector[];
     } | undefined;
     actions: ConnectorActions;
+    market?: MarketActions | undefined;
 }) {
     const list = roster?.connectors ?? [];
     return <section className='bt-set-section'><div className='bt-set-card bt-connectors-card'>{list.length === 0
-        ? <div className='bt-set-row'><span className='bt-set-hint'>{t('No connectors')}</span></div> : list.map(connector => h(ConnectorRow, { key: connector.id, connector, actions }))}</div></section>;
+        ? <div className='bt-set-row'><span className='bt-set-hint'>{t('No connectors')}</span></div> : list.map(connector => h(ConnectorRow, { key: connector.id, connector, actions }))}</div>{market !== undefined ? h(ConnectorCatalog, { key: 'catalog', market }) : null}</section>;
 }

@@ -48,6 +48,7 @@ import { BOT_SETTINGS_CSS } from './bot-settings.tsx'
 import { GROUP_SETTINGS_CSS } from './group-settings.tsx'
 import { FOLDER_CSS } from './folder-menu.tsx'
 import { ENGINE_CSS } from './engine-menu.tsx'
+import { MARKET_CSS } from './connector-market.tsx'
 import { PROCESS_CSS } from './work-process.tsx'
 
 export const inject = ['sessions', 'uiWorkspace', 'uiConversation', 'slots', 'theme', 'layout']
@@ -166,7 +167,7 @@ export function apply(ctx: ClientContext): void {
     () => installCompiledStyles(SHELL_CSS, 'shell'),
     () => installCompiledStyles(SIDEBAR_CSS, 'sidebar'),
     () => installCompiledStyles(SECRET_CSS, 'secrets'),
-    () => installCompiledStyles(MODEL_CSS + FOLDER_CSS + ENGINE_CSS + BOT_SETTINGS_CSS + GROUP_SETTINGS_CSS, 'models'),
+    () => installCompiledStyles(MODEL_CSS + FOLDER_CSS + ENGINE_CSS + BOT_SETTINGS_CSS + GROUP_SETTINGS_CSS + MARKET_CSS, 'models'),
     () => installCompiledStyles(USAGE_CSS, 'usage'),
     () => installCompiledStyles(SCHEDULE_CSS, 'schedules'),
     () => installCompiledStyles(FEEDBACK_CSS, 'feedback'),

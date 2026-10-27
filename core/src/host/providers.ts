@@ -2,6 +2,7 @@ import type {
   ConfigurableProvider, CredentialsService, SettingsSection, SettingsService,
 } from './dsh-types.js'
 import type { HostRuntime } from './runtime.js'
+import { resolveModelSpec } from '../shared/model-catalog.ts'
 
 type ProviderBody = Readonly<Record<string, unknown>>
 type Profile = Readonly<Record<string, unknown>>
@@ -49,16 +50,20 @@ function checkEndpoint(value: unknown): string {
 
 // A model as the route stores it: what discovery told about it, under pi-ai's names.
 function modelEntry(model: unknown): { readonly id: string; readonly name?: string | undefined; readonly contextWindow?: number | undefined; readonly maxTokens?: number | undefined; readonly input?: readonly string[] | undefined } {
-  const source = model as { readonly id?: unknown; readonly name?: unknown; readonly contextWindow?: unknown; readonly maxTokens?: unknown; readonly inputModalities?: readonly unknown[] } | undefined
+  const source = model as { readonly id?: unknown; readonly name?: unknown; readonly contextWindow?: unknown; readonly maxTokens?: unknown; readonly inputModalities?: readonly unknown[]; readonly input?: readonly unknown[] } | undefined
   const id = typeof model === 'string' ? model.trim() : typeof source?.id === 'string' ? source.id.trim() : ''
   if (id === '') throw invalid('Every model needs an id')
+  const spec = resolveModelSpec(id)
   const whole = (value: unknown): number | undefined => (typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : undefined)
+  const contextWindow = whole(source?.contextWindow) ?? spec.contextWindow
+  const maxTokens = whole(source?.maxTokens) ?? spec.maxTokens
+  const rawInputs = Array.isArray(source?.inputModalities) ? source.inputModalities : Array.isArray(source?.input) ? source.input : (spec.name ? spec.inputModalities : undefined)
   return {
     id,
-    ...(typeof source?.name === 'string' && source.name.trim() !== '' ? { name: source.name.trim() } : {}),
-    ...(whole(source?.contextWindow) ? { contextWindow: whole(source?.contextWindow) } : {}),
-    ...(whole(source?.maxTokens) ? { maxTokens: whole(source?.maxTokens) } : {}),
-    ...(Array.isArray(source?.inputModalities) && source.inputModalities.length > 0 ? { input: source.inputModalities.filter((kind): kind is string => typeof kind === 'string') } : {}),
+    ...(typeof source?.name === 'string' && source.name.trim() !== '' ? { name: source.name.trim() } : spec.name ? { name: spec.name } : {}),
+    ...(contextWindow ? { contextWindow } : {}),
+    ...(maxTokens ? { maxTokens } : {}),
+    ...(Array.isArray(rawInputs) && rawInputs.length > 0 ? { input: rawInputs.filter((kind): kind is string => typeof kind === 'string') } : {}),
   }
 }
 
@@ -125,7 +130,17 @@ export function install(rt: HostRuntime): void {
         continue
       }
       const ref = refOf(profile)
-      const models = catalog.filter(model => model.provider === entry.provider).map(model => ({ ref: model.ref, name: model.name }))
+      const models = catalog.filter(model => model.provider === entry.provider).map(model => {
+        const spec = resolveModelSpec(model.id ?? model.ref)
+        return {
+          ref: model.ref,
+          name: model.name,
+          contextWindow: model.contextWindow ?? spec.contextWindow,
+          maxTokens: model.maxTokens ?? spec.maxTokens,
+          input: model.input ?? (spec.inputModalities ? [...spec.inputModalities] : undefined),
+          reasoning: model.reasoning !== undefined ? true : spec.reasoning,
+        }
+      })
       if (ref === undefined && models.length === 0 && entry.error === undefined) continue
       const info = ref === undefined ? undefined : await found.credentials.describe(ref).catch(() => undefined)
       providers.push({
@@ -212,13 +227,17 @@ export function install(rt: HostRuntime): void {
           ...(typeof body.key === 'string' && body.key.trim() !== '' ? { apiKey: checkKey(body.key) } : {}),
         }
     const models = await ctx.llm.discoverModels(PI_AI, request)
-    return models.slice(0, MAX_MODELS).map(model => ({
-      id: model.id,
-      ...(model.name ? { name: model.name } : {}),
-      ...(model.contextWindow ? { contextWindow: model.contextWindow } : {}),
-      ...(model.maxTokens ? { maxTokens: model.maxTokens } : {}),
-      ...(model.inputModalities ? { inputModalities: [...model.inputModalities] } : {}),
-    }))
+    return models.slice(0, MAX_MODELS).map(model => {
+      const spec = resolveModelSpec(model.id)
+      return {
+        id: model.id,
+        ...(model.name ? { name: model.name } : spec.name ? { name: spec.name } : {}),
+        ...(model.contextWindow ? { contextWindow: model.contextWindow } : spec.contextWindow ? { contextWindow: spec.contextWindow } : {}),
+        ...(model.maxTokens ? { maxTokens: model.maxTokens } : spec.maxTokens ? { maxTokens: spec.maxTokens } : {}),
+        ...(model.inputModalities ? { inputModalities: [...model.inputModalities] } : spec.inputModalities ? { inputModalities: [...spec.inputModalities] } : {}),
+        ...((model as { reasoning?: boolean }).reasoning ? { reasoning: true } : spec.reasoning ? { reasoning: true } : {}),
+      }
+    })
   }
 
   // Only a route the user added goes; its key goes with it when it is the one this page

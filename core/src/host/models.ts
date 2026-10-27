@@ -1,6 +1,7 @@
 import { clearTimeout, setTimeout } from 'node:timers'
 import type { AgentDefaultModelService, ModelSelection } from './dsh-types.js'
 import type { HostRuntime, ModelEntry, ModelReasoning, StoredBot } from './runtime.js'
+import { resolveModelSpec } from '../shared/model-catalog.ts'
 
 interface Selection {
   readonly provider: string
@@ -34,9 +35,15 @@ export function install(rt: HostRuntime): void {
     if (cached !== undefined && Date.now() - cached.at < CATALOG_TTL_MS) return cached.value
     const route = splitRef(ref)
     const info = route === undefined ? undefined : await ctx.llm.resolveModelInfo(route.provider, route.model).catch(() => undefined)
-    const value = info?.reasoning === undefined ? undefined : {
-      efforts: (info.reasoning.efforts ?? []).map(effort => ({ id: effort.id, name: effort.name ?? effort.id, ...(effort.description ? { description: effort.description } : {}) })),
-      ...(info.reasoning.defaultEffort === undefined ? {} : { defaultEffort: info.reasoning.defaultEffort }),
+    const spec = route ? resolveModelSpec(route.model) : undefined
+    const efforts = info?.reasoning?.efforts?.length
+      ? (info.reasoning.efforts ?? []).map(effort => ({ id: effort.id, name: effort.name ?? effort.id, ...(effort.description ? { description: effort.description } : {}) }))
+      : spec?.reasoning && spec.reasoningEfforts
+        ? spec.reasoningEfforts.map(id => ({ id, name: id.charAt(0).toUpperCase() + id.slice(1) }))
+        : []
+    const value = efforts.length === 0 ? undefined : {
+      efforts,
+      defaultEffort: info?.reasoning?.defaultEffort ?? 'medium',
     }
     reasoningCache.set(ref, { at: Date.now(), value })
     return value
@@ -49,16 +56,22 @@ export function install(rt: HostRuntime): void {
     if (!fresh && Date.now() - catalogCache.at < CATALOG_TTL_MS && catalogCache.value.length > 0) return catalogCache.value
     const entries: ModelEntry[] = []
     for (const provider of ctx.llm.listProviders()) {
-      let models: readonly { readonly id: string; readonly name?: string; readonly inputModalities?: readonly string[] }[] = []
+      let models: readonly { readonly id: string; readonly name?: string; readonly contextWindow?: number; readonly maxTokens?: number; readonly inputModalities?: readonly string[] }[] = []
       try { models = await ctx.llm.listModels(provider.id) } catch { continue }
       for (const model of models) {
+        const spec = resolveModelSpec(model.id)
+        const contextWindow = model.contextWindow ?? spec.contextWindow
+        const maxTokens = model.maxTokens ?? spec.maxTokens
+        const input = model.inputModalities ? [...model.inputModalities] : (spec.inputModalities ? [...spec.inputModalities] : undefined)
         entries.push({
           ref: `${provider.id}/${model.id}`,
           provider: provider.id,
           providerName: provider.name ?? provider.id,
           id: model.id,
-          name: model.name ?? model.id,
-          ...(model.inputModalities ? { input: [...model.inputModalities] } : {}),
+          name: model.name ?? spec.name ?? model.id,
+          ...(contextWindow !== undefined ? { contextWindow } : {}),
+          ...(maxTokens !== undefined ? { maxTokens } : {}),
+          ...(input !== undefined ? { input } : {}),
         })
       }
     }

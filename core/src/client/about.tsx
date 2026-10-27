@@ -214,8 +214,7 @@ export function AboutPage({ useUpdate, actions, run, Section, Row }: {
         update.source === 'web' ? h(Section, { key: 'updates', title: t('Updates') }, h(Row, { label: productName(), hint: botHint(update) }))
             : h(Section, { key: 'updates', title: t('Updates') }, appBridge() ? h(AppUpdateRow, { Row, run }) : null, h(EngineRow, { Row, run }), appBridge() ? null : h(Row, { label: productName(), hint: botHint(update) }, botControl, update.available && update.notesUrl ? <a {...linkProps(update.notesUrl)}>{t("What's new")}</a> : null)),
         h(Section, { key: 'links', title: t('Links') }, repo ? h(Row, { label: t('Source code'), hint: repo.replace(/^https:\/\//, '') }, <a {...linkProps(repo)}>{h(GitHubMark)}{t('Open')}</a>) : null, update.notesUrl ? h(Row, { label: t('Release notes') }, <a {...linkProps(update.notesUrl)}>{t('Open')}</a>) : null, 
-        // The fork's attribution: DS Bot is the project Moon Bot started from.
-        h(Row, { label: t('Based on DS Bot'), hint: 'github.com/Fei2411/DeepSeek-Bot · Apache-2.0' }, <a {...linkProps('https://github.com/Fei2411/DeepSeek-Bot')}>{h(GitHubMark)}{t('Open')}</a>), h(Row, { label: t('Report a problem') }, <button type='button' className='bt-soft bt-soft-sm' onClick={() => actions.openSettings('feedback')}>{t('Open')}</button>)),
+        h(Row, { label: t('Runtime'), hint: t("Moon Bot's own runtime with built-in and ACP engines.") }, <span>Apache-2.0</span>), h(Row, { label: t('Report a problem') }, <button type='button' className='bt-soft bt-soft-sm' onClick={() => actions.openSettings('feedback')}>{t('Open')}</button>)),
     ];
 }
 export const ABOUT_CSS = `

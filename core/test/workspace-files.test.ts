@@ -73,7 +73,15 @@ test('only files inside the team\'s folders are served, symlinks included', asyn
   mkdirSync(work)
   writeFileSync(join(work, 'ok.txt'), 'ok')
   writeFileSync(outside, 'no')
-  symlinkSync(outside, join(work, 'link.txt'))
+  try {
+    symlinkSync(outside, join(work, 'link.txt'))
+  } catch (error) {
+    if (process.platform === 'win32' && error && typeof error === 'object' && 'code' in error && error.code === 'EPERM') {
+      t.skip('Windows symlink privilege is not enabled')
+      return
+    }
+    throw error
+  }
   const rt = { ctx: { workspaceRegistry: { list: () => [{ path: work }] } }, state: { bots: {}, rooms: {} } } as unknown as Omit<HostRuntime, 'workspaceDownload' | 'workspaceDescribe'> & {
     workspaceDownload(path: string): Promise<{ data: string }>
     workspaceDescribe(path: string): Promise<{ size: number }>

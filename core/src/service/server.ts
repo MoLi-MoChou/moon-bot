@@ -11,6 +11,7 @@ import { wireService } from './engine.ts'
 import { FileCredentials } from './credentials.ts'
 import { FileSettings } from './settings.ts'
 import { StandaloneLlm } from './llm.ts'
+import { ModelsDevSync } from './models-dev.ts'
 import type { FetchRoute } from './context.ts'
 
 export interface ServiceOptions {
@@ -60,6 +61,8 @@ export async function startService(options: ServiceOptions): Promise<StandaloneS
   const settings = new FileSettings(options.home)
   const credentials = new FileCredentials(options.home)
   const llm = new StandaloneLlm(settings, credentials)
+  const devSync = new ModelsDevSync(options.home)
+  void devSync.sync()
   const wired = wireService({
     home: options.home,
     llm,
@@ -77,6 +80,7 @@ export async function startService(options: ServiceOptions): Promise<StandaloneS
       done(err as Error, undefined)
     }
   })
+
   const secret = randomBytes(32)
 
   // Throttled password guessing, per client address, as the old proxy had it.

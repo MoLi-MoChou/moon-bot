@@ -25,7 +25,7 @@ export interface BridgeAgent {
 }
 
 export interface BridgeOptions {
-  readonly runtime: AgentRuntime
+  readonly runtime: AgentRuntime | (() => AgentRuntime)
   /** Where engine events land as session/events: the host's session/event fanout. */
   readonly emitEvent: (sessionId: string, event: EngineEvent) => void
   /** A hook the host can use to observe settle (unused by the bridge itself). */
@@ -37,12 +37,16 @@ export interface BridgeOptions {
 export function engineAgentOf(sessionId: string, options: BridgeOptions): BridgeAgent {
   const calls: DeliveredMessage[] = []
   let running = false
+  let activeRuntime: AgentRuntime | undefined
+  const runtimeOf = (): AgentRuntime => typeof options.runtime === 'function' ? options.runtime() : options.runtime
   const start = (message: DeliveredMessage): void => {
     calls.push(message)
     running = true
+    const runtime = runtimeOf()
+    activeRuntime = runtime
     void (async () => {
       try {
-        for await (const event of options.runtime.runTurn({ sessionId, message: { content: message.content as never, source: message.source } })) {
+        for await (const event of runtime.runTurn({ sessionId, message: { content: message.content as never, source: message.source } })) {
           options.emitEvent(sessionId, event)
         }
       } catch {
@@ -51,6 +55,7 @@ export function engineAgentOf(sessionId: string, options: BridgeOptions): Bridge
         options.emitEvent(sessionId, { type: 'turn/end', turn: 0, reason: { kind: 'error', error: { message: 'the engine turn crashed' } } })
       } finally {
         running = false
+        if (activeRuntime === runtime) activeRuntime = undefined
         options.onSettled?.(sessionId)
       }
     })()
@@ -63,11 +68,11 @@ export function engineAgentOf(sessionId: string, options: BridgeOptions): Bridge
     steer: (message) => {
       // A steer on an idle session starts the turn now (DSH's inbox would run it as
       // the next step); on a running one it cuts into that turn.
-      void options.runtime.steer(sessionId, { content: message.content as never, source: message.source }).then(joined => {
+      void (activeRuntime ?? runtimeOf()).steer(sessionId, { content: message.content as never, source: message.source }).then(joined => {
         if (!joined) start(message)
       })
     },
-    cancel: () => { void options.runtime.cancelTurn(sessionId, 'user') },
+    cancel: () => { void (activeRuntime ?? runtimeOf()).cancelTurn(sessionId, 'user') },
     get status() { return running ? 'running' : 'idle' },
   }
 }

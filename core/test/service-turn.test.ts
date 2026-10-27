@@ -43,7 +43,6 @@ test('a message over HTTP runs its turn on the engine and answers on the feed', 
   const { port } = await mock.listen()
   t.after(() => void mock.close())
   const home = mkdtempSync(join(tmpdir(), 'ds-bot-stack-'))
-  t.after(() => rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }))
   writeFileSync(join(home, 'state.json'), JSON.stringify({
     version: 1,
     mainBotIds: ['a'],
@@ -60,6 +59,7 @@ test('a message over HTTP runs its turn on the engine and answers on the feed', 
   mock.reply('At your service. The plan is ready.')
   const service: StandaloneService = await startService({ home })
   t.after(() => service.close())
+  t.after(() => rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }))
   const base = service.url
 
   const call = async (endpoint: string, payload: Record<string, unknown>): Promise<Record<string, unknown>> =>
@@ -123,7 +123,6 @@ test('a relevant memory surfaces itself into the next request, unprompted', asyn
   const { port } = await mock.listen()
   t.after(() => void mock.close())
   const home = mkdtempSync(join(tmpdir(), 'ds-bot-mem-'))
-  t.after(() => rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }))
   writeFileSync(join(home, 'state.json'), JSON.stringify({
     version: 1,
     mainBotIds: ['a'],
@@ -141,6 +140,7 @@ test('a relevant memory surfaces itself into the next request, unprompted', asyn
   mock.reply('On it — I will follow the checklist.')
   const service = await startService({ home })
   t.after(() => service.close())
+  t.after(() => rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }))
   const call = async (endpoint: string, payload: Record<string, unknown>): Promise<Record<string, unknown>> =>
     (await fetch(`${service.url}/api/bot`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ endpoint, payload }) })).json()
 

@@ -37,7 +37,7 @@ const PROFILE = 'ds-bot'
 const iconFile = join(here, '..', 'assets', process.platform === 'win32' ? 'icon.ico' : 'icon.png')
 // Windows 11 draws Mica behind the page; mica.css lets it through the sidebar.
 const mica = micaAvailable(process.platform, release())
-if (process.env.DS_BOT_SHELL_DATA) app.setPath('userData', process.env.DS_BOT_SHELL_DATA)
+if (process.env.MOON_BOT_SHELL_DATA) app.setPath('userData', process.env.MOON_BOT_SHELL_DATA)
 if (needsNoSandbox()) app.commandLine.appendSwitch('no-sandbox')
 
 let mainWindow: BrowserWindow | undefined
@@ -112,8 +112,8 @@ async function start(): Promise<void> {
   updates = startUpdates()
   const ready = host.start()
   void ready.catch(fail)
-  // A throwaway run (DS_BOT_HOME) keeps its folders where it was told.
-  const fixed = Boolean(process.env.DS_BOT_HOME)
+  // A throwaway run (MOON_BOT_DATA) keeps its folders where it was told.
+  const fixed = Boolean(process.env.MOON_BOT_DATA)
   // Moon Bot patch: Settings > About drives the app's own updater.
   ipcMain.handle(IPC.updateState, (event) => { assertWindow(event); return updates?.state?.() ?? { phase: 'unsupported', current: app.getVersion(), reason: updateUnsupported() } })
   ipcMain.handle(IPC.updateCheck, async (event) => { assertWindow(event); if (updates?.check === undefined) return { phase: 'unsupported', current: app.getVersion(), reason: updateUnsupported() }; await updates.check(); return updates.state?.() })
@@ -223,8 +223,8 @@ const notePage = (message: string): string => `data:text/html;charset=utf-8,${en
 // Windows updates itself; macOS asks to download the new version. Throwaway runs check only a
 // given feed and never ask.
 function startUpdates(): UpdateWatch | undefined {
-  const feed = process.env.DS_BOT_UPDATE_URL || undefined
-  const throwaway = Boolean(process.env.DS_BOT_HOME)
+  const feed = process.env.MOON_BOT_UPDATE_URL || undefined
+  const throwaway = Boolean(process.env.MOON_BOT_DATA)
   if (!app.isPackaged || (throwaway && feed === undefined)) return undefined
   if (process.platform === 'darwin') {
     return watchReleases({
@@ -364,7 +364,7 @@ async function fail(error: unknown): Promise<void> {
   if (failed || stopping) return
   failed = true
   const found: UpdateFound | null = await Promise.race([updates?.latest() ?? null, sleep(UPDATE_CHECK_WAIT_MS).then(() => null)])
-  const throwaway = Boolean(process.env.DS_BOT_HOME)
+  const throwaway = Boolean(process.env.MOON_BOT_DATA)
   const t = localeText(UPDATE_TEXT)
   const page = found !== null && 'page' in found ? found.page : undefined
   const next = found !== null ? `\n\n${page !== undefined ? t.onFailurePage(found.version) : t.onFailure(found.version)}` : ''

@@ -53,6 +53,10 @@
   <img src="docs/images/moon/files-fallback.png" alt="不能预览的文件显示文件卡片" width="49%">
 </p>
 
+## 源码来源与致谢
+
+Moon Bot 的客户端界面、部分桌面端代码和交互实现参考并改造自 [DSH Bot](https://github.com/MoLi-MoChou/dsh-bot)。DSH Bot 基于 [DS Bot](https://github.com/Fei2411/DeepSeek-Bot)，相关代码按 Apache-2.0 许可证使用和修改。Moon Bot 的运行时、服务端、存储和 Agent 引擎由本项目自行实现；完整的来源、修改说明和许可证见 [NOTICE](NOTICE)。
+
 ## 部署网页版（推荐）
 
 需要 Docker。端口 8290，数据放在挂载的 `/data`。
@@ -125,6 +129,11 @@ Apache-2.0，见 [LICENSE](LICENSE)。Moon Bot 基于 Fei2411 的 [DS Bot（Deep
 ---
 
 ## English
+
+## Source and attribution
+
+Moon Bot's client UI, parts of the desktop app, and interaction code are adapted from [DSH Bot](https://github.com/MoLi-MoChou/dsh-bot). DSH Bot is based on [DS Bot](https://github.com/Fei2411/DeepSeek-Bot); the relevant code is used and modified under the Apache-2.0 license. Moon Bot's runtime, service, storage, and agent engines are implemented in this project. See [NOTICE](NOTICE) for the full source, modification, and license notices.
+
 
 Moon Bot is a team of long-lived Bots: you create Bots, not chats. Chief, the lilac moon sprite, is the Main Bot: it creates Bots, hands them tasks and brings their results back to you. It was forked from [DS Bot](https://github.com/Fei2411/DeepSeek-Bot) and now ships its own runtime: a Fastify service, a built-in agent engine (pi-agent-core + pi-ai) over SQLite, and an Electron window — no DeepSeek Harness install.
 

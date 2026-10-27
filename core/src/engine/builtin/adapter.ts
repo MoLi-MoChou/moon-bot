@@ -11,7 +11,8 @@ import type { EngineServices, ResolvedModel, StoredMessage, ToolDefinition } fro
 /** A pi Model for any endpoint the engine speaks; `input` is required: image checks read it. */
 export const piModelOf = (resolved: ResolvedModel): Model<'openai-completions' | 'anthropic-messages'> => ({
   id: resolved.id, name: resolved.id, api: resolved.api ?? 'openai-completions', provider: 'moon', baseUrl: resolved.baseUrl,
-  input: ['text'], reasoning: false,
+  input: ((resolved.input && resolved.input.length > 0 ? resolved.input : ['text']) as ('text' | 'image')[]),
+  reasoning: resolved.reasoning ?? (resolved.effort !== undefined),
   contextWindow: resolved.contextWindow ?? 128000, maxTokens: resolved.maxTokens ?? 8192,
   cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
 })

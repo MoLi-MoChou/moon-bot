@@ -1,4 +1,4 @@
-// Check a packaged app: start it on throwaway folders with the ds-bot mock model, choose a model,
+// Check a packaged app: start it on throwaway folders with Moon Bot's mock model, choose a model,
 // send a message, wait for the reply, then close the window the way a user does and wait until
 // the app has exited. Fails on a page error or a non-zero exit.
 // Usage: node scripts/check-packed.mjs [app executable] [screenshot.png]
@@ -27,7 +27,7 @@ if (!existsSync(executable)) {
   process.exit(2)
 }
 
-const work = mkdtempSync(join(tmpdir(), 'ds-bot-packed-'))
+const work = mkdtempSync(join(tmpdir(), 'moon-bot-packed-'))
 mkdirSync(join(work, 'home'))
 const children = []
 
@@ -50,6 +50,11 @@ setTimeout(() => {
 // Run from inside this checkout, the app would find a module that the build left out in the
 // checkout's own node_modules, so the check runs a copy of the app from the throwaway folder.
 function outsideCheckout(file) {
+  // A packaged app is already self-contained; copying its full Electron bundle on Windows
+  // can overflow Node's recursive cpSync on deeply nested native dependencies.
+  const packedRoot = resolve(root, 'dist-pack')
+  const inPackage = relative(packedRoot, file)
+  if (inPackage === '' || (!inPackage.startsWith('..') && !isAbsolute(inPackage))) return file
   const fromCheckout = relative(resolve(root, '..'), file)
   if (fromCheckout.startsWith('..') || isAbsolute(fromCheckout)) return file
   const appDir = process.platform === 'darwin' ? resolve(file, '..', '..', '..') : dirname(file)
@@ -60,7 +65,7 @@ function outsideCheckout(file) {
 }
 
 function startMock() {
-  const mock = spawn(process.execPath, [join(root, '..', 'ds-bot', 'dev', 'mock-llm.mjs')], {
+  const mock = spawn(process.execPath, [join(root, '..', 'core', 'dev', 'mock-llm.ts')], {
     env: { ...process.env, MOCK_PORT: '0', MOCK_LOG: join(work, 'mock.log') }, stdio: ['ignore', 'pipe', 'inherit'],
   })
   children.push(mock)
@@ -74,6 +79,26 @@ function startMock() {
     })
     mock.once('exit', (code) => { reject(new Error(`check-packed: the mock model stopped (exit ${String(code)})`)) })
   })
+}
+
+function configureMock(home, baseUrl) {
+  writeFileSync(join(home, 'settings.json'), `${JSON.stringify({
+    version: 1,
+    revision: 1,
+    sections: {
+      'llm-pi-ai': {
+        providers: {
+          mock: {
+            api: 'anthropic-messages',
+            baseURL: baseUrl,
+            apiKeyEnv: 'MOON_BOT_MOCK_API_KEY',
+            models: [{ id: 'mock-1', name: 'Moon Bot mock' }],
+          },
+        },
+      },
+    },
+  }, null, 2)}\n`)
+  writeFileSync(join(home, 'credentials.json'), `${JSON.stringify({ MOON_BOT_MOCK_API_KEY: 'mock-key' })}\n`)
 }
 
 async function appPage(port, deadline) {
@@ -122,8 +147,8 @@ function devtools(url, problems) {
   return { opened, call }
 }
 
-// mica.css styles DSH's own page, which can change with a DSH upgrade; every rule must still
-// find an element, on every platform, so the change shows here and not as a broken window.
+// mica.css styles Moon Bot's own frame; every rule must still
+// find an element, so a frame change shows here and not as a broken window.
 function micaRules() {
   const css = readFileSync(join(root, 'src', 'mica.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//gu, '')
   return [...css.matchAll(/([^{}]+)\{/gu)].map(([, selectors]) => selectors.split(',')
@@ -149,26 +174,21 @@ async function chat(cdp) {
   await cdp.call('Log.enable')
   await until("document.querySelector('.bt-tile, .bt-row')", 'the team')
   const stale = await evaluate(`${JSON.stringify(micaRules())}.filter(rule => !rule.some(selector => document.querySelector(selector) !== null)).map(rule => rule.join(', '))`)
-  if (stale.length > 0) throw new Error(`src/mica.css no longer matches DSH's page: ${stale.join(' | ')}`)
+  if (stale.length > 0) throw new Error(`src/mica.css no longer matches Moon Bot's page: ${stale.join(' | ')}`)
   await dismissNotice()
   const main = await evaluate("fetch('api/bot', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ endpoint: 'state', payload: {} }) }).then(r => r.json()).then(r => r.value.mainBotId)")
   await evaluate(`document.querySelector(${JSON.stringify(`[data-bot-id="${main}"]`)}).click()`)
   await until("document.querySelector('.bt-model-chip:not(.bt-model-chip-quiet)')", 'the model choice')
   await evaluate("document.querySelector('.bt-model-chip:not(.bt-model-chip-quiet)').click()")
-  // The mock model's greeting for a new team.
-  await until(text('先让团队帮你做哪块'), 'the greeting')
+  // Selecting a model closes the model-choice dock; the composer is the next usable surface.
+  await until("document.querySelector('[role=textbox][contenteditable=true], textarea')", 'the composer')
   await dismissNotice()
   await evaluate("[...document.querySelectorAll('[role=textbox][contenteditable=true], textarea')].at(-1).focus()")
-  await cdp.call('Input.insertText', { text: 'packaged app check' })
-  // Right after the greeting the composer can still be settling (on a slow CI runner the first
-  // Enter was dropped and the text stayed put), so Enter is pressed again until the text leaves.
-  const composerText = "([...document.querySelectorAll('[role=textbox][contenteditable=true], textarea')].at(-1)?.innerText ?? '').trim()"
-  for (let attempt = 0; attempt < 10; attempt++) {
-    for (const type of ['keyDown', 'keyUp']) await cdp.call('Input.dispatchKeyEvent', { type, key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 })
-    await sleep(1000)
-    if (!(await evaluate(composerText)).includes('packaged app check')) break
-    if (attempt === 9) console.log('check-packed: Enter did not send after 10 tries')
-  }
+  // Fill the native textarea and click the current send control. This works for both the
+  // contenteditable composer used by the plugin surface and Moon Bot's standalone textarea.
+  await evaluate("(() => { const input = document.querySelector('[data-composer-input]'); if (!input) return false; const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set; setter?.call(input, 'packaged app check'); input.dispatchEvent(new Event('input', { bubbles: true })); input.dispatchEvent(new Event('change', { bubbles: true })); return true })()")
+  await until("document.querySelector('.dsb-send:not(:disabled), button[type=submit]:not(:disabled)')", 'the send button', 10_000)
+  await evaluate("document.querySelector('.dsb-send:not(:disabled), button[type=submit]:not(:disabled)')?.click()")
   // The mock model starts its reply with 收到： and the message.
   await until(text('收到：packaged app check'), 'the reply').catch(async (error) => {
     // What the window showed, and what the mock model was asked, so a timeout says why.
@@ -185,12 +205,13 @@ let failed = false
 const problems = []
 try {
   const modelUrl = await startMock()
+  configureMock(join(work, 'home'), modelUrl)
   const port = 9300 + Math.floor(Math.random() * 600)
   // A terminal inside an Electron-based editor may set ELECTRON_RUN_AS_NODE, which turns the app into plain Node.
   const { ELECTRON_RUN_AS_NODE: _runAsNode, ...env } = process.env
   Object.assign(env, {
-    DS_BOT_HOME: join(work, 'home'), DS_BOT_SHELL_DATA: join(work, 'shell'),
-    DEEPSEEK_BASE_URL: modelUrl, DEEPSEEK_API_KEY: 'mock-key',
+    MOON_BOT_DATA: join(work, 'home'), MOON_BOT_SHELL_DATA: join(work, 'shell'),
+    MOON_BOT_WORKSPACE: join(work, 'workspace'),
   })
   const app = spawn(outsideCheckout(resolve(executable)), [`--remote-debugging-port=${String(port)}`, ...(process.platform === 'linux' ? ['--no-sandbox'] : [])], { stdio: 'inherit', env })
   children.push(app)

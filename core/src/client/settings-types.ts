@@ -9,6 +9,24 @@ import type { DiagnosticsReport } from './feedback.tsx'
 import type { ReactNode } from 'react'
 
 // The team records the settings page and its forms read; the rest passes through.
+export interface SettingsEngineOption {
+  id: string
+  label: string
+  kind: string
+  command?: string
+  args?: readonly string[]
+  key?: string
+  path?: string
+  version?: string
+  selectable?: boolean
+  reason?: string
+}
+export interface SettingsBotEngine {
+  kind: 'builtin' | 'acp'
+  command?: string
+  args?: readonly string[]
+  key?: string
+}
 export interface SettingsBot {
   id: string
   name: string
@@ -20,6 +38,8 @@ export interface SettingsBot {
   model?: string
   appliedModel?: string
   effort?: string
+  engine?: SettingsBotEngine
+  runtimeId?: string
   instructions?: string
   workDir?: string
   capabilities?: readonly string[]
@@ -59,6 +79,8 @@ export interface BotPatch {
   workDir?: string | undefined
   model?: string | undefined
   effort?: string | null | undefined
+  engine?: SettingsBotEngine | null | undefined
+  runtimeId?: string | null | undefined
   avatar?: { shape?: string; image?: string } | null | undefined
   color?: string | null | undefined
   pinned?: boolean | undefined
@@ -80,6 +102,7 @@ export interface SettingsActions extends FolderMenuActions, SecretActions, Conne
   closeOverlay: () => void
   setTeamWorkspace: (path: string) => Promise<{ team: string }>
   refreshModels?: (() => Promise<unknown>) | undefined
+  refreshEngines?: (() => Promise<{ engines: readonly SettingsEngineOption[]; of: Readonly<Record<string, string>> }>) | undefined
   providers?: (() => Promise<unknown>) | undefined
   openShellSettingsPanel?: ((page?: string) => void) | undefined
   setSurface?: ((mode: string) => void) | undefined

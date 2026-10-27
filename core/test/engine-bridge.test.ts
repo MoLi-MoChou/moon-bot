@@ -69,7 +69,6 @@ test('a group round completes through the engine: delivery, turn events, group r
   const home = mkdtempSync(join(tmpdir(), 'ds-bot-bridge-'))
   writeFileSync(join(home, 'state.json'), JSON.stringify(seed()))
   const store = openStore(home)
-  t.after(() => store.close())
   store.sessions.upsertSession({ id: 'gb', kind: 'group', ownerId: 'r1' })
 
   const services: EngineServices = {
@@ -83,6 +82,8 @@ test('a group round completes through the engine: delivery, turn events, group r
   const engine = new BuiltinRuntime({ services, emit: () => {} })
 
   const ctx = fakeContext()
+  t.after(async () => { await ctx.dispose(); store.close(); rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }) })
+
   const agents = new Map<string, BridgeAgent>()
   let seq = 0
   const emitEvent = (sessionId: string, event: EngineEvent): void => {
@@ -129,8 +130,6 @@ test('a group round completes through the engine: delivery, turn events, group r
   const rows = store.sessions.page('gb', 10)
   assert.match(JSON.stringify(rows), /The plan is drafted/)
 
-  await ctx.dispose()
-  rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 })
 })
 
 test('a request between Bots round-trips through the engine and is recorded as an exchange', async (t) => {
@@ -149,6 +148,8 @@ test('a request between Bots round-trips through the engine and is recorded as a
   }
   const engine = new BuiltinRuntime({ services, emit: () => {} })
   const ctx = fakeContext()
+
+
   const agents = new Map<string, BridgeAgent>()
   let seq = 0
   const emitEvent = (sessionId: string, event: EngineEvent): void => {
@@ -185,6 +186,4 @@ test('a request between Bots round-trips through the engine and is recorded as a
   assert.ok(reply, 'Chief received the engine turn\u2019s reply')
   assert.match(String(JSON.stringify(reply)), /\[Reply from Writer\]/)
 
-  await ctx.dispose()
-  rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 })
 })

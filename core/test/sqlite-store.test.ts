@@ -10,9 +10,9 @@ import { openStore } from '../src/store/db.ts'
 
 const freshStore = (t) => {
   const home = mkdtempSync(join(tmpdir(), 'ds-bot-store-'))
-  t.after(() => rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }))
   const store = openStore(home)
   t.after(() => store.close())
+  t.after(() => rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }))
   return store
 }
 

@@ -38,6 +38,8 @@ export interface CreateBotOptions {
   readonly model?: unknown
   readonly effort?: unknown
   readonly workDir?: unknown
+  readonly engine?: unknown
+  readonly runtimeId?: unknown
 }
 
 /** What a group is created with; `roster.js` normalizes every field itself. */
@@ -139,7 +141,7 @@ const LANGUAGES: Readonly<Record<string, string>> = { zh: 'Chinese (简体中文
 
 // What a host that only reads the team may still answer.
 // Updates change the dsh profile, not the team, so a reading host may run them too.
-const READS: ReadonlySet<RpcEndpoint> = new Set<RpcEndpoint>(['state', 'models', 'efforts', 'providers', 'provider-models', 'earlier', 'chat', 'run-stats', 'room-progress', 'exchange', 'exchange-text', 'file-text', 'usage', 'schedules', 'memory-view', 'browser-wait', 'browser-result', 'diagnostics', 'diagnostics-log', 'diagnostics-clear', 'update-check', 'update-install', 'repo-stars', 'approval-answer', 'thinking', 'workspace-download', 'workspace-describe'])
+const READS: ReadonlySet<RpcEndpoint> = new Set<RpcEndpoint>(['state', 'models', 'efforts', 'engines', 'providers', 'provider-models', 'earlier', 'chat', 'run-stats', 'room-progress', 'exchange', 'exchange-text', 'file-text', 'usage', 'schedules', 'memory-view', 'browser-wait', 'browser-result', 'diagnostics', 'diagnostics-log', 'diagnostics-clear', 'update-check', 'update-install', 'repo-stars', 'approval-answer', 'thinking', 'workspace-download', 'workspace-describe'])
 
 export function install(rt: ChannelRuntime): void {
   const { ctx } = rt

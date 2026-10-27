@@ -13,8 +13,8 @@
     "build:main": "node scripts/build-main.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p ui/tsconfig.json",
     "start": "electron .",
-    "pack": "electron-builder --dir --publish never",
-    "dist": "electron-builder --publish never",
+    "pack": "node scripts/rebuild-native.mjs && electron-builder --dir --publish never",
+    "dist": "node scripts/rebuild-native.mjs && electron-builder --publish never",
     "check-packed": "node scripts/check-packed.mjs",
     "shot": "node scripts/shot.mjs",
     "icon": "python3 scripts/icon.py",
@@ -27,6 +27,7 @@
     "pnpm": "11.7.0"
   },
   "devDependencies": {
+    "@electron/rebuild": "4.2.1",
     "@types/react-dom": "^19.3.0",
     "electron": "44.7.0",
     "electron-builder": "26.17.0",
@@ -39,9 +40,9 @@
     "vite": "8.3.4"
   },
   "optionalDependencies": {
-    "@rolldown/binding-win32-x64-msvc": "1.2.14",
     "@rolldown/binding-linux-x64-gnu": "1.2.14",
-    "lightningcss-win32-x64-msvc": "1.33.0",
-    "lightningcss-linux-x64-gnu": "1.33.0"
+    "@rolldown/binding-win32-x64-msvc": "1.2.14",
+    "lightningcss-linux-x64-gnu": "1.33.0",
+    "lightningcss-win32-x64-msvc": "1.33.0"
   }
 }

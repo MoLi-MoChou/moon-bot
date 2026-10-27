@@ -40,7 +40,7 @@ jobs:
         working-directory: .
       # The app's unit tests run on Linux (as in DS Bot's test.yml); one file-lock test expects POSIX.
       - run: npm run build -w moon-bot
-      - run: npx electron-builder --win --publish never
+      - run: npm run dist -- --win
       - name: Check the packaged app
         run: node scripts/check-packed.mjs
       - name: Size report (unpacked app, installer)
@@ -85,7 +85,7 @@ jobs:
         working-directory: .
       - run: npm test
       - run: npm run build -w moon-bot
-      - run: npx electron-builder --linux AppImage --publish never
+      - run: npm run dist -- --linux AppImage
       - name: Check the packaged app
         run: xvfb-run -a node scripts/check-packed.mjs dist-pack/linux-unpacked/moon-bot
       - name: Size report (unpacked app, AppImage)

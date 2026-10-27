@@ -1,6 +1,6 @@
 // Scripted Anthropic-Messages-compatible mock that drives the Bot team flows
 // (Main Bot setup, create_bot, message_bot round trips, group chat relay, questions)
-// without a real model. Usage: node dev/mock-llm.ts, then point DEEPSEEK_BASE_URL at it.
+// without a real model. Usage: node dev/mock-llm.ts, then point a local provider endpoint at it.
 //
 // Group turns read only the "This round so far" section of the prompt, so counting goes
 // wrong if the round and older messages are not kept apart. Usage is estimated from the
@@ -211,7 +211,7 @@ function decide(body) {
       const note = textBlocks(last.content).find(value => value.trim().startsWith('[Secret card]'))
       return note ? secretNote(note.trim(), tools) : [text('')]
     }
-    if ((used?.name === 'bash' || used?.name === 'pwsh') && /DSH_SECRET_/.test(used.input?.command ?? '')) {
+    if ((used?.name === 'bash' || used?.name === 'pwsh') && /MOON_BOT_SECRET_/.test(used.input?.command ?? '')) {
       return [text(`终端输出里我看到的是：${resultText.replace(/\s+/g, ' ').trim().slice(0, 200)}`)]
     }
     if (used?.input?.justification === ESCALATION) return [text(result.is_error ? `没跑成：${resultText.slice(0, 80)}` : '命令跑完了，文件已经写好。')]
@@ -597,7 +597,7 @@ function secretNote(note, tools) {
 }
 // Prints a secret's variable in whichever shell the profile offers.
 function echoSecret(name, tools) {
-  const key = `DSH_SECRET_${String(name).toUpperCase()}`
+  const key = `MOON_BOT_SECRET_${String(name).toUpperCase()}`
   return tools.has('pwsh') && !tools.has('bash')
     ? tool('pwsh', { description: 'Print the secret variable', command: `Write-Output "value=$env:${key}"` })
     : tool('bash', { description: 'Print the secret variable', command: `echo "value=$${key}"` })
@@ -739,4 +739,4 @@ const server = createServer((req, res) => {
   })
 })
 
-server.listen(PORT, '127.0.0.1', () => console.log(`ds-bot mock on http://127.0.0.1:${server.address().port}/v1`))
+server.listen(PORT, '127.0.0.1', () => console.log(`Moon Bot mock on http://127.0.0.1:${server.address().port}/v1`))

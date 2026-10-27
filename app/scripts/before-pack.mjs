@@ -1,6 +1,6 @@
-// electron-builder's beforePack hook. The native modules go into the package as npm installed them
-// (npmRebuild: false), so they fit only the architecture of the Node that ran npm. An app built for
-// another architecture would carry them and not start, so such a build stops here.
+// electron-builder's beforePack hook. The native modules are rebuilt by the pack/dist scripts
+// before this hook runs; this hook checks the target architecture and materializes the core link.
+// The architecture check still prevents carrying host binaries into another target.
 import { Arch } from 'electron-builder'
 
 const WHERE = {

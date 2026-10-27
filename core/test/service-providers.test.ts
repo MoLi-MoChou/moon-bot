@@ -40,7 +40,6 @@ test('the providers page adds a provider, and a Bot on it runs its turn', async 
   const { port } = await mock.listen()
   t.after(() => void mock.close())
   const home = mkdtempSync(join(tmpdir(), 'ds-bot-providers-'))
-  t.after(() => rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }))
   writeFileSync(join(home, 'state.json'), JSON.stringify({
     version: 1,
     mainBotIds: ['a'],
@@ -48,7 +47,8 @@ test('the providers page adds a provider, and a Bot on it runs its turn', async 
     rooms: {}, agents: {}, exchanges: [], exchangeTurns: {}, questions: {}, prefs: {}, revision: 0,
   }))
   const service = await startService({ home, password: '', logger: false })
-  t.after(() => void service.close())
+  t.after(() => service.close())
+  t.after(() => rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }))
 
   const call = async (endpoint: string, payload: Record<string, unknown>): Promise<{ ok?: boolean, value?: unknown, error?: { message?: string } }> =>
     (await fetch(`${service.url}/api/bot`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ endpoint, payload }) })).json() as never

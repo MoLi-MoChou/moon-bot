@@ -34,6 +34,10 @@ const HOST_ERRORS: readonly (readonly [RegExp, string])[] = [
   [/^Moon Bot offers no provider (.+)$/, 'Moon Bot 没有服务商 $1'],
   [/^Moon Bot already offers (.+); add it from its list$/, 'Moon Bot 已经提供 $1，请在常用服务商里添加'],
   [/^The protocol must be one of (.+)$/, '协议只能是 $1'],
+  [/^An ACP engine needs a command$/, 'ACP Agent 需要填写命令'],
+  [/^ACP engine arguments must be a list of strings$/, 'ACP Agent 参数必须是一行一个字符串'],
+  [/^Invalid Bot engine$/, 'Bot 的执行引擎配置无效'],
+  [/^Unknown engine$/, '找不到这个执行引擎'],
   [/^(.+) is not set up$/, '$1 还没有设置'],
   [/^(.+) comes with this setup and cannot be removed$/, '$1 是这个配置自带的，不能删除'],
   [/^A Bot named (.+) already exists$/, '已经有叫 $1 的 Bot 了'],
@@ -104,9 +108,7 @@ export function installLocale(locale: LocaleService | null | undefined): () => v
   }
 }
 
-// Moon Bot: the product is named Moon Bot (in Chinese too) wherever the copy names it. The
-// upstream strings say DS Bot; the attribution lines keep the upstream name.
-const KEEP_NAME = new Set<string>(['Based on DS Bot'])
+// Moon Bot: the product is named Moon Bot (in Chinese too) wherever the copy names it.
 export const productName = (): string => 'Moon Bot'
 export const brand = (text: string): string => text.replace(/\b(?:DS Bot|DeepSeek Bot)\b/g, productName())
 
@@ -114,7 +116,7 @@ export const brand = (text: string): string => text.replace(/\b(?:DS Bot|DeepSee
 // not a key comes back unchanged.
 export function t(key: I18nKey, params?: Record<string, unknown>): string {
   const text = bound ? bound(key, params) : fill(key, params)
-  return KEEP_NAME.has(key) ? text : brand(text)
+  return brand(text)
 }
 
 // A message from the host, in the interface language.

@@ -8,7 +8,7 @@ import { createRosterSetup } from './roster-setup.ts'
 import { createRosterRoles } from './roster-roles.ts'
 import { createRosterRooms } from './roster-rooms.ts'
 import type { RosterRooms } from './roster-rooms.ts'
-import type { HostRuntime, StoredBot, StoredRoom } from './runtime.js'
+import type { HostRuntime, StoredBot, StoredBotEngine, StoredRoom } from './runtime.js'
 
 interface CreateBotOptions {
   readonly name?: unknown
@@ -24,6 +24,8 @@ interface CreateBotOptions {
   readonly workDir?: string | null
   readonly copyOf?: string
   readonly pickModel?: boolean
+  readonly engine?: unknown
+  readonly runtimeId?: unknown
 }
 
 interface UpdateBotPatch {
@@ -36,6 +38,20 @@ interface UpdateBotPatch {
   readonly effort?: string | null
   readonly permission?: string | null
   readonly workDir?: string | null
+  readonly engine?: unknown
+  readonly runtimeId?: unknown
+}
+
+const cleanEngine = (value: unknown): StoredBotEngine | undefined => {
+  if (value === null || value === undefined) return undefined
+  if (typeof value !== 'object' || Array.isArray(value)) throw new Error('Invalid Bot engine')
+  const input = value as { kind?: unknown, command?: unknown, args?: unknown, key?: unknown }
+  if (input.kind === 'builtin') return { kind: 'builtin' }
+  if (input.kind !== 'acp' || typeof input.command !== 'string' || input.command.trim() === '') throw new Error('An ACP engine needs a command')
+  const args = input.args === undefined ? [] : Array.isArray(input.args) && input.args.every(arg => typeof arg === 'string') ? input.args.map(arg => arg.slice(0, 400)) : undefined
+  if (args === undefined) throw new Error('ACP engine arguments must be a list of strings')
+  const key = typeof input.key === 'string' && input.key.trim() !== '' ? input.key.trim().slice(0, 120) : input.command.trim()
+  return { kind: 'acp', command: input.command.trim().slice(0, 400), args, key }
 }
 
 export function install(rt: HostRuntime): void {
@@ -101,9 +117,11 @@ export function install(rt: HostRuntime): void {
   }
 
   async function buildBot(cleanName: string, {
-    role = '', instructions = '', color, brief = '', createdBy, main = false, avatar, model, effort, workDir, copyOf, pickModel = false,
+    role = '', instructions = '', color, brief = '', createdBy, main = false, avatar, model, effort, workDir, copyOf, pickModel = false, engine, runtimeId,
   }: CreateBotOptions): Promise<StoredBot> {
     const cleanAvatarValue = cleanAvatar(avatar)
+    const engineSpec = cleanEngine(engine)
+    const cleanRuntimeId = typeof runtimeId === 'string' && runtimeId.trim() !== '' ? runtimeId.trim().slice(0, 120) : undefined
     // The model is fixed at creation, so a later change of the DSH default leaves it alone.
     const modelRef = model ? await rt.resolveModel(model) : pickModel ? undefined : await rt.defaultModel()
     // A thinking level needs a model to resolve against; with none it would be dropped
@@ -122,6 +140,8 @@ export function install(rt: HostRuntime): void {
         ...(cleanAvatarValue ? { avatar: cleanAvatarValue } : {}),
         ...(modelRef ? { model: modelRef } : {}),
         ...(effortId ? { effort: effortId } : {}),
+        ...(engineSpec ? { engine: engineSpec } : {}),
+        ...(cleanRuntimeId ? { runtimeId: cleanRuntimeId } : {}),
         ...(dir ? { workDir: dir } : {}),
         instructions: String(instructions).trim(),
         createdAt: Date.now(),
@@ -174,6 +194,8 @@ export function install(rt: HostRuntime): void {
       avatar: bot.avatar,
       ...(served && bot.model !== undefined ? { model: bot.model } : {}),
       ...(served && bot.effort !== undefined ? { effort: bot.effort } : {}),
+      ...(bot.engine === undefined ? {} : { engine: bot.engine }),
+      ...(bot.runtimeId === undefined ? {} : { runtimeId: bot.runtimeId }),
       ...(workDir === undefined ? {} : { workDir }),
       copyOf: bot.id,
     })
@@ -193,6 +215,8 @@ export function install(rt: HostRuntime): void {
     // model it keeps, or — the model cleared — the one it last ran on.
     const effortRef = modelRef === undefined ? bot.model ?? bot.appliedModel : modelRef ?? bot.appliedModel
     let effortId: string | null | undefined
+    const engineSpec = patch.engine === undefined ? undefined : cleanEngine(patch.engine)
+    const runtimeId = patch.runtimeId === undefined ? undefined : typeof patch.runtimeId === 'string' && patch.runtimeId.trim() !== '' ? patch.runtimeId.trim().slice(0, 120) : undefined
     if (patch.effort !== undefined) {
       if (patch.effort === null || patch.effort === '') effortId = null
       else {
@@ -216,6 +240,8 @@ export function install(rt: HostRuntime): void {
     if (patch.role !== undefined) bot.role = String(patch.role).trim().slice(0, 24)
     if (patch.instructions !== undefined) bot.instructions = String(patch.instructions).trim()
     let modelChanged = false
+    const engineChanged = patch.engine !== undefined
+    const runtimeChanged = patch.runtimeId !== undefined
     if (patch.color !== undefined) {
       if (patch.color === null) delete bot.color
       else if (isColor(currentColor(patch.color))) bot.color = currentColor(patch.color)
@@ -234,6 +260,14 @@ export function install(rt: HostRuntime): void {
       if (effortId === null || effortId === undefined) delete bot.effort
       else bot.effort = effortId
       modelChanged = true
+    }
+    if (engineChanged) {
+      if (engineSpec === undefined) delete bot.engine
+      else bot.engine = engineSpec
+    }
+    if (runtimeChanged) {
+      if (runtimeId === undefined) delete bot.runtimeId
+      else bot.runtimeId = runtimeId
     }
     if (patch.permission !== undefined) await rt.setPermission?.(bot, patch.permission)
     const moved = moving && workDir !== bot.workDir

@@ -37,6 +37,14 @@ export interface HostDefaults {
   readonly mainRole: string
 }
 
+/** The runtime selected for one Bot's turns. */
+export interface StoredBotEngine {
+  readonly kind: 'builtin' | 'acp'
+  readonly command?: string
+  readonly args?: readonly string[]
+  readonly key?: string
+}
+
 /** A Bot as `state.json` stores it. */
 export interface StoredBot {
   readonly id: string
@@ -49,6 +57,8 @@ export interface StoredBot {
   appliedModel?: string
   effort?: string
   appliedEffort?: string
+  engine?: StoredBotEngine
+  runtimeId?: string
   segments?: readonly { readonly sessionId: string; readonly endedAt?: number }[]
   workDir?: string
   capabilities?: string[]
@@ -158,6 +168,8 @@ export interface ModelEntry {
   providerName?: string
   id?: string
   name?: string
+  contextWindow?: number
+  maxTokens?: number
   input?: readonly string[]
   needsKey?: boolean
   reasoning?: ModelReasoning

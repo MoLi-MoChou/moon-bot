@@ -56,9 +56,9 @@ test('a turn runs in-process with a gated tool and lands in the transcript', asy
   const { port } = await mock.listen()
   t.after(() => void mock.close())
   const home = mkdtempSync(join(tmpdir(), 'ds-bot-engine-'))
-  t.after(() => rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }))
   const store = openStore(home)
   t.after(() => store.close())
+  t.after(() => rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }))
   store.sessions.upsertSession({ id: 'b1', kind: 'bot', ownerId: 'bot-1' })
 
   const decisions = new Map<string, GateDecision>()
@@ -228,9 +228,9 @@ test('the second turn replays the first: history, tools, and the raw kernel mess
   const { port } = await mock.listen()
   t.after(() => void mock.close())
   const home = mkdtempSync(join(tmpdir(), 'ds-bot-engine-'))
-  t.after(() => rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }))
   const store = openStore(home)
   t.after(() => store.close())
+  t.after(() => rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }))
   store.sessions.upsertSession({ id: 'b1', kind: 'bot', ownerId: 'bot-1' })
   const transcript = sqliteTranscriptOf(store.sessions as unknown as SessionsLike)
   const note: ToolDefinition = {

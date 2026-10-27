@@ -50,11 +50,9 @@ interface Host {
 
 async function start(t: { after: (run: () => Promise<void> | void) => void }): Promise<Host> {
   const agentDir = mkdtempSync(join(tmpdir(), 'acp-full-'))
-  t.after(() => rmSync(agentDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }))
   writeFileSync(join(agentDir, 'agent.cjs'), AGENT)
 
   const home = mkdtempSync(join(tmpdir(), 'ds-bot-acpbot-'))
-  t.after(() => rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }))
   writeFileSync(join(home, 'state.json'), JSON.stringify({
     version: 1,
     mainBotIds: ['a'],
@@ -110,6 +108,8 @@ async function start(t: { after: (run: () => Promise<void> | void) => void }): P
   t.after(async () => {
     await ctx.dispose()
     await wired.close()
+    rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 })
+    rmSync(agentDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 })
   })
   return { ctx, tool, agentOf }
 }

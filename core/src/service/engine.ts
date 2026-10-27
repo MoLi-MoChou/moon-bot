@@ -17,6 +17,7 @@ import type { EngineEvent } from '../engine/events.ts'
 import { splitRef } from '../host/text.ts'
 import { HIDDEN_TOOLS } from '../host/tools/shared.ts'
 import { LEAN_HIDDEN_TOOLS } from '../shared/lean.ts'
+import { resolveModelSpec } from '../shared/model-catalog.ts'
 import { openStore, type Store } from '../store/db.ts'
 import { ServiceContext } from './context.ts'
 import { FileAttachments } from './attachments.ts'
@@ -24,13 +25,13 @@ import { ServiceApproval } from './approval.ts'
 import { MemorySync } from './memory-sync.ts'
 import { TaskScheduler } from './scheduler.ts'
 import { PolicyEngine } from '../engine/policy.ts'
-import { AcpRuntime } from '../engine/acp/runtime.ts'
-import type { AgentRuntime } from '../engine/runtime.ts'
+import { LocalRunner } from '../engine/runner.ts'
+import { localEngineCatalog } from '../engine/acp/discovery.ts'
 import type { StandaloneLlm } from './llm.ts'
 
 /** The host runtime's own shape, as the wiring reads it. */
 interface Runtime {
-  botOf(id: string | undefined): { model?: string, appliedModel?: string, effort?: string, appliedEffort?: string } | undefined
+  botOf(id: string | undefined): { model?: string, appliedModel?: string, effort?: string, appliedEffort?: string, engine?: unknown, runtimeId?: string } | undefined
   selfOf(sessionId: string): string | undefined
   toolRegistry: { names(): readonly string[], definitions(names?: readonly string[]): readonly unknown[] }
 }
@@ -93,6 +94,7 @@ export function wireService(options: WireOptions): WiredService {
       ...(options.services === undefined ? {} : options.services),
       attachments,
       approval,
+      engineCatalog: localEngineCatalog,
     },
     // The providers and models modules read the LLM service through the context; the
     // standalone one (settings + credentials + discovery) is the same instance the
@@ -146,12 +148,22 @@ export function wireService(options: WireOptions): WiredService {
         const route = options.llm.resolveRoute(split.provider)
         if (route === undefined) return undefined
         const effort = config?.effort ?? bot?.appliedEffort ?? bot?.effort
+        const matched = route.models.find(model => model.id === split.model)
+        const spec = resolveModelSpec(split.model)
+        const contextWindow = matched?.contextWindow ?? spec.contextWindow
+        const maxTokens = matched?.maxTokens ?? spec.maxTokens
+        const input = matched?.input ?? (spec.inputModalities ? [...spec.inputModalities] : undefined)
+        const reasoning = matched?.reasoning ?? spec.reasoning ?? (effort !== undefined)
         return {
           id: split.model,
           baseUrl: route.baseUrl,
           api: route.api,
           ...(route.apiKey !== undefined ? { apiKey: route.apiKey } : {}),
           ...(effort !== undefined ? { effort } : {}),
+          ...(contextWindow !== undefined ? { contextWindow } : {}),
+          ...(maxTokens !== undefined ? { maxTokens } : {}),
+          ...(input !== undefined ? { input } : {}),
+          ...(reasoning !== undefined ? { reasoning } : {}),
         }
       },
     },
@@ -198,32 +210,10 @@ export function wireService(options: WireOptions): WiredService {
   const engine = new BuiltinRuntime({ services, emit: emitEvent })
 
   const agents = new Map<string, ReturnType<typeof engineAgentOf>>()
-  // An ACP Bot runs its turns in an external agent; one runtime per engine spec,
-  // shared by every session on it. Everything else about being a Bot — the name, the
-  // memory, the group chats, the work — is the roster's, unchanged.
-  const acpRuntimes = new Map<string, AcpRuntime>()
-  const runtimeOf = (sessionId: string): AgentRuntime => {
-    const bot = runtime.botOf(runtime.selfOf(sessionId)) as { engine?: unknown } | undefined
-    const engineSpec = bot?.engine
-    if (engineSpec !== null && typeof engineSpec === 'object' && (engineSpec as { kind?: unknown }).kind === 'acp') {
-      const spec = engineSpec as { command?: unknown, args?: readonly string[] | undefined, key?: unknown }
-      const command = typeof spec.command === 'string' ? spec.command : ''
-      if (command !== '') {
-        const key = typeof spec.key === 'string' ? spec.key : command
-        let acp = acpRuntimes.get(key)
-        if (acp === undefined) {
-          acp = new AcpRuntime({
-            command,
-            ...(Array.isArray(spec.args) ? { args: spec.args } : {}),
-            emit: emitEvent,
-          })
-          acpRuntimes.set(key, acp)
-        }
-        return acp
-      }
-    }
-    return engine
-  }
+  // The host only knows the runner boundary. LocalRunner is today's in-process
+  // implementation; a headless daemon can replace it without changing delivery.
+  const runner = new LocalRunner({ builtin: engine, emit: emitEvent })
+  const runtimeOf = (sessionId: string) => runner.runtimeFor(sessionId, runtime.botOf(runtime.selfOf(sessionId)))
 
   const agentOf = (sessionId: string): unknown => {
     let agent = agents.get(sessionId)
@@ -231,7 +221,7 @@ export function wireService(options: WireOptions): WiredService {
       store.sessions.upsertSession({ id: sessionId, kind: 'bot', ownerId: runtime.selfOf(sessionId) ?? sessionId })
       // The part pager reads the agent session's seq as "the next one"; the store knows.
       agents.set(sessionId, agent = engineAgentOf(sessionId, {
-        runtime: runtimeOf(sessionId),
+        runtime: () => runtimeOf(sessionId),
         emitEvent,
         seqOf: () => store.sessions.countMessages(sessionId) + 1,
       }))
@@ -285,7 +275,7 @@ ${task.prompt}` }],
     context, runtime, store, engine, agentOf, emitEvent,
     close: async () => {
       await engine.stop()
-      for (const acp of acpRuntimes.values()) await acp.stop().catch(() => {})
+      await runner.stop()
       await context.dispose()
       store.close()
     },

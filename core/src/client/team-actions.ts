@@ -101,6 +101,7 @@ export function teamActions({ call, after, partFor, roster, ui, live, cards, hel
     createRoom: (members: readonly string[], options: Record<string, unknown> = {}) => after(call('create-room', { members, ...options })),
     updateBot: (id: string, patch: Record<string, unknown>) => after(call('update-bot', { id, ...patch })),
     refreshModels: () => after(call('models')).catch(() => {}),
+    refreshEngines: () => after(call('engines')).then(value => value as { engines: readonly Record<string, unknown>[]; of: Readonly<Record<string, string>> }).catch(() => ({ engines: [], of: {} })),
     efforts: (ref: string) => call('efforts', { ref }),
     runStats: (botId: string) => call('run-stats', { botId }),
     folders: () => call('folders'),

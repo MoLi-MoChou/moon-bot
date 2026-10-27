@@ -143,11 +143,11 @@ export type FirstRunResult = SavedPlaces | { readonly quit: true }
 
 /**
  * Where the app keeps its data and the Bots' files, asked at the first start.
- * A run on throwaway folders (DS_BOT_HOME, for development and tests) asks nothing.
+ * A run on throwaway folders (MOON_BOT_DATA, for development and tests) asks nothing.
  */
 export async function chooseLocations(signal: AbortSignal): Promise<FirstRunResult> {
-  const throwaway = process.env.DS_BOT_HOME
-  if (throwaway) return { dataDir: throwaway, workspace: process.env.DS_BOT_WORKSPACE || undefined }
+  const throwaway = process.env.MOON_BOT_DATA
+  if (throwaway) return { dataDir: throwaway, workspace: process.env.MOON_BOT_WORKSPACE || undefined }
   const file = locationsFile()
   // Before the Moon Bot rename the app was "Mochou" or "DSH Bot": their saved places still apply.
   const legacy = ['Mochou', 'DSH Bot'].map(name => join(app.getPath('appData'), name, 'locations.json')).find(path => existsSync(path))

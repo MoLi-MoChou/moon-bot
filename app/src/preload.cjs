@@ -91,11 +91,7 @@ function captionColors(mica) {
     const [red, green, blue] = context.getImageData(0, 0, 1, 1).data
     return `rgb(${red}, ${green}, ${blue})`
   }
-  const column = () => {
-    if (!mica) return document.querySelector('div[class*="_sidebarCol"]')
-    const right = document.querySelector('div[class*="_rightbarCol"]')
-    return right !== null && right.getBoundingClientRect().width > 0 ? right : document.querySelector('div[class*="_centerCol"]')
-  }
+  const column = () => document.querySelector('.dsb-main') ?? document.querySelector('.dsb-side')
   let frame
   const surface = () => {
     const start = column()

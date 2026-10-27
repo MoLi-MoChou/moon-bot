@@ -15,6 +15,8 @@ export interface ResolvedModel {
   readonly effort?: string | undefined
   readonly contextWindow?: number | undefined
   readonly maxTokens?: number | undefined
+  readonly input?: readonly string[] | undefined
+  readonly reasoning?: boolean | undefined
 }
 
 /** The model catalog: what a session runs on, and what else exists. */

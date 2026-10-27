@@ -59,8 +59,8 @@ change is listed here (Apache-2.0 section 4(b)); code changes carry a
  11. Linux sandbox: the AppImage adds --no-sandbox when the kernel or AppArmor
      forbids unprivileged user namespaces (app/src/sandbox.mjs);
      DSH_BOT_SANDBOX=1 keeps the sandbox.
- 12. About lists "基于 DS Bot" with a link to the upstream project. The dev mock
-     model answers "提权" in a Bot's own chat with a full-access shell request.
+ 12. The dev mock model answers "提权" in a Bot's own chat with a full-access
+     shell request.
  13. Web mode (app/src/web.mjs): the same UI served by the Node host behind a
      password page, `npm run web` and a Dockerfile. Themes are DeepSeek, Claude
      and Grok Bot (light and dark). Motion and chat details follow open-claude-ui.

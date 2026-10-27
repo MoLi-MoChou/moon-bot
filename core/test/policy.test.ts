@@ -10,9 +10,9 @@ import { openStore } from '../src/store/db.ts'
 
 const fresh = (t: { after: (run: () => void) => void }, budget = DEFAULT_BUDGET) => {
   const home = mkdtempSync(join(tmpdir(), 'ds-bot-policy-'))
-  t.after(() => rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }))
   const store = openStore(home)
   t.after(() => store.close())
+  t.after(() => rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }))
   const engine = new PolicyEngine({ countersOf: async (sessionId, level, spend) => store.policy.spend(sessionId, level, spend) }, budget)
   return { store, engine }
 }

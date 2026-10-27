@@ -9,6 +9,7 @@ files:
   # The main process ships bundled (dist-main/main.cjs); the child Host (service-host.ts),
   # preload.cjs and mica.css run from src/ as Node type-stripped sources.
   - dist-main/**
+  - ui/dist/**
   - src/**
   - assets/**
   # Moon Bot: size. Source maps, type declarations and test folders do not run.

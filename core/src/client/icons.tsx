@@ -99,6 +99,7 @@ export function FileKindIcon({ kind, size = 15 }: {
     return <svg width={size} height={size} viewBox='0 0 20 20' fill='none' stroke='currentColor' strokeWidth={1.5} strokeLinecap='round' strokeLinejoin='round' aria-hidden>{KIND_PATHS[kind].map((d, index) => <path key={index} d={d}/>)}</svg>;
 }
 // A shelf of books: everything the team has handed over, kept in one place.
+export const RelayIcon = lineIcon(['M10 3v3.2', 'M10 11.8V15', 'M6.4 6.6a5 5 0 000 6.8', 'M13.6 6.6a5 5 0 010 6.8']);
 export const LibraryIcon = lineIcon(['M4 4.5h3.2v11H4z', 'M8.7 4.5h3.2v11H8.7z', 'M14.6 5.2l2.2.5-2.1 10.3-2.2-.5z']);
 // Defined here, after the icons: SettingsDialog only reads them at render time.
 // Two speech bubbles, the back one peeking out: a group chat.

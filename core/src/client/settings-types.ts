@@ -3,6 +3,7 @@
 import type { ModelEntry } from './model-menu.tsx'
 import type { SecretActions, SecretEntry, SecretRequest } from './secret-card.tsx'
 import type { Connector, ConnectorActions } from './connectors.tsx'
+import type { RelayActions } from './relay-page.tsx'
 import type { FolderMenuActions } from './folder-menu.tsx'
 import type { UsagePageProps } from './usage-page.tsx'
 import type { DiagnosticsReport } from './feedback.tsx'
@@ -89,7 +90,7 @@ export interface BotPatch {
   hidden?: boolean | undefined
   permission?: string | undefined
 }
-export interface SettingsActions extends FolderMenuActions, SecretActions, ConnectorActions {
+export interface SettingsActions extends FolderMenuActions, SecretActions, ConnectorActions, RelayActions {
   closeSettings: () => void
   openSettings: (page: string, id?: string | null) => void
   setPrefs: (prefs: SettingsPrefs) => Promise<unknown>

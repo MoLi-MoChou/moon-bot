@@ -14,6 +14,7 @@ import * as providers from './host/providers.ts'
 import * as permissions from './host/permissions.ts'
 import * as turns from './host/turns.ts'
 import * as handoffs from './host/handoffs.ts'
+import * as tasksPanel from './host/tasks-panel.ts'
 import * as delivery from './host/delivery.ts'
 import * as roster from './host/roster.ts'
 import * as folders from './host/folders.ts'
@@ -49,7 +50,7 @@ export const inject = ['llm', 'tools', 'systemPrompt', 'sessionController', 'ses
 // the functions other modules call; they call them through `rt` at run time, never during
 // install. Listeners run and tools are listed in registration order, so this order holds:
 // usage meters model requests after every listener that rewrites them.
-const MODULES = [diagnostics, store, models, providers, permissions, turns, handoffs, delivery, roster, folders, agents, prompt, timeContext, tools, chatIndex, groups, approvals, resume, memory, parts, images, secrets, connectors, capabilities, schedules, browser, usage, update, thinking, feed, workspaceFiles, channel]
+const MODULES = [diagnostics, store, models, providers, permissions, turns, handoffs, tasksPanel, delivery, roster, folders, agents, prompt, timeContext, tools, chatIndex, groups, approvals, resume, memory, parts, images, secrets, connectors, capabilities, schedules, browser, usage, update, thinking, feed, workspaceFiles, channel]
 
 export function apply(ctx: DshContext, config: Record<string, unknown> = {}): void {
   createRuntime(ctx, config)

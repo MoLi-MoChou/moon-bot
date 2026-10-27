@@ -129,6 +129,8 @@ export function teamActions({ call, after, partFor, roster, ui, live, cards, hel
     connectorConnect: (id: string, token: string) => after(call('connector-connect', { id, token })),
     connectorDisconnect: (id: string) => after(call('connector-disconnect', { id })),
     connectorRetry: (id: string) => after(call('connector-retry', { id })),
+    tasks: () => call('tasks').then(value => value as { running: readonly Record<string, unknown>[]; completed: readonly Record<string, unknown>[]; waiting: readonly Record<string, unknown>[] }),
+    stopTask: (sessionId: string) => after(call('task-stop', { sessionId })),
     relayInvites: () => call('relay-invites').then(value => value as { invites: readonly { agentId: string; createdAt: number; revokedAt: number | null; lastSeenAt: number | null; online: boolean }[] }),
     relayInviteCreate: (agentId: string) => call('relay-invite-create', { agentId }).then(value => value as { agentId: string; token: string }),
     relayInviteRevoke: (agentId: string) => call('relay-invite-revoke', { agentId }).then(value => value as { invites: readonly { agentId: string; createdAt: number; revokedAt: number | null; lastSeenAt: number | null; online: boolean }[] }),

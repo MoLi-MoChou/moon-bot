@@ -246,6 +246,7 @@ export function wireService(options: WireOptions): WiredService {
     // The session/event envelope: a type plus its data, as the DSH runtime delivered it.
     context.emit('session/event', { id: sessionId }, { type: event.type, data: event })
     noteTurnEvent(sessionId, event)
+    ;(runtime as unknown as { noteTurn?(sessionId: string, event: EngineEvent): void }).noteTurn?.(sessionId, event)
   }
   const engine = new BuiltinRuntime({ services, emit: emitEvent })
 

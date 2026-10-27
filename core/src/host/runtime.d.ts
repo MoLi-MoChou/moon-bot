@@ -336,6 +336,11 @@ export interface HostRuntime {
   ensureWorkspace(): Promise<string>
   indexAgents?(): void
   dshSpawn?(command: string, argv: readonly string[], options: { readonly windowsHide?: boolean }): ChildProcess
+  // --- provided by tasks-panel.ts
+  tasksView?(): { readonly running: readonly Readonly<Record<string, unknown>>[]; readonly completed: readonly Readonly<Record<string, unknown>>[]; readonly waiting: readonly { readonly botId: string; readonly botName: string; readonly for: readonly string[] }[] }
+  noteTurn?(sessionId: string, event: { readonly type?: string; readonly reason?: unknown }): void
+  stopTask?(sessionId: string): Promise<boolean>
+
   // --- provided by secrets/install.ts
   loadSecrets(): Promise<unknown>
   secretsView(): readonly SecretView[]

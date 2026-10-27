@@ -162,6 +162,11 @@ export interface BotChannelRpcMap {
   'relay-invite-create': { request: { agentId: string }; response: { readonly agentId: string; readonly token: string } }
   'relay-invite-revoke': { request: { agentId: string }; response: { readonly invites: readonly RelayInviteView[] } }
 
+  // The task panel (2026-10-28 tasks-panel): who is working now, what finished lately,
+  // and the stop that ends one turn without messaging its Bot.
+  tasks: { request: Record<string, never>; response: { readonly running: readonly Record<string, unknown>[]; readonly completed: readonly Record<string, unknown>[]; readonly waiting: readonly Record<string, unknown>[] } }
+  'task-stop': { request: { sessionId: string }; response: { readonly stopped: boolean } }
+
   // Conversations
   chat: { request: { botId: string; cursor?: ChatCursor }; response: ChatPage }
   earlier: { request: { sessionId: string; cursor?: ChatCursor }; response: ChatPage & { startedAt: number | null } }

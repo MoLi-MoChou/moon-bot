@@ -39,7 +39,22 @@ jobs:
           MOON_BOT_PASSWORD=bench core/dev/bench.sh e2e 3100 8790 reset
           MOON_BOT_PASSWORD=bench core/dev/bench.sh e2e 3100 8790 start
       - name: Drive the browser
-        run: MOON_BOT_PASSWORD=bench node core/dev/e2e-web.mjs http://127.0.0.1:3100 --mock-url http://127.0.0.1:8790/v1 --out "$RUNNER_TEMP/e2e-shots"
+        run: |
+          set +e
+          MOON_BOT_PASSWORD=bench node core/dev/e2e-web.mjs http://127.0.0.1:3100 --mock-url http://127.0.0.1:8790/v1 --out "$RUNNER_TEMP/e2e-shots" 2>&1 | tee "$RUNNER_TEMP/e2e.log"
+          code=${PIPESTATUS[0]}
+          if [ "$code" != "0" ]; then
+            # The step log needs a login to read; annotations are public, so the reason
+            # has to travel as ::error:: lines.
+            echo "::error::e2e-web exited $code"
+            tail -n 25 "$RUNNER_TEMP/e2e.log" | sed "s/^/::error::/"
+            echo "::error::bench service log:"
+            tail -n 40 .moon-bot-test-e2e/service.log 2>/dev/null | sed "s/^/::error::/"
+            echo "::error::bench mock log:"
+            tail -n 10 .moon-bot-test-e2e/mock.log 2>/dev/null | sed "s/^/::error::/"
+            exit 1
+          fi
+          exit 0
       - name: Keep the screenshots
         if: always()
         uses: actions/upload-artifact@v4

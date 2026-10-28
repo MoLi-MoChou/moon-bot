@@ -145,9 +145,10 @@ export function createClientState(ctx: ClientContext): ClientState {
     noteMemoryNews(value.memoryNews ?? {})
     const current = snapshot()
     // Connector and capability states change without a new revision.
-    const live: { connectors?: unknown; capabilityStatuses?: Record<string, unknown> } = {}
+    const live: { connectors?: unknown; capabilityStatuses?: Record<string, unknown>; capabilityTools?: Record<string, readonly string[]> } = {}
     if (value.connectors !== undefined && JSON.stringify(value.connectors) !== JSON.stringify(current.connectors ?? [])) live.connectors = value.connectors
     if (value.capabilityStatuses !== undefined && JSON.stringify(value.capabilityStatuses) !== JSON.stringify(current.capabilityStatuses ?? {})) live.capabilityStatuses = value.capabilityStatuses
+    if (value.capabilityTools !== undefined && JSON.stringify(value.capabilityTools) !== JSON.stringify(current.capabilityTools ?? {})) live.capabilityTools = value.capabilityTools
     if (Object.keys(live).length > 0 && current.ready) roster.set({ ...current, ...live })
     if (value.unchanged || (value.revision === current.revision && value.modelsKey === current.modelsKey)) return
     // On a browser with no visit record yet, everything already there counts as seen.

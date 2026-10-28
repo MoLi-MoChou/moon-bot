@@ -1,195 +1,145 @@
-import { createElement as h, useEffect, useState } from 'react';
+import { createElement as h, useState } from 'react';
 import { t } from './i18n.ts';
-// A capability as the host reports it: an MCP server, a skill or a pack of them.
-export interface Capability {
-    name: string;
-    kind: string;
-    description?: string;
-    transport?: string;
-    command?: string;
-    args?: string[];
-    env?: Record<string, string>;
-    url?: string;
-    headers?: Record<string, string>;
-    content?: string;
-    items?: string[];
-    approved?: boolean;
+import { CloseIcon, PlusIcon, PlugIcon, SearchIcon } from './icons.tsx';
+import { blankCapability, draftFromCapability, type CapabilityDraft } from './capability-draft.ts';
+import { CapabilityForm } from './capability-form.tsx';
+import { CapabilityRow } from './capability-row.tsx';
+import { countsByKind, filterCapabilities, groupCapabilities, healthOf, keyReadiness, toolsOf, type CapabilityFilterKind } from './capability-library.ts';
+import type { Capability, CapabilityActions, CapabilityBot, CapabilityStatus, RunWork } from './capability-types.ts';
+
+export type { Capability, CapabilityActions, RunWork } from './capability-types.ts';
+export type { CapabilityDraft } from './capability-draft.ts';
+
+interface CapabilityRoster {
+    capabilities?: readonly Capability[];
+    bots?: readonly CapabilityBot[];
+    secrets?: readonly { name: string }[];
+    capabilityStatuses?: Readonly<Record<string, Readonly<Record<string, CapabilityStatus | undefined>> | undefined>>;
+    capabilityTools?: Readonly<Record<string, readonly string[]>>;
 }
-// The form's own shape: every field is a string in the inputs, and the JSON ones stay
-// text until the form is sent.
-interface CapabilityDraft {
-    name: string;
-    kind: string;
-    description: string;
-    transport: string;
-    command: string;
-    argsText: string;
-    envText: string;
-    url: string;
-    headersText: string;
-    content: string;
-    items: string[];
-    originalName?: string | undefined;
-}
-interface CapabilityStatus {
-    state: string;
-    error?: string;
-}
-export interface CapabilityActions {
-    saveCapability: (payload: Record<string, unknown>) => Promise<unknown>;
-    deleteCapability: (name: string) => Promise<unknown>;
-    approveCapability: (name: string) => Promise<unknown>;
-    setBotCapability: (botId: string, name: string, attached: boolean) => Promise<unknown>;
-}
-export type RunWork = (work: Promise<unknown>) => unknown;
-const blank = (): CapabilityDraft => ({ name: '', kind: 'mcp', description: '', transport: 'stdio', command: '', argsText: '', envText: '{}', url: '', headersText: '{}', content: '', items: [] });
-const parseMap = (text: string, label: string): Record<string, unknown> => {
-    let value;
-    try {
-        value = JSON.parse(text || '{}');
-    }
-    catch {
-        throw new Error(t('{label} must be valid JSON.', { label }));
-    }
-    if (!value || typeof value !== 'object' || Array.isArray(value))
-        throw new Error(t('{label} must be a JSON object.', { label }));
-    return value;
-};
-const statusText = (status: CapabilityStatus | undefined): string | undefined => !status ? undefined : status.state === 'ready' ? t('Ready')
-    : status.state === 'needs-approval' ? t('Needs approval')
-        : status.state === 'error' ? t('Could not connect: {error}', { error: status.error ?? '' })
-            : t('Connecting…');
-function Field({ label, value, onChange, multiline = false, disabled = false, placeholder }: {
-    label: string;
-    value: string;
-    onChange: (value: string) => void;
-    multiline?: boolean;
-    disabled?: boolean;
-    placeholder?: string;
-}) {
-    return <label className='bt-set-row bt-bs-row bt-bs-stack'><span className='bt-set-copy'><span className='bt-bs-label'>{t(label)}</span></span>{h(multiline ? 'textarea' : 'input', {
-        className: multiline ? 'bt-input bt-input-area' : 'bt-input',
-        value,
-        disabled,
-        maxLength: label === 'Name' ? 32 : undefined,
-        placeholder,
-        spellCheck: false,
-        onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onChange(event.target.value),
-    })}</label>;
-}
-function CapabilityForm({ draft, setDraft, items, actions, onClose }: {
-    draft: CapabilityDraft;
-    setDraft: React.Dispatch<React.SetStateAction<CapabilityDraft | null>>;
-    items: Capability[];
-    actions: CapabilityActions;
-    onClose: () => void;
-}) {
-    const [error, setError] = useState('');
-    const set = <K extends keyof CapabilityDraft>(key: K, value: CapabilityDraft[K]): void => {
-        setDraft(previous => (previous === null ? null : ({ ...previous, [key]: value } as CapabilityDraft)));
-    };
-    const submit = async (event: React.FormEvent) => {
-        event.preventDefault();
-        setError('');
-        let payload: Record<string, unknown>;
-        try {
-            payload = { name: draft.name.trim(), kind: draft.kind, description: draft.description };
-            if (draft.kind === 'mcp' && draft.transport === 'stdio') {
-                payload.transport = 'stdio';
-                payload.command = draft.command;
-                payload.args = draft.argsText.split('\n').filter(line => line !== '');
-                payload.env = parseMap(draft.envText, t('Environment'));
-            }
-            else if (draft.kind === 'mcp') {
-                payload.transport = 'streamable-http';
-                payload.url = draft.url;
-                payload.headers = parseMap(draft.headersText, t('Headers'));
-            }
-            else if (draft.kind === 'skill')
-                payload.content = draft.content;
-            else
-                payload.items = draft.items;
-        }
-        catch (failure) {
-            setError((failure as {
-                message?: string;
-            } | null)?.message ?? String(failure));
-            return;
-        }
-        try {
-            await actions.saveCapability(payload);
-            onClose();
-        }
-        catch (failure) {
-            setError((failure as {
-                message?: string;
-            } | null)?.message ?? String(failure));
-        }
-    };
-    const available = items.filter(item => item.name !== draft.name && ['mcp', 'skill'].includes(item.kind));
-    return <form className='bt-connector-form' onSubmit={submit}><Field label='Name' value={draft.name} disabled={draft.originalName !== undefined} onChange={value => set('name', value)} placeholder='my-tool' /><label className='bt-set-row bt-bs-row bt-bs-stack'><span className='bt-set-copy'><span className='bt-bs-label'>{t('Type')}</span></span><select className='bt-input' value={draft.kind} disabled={draft.originalName !== undefined} onChange={(event: React.ChangeEvent<HTMLSelectElement>) => set('kind', event.target.value)}>{['mcp', 'skill', 'pack'].map(kind => <option key={kind} value={kind}>{t(kind === 'mcp' ? 'MCP server' : kind === 'skill' ? 'Skill' : 'Pack')}</option>)}</select></label><Field label='Description' value={draft.description} onChange={value => set('description', value)} />{draft.kind === 'mcp' ? <label className='bt-set-row bt-bs-row bt-bs-stack'><span className='bt-set-copy'><span className='bt-bs-label'>{t('Connection')}</span></span><select className='bt-input' value={draft.transport} onChange={(event: React.ChangeEvent<HTMLSelectElement>) => set('transport', event.target.value)}><option value='stdio'>{t('Local command')}</option><option value='streamable-http'>{t('HTTP server')}</option></select></label> : null}{draft.kind === 'mcp' && draft.transport === 'stdio' ? <div><Field label='Command' value={draft.command} onChange={value => set('command', value)} /><Field label='Arguments (one per line)' value={draft.argsText} onChange={value => set('argsText', value)} multiline /><Field label='Environment (JSON)' value={draft.envText} onChange={value => set('envText', value)} multiline placeholder={t('{"API_KEY": "$MOON_BOT_SECRET_MY_KEY"}')} /></div> : null}{draft.kind === 'mcp' && draft.transport === 'streamable-http' ? <div><Field label='URL' value={draft.url} onChange={value => set('url', value)} /><Field label='Headers (JSON)' value={draft.headersText} onChange={value => set('headersText', value)} multiline placeholder={t('{"API_KEY": "$MOON_BOT_SECRET_MY_KEY"}')} /></div> : null}{draft.kind === 'skill' ? <Field label='Skill instructions' value={draft.content} onChange={value => set('content', value)} multiline /> : null}{draft.kind === 'pack' ? <div className='bt-set-card'>{available.length === 0 ? <div className='bt-set-row'><span className='bt-set-hint'>{t('Save an MCP server or skill first.')}</span></div> : available.map(item => <label key={item.name} className='bt-set-row bt-bs-row'><span className='bt-set-copy'><span className='bt-bs-label'>{item.name}</span></span><input type='checkbox' checked={draft.items.includes(item.name)} onChange={(event: React.ChangeEvent<HTMLInputElement>) => set('items', event.target.checked ? [...draft.items, item.name] : draft.items.filter(name => name !== item.name))}/></label>)}</div> : null}{error ? <div className='bt-connector-error' role='alert'>{error}</div> : null}<div className='bt-connector-form-row'><button type='button' className='bt-soft bt-soft-sm' onClick={onClose}>{t('Cancel')}</button><button type='submit' className='bt-soft bt-soft-sm'>{draft.originalName ? t('Save changes') : t('Add capability')}</button></div></form>;
-}
-function CapabilityRow({ item, onEdit, onDelete, onApprove, confirming }: {
-    item: Capability;
-    onEdit: () => void;
-    onDelete: () => void;
-    onApprove: () => void;
-    confirming: boolean;
-}) {
-    const detail = item.kind === 'pack' ? `${t('Pack')}: ${(item.items ?? []).join(', ') || t('No items')}`
-        : item.kind === 'mcp' ? item.transport === 'stdio' ? t('Local command') : t('HTTP server')
-            : t('Skill');
-    const secondary = item.kind === 'pack'
-        ? [item.description, (item.items ?? []).join(', ') || t('No items')].filter(Boolean).join(' · ')
-        : item.description || detail;
-    return <div className='bt-connector'><div className='bt-connector-head'><span className='bt-connector-text'><span className='bt-connector-name'>{item.name}</span><span className='bt-connector-status'>{secondary}</span></span><span className='bt-connector-actions'>{item.kind === 'mcp' && item.transport === 'stdio' && !item.approved
-        ? <button type='button' className='bt-soft bt-soft-sm' onClick={onApprove}>{t('Allow')}</button> : null}<button type='button' className='bt-soft bt-soft-sm' onClick={onEdit}>{t('Edit')}</button><button type='button' className='bt-soft bt-soft-sm' onClick={onDelete}>{confirming ? t('Click again to delete.') : t('Delete')}</button></span></div></div>;
-}
+
+const KIND_TABS: readonly (readonly [CapabilityFilterKind, () => string])[] = [
+    ['all', () => t('All')],
+    ['mcp', () => t('MCP servers')],
+    ['skill', () => t('Skills')],
+    ['pack', () => t('Packs')],
+];
+const GROUP_LABEL: Record<string, () => string> = { mcp: () => t('MCP servers'), skill: () => t('Skills'), pack: () => t('Packs') };
+
 export function CapabilitiesPage({ roster, actions, run }: {
-    roster: {
-        capabilities?: Capability[];
-    };
+    roster: CapabilityRoster;
     actions: CapabilityActions;
     run: RunWork;
 }) {
-    const items = [...(roster.capabilities ?? [])].sort((a, b) => a.name.localeCompare(b.name));
+    const items = [...(roster.capabilities ?? [])];
+    const bots = roster.bots ?? [];
+    const statuses = roster.capabilityStatuses;
+    const tools = roster.capabilityTools;
     const [draft, setDraft] = useState<CapabilityDraft | null>(null);
+    const [query, setQuery] = useState('');
+    const [kind, setKind] = useState<CapabilityFilterKind>('all');
+    const [expanded, setExpanded] = useState('');
     const [confirming, setConfirming] = useState('');
-    useEffect(() => {
-        if (!confirming)
-            return undefined;
-        const timer = setTimeout(() => setConfirming(''), 4000);
-        return () => clearTimeout(timer);
-    }, [confirming]);
-    const startNew = () => setDraft(blank());
-    const edit = (item: Capability) => setDraft({
-        ...blank(),
-        ...(item as Partial<CapabilityDraft>),
-        originalName: item.name,
-        argsText: (item.args ?? []).join('\n'),
-        envText: JSON.stringify(item.env ?? {}, null, 2),
-        headersText: JSON.stringify(item.headers ?? {}, null, 2),
-        items: [...(item.items ?? [])],
-    });
-    const remove = (item: Capability) => {
+    const [busy, setBusy] = useState('');
+    const [approved, setApproved] = useState<Record<string, boolean>>({});
+    const counts = countsByKind(items);
+    const shown = filterCapabilities(items, { query, kind, tools, textOf: item => t(item.description ?? '') });
+    const groups = groupCapabilities(shown);
+    const filtered = query.trim() !== '' || kind !== 'all';
+    const openSettings = (page: string): void => { actions.openSettings?.(page); };
+    const act = async (name: string, work: Promise<unknown>, after?: () => void): Promise<void> => {
+        setBusy(name);
+        try {
+            const ok = await Promise.resolve(run(work));
+            if (ok !== false && after !== undefined)
+                after();
+        }
+        finally {
+            setBusy('');
+        }
+    };
+    const approve = async (item: Capability): Promise<void> => {
+        setApproved(previous => ({ ...previous, [item.name]: true }));
+        setBusy(item.name);
+        try {
+            const ok = await Promise.resolve(run(actions.approveCapability(item.name)));
+            if (ok === false)
+                setApproved(previous => { const next = { ...previous }; delete next[item.name]; return next; });
+        }
+        finally {
+            setBusy('');
+        }
+    };
+    const remove = (item: Capability): void => {
         if (confirming !== item.name) {
             setConfirming(item.name);
             return;
         }
-        setConfirming('');
-        void run(actions.deleteCapability(item.name));
+        void act(item.name, actions.deleteCapability(item.name), () => {
+            setConfirming('');
+            if (draft?.originalName === item.name)
+                setDraft(null);
+        });
     };
-    return <section className='bt-set-section'><h3>{t('Shared capabilities')}</h3><div className='bt-actions'><button type='button' className='bt-soft bt-soft-sm' onClick={startNew}>{t('Add capability')}</button></div>{draft ? <CapabilityForm draft={draft} setDraft={setDraft} items={items} actions={actions} onClose={() => setDraft(null)} /> : null}<div className='bt-set-card bt-connectors-card'>{items.length === 0 ? <div className='bt-set-row'><span className='bt-set-hint'>{t('No capabilities saved')}</span></div> : items.map(item => <CapabilityRow key={item.name} item={item} confirming={confirming === item.name} onEdit={() => edit(item)} onDelete={() => remove(item)} onApprove={() => void run(actions.approveCapability(item.name))} />)}</div></section>;
+    return <section className='bt-set-section'>
+        <div className='bt-cap-head'>
+            <h3>{t('Shared capabilities')}</h3>
+            <div className='bt-cap-head-actions'>
+                <button type='button' className='bt-soft bt-soft-sm' onClick={() => openSettings('connectors')}>{t('Browse connector market')}</button>
+                <button type='button' className='bt-soft bt-soft-sm' onClick={() => setDraft(blankCapability())}><PlusIcon />{t('Add capability')}</button>
+            </div>
+        </div>
+        <p className='bt-set-hint'>{t('Save a capability once here, then turn it on for each Bot in the Bot’s settings.')}</p>
+        {draft ? <CapabilityForm draft={draft} setDraft={setDraft} items={items} actions={actions} onClose={() => setDraft(null)} /> : null}
+        {items.length === 0 ? <div className='bt-cap-empty'>
+            <span className='bt-cap-empty-icon'><PlugIcon /></span>
+            <span className='bt-cap-empty-title'>{t('No capabilities yet')}</span>
+            <span className='bt-set-hint'>{t('Install one from the connector market, or save an MCP server, a skill, or a pack of them yourself.')}</span>
+            <div className='bt-connector-form-row'>
+                <button type='button' className='bt-soft bt-soft-sm' onClick={() => openSettings('connectors')}>{t('Browse connector market')}</button>
+                <button type='button' className='bt-soft bt-soft-sm' onClick={() => setDraft(blankCapability())}>{t('Add capability')}</button>
+            </div>
+        </div> : null}
+        {items.length > 0 ? <div className='bt-cap-toolbar'>
+            <div className='bt-market-search'>
+                <span className='bt-market-search-icon'><SearchIcon /></span>
+                <input type='text' className='bt-market-search-input' placeholder={t('Search capabilities…')} value={query} onChange={event => setQuery(event.target.value)} aria-label={t('Search capabilities')} />
+                {query ? <button type='button' className='bt-market-search-clear' onClick={() => setQuery('')} aria-label={t('Clear search')}><CloseIcon /></button> : null}
+            </div>
+            <div className='bt-market-tabs'>{KIND_TABS.map(([key, text]) => <button key={key} type='button' className={`bt-market-tab ${kind === key ? 'bt-market-tab-active' : ''}`} aria-pressed={kind === key} onClick={() => setKind(key)}>{text()} ({counts[key]})</button>)}</div>
+        </div> : null}
+        {items.length > 0 && groups.length === 0 ? <div className='bt-cap-empty'><span className='bt-cap-empty-title'>{t('No capabilities match “{query}”', { query })}</span><div className='bt-connector-form-row'><button type='button' className='bt-soft bt-soft-sm' onClick={() => { setQuery(''); setKind('all'); }}>{t('Clear filters')}</button></div></div> : null}
+        {groups.map(group => <div key={group.kind} className='bt-cap-group'>
+            <div className='bt-cap-group-head'><span>{GROUP_LABEL[group.kind]?.() ?? group.kind}</span><span className='bt-cap-count'>{group.items.length}</span></div>
+            <div className='bt-set-card bt-connectors-card'>{group.items.map(item => <CapabilityRow
+                key={item.name}
+                item={approved[item.name] === true ? { ...item, approved: true } : item}
+                health={healthOf(item, bots, statuses)}
+                keys={keyReadiness(item, roster.secrets ?? [])}
+                tools={toolsOf(item, tools)}
+                expanded={expanded === item.name}
+                confirming={confirming === item.name}
+                busy={busy === item.name}
+                onExpand={() => setExpanded(expanded === item.name ? '' : item.name)}
+                onEdit={() => setDraft(draftFromCapability(item))}
+                onDelete={() => remove(item)}
+                onCancelDelete={() => setConfirming('')}
+                onApprove={() => { void approve(item); }}
+                onRetry={() => void act(item.name, actions.retryCapability?.(item.name) ?? Promise.resolve())}
+                onOpenSecrets={() => openSettings('secrets')}
+                onOpenBots={() => openSettings('bots')}
+            />)}</div>
+        </div>)}
+        {filtered && shown.length > 0 ? <div className='bt-set-hint'>{t('Showing {count} of {total}.', { count: shown.length, total: items.length })}</div> : null}
+    </section>;
 }
+
 export function BotCapabilitiesCard({ bot, roster, actions, run, Card, SwitchRow }: {
     bot: {
         id: string;
-        capabilities?: string[];
+        capabilities?: readonly string[];
     };
-    roster: {
-        capabilities?: Capability[];
-        capabilityStatuses?: Record<string, Record<string, CapabilityStatus | undefined>>;
-    };
+    roster: CapabilityRoster;
     actions: CapabilityActions;
     run: RunWork;
     Card: React.ComponentType<Record<string, unknown>>;
@@ -198,13 +148,37 @@ export function BotCapabilitiesCard({ bot, roster, actions, run, Card, SwitchRow
     const items = [...(roster.capabilities ?? [])].sort((a, b) => Number(b.kind === 'pack') - Number(a.kind === 'pack') || a.name.localeCompare(b.name));
     const attached = new Set(bot.capabilities ?? []);
     const statuses = roster.capabilityStatuses?.[bot.id] ?? {};
+    const [overrides, setOverrides] = useState<Record<string, boolean>>({});
+    const [pending, setPending] = useState<Record<string, boolean>>({});
     if (items.length === 0)
         return null;
-    return h(Card, { title: t('Capabilities') }, items.map(item => h(SwitchRow, {
-        key: item.name,
-        label: item.name,
-        hint: attached.has(item.name) ? statusText(statuses[item.name]) : undefined,
-        on: attached.has(item.name),
-        onChange: (enabled: boolean) => void run(actions.setBotCapability(bot.id, item.name, enabled)),
-    })));
+    const isOn = (name: string): boolean => overrides[name] ?? attached.has(name);
+    const toggle = (name: string, next: boolean): void => {
+        setOverrides(previous => ({ ...previous, [name]: next }));
+        setPending(previous => ({ ...previous, [name]: true }));
+        const work = (async (): Promise<void> => {
+            try {
+                const ok = await Promise.resolve(run(actions.setBotCapability(bot.id, name, next)));
+                if (ok === false)
+                    setOverrides(previous => ({ ...previous, [name]: !next }));
+            }
+            finally {
+                setPending(previous => { const copy = { ...previous }; delete copy[name]; return copy; });
+            }
+        })();
+        void work.catch(() => {});
+    };
+    return h(Card, { title: t('Capabilities') }, items.map(item => {
+        const on = isOn(item.name);
+        const status = statuses[item.name];
+        const hint = pending[item.name] === true ? t('Saving…') : !on ? t('Off') : status === undefined ? t('On. Connects on its next turn.') : status.state === 'ready' ? t('Ready') : status.state === 'error' ? t('Could not connect: {error}', { error: status.error ?? '' }) : status.state === 'needs-approval' ? t('Needs approval. Open Capabilities to allow it.') : t('Connecting…');
+        return h(SwitchRow, {
+            key: item.name,
+            label: item.name,
+            hint,
+            disabled: pending[item.name] === true,
+            on,
+            onChange: (enabled: boolean) => { if (pending[item.name] !== true) toggle(item.name, enabled); },
+        });
+    }));
 }

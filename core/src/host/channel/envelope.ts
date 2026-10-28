@@ -96,6 +96,7 @@ export interface TeamLive {
   readonly memoryReviews: number
   readonly connectors: readonly Readonly<Record<string, unknown>>[]
   readonly capabilityStatuses: Readonly<Record<string, Readonly<Record<string, unknown>>>>
+  readonly capabilityTools: Readonly<Record<string, readonly string[]>>
 }
 
 /** A permission preset list, as the settings page asks for it. */

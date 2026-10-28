@@ -46,6 +46,7 @@ export const EMPTY_ROSTER = {
   secrets: [] as unknown[],
   capabilities: [] as unknown[],
   capabilityStatuses: {} as Record<string, unknown>,
+  capabilityTools: {} as Record<string, readonly string[]>,
   secretRequests: {} as Record<string, unknown>,
   models: [] as unknown[],
   defaultModel: null,

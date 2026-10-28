@@ -96,8 +96,8 @@
 - JSX 形态、测试等待方式、审批默认值目前没有自动门禁，只能靠评审和本文；665e968 之后两种写法混在一处，就是没有门禁的后果。
 - 迁移的「新库 = 升级库」没有自动 parity 测试，只有 `core/test/sqlite-store.test.ts` 的「重开幂等」和评审。
 - 审批的「默认开启」靠 `core/test/policy.test.ts` 锁等级、预算和文案，不锁「不许加全局开关」这条红线本身。
-- `core/src/service/engine.ts` 的 gate 注释和 `core/src/engine/policy.ts` 顶部注释都说 L4「always asks」，而实现是「L4 在每日预算内执行、超出才问」（`core/test/policy.test.ts` 锁的是实现）。本文按实现写；注释与实现的这处不一致留给设计评审决定，不顺手改行为。
-- [浏览器与电脑的边界](2026-10-28-browser-and-computer-boundaries.md) 要求浏览器动作里的 L4（提交表单、登录、支付、删除账号）每次都问；当前 policy 的 L4 是预算内放行，实现浏览器动作时要先把两处口径对齐，再写代码。
+- `core/src/engine/policy.ts` 顶部注释曾写 L4「always asks」，而实现是「L4 在每日预算内执行、超出才问」（`core/test/policy.test.ts` 锁的是实现）。2026-10-28 已把注释改成实现的说法；要「每次都问」的动作在建规则时显式声明，不改 L4 的预算语义。
+- [浏览器与电脑的边界](2026-10-28-browser-and-computer-boundaries.md) 里的「逐次审批」动作目前只是设计约束：policy 还没有「始终询问」的规则位，实现浏览器动作时先加规则再加动作。
 
 ## 变更
 

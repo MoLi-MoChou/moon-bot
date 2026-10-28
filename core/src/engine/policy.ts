@@ -4,7 +4,10 @@
 //   L1 in-chat effects — reversible inside the conversation (messages, cards, memory).
 //   L2 workspace writes — confined to the team's folders by the runtime.
 //   L3 external or costly — side effects beyond the workspace, or spending.
-//   L4 irreversible — destructive or account-level; always asks.
+//   L4 irreversible — destructive or account-level; runs inside a much smaller daily
+//      budget, then every call asks. A design that needs a level to ask always (the
+//      browser actions in docs/plans/2026-10-28-browser-and-computer-boundaries.md)
+//      adds that rule explicitly instead of relying on L4.
 // The decision is the server's alone: the refusal text says so in as many words, so a
 // model cannot argue its way past it, and no tool result carries an override.
 import type { GateDecision } from './builtin/services.ts'

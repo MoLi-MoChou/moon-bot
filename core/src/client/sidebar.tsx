@@ -73,16 +73,11 @@ export function TeamSidebar(props: TSidebarProps) {
         event.preventDefault();
         actions.openPalette(event.key);
     };
-    return <div className={wide ? 'bt-side' : 'bt-side bt-rail'} onKeyDown={typeToSearch}>{wide ? <div className='bt-side-top'><span className='bt-brand'>{h(BrandMark, { size: 22 })}{h(BrandName)}</span>{h(UpdateButton, { useUpdate: props.useUpdate, actions })}<button type='button' className='bt-round' aria-label={t('Search')} title={t('Search')} onClick={() => actions.openPalette()}>{h(SearchIcon)}</button><button type='button' className='bt-round' aria-label={t('New…')} title={t('New…')} onClick={() => actions.openNewChat('new')}>{h(PlusIcon)}</button><button type='button' className='bt-round bt-side-collapse' aria-label={t('Collapse sidebar')} title={t('Collapse sidebar')} onClick={() => actions.toggleSidebar()}>{h(SidebarIcon)}</button></div> : <>{h(UpdateButton, { useUpdate: props.useUpdate, actions })}<button type='button' className='bt-round' aria-label={t('New…')} title={t('New…')} onClick={() => actions.openNewChat('new')}>{h(PlusIcon)}</button></>}{wide && roster.readOnly ? <div className='bt-hint bt-read-only' role='status'>{hostText(roster.readOnly as string)}</div> : null}<div ref={listRef as Ref<HTMLDivElement>} className='bt-list' role='region' aria-label={t('Bot list')}>{main ? h(BotRow, { ...rowProps, bot: main, marked: markedUnread[main.id] === true }) : roster.ready ? null : <div className='bt-hint'>{t('Setting up your Main Bot…')}</div>}{h(ReorderList, { shown, wide, reorder, dropped, dragging, render: entry => entry.kind === 'bot'
-            ? h(BotRow, { ...rowProps, bot: entry.item, marked: markedUnread[entry.item.id] === true })
+    return <div className={wide ? 'bt-side' : 'bt-side bt-rail'} onKeyDown={typeToSearch}>{wide ? <div className='bt-side-top'><span className='bt-brand'><BrandMark size={22} /><BrandName /></span><UpdateButton useUpdate={props.useUpdate} actions={actions} /><button type='button' className='bt-round' aria-label={t('Search')} title={t('Search')} onClick={() => actions.openPalette()}><SearchIcon /></button><button type='button' className='bt-round' aria-label={t('New…')} title={t('New…')} onClick={() => actions.openNewChat('new')}><PlusIcon /></button><button type='button' className='bt-round bt-side-collapse' aria-label={t('Collapse sidebar')} title={t('Collapse sidebar')} onClick={() => actions.toggleSidebar()}><SidebarIcon /></button></div> : <><UpdateButton useUpdate={props.useUpdate} actions={actions} /><button type='button' className='bt-round' aria-label={t('New…')} title={t('New…')} onClick={() => actions.openNewChat('new')}><PlusIcon /></button></>}{wide && roster.readOnly ? <div className='bt-hint bt-read-only' role='status'>{hostText(roster.readOnly as string)}</div> : null}<div ref={listRef as Ref<HTMLDivElement>} className='bt-list' role='region' aria-label={t('Bot list')}>{main ? <BotRow {...rowProps} bot={main} marked={markedUnread[main.id] === true} /> : roster.ready ? null : <div className='bt-hint'>{t('Setting up your Main Bot…')}</div>}<ReorderList shown={shown} wide={wide} reorder={reorder} dropped={dropped} dragging={dragging} render={entry => entry.kind === 'bot'
+            ? <BotRow {...rowProps} bot={entry.item} marked={markedUnread[entry.item.id] === true} />
             : entry.kind === 'room'
-                ? h(RoomRow, { ...rowProps, room: entry.item, marked: markedUnread[entry.item.id] === true })
-                : h(AgentRow, { ...rowProps, agent: entry.item, marked: markedUnread[entry.item.id] === true }) })}{wide && roster.ready && shown.length === 0 ? <div className='bt-side-empty'>{h(EmptyState, {
-        compact: true, icon: h(PeopleIcon),
-        title: t('Build your Bot team'),
-        hint: t('Each Bot has its own chat, instructions and memory. Create one, or ask your Main Bot to set one up.'),
-        action: { icon: h(PlusIcon), label: t('Create Bot'), onClick: () => actions.openNewChat('create') },
-    })}</div> : null}</div></div>;
+                ? <RoomRow {...rowProps} room={entry.item} marked={markedUnread[entry.item.id] === true} />
+                : <AgentRow {...rowProps} agent={entry.item} marked={markedUnread[entry.item.id] === true} />} />{wide && roster.ready && shown.length === 0 ? <div className='bt-side-empty'><EmptyState compact icon={<PeopleIcon />} title={t('Build your Bot team')} hint={t('Each Bot has its own chat, instructions and memory. Create one, or ask your Main Bot to set one up.')} action={{ icon: <PlusIcon />, label: t('Create Bot'), onClick: () => actions.openNewChat('create') }} /></div> : null}</div></div>;
 }
 export function ReorderList({ shown, wide, reorder, dropped, dragging, render }: {
     readonly shown: readonly TSidebarEntry[];
@@ -97,15 +92,10 @@ export function ReorderList({ shown, wide, reorder, dropped, dragging, render }:
     const Reorder = framerMotion()?.Reorder;
     if (!Reorder)
         return <>{shown.map(entry => <>{render(entry)}</>)}</>;
-    return h(Reorder.Group, { as: 'div', axis: 'y', values: shown.map(entry => entry.item.id), onReorder: reorder, className: 'bt-reorder' }, shown.map(entry => h(Reorder.Item, {
-        key: entry.item.id, value: entry.item.id, as: 'div', className: 'bt-reorder-item',
-        dragListener: wide, onDragEnd: dropped,
-        whileDrag: { scale: 1.02, boxShadow: '0 6px 18px rgba(0,0,0,.12)', zIndex: 5 },
-        onClickCapture: (event: React.MouseEvent) => { if (dragging.current) {
+    return <Reorder.Group as='div' axis='y' values={shown.map(entry => entry.item.id)} onReorder={reorder} className='bt-reorder'>{shown.map(entry => <Reorder.Item key={entry.item.id} value={entry.item.id} as='div' className='bt-reorder-item' dragListener={wide} onDragEnd={dropped} whileDrag={{ scale: 1.02, boxShadow: '0 6px 18px rgba(0,0,0,.12)', zIndex: 5 }} onClickCapture={(event: React.MouseEvent) => { if (dragging.current) {
             event.stopPropagation();
             event.preventDefault();
-        } },
-    }, render(entry))));
+        } }}>{render(entry)}</Reorder.Item>)}</Reorder.Group>;
 }
 // The update button at the sidebar's top right: a cloud while a newer DS Bot —
 // or a newer verified DSH — is available, then the install's progress and
@@ -166,7 +156,7 @@ export function UpdateButton({ useUpdate, actions }: {
             : update?.available ? t('Moon Bot {version} is available', { version: update.latest })
                 : t('Moon Bot is up to date');
     const message = error || (phase === 'failed' ? update.error : '');
-    return <><button ref={button} type='button' className='bt-round bt-update' data-phase={cloudPhase} aria-label={label} title={label} aria-haspopup='dialog' aria-expanded={open} onClick={toggle}>{h(CloudDownloadIcon, { done: phase === 'installed' })}{phase === 'failed' ? <span className='bt-update-dot' aria-hidden/> : null}</button>{open && box ? createPortal(<div className='bt-update-pop' role='dialog' aria-label={t('Moon Bot update')} style={box}><div className='bt-update-title'>{phase === 'installed' ? t('Update installed') : t('Moon Bot {version}', { version: update.latest })}</div><div className='bt-update-text'>{phase === 'installed'
+    return <><button ref={button} type='button' className='bt-round bt-update' data-phase={cloudPhase} aria-label={label} title={label} aria-haspopup='dialog' aria-expanded={open} onClick={toggle}><CloudDownloadIcon done={phase === 'installed'} />{phase === 'failed' ? <span className='bt-update-dot' aria-hidden/> : null}</button>{open && box ? createPortal(<div className='bt-update-pop' role='dialog' aria-label={t('Moon Bot update')} style={box}><div className='bt-update-title'>{phase === 'installed' ? t('Update installed') : t('Moon Bot {version}', { version: update.latest })}</div><div className='bt-update-text'>{phase === 'installed'
         ? t('Restart to start using Moon Bot {version}.', { version: update.installed ?? update.latest })
         : t('You have {version}.', { version: update.current })}</div>{message ? <div className='bt-update-error' role='alert'>{t('The update did not finish: {reason}', { reason: message })}</div> : null}<div className='bt-update-actions'>{update.notesUrl ? <a className='bt-update-notes' href={update.notesUrl} target='_blank' rel='noopener noreferrer'>{t("What's new")}</a> : null}{phase === 'installed' ? null : <button type='button' className='bt-update-go' disabled={phase === 'installing'} onClick={start}>{phase === 'installing' ? t('Updating…') : phase === 'failed' ? t('Try again') : t('Update')}</button>}</div></div>, document.body) : null}</>;
 }
@@ -177,11 +167,11 @@ export function ConnectPlugins({ wide, actions }: {
 }) {
     if (!wide)
         return null;
-    return <span className='bt-connect-wrap'><button type='button' className='bt-connect bt-connect-foot' onClick={() => actions.selectPanel('plugins')}>{h(PlugIcon)}{t('Connect plugins')}</button></span>;
+    return <span className='bt-connect-wrap'><button type='button' className='bt-connect bt-connect-foot' onClick={() => actions.selectPanel('plugins')}><PlugIcon />{t('Connect plugins')}</button></span>;
 }
 // Account seat of the Settings trigger: the visible label stays for assistive tech only.
 export function YouAvatar() {
-    return <span className='bt-you-wrap'><span className='bt-you' aria-hidden>{h(MoonBotMark, { size: 24 })}</span><span style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>{t('Settings')}</span></span>;
+    return <span className='bt-you-wrap'><span className='bt-you' aria-hidden><MoonBotMark size={24} /></span><span style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>{t('Settings')}</span></span>;
 }
 export { AccountLauncher, FooterAccount, BotReturn, BrandMark, BrandName, holdShellShortcuts, openShellSettingsPanel, openShellOnboardingPanel, } from './sidebar-account.tsx';
 export { SIDEBAR_CSS, RETURN_CSS } from './sidebar-css.ts';

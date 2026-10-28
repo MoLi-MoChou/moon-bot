@@ -105,7 +105,7 @@ export interface MemoryRowProps {
 export function MemoryRow({ owner, actions }: MemoryRowProps) {
     const count = useMemoryCount(owner.id, actions);
     const label = count === null ? t('Loading…') : count === 0 ? t('Nothing saved yet') : count === 1 ? t('1 entry') : t('{count} entries', { count });
-    return <div><div className='bt-section-title'>{t('Memory')}</div><button type='button' className='bt-mem-row' aria-label={t("Manage {name}'s memory", { name: owner.name })} onClick={() => actions.openMemory(owner.id)}>{h(MemoryIcon)}<span className='bt-mem-row-copy'>{label}</span><span className='bt-mem-row-go'>{t('Manage')}{h(ChevronRightIcon)}</span></button></div>;
+    return <div><div className='bt-section-title'>{t('Memory')}</div><button type='button' className='bt-mem-row' aria-label={t("Manage {name}'s memory", { name: owner.name })} onClick={() => actions.openMemory(owner.id)}><MemoryIcon /><span className='bt-mem-row-copy'>{label}</span><span className='bt-mem-row-go'>{t('Manage')}<ChevronRightIcon /></span></button></div>;
 }
 interface SummaryProps {
     owner: MemoryOwner;
@@ -114,18 +114,14 @@ interface SummaryProps {
 }
 function Summary({ owner, view, regenerate }: SummaryProps) {
     if (view.entries.length === 0) {
-        return h(EmptyState, {
-            icon: h(MemoryIcon),
-            title: owner.group ? t('Nothing is saved for this group yet') : t('{name} has not saved anything yet', { name: owner.name }),
-            hint: owner.group
+        return <EmptyState icon={<MemoryIcon />} title={owner.group ? t('Nothing is saved for this group yet') : t('{name} has not saved anything yet', { name: owner.name })} hint={owner.group
                 ? t('A group keeps the decisions, rules, and facts its work needs, for its members to read here. Tell it below, or in the group.')
-                : t('Bots keep lasting preferences, decisions, and what you ask them to remember. Tell {name} below, or in its chat.', { name: owner.name }),
-        });
+                : t('Bots keep lasting preferences, decisions, and what you ask them to remember. Tell {name} below, or in its chat.', { name: owner.name })} />;
     }
     const failed = view.error && !view.summarizing
         ? <div className='bt-mem-failed' role='alert'><span>{view.summary ? t('The summary is out of date: {reason}', { reason: hostText(String(view.error ?? '')) }) : t('The summary could not be written: {reason}', { reason: hostText(String(view.error ?? '')) })}</span><button type='button' className='bt-soft bt-soft-sm' onClick={regenerate}>{t('Try again')}</button></div> : null;
     if (!view.summary)
-        return <>{failed}{failed ? null : h(Skeleton, { label: t('Writing the summary…') })}</>;
+        return <>{failed}{failed ? null : <Skeleton label={t('Writing the summary…')} />}</>;
     return <>{failed}<div key={view.summary.at} className='bt-mem-summary' data-stale={!view.fresh || undefined}>{summaryBlocks(view.summary.text).map((block, index) => (block.kind === 'h'
         ? <h3 key={index}>{block.text}</h3> : <p key={index}>{block.text}</p>))}</div></>;
 }
@@ -168,7 +164,7 @@ function EntryRow({ entry, remove }: EntryRowProps) {
         if (!await remove(entry))
             setBusy(false);
     };
-    return <li className='bt-mem-entry' data-busy={busy || undefined}><div className='bt-mem-entry-copy'><span className='bt-mem-entry-text'>{entry.text}</span>{meta ? <span className='bt-mem-entry-meta'>{meta}</span> : null}</div><button type='button' className='bt-mem-remove' data-confirm={confirming || undefined} disabled={busy} aria-label={confirming ? t('Click again to remove') : t('Remove from memory')} title={confirming ? undefined : t('Remove from memory')} onClick={click}>{confirming ? t('Remove') : h(TrashIcon)}</button></li>;
+    return <li className='bt-mem-entry' data-busy={busy || undefined}><div className='bt-mem-entry-copy'><span className='bt-mem-entry-text'>{entry.text}</span>{meta ? <span className='bt-mem-entry-meta'>{meta}</span> : null}</div><button type='button' className='bt-mem-remove' data-confirm={confirming || undefined} disabled={busy} aria-label={confirming ? t('Click again to remove') : t('Remove from memory')} title={confirming ? undefined : t('Remove from memory')} onClick={click}>{confirming ? t('Remove') : <TrashIcon />}</button></li>;
 }
 interface EntriesProps {
     owner: MemoryOwner;
@@ -184,7 +180,7 @@ function Entries({ owner, view, remove }: EntriesProps) {
             { scope: 'team', title: t('Team memory'), hint: t('Every Bot reads it'), size: view.sizes.team },
         ];
     return <div className='bt-mem-entries'>{sections.map(section => <section key={section.scope} className='bt-mem-section'><div className='bt-mem-section-head'><h3>{section.title}</h3>{section.hint ? <span>{section.hint}</span> : null}<span className='bt-mem-size' title={t('MEMORY.md, which every conversation reads')}>{t('{used} of {limit} characters', { used: section.size.toLocaleString(dateLocale()), limit: view.limits.main.toLocaleString(dateLocale()) })}</span></div>{groups.some(group => group.scope === section.scope)
-        ? groups.filter(group => group.scope === section.scope).map(group => <>{group.topic ? <div className='bt-mem-topic'>{group.topic}</div> : null}<ul className='bt-mem-list'>{group.entries.map(entry => h(EntryRow, { key: `${entry.topic ?? ''}:${entry.text}`, entry, remove }))}</ul></>)
+        ? groups.filter(group => group.scope === section.scope).map(group => <>{group.topic ? <div className='bt-mem-topic'>{group.topic}</div> : null}<ul className='bt-mem-list'>{group.entries.map(entry => <EntryRow key={`${entry.topic ?? ''}:${entry.text}`} entry={entry} remove={remove} />)}</ul></>)
         : <div className='bt-mem-none'>{t('Nothing saved yet')}</div>}</section>)}</div>;
 }
 function changeLine(change: MemoryChange): string {
@@ -201,8 +197,8 @@ function Reply({ answer, dismiss }: {
     answer: MemoryAnswer;
     dismiss: () => void;
 }) {
-    return <div className='bt-mem-reply' role='status'><div className='bt-mem-reply-head'><span className='bt-mem-reply-asked'>{answer.asked}</span>{answer.pending ? null : <button type='button' className='bt-icon-btn' aria-label={t('Dismiss')} onClick={dismiss}>{h(CloseIcon)}</button>}</div>{answer.pending ? <div className='bt-mem-reply-text bt-shimmer'>{t('Thinking…')}</div> : answer.error ? <div className='bt-mem-reply-text bt-danger'>{hostText(String(answer.error ?? ''))}</div> : <>{answer.reply ? <div className='bt-mem-reply-text'>{answer.reply}</div> : null}{(answer.changes?.length ?? 0) > 0
-        ? <ul className='bt-mem-changes'>{(answer.changes ?? []).map((change, index) => <li key={index} data-ok={change.ok || undefined}>{change.ok ? h(CheckIcon) : h(CloseIcon)}<span>{changeLine(change)}</span></li>)}</ul> : null}</>}</div>;
+    return <div className='bt-mem-reply' role='status'><div className='bt-mem-reply-head'><span className='bt-mem-reply-asked'>{answer.asked}</span>{answer.pending ? null : <button type='button' className='bt-icon-btn' aria-label={t('Dismiss')} onClick={dismiss}><CloseIcon /></button>}</div>{answer.pending ? <div className='bt-mem-reply-text bt-shimmer'>{t('Thinking…')}</div> : answer.error ? <div className='bt-mem-reply-text bt-danger'>{hostText(String(answer.error ?? ''))}</div> : <>{answer.reply ? <div className='bt-mem-reply-text'>{answer.reply}</div> : null}{(answer.changes?.length ?? 0) > 0
+        ? <ul className='bt-mem-changes'>{(answer.changes ?? []).map((change, index) => <li key={index} data-ok={change.ok || undefined}>{change.ok ? <CheckIcon /> : <CloseIcon />}<span>{changeLine(change)}</span></li>)}</ul> : null}</>}</div>;
 }
 interface MemoryViewState {
     view: MemoryView | null;
@@ -326,7 +322,7 @@ export function MemoryDialog({ owner, actions, leaving = false }: MemoryDialogPr
                 : view.summary && view.fresh ? (when ? t('Updated {time}', { time: when }) : t('Updated just now'))
                     : '';
     const busy = answer?.pending === true;
-    return <div className='bt-mem-layer' data-leaving={leaving || undefined}><div className='bt-scrim bt-mem-scrim' onMouseDown={close}/><div className='bt-mem' role='dialog' aria-modal aria-label={t("{name}'s memory", { name: owner.name })}><div className='bt-mem-head'>{page === 'entries' ? <button type='button' className='bt-icon-btn' aria-label={t('Back to the summary')} onClick={backToSummary}>{h(ChevronLeftIcon)}</button> : null}<h2>{page === 'entries' ? t('All entries') : t('Memory summary')}</h2><span className='bt-mem-status'>{page === 'summary' ? [owner.name, status].filter(Boolean).join(' · ') : status}</span><span className='bt-mem-head-gap'/><button ref={dotsRef} type='button' className='bt-icon-btn' aria-label={t('Memory options')} aria-haspopup='menu' aria-expanded={menu} onClick={() => setMenu(value => !value)}>{h(DotsIcon)}</button><button type='button' className='bt-icon-btn' aria-label={t('Close memory')} onClick={close}>{h(CloseIcon)}</button>{menuShown ? <div ref={menuRef} className='bt-menu bt-mem-menu' role='menu' aria-label={t('Memory options')} data-leaving={menuLeaving || undefined}><button type='button' role='menuitem' onClick={openEntries}><span className='bt-menu-label'>{t('All entries')}</span><span className='bt-menu-hint'>{String(count)}</span></button><button type='button' role='menuitem' disabled={count === 0 || view?.summarizing} onClick={regenerate}><span className='bt-menu-label'>{t('Regenerate summary')}</span></button></div> : null}</div><div className='bt-mem-body'>{error ? <div className='bt-error' role='alert' style={{ padding: 0 }}>{hostText(error)}</div> : null}{view === null ? (error ? null : h(Skeleton))
-        : page === 'entries' ? h(Entries, { owner, view, remove })
-            : h(Summary, { owner, view, regenerate })}</div><div className='bt-mem-foot'>{answer ? h(Reply, { answer, dismiss: () => setAnswer(null) }) : null}<form className='bt-mem-ask' onSubmit={ask}><input ref={inputRef} className='bt-mem-input' value={text} maxLength={2000} disabled={view === null} placeholder={t('Ask or update')} aria-label={t("Ask about or update {name}'s memory", { name: owner.name })} onChange={event => setText(event.target.value)}/><button type='submit' className='bt-mem-send' disabled={busy || text.trim() === ''} aria-label={t('Send')}>{busy ? <span className='bt-mem-spin' aria-hidden/> : h(ArrowUpIcon)}</button></form></div></div></div>;
+    return <div className='bt-mem-layer' data-leaving={leaving || undefined}><div className='bt-scrim bt-mem-scrim' onMouseDown={close}/><div className='bt-mem' role='dialog' aria-modal aria-label={t("{name}'s memory", { name: owner.name })}><div className='bt-mem-head'>{page === 'entries' ? <button type='button' className='bt-icon-btn' aria-label={t('Back to the summary')} onClick={backToSummary}><ChevronLeftIcon /></button> : null}<h2>{page === 'entries' ? t('All entries') : t('Memory summary')}</h2><span className='bt-mem-status'>{page === 'summary' ? [owner.name, status].filter(Boolean).join(' · ') : status}</span><span className='bt-mem-head-gap'/><button ref={dotsRef} type='button' className='bt-icon-btn' aria-label={t('Memory options')} aria-haspopup='menu' aria-expanded={menu} onClick={() => setMenu(value => !value)}><DotsIcon /></button><button type='button' className='bt-icon-btn' aria-label={t('Close memory')} onClick={close}><CloseIcon /></button>{menuShown ? <div ref={menuRef} className='bt-menu bt-mem-menu' role='menu' aria-label={t('Memory options')} data-leaving={menuLeaving || undefined}><button type='button' role='menuitem' onClick={openEntries}><span className='bt-menu-label'>{t('All entries')}</span><span className='bt-menu-hint'>{String(count)}</span></button><button type='button' role='menuitem' disabled={count === 0 || view?.summarizing} onClick={regenerate}><span className='bt-menu-label'>{t('Regenerate summary')}</span></button></div> : null}</div><div className='bt-mem-body'>{error ? <div className='bt-error' role='alert' style={{ padding: 0 }}>{hostText(error)}</div> : null}{view === null ? (error ? null : <Skeleton />)
+        : page === 'entries' ? <Entries owner={owner} view={view} remove={remove} />
+            : <Summary owner={owner} view={view} regenerate={regenerate} />}</div><div className='bt-mem-foot'>{answer ? <Reply answer={answer} dismiss={() => setAnswer(null)} /> : null}<form className='bt-mem-ask' onSubmit={ask}><input ref={inputRef} className='bt-mem-input' value={text} maxLength={2000} disabled={view === null} placeholder={t('Ask or update')} aria-label={t("Ask about or update {name}'s memory", { name: owner.name })} onChange={event => setText(event.target.value)}/><button type='submit' className='bt-mem-send' disabled={busy || text.trim() === ''} aria-label={t('Send')}>{busy ? <span className='bt-mem-spin' aria-hidden/> : <ArrowUpIcon />}</button></form></div></div></div>;
 }

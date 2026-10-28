@@ -107,7 +107,7 @@ export function UsagePage({ roster, actions, focusId }: UsagePageProps): ReactEl
         const models = view.models.map((model, at): Face => {
             const name = model.name || model.model || t('Unknown model');
             const paint = modelPaint.get(at) ?? 'var(--bt-us-rest)';
-            return { kind: 'model', name, sub: model.providerName ?? model.provider, paint, glyph: size => h(ModelGlyph, { name, paint, size }) };
+            return { kind: 'model', name, sub: model.providerName ?? model.provider, paint, glyph: size => <ModelGlyph name={name} paint={paint} size={size} /> };
         });
         const ownerAt = focus?.kind === 'owner' ? view.owners.findIndex(owner => owner.key === focus.key) : -1;
         const modelAt = focus?.kind === 'model' ? view.models.findIndex(model => model.key === focus.key) : -1;
@@ -188,14 +188,10 @@ export function UsagePage({ roster, actions, focusId }: UsagePageProps): ReactEl
     const root = useRef<HTMLDivElement | null>(null);
     useEffect(() => { root.current?.closest<HTMLElement>('.bt-settings-scroll')?.scrollTo?.({ top: 0 }); }, [focusId]);
     if (!view) {
-        return error ? <div className='bt-error' role='alert' style={{ padding: 0 }}>{error}</div> : h(Skeleton);
+        return error ? <div className='bt-error' role='alert' style={{ padding: 0 }}>{error}</div> : <Skeleton />;
     }
     if (view.rows.length === 0) {
-        return <div className='bt-us'>{h(EmptyState, {
-            art: h(BotMark, { look: MAIN_LOOK, size: 56, live: true }),
-            title: view.scanning ? t('Reading your chats…') : t('No usage yet.'),
-            hint: t('Token usage shows up here after a model is called.'),
-        })}</div>;
+        return <div className='bt-us'><EmptyState art={<BotMark look={MAIN_LOOK} size={56} live />} title={view.scanning ? t('Reading your chats…') : t('No usage yet.')} hint={t('Token usage shows up here after a model is called.')} /></div>;
     }
     if (!shaped)
         return null;
@@ -226,22 +222,14 @@ export function UsagePage({ roster, actions, focusId }: UsagePageProps): ReactEl
         UsageSum
     ], index: number, total = whole): ReactElement => {
         const entry = faces[Number(at)]!;
-        return h(Row, {
-            key: `o${at}`, kind: entry.kind, glyph: entry.glyph(32), name: entry.name, sub: entry.sub, sum, whole: total, index,
-            fill: face ? soften(face.paint, 0.8) : fillOf.get(`o${at}`) ?? soften(entry.paint),
-            onClick: () => pick({ kind: 'owner', key: view.owners[Number(at)]!.key }),
-        });
+        return <Row key={`o${at}`} kind={entry.kind} glyph={entry.glyph(32)} name={entry.name} sub={entry.sub} sum={sum} whole={total} index={index} fill={face ? soften(face.paint, 0.8) : fillOf.get(`o${at}`) ?? soften(entry.paint)} onClick={() => pick({ kind: 'owner', key: view.owners[Number(at)]!.key })} />;
     };
     const modelRow = ([at, sum]: readonly [
         string,
         UsageSum
     ], index: number): ReactElement => {
         const entry = models[Number(at)]!;
-        return h(Row, {
-            key: `m${at}`, kind: 'model', glyph: entry.glyph(32), name: entry.name, sub: entry.sub, sum, whole, index,
-            fill: face ? soften(face.paint, 0.8) : fillOf.get(`m${at}`) ?? soften(entry.paint),
-            onClick: () => pick({ kind: 'model', key: view.models[Number(at)]!.key }),
-        });
+        return <Row key={`m${at}`} kind='model' glyph={entry.glyph(32)} name={entry.name} sub={entry.sub} sum={sum} whole={whole} index={index} fill={face ? soften(face.paint, 0.8) : fillOf.get(`m${at}`) ?? soften(entry.paint)} onClick={() => pick({ kind: 'model', key: view.models[Number(at)]!.key })} />;
     };
     const nothing = <div className='bt-us-none'>{t('Nothing in this range.')}</div>;
     let body: ReactElement[];
@@ -250,12 +238,12 @@ export function UsagePage({ roster, actions, focusId }: UsagePageProps): ReactEl
         const usedModels = ranked(part.models);
         const owners = ranked(part.owners);
         body = [
-            h(Profile, { key: 'profile', face, range, share: all.total.total > 0 ? whole / all.total.total : 0 }),
-            <div key='sheet' className='bt-us-sheet'>{h(Stats, { key: 'stats', range, total: part.total, previous: part.previous })}{h(Chart, { key: 'chart', range, columns, series, tipSeries, onPick: pick })}<div key='pair' className='bt-us-pair'>{ownerAt >= 0
-                ? h(ListCard, { title: t('Models'), count: usedModels.length, index: 2 }, usedModels.length > 0 ? usedModels.map(modelRow) : nothing)
-                : h(ListCard, { title: t('Who used it'), count: owners.length, index: 2 }, owners.length > 0 ? owners.map((entry, index) => ownerRow(entry, index)) : nothing)}{h(ListCard, { title: t('What for'), index: 3 }, kinds.length > 0
-                ? kinds.map(([at, sum], index) => h(Row, { key: at, name: kindLabel(view.kinds[Number(at)], ownerAt >= 0 && isBot(ownerAt)), sum, whole, index, fill: soften(face.paint, 0.8) }))
-                : nothing)}</div>{h(Heat, { key: 'heat', view, keep, paint: face.paint, index: 4 })}</div>,
+            <Profile key='profile' face={face} range={range} share={all.total.total > 0 ? whole / all.total.total : 0} />,
+            <div key='sheet' className='bt-us-sheet'><Stats key='stats' range={range} total={part.total} previous={part.previous} /><Chart key='chart' range={range} columns={columns} series={series} tipSeries={tipSeries} onPick={pick} /><div key='pair' className='bt-us-pair'>{ownerAt >= 0
+                ? <ListCard title={t('Models')} count={usedModels.length} index={2}>{usedModels.length > 0 ? usedModels.map(modelRow) : nothing}</ListCard>
+                : <ListCard title={t('Who used it')} count={owners.length} index={2}>{owners.length > 0 ? owners.map((entry, index) => ownerRow(entry, index)) : nothing}</ListCard>}<ListCard title={t('What for')} index={3}>{kinds.length > 0
+                ? kinds.map(([at, sum], index) => <Row key={at} name={kindLabel(view.kinds[Number(at)], ownerAt >= 0 && isBot(ownerAt))} sum={sum} whole={whole} index={index} fill={soften(face.paint, 0.8)} />)
+                : nothing}</ListCard></div><Heat key='heat' view={view} keep={keep} paint={face.paint} index={4} /></div>,
         ];
     }
     else {
@@ -264,8 +252,8 @@ export function UsagePage({ roster, actions, focusId }: UsagePageProps): ReactEl
         const rest = owners.filter(([at]) => !isBot(at));
         const usedModels = ranked(all.models);
         body = [
-            <div key='sheet' className='bt-us-sheet'>{h(Stats, { key: 'stats', range, total: all.total, previous: all.previous })}{h(Chart, { key: 'chart', range, columns, series, tipSeries, by, onBy: setBy, onPick: pick })}<div key='pair' className='bt-us-pair'>{h(ListCard, { title: t('Bots'), count: bots.length, index: 2 }, owners.length > 0 ? null : nothing, bots.map((entry, index) => ownerRow(entry, index)), bots.length > 0 && rest.length > 0 ? <div className='bt-us-split' role='separator'/> : null, rest.map((entry, index) => ownerRow(entry, bots.length + index)))}{h(ListCard, { title: t('Models'), count: usedModels.length, index: 3 }, usedModels.length > 0 ? usedModels.map(modelRow) : nothing)}</div>{h(Heat, { key: 'heat', view, keep, paint: 'var(--bt-accent)', index: 4 })}</div>,
+            <div key='sheet' className='bt-us-sheet'><Stats key='stats' range={range} total={all.total} previous={all.previous} /><Chart key='chart' range={range} columns={columns} series={series} tipSeries={tipSeries} by={by} onBy={setBy} onPick={pick} /><div key='pair' className='bt-us-pair'><ListCard title={t('Bots')} count={bots.length} index={2}>{owners.length > 0 ? null : nothing}{bots.map((entry, index) => ownerRow(entry, index))}{bots.length > 0 && rest.length > 0 ? <div className='bt-us-split' role='separator'/> : null}{rest.map((entry, index) => ownerRow(entry, bots.length + index))}</ListCard><ListCard title={t('Models')} count={usedModels.length} index={3}>{usedModels.length > 0 ? usedModels.map(modelRow) : nothing}</ListCard></div><Heat key='heat' view={view} keep={keep} paint='var(--bt-accent)' index={4} /></div>,
         ];
     }
-    return <div ref={root} className='bt-us' key={focusId ?? 'all'}><div className='bt-us-top'>{h(Tabs, { label: t('Time range'), value: rangeId, onChange: chooseRange, options: rangeOptions, boxRef: tabs })}{view.scanning ? <span className='bt-us-note' role='status'>{t('Still reading older chats; totals may grow.')}</span> : null}{picking ? h(SpanPicker, { span, today, oldest, active: activeDays, near: tabs, onPick: pickSpan, onClose: () => setPicking(false) }) : null}</div>{error ? <div className='bt-error' role='alert' style={{ padding: 0 }}>{error}</div> : null}{body}</div>;
+    return <div ref={root} className='bt-us' key={focusId ?? 'all'}><div className='bt-us-top'><Tabs label={t('Time range')} value={rangeId} onChange={chooseRange} options={rangeOptions} boxRef={tabs} />{view.scanning ? <span className='bt-us-note' role='status'>{t('Still reading older chats; totals may grow.')}</span> : null}{picking ? <SpanPicker span={span} today={today} oldest={oldest} active={activeDays} near={tabs} onPick={pickSpan} onClose={() => setPicking(false)} /> : null}</div>{error ? <div className='bt-error' role='alert' style={{ padding: 0 }}>{error}</div> : null}{body}</div>;
 }

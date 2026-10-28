@@ -236,55 +236,35 @@ function Composer({ sessionId, placeholder, disabled, onSend, actions, useUi, us
       setError(failure instanceof Error ? failure.message : String(failure))
     }
   }
-  return h('div', { className: 'dsb-composer-wrap' },
-    trigger !== null && !dismissed ? h(ComposerMenu, {
-      trigger,
-      sessionId,
-      useRoster,
-      actions,
-      activeIndex,
-      onActiveIndexChange: setActiveIndex,
-      onItemsChange: setMenuItems,
-      onPick: handlePick,
-      onDismiss: () => setDismissed(true),
-    }) : null,
-    error !== null ? h('p', { className: 'dsb-composer-error', role: 'alert' }, error) : null,
-    h('div', { className: 'dsb-composer', 'data-composer-card': '', 'data-multiline': text.includes('\n') || undefined },
-      h('div', { className: 'dsb-composer-tools' }, h(ComposerPlus, { sessionId, inputActions, useRoster, actions })),
-      h('div', { className: 'dsb-composer-input', 'data-input-scroll': '' },
-        h('div', { className: 'bt-mention-field' },
-          h(MentionMirror, { field, text, chips, composing }),
-          h('textarea', {
-            ref: field,
-            className: 'bt-mention-input',
-            'data-composing': composing ? 'true' : undefined,
-            rows: 1,
-            value: text,
-            disabled,
-            placeholder,
-            'aria-label': placeholder,
-            'data-composer-input': '',
-            onChange: (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+  return <div className='dsb-composer-wrap'>
+    {trigger !== null && !dismissed ? <ComposerMenu trigger={trigger} sessionId={sessionId} useRoster={useRoster} actions={actions} activeIndex={activeIndex} onActiveIndexChange={setActiveIndex} onItemsChange={setMenuItems} onPick={handlePick} onDismiss={() => setDismissed(true)} /> : null}
+    {error !== null ? <p className='dsb-composer-error' role='alert'>{error}</p> : null}
+    <div className='dsb-composer' data-composer-card='' data-multiline={text.includes('\n') || undefined}>
+      <div className='dsb-composer-tools'>
+        <ComposerPlus sessionId={sessionId} inputActions={inputActions} useRoster={useRoster} actions={actions} />
+      </div>
+      <div className='dsb-composer-input' data-input-scroll=''>
+        <div className='bt-mention-field'>
+          <MentionMirror field={field} text={text} chips={chips} composing={composing} />
+          {/*
+            While an IME composes, the textarea shows its own text and the mirror steps aside:
+            a controlled value can trail the composition, and a mirror painted from that stale
+            text would show blank or shifted characters. On commit the input reads the
+            textarea's value, so nothing the IME typed is lost.
+          */}
+          <textarea ref={field} className='bt-mention-input' data-composing={composing ? 'true' : undefined} rows={1} value={text} disabled={disabled} placeholder={placeholder} aria-label={placeholder} data-composer-input='' onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => {
               const val = event.target.value
               setText(val)
               updateTrigger(val, event.target.selectionStart ?? val.length)
-            },
-            onSelect: (event: React.SyntheticEvent<HTMLTextAreaElement>) => {
+            }} onSelect={(event: React.SyntheticEvent<HTMLTextAreaElement>) => {
               const target = event.target as HTMLTextAreaElement
               updateTrigger(target.value, target.selectionStart ?? target.value.length)
-            },
-            // While an IME composes, the textarea shows its own text and the mirror steps
-            // aside: a controlled value can trail the composition, and a mirror painted from
-            // that stale text would show blank or shifted characters. On commit the input
-            // reads the textarea's value, so nothing the IME typed is lost.
-            onCompositionStart: () => setComposing(true),
-            onCompositionEnd: (event: React.CompositionEvent<HTMLTextAreaElement>) => {
+            }} onCompositionStart={() => setComposing(true)} onCompositionEnd={(event: React.CompositionEvent<HTMLTextAreaElement>) => {
               const target = event.currentTarget
               setComposing(false)
               setText(target.value)
               updateTrigger(target.value, target.selectionStart ?? target.value.length)
-            },
-            onKeyDown: (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+            }} onKeyDown={(event: React.KeyboardEvent<HTMLTextAreaElement>) => {
               // A chip is one token: Backspace removes its whole "@Name", plus the single
               // space the menu inserted, while leaving every other key to the textarea.
               if (event.key === 'Backspace' && !composing && !event.nativeEvent.isComposing && (trigger === null || dismissed)) {
@@ -327,11 +307,17 @@ function Composer({ sessionId, placeholder, disabled, onSend, actions, useUi, us
                 event.preventDefault()
                 void submit()
               }
-            },
-          }))),
-      h('div', { className: 'dsb-composer-trailing' },
-        h(ComposerVoice, { sessionId, inputActions, actions, useUi }),
-        h('button', { type: 'button', className: 'dsb-send', disabled: disabled || text.trim() === '', 'aria-label': t('Send message'), title: t('Send message'), onClick: () => { void submit() } }, h(ArrowUpIcon)))))
+            }} />
+        </div>
+      </div>
+      <div className='dsb-composer-trailing'>
+        <ComposerVoice sessionId={sessionId} inputActions={inputActions} actions={actions} useUi={useUi} />
+        <button type='button' className='dsb-send' disabled={disabled || text.trim() === ''} aria-label={t('Send message')} title={t('Send message')} onClick={() => { void submit() }}>
+          <ArrowUpIcon />
+        </button>
+      </div>
+    </div>
+  </div>
 }
 
 /** One conversation in the main view. */
@@ -360,34 +346,28 @@ export function Chat({ sessionId, team }: { readonly sessionId: string, readonly
     if (node === null) return
     follow.current = node.scrollHeight - node.scrollTop - node.clientHeight < FOLLOW_PX
   }
-  const earlier = view.loading && view.sessionId !== null ? h(Shimmer, null, t('Loading earlier messages…'))
-    : view.failed ? h('button', { type: 'button', className: 'bt-soft', onClick: () => { void load(view.cursor, scroller.current) } }, t('Couldn’t load earlier messages · Retry'))
-      : view.cursor !== null ? h('button', { type: 'button', className: 'bt-soft', onClick: () => { void load(view.cursor, scroller.current) } }, t('Load earlier')) : null
+  const earlier = view.loading && view.sessionId !== null ? <Shimmer>{t('Loading earlier messages…')}</Shimmer>
+    : view.failed ? <button type='button' className='bt-soft' onClick={() => { void load(view.cursor, scroller.current) }}>{t('Couldn’t load earlier messages · Retry')}</button>
+      : view.cursor !== null ? <button type='button' className='bt-soft' onClick={() => { void load(view.cursor, scroller.current) }}>{t('Load earlier')}</button> : null
   const waiting = bot?.waiting === true
 
-  return h('div', { className: 'dsb-chat' },
-    h('div', { ref: scroller, className: 'dsb-scroll', 'data-conversation-scroll': '', onScroll },
-      h('div', { className: 'dsb-column' },
-        earlier !== null ? h('div', { className: 'bt-earlier-top' }, earlier) : null,
-        h('div', { className: 'dsb-flow', 'data-chat-flow': '', role: 'feed', 'aria-label': name, 'aria-busy': view.loading },
-          h(ChatRows, { items: view.items, sessionId, roster, actions: cellActions, useUi: cellUi, clock: true }),
-          pending.length > 0 ? h('div', { className: 'dsb-pending' }, h(ChatRows, { items: pending, sessionId, roster, actions: cellActions, useUi: cellUi })) : null,
-          stream !== null && stream.text !== '' ? h(Bubbles, { texts: [stream.text], roster, selfId: bot?.id, actions: cellActions, streaming: true, sessionId, useUi: cellUi }) : null,
-          // The host slot the activity row portals into. The header pill draws the row
-          // itself (as it does under DSH); a second indicator here portals a second row
-          // into this same slot.
-          h('div', { 'data-chat-running': '' }),
-
-          question !== undefined ? h(PendingQuestion, { key: JSON.stringify([sessionId, question.id]), sessionId, question, actions, inline: true }) : null))),
-    h('div', { className: 'dsb-composer-root' },
-      h(ModelChoiceDock, { sessionId, useRoster: hooks.useRoster as unknown as ModelChoiceDockProps['useRoster'], actions: asActions<ModelChoiceActions>(actions) }),
-      h(Composer, {
-        sessionId,
-        disabled: waiting,
-        placeholder: waiting ? t('Pick a model and {name} can start.', { name }) : name !== '' ? t('Message {name}', { name }) : t('Message'),
-        onSend: text => send(text, actions, sessionId),
-        actions,
-        useUi: hooks.useUi,
-        useRoster: hooks.useRoster,
-      })))
+  return <div className='dsb-chat'>
+    <div ref={scroller} className='dsb-scroll' data-conversation-scroll='' onScroll={onScroll}>
+      <div className='dsb-column'>
+        {earlier !== null ? <div className='bt-earlier-top'>{earlier}</div> : null}
+        <div className='dsb-flow' data-chat-flow='' role='feed' aria-label={name} aria-busy={view.loading}>
+          {h(ChatRows, { items: view.items, sessionId, roster, actions: cellActions, useUi: cellUi, clock: true })}
+          {pending.length > 0 ? <div className='dsb-pending'>{h(ChatRows, { items: pending, sessionId, roster, actions: cellActions, useUi: cellUi })}</div> : null}
+          {stream !== null && stream.text !== '' ? <Bubbles texts={[stream.text]} roster={roster} selfId={bot?.id} actions={cellActions} streaming sessionId={sessionId} useUi={cellUi} /> : null}
+          {/* The host slot the activity row portals into. The header pill draws the row itself (as it does under DSH); a second indicator here portals a second row into this same slot. */}
+          <div data-chat-running='' />
+          {question !== undefined ? <PendingQuestion key={JSON.stringify([sessionId, question.id])} sessionId={sessionId} question={question} actions={actions} inline /> : null}
+        </div>
+      </div>
+    </div>
+    <div className='dsb-composer-root'>
+      <ModelChoiceDock sessionId={sessionId} useRoster={hooks.useRoster as unknown as ModelChoiceDockProps['useRoster']} actions={asActions<ModelChoiceActions>(actions)} />
+      <Composer sessionId={sessionId} disabled={waiting} placeholder={waiting ? t('Pick a model and {name} can start.', { name }) : name !== '' ? t('Message {name}', { name }) : t('Message')} onSend={text => send(text, actions, sessionId)} actions={actions} useUi={hooks.useUi} useRoster={hooks.useRoster} />
+    </div>
+  </div>
 }

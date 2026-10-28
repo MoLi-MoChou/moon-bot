@@ -85,9 +85,20 @@ function GeneralPage({ roster, actions, run }: GeneralPageProps) {
         timer.current = setTimeout(() => { void run(actions.setPrefs({ accent: value })); }, 350);
     };
     return [
-        h(SetSection, { key: 'look', title: t('Appearance') }, h(SetRow, { label: t('Theme'), hint: t('Colors for the whole team, on every device.') }, h(ThemePicker, { themes, current, onPick: id => run(actions.setPrefs({ theme: id })) })), h(SetRow, { label: t('Accent'), hint: t('Unread marks, badges, and the brand mark.') }, <div className='bt-swatches'><button type='button' className='bt-swatch bt-swatch-default' title={t('Theme accent')} aria-label={t('Theme accent')} aria-pressed={!prefs.accent} onClick={() => { void run(actions.setPrefs({ accent: null })); }}/>{ACCENT_INKS.map(ink => <button key={ink} type='button' className='bt-swatch' title={t(capitalize(ink))} aria-label={t(capitalize(ink))} aria-pressed={prefs.accent === INKS[ink]?.[0]} style={{ background: INKS[ink]?.[0] }} onClick={() => run(actions.setPrefs({ accent: INKS[ink]?.[0] }))}/>)}<label className='bt-swatch bt-swatch-custom' title={t('Custom accent')} data-on={Boolean(prefs.accent) && !ACCENT_INKS.some(ink => INKS[ink]?.[0] === prefs.accent)}><input type='color' value={custom} aria-label={t('Custom accent')} onChange={(event: React.ChangeEvent<HTMLInputElement>) => pickCustom(event.target.value)}/></label></div>)),
-        LEAN.classicMode && actions.setSurface ? h(SetSection, { key: 'mode', title: t('Mode') }, h(SetRow, { label: t('Classic Agent mode') }, <button type='button' className='bt-soft bt-soft-sm' onClick={() => actions.setSurface?.('agent')}>{t('Switch')}</button>)) : null,
-        h(LocationsSection, { key: 'places', actions, run }),
+        <SetSection key='look' title={t('Appearance')}>
+          <SetRow label={t('Theme')} hint={t('Colors for the whole team, on every device.')}>
+            <ThemePicker themes={themes} current={current} onPick={id => run(actions.setPrefs({ theme: id }))} />
+          </SetRow>
+          <SetRow label={t('Accent')} hint={t('Unread marks, badges, and the brand mark.')}>
+            <div className='bt-swatches'><button type='button' className='bt-swatch bt-swatch-default' title={t('Theme accent')} aria-label={t('Theme accent')} aria-pressed={!prefs.accent} onClick={() => { void run(actions.setPrefs({ accent: null })); }}/>{ACCENT_INKS.map(ink => <button key={ink} type='button' className='bt-swatch' title={t(capitalize(ink))} aria-label={t(capitalize(ink))} aria-pressed={prefs.accent === INKS[ink]?.[0]} style={{ background: INKS[ink]?.[0] }} onClick={() => run(actions.setPrefs({ accent: INKS[ink]?.[0] }))}/>)}<label className='bt-swatch bt-swatch-custom' title={t('Custom accent')} data-on={Boolean(prefs.accent) && !ACCENT_INKS.some(ink => INKS[ink]?.[0] === prefs.accent)}><input type='color' value={custom} aria-label={t('Custom accent')} onChange={(event: React.ChangeEvent<HTMLInputElement>) => pickCustom(event.target.value)}/></label></div>
+          </SetRow>
+        </SetSection>,
+        LEAN.classicMode && actions.setSurface ? <SetSection key='mode' title={t('Mode')}>
+          <SetRow label={t('Classic Agent mode')}>
+            <button type='button' className='bt-soft bt-soft-sm' onClick={() => actions.setSurface?.('agent')}>{t('Switch')}</button>
+          </SetRow>
+        </SetSection> : null,
+        <LocationsSection key='places' actions={actions} run={run} />,
     ];
 }
 interface LocationsSectionProps {
@@ -122,8 +133,11 @@ function LocationsSection({ actions, run }: LocationsSectionProps) {
             setMoving(false);
         }));
     };
-    return h(SetSection, { title: t('Locations'), className: 'bt-set-places' }, h(SetRow, { label: t('Team workspace'), hint: t('Where Bots without a folder of their own work.') }, team === null ? null : h(FolderMenu, { value: team, team: true, actions, run, onPick: pickTeam, disabled: moving })), data === null || app === undefined ? null : h(SetRow, { label: t('Data location'), hint: data.path }, data.fixed ? null : <button type='button' className='bt-soft bt-soft-sm' disabled={moving} onClick={() => { if (!busy.current)
-        void run(app.moveData(team ?? undefined)); }}>{t('Change…')}</button>));
+    return <SetSection title={t('Locations')} className='bt-set-places'>
+      <SetRow label={t('Team workspace')} hint={t('Where Bots without a folder of their own work.')}>{team === null ? null : <FolderMenu value={team} team actions={actions} run={run} onPick={pickTeam} disabled={moving} />}</SetRow>
+      {data === null || app === undefined ? null : <SetRow label={t('Data location')} hint={data.path}>{data.fixed ? null : <button type='button' className='bt-soft bt-soft-sm' disabled={moving} onClick={() => { if (!busy.current)
+        void run(app.moveData(team ?? undefined)); }}>{t('Change…')}</button>}</SetRow>}
+    </SetSection>;
 }
 interface MainBotsSectionProps {
     roster: SettingsRoster;
@@ -136,11 +150,19 @@ function MainBotsSection({ roster, actions, run }: MainBotsSectionProps) {
     const mains = (roster.mainBotIds ?? []).map(id => roster.byId[id]).filter((bot): bot is SettingsBot => bot !== undefined);
     const [first, ...others] = mains;
     const candidates = roster.bots.filter(bot => !isMainOf(roster, bot.id));
-    return h(SetSection, { title: t('Main Bot') }, h(SetRow, {
-        label: t('Main Bot'),
-        hint: first ? t('First in the sidebar. Pick another Bot to hand it the role; {name} then stops being a Main Bot.', { name: first.name }) : undefined,
-    }, <select className='bt-select' aria-label={t('Main Bot')} value={first?.id ?? ''} onChange={(event: React.ChangeEvent<HTMLSelectElement>) => run(actions.setMain(event.target.value, true, first ? { replace: first.id } : {}))}>{first ? null : <option value=''>{t('Choose a Bot…')}</option>}{roster.bots.map(bot => <option key={bot.id} value={bot.id}>{bot.name}</option>)}</select>), others.map(bot => h(SetRow, { key: bot.id, label: bot.name, hint: t('Also a Main Bot.') }, <button type='button' className='bt-soft bt-soft-sm' onClick={() => run(actions.setMain(bot.id, true, { primary: true }))}>{t('Move to first')}</button>, <button type='button' className='bt-soft bt-soft-sm' onClick={() => run(actions.setMain(bot.id, false))}>{t('Remove Main Bot role')}</button>)), candidates.length > 0 ? h(SetRow, { label: t('Add a Main Bot'), hint: t('Main Bots can create and change Bots, and run every group chat.') }, <select className='bt-select' aria-label={t('Add a Main Bot')} value='' onChange={(event: React.ChangeEvent<HTMLSelectElement>) => { if (event.target.value)
-        void run(actions.setMain(event.target.value, true)); }}><option value=''>{t('Choose a Bot…')}</option>{candidates.map(bot => <option key={bot.id} value={bot.id}>{bot.name}</option>)}</select>) : null);
+    return <SetSection title={t('Main Bot')}>
+      <SetRow label={t('Main Bot')} hint={first ? t('First in the sidebar. Pick another Bot to hand it the role; {name} then stops being a Main Bot.', { name: first.name }) : undefined}>
+        <select className='bt-select' aria-label={t('Main Bot')} value={first?.id ?? ''} onChange={(event: React.ChangeEvent<HTMLSelectElement>) => run(actions.setMain(event.target.value, true, first ? { replace: first.id } : {}))}>{first ? null : <option value=''>{t('Choose a Bot…')}</option>}{roster.bots.map(bot => <option key={bot.id} value={bot.id}>{bot.name}</option>)}</select>
+      </SetRow>
+      {others.map(bot => <SetRow key={bot.id} label={bot.name} hint={t('Also a Main Bot.')}>
+      <button type='button' className='bt-soft bt-soft-sm' onClick={() => run(actions.setMain(bot.id, true, { primary: true }))}>{t('Move to first')}</button>
+      <button type='button' className='bt-soft bt-soft-sm' onClick={() => run(actions.setMain(bot.id, false))}>{t('Remove Main Bot role')}</button>
+    </SetRow>)}
+      {candidates.length > 0 ? <SetRow label={t('Add a Main Bot')} hint={t('Main Bots can create and change Bots, and run every group chat.')}>
+      <select className='bt-select' aria-label={t('Add a Main Bot')} value='' onChange={(event: React.ChangeEvent<HTMLSelectElement>) => { if (event.target.value)
+        void run(actions.setMain(event.target.value, true)); }}><option value=''>{t('Choose a Bot…')}</option>{candidates.map(bot => <option key={bot.id} value={bot.id}>{bot.name}</option>)}</select>
+    </SetRow> : null}
+    </SetSection>;
 }
 const MOTIONS: [
     string,
@@ -154,8 +176,12 @@ interface MotionSectionProps {
 function MotionSection({ roster, actions, run }: MotionSectionProps) {
     const stored = roster.prefs?.motion;
     const motion = stored === 'quiet' || stored === 'lively' ? stored : 'normal';
-    return h(SetSection, { title: t('Animation') }, h(SetRow, { label: t('Bot animation') }, h(Segmented, { label: t('Bot animation'), value: motion, className: 'bt-motion-seg' }, MOTIONS.map(([id, label]) => <button key={id} type='button' aria-pressed={motion === id} onClick={() => { if (motion !== id)
-        void run(actions.setPrefs({ motion: id })); }}>{t(label)}</button>))));
+    return <SetSection title={t('Animation')}>
+      <SetRow label={t('Bot animation')}>
+        <Segmented label={t('Bot animation')} value={motion} className='bt-motion-seg'>{MOTIONS.map(([id, label]) => <button key={id} type='button' aria-pressed={motion === id} onClick={() => { if (motion !== id)
+        void run(actions.setPrefs({ motion: id })); }}>{t(label)}</button>)}</Segmented>
+      </SetRow>
+    </SetSection>;
 }
 interface BotsPageProps {
     roster: SettingsRoster;
@@ -165,12 +191,12 @@ interface BotsPageProps {
 function BotsPage({ roster, actions, run }: BotsPageProps) {
     const [creating, setCreating] = useState(false);
     return [
-        h(MainBotsSection, { key: 'main', roster, actions, run }),
-        h(MotionSection, { key: 'motion', roster, actions, run }),
+        <MainBotsSection key='main' roster={roster} actions={actions} run={run} />,
+        <MotionSection key='motion' roster={roster} actions={actions} run={run} />,
         creating
-            ? h(CreateBot, { key: 'create', roster, actions, inline: true, canGoBack: false, onBack: () => setCreating(false), onCreated: bot => actions.openSettings('bots', bot.id) })
-            : <div key='new' className='bt-actions'><button type='button' className='bt-soft bt-soft-sm bt-with-icon' onClick={() => setCreating(true)}>{h(PlusIcon)}{t('New Bot')}</button></div>,
-        h(SetSection, { key: 'bots', title: t('Bots · {count}', { count: roster.bots.length }) }, roster.bots.map(bot => <button key={bot.id} type='button' className='bt-set-row' onClick={() => actions.openSettings('bots', bot.id)}><span className='bt-set-bot'>{h(BotAvatar, { bot, size: 28, badge: false, live: false })}<span className='bt-row-title'>{bot.name}</span>{bot.role ? <span className='bt-tag'>{bot.role}</span> : null}{isMainOf(roster, bot.id) ? <span className='bt-tag'>{t('Main Bot')}</span> : null}{bot.hidden && !isMainOf(roster, bot.id) ? <span className='bt-tag'>{t('Hidden')}</span> : null}</span><span className='bt-chevron'>{h(ChevronRightIcon)}</span></button>)),
+            ? <CreateBot key='create' roster={roster} actions={actions} inline canGoBack={false} onBack={() => setCreating(false)} onCreated={bot => actions.openSettings('bots', bot.id)} />
+            : <div key='new' className='bt-actions'><button type='button' className='bt-soft bt-soft-sm bt-with-icon' onClick={() => setCreating(true)}><PlusIcon />{t('New Bot')}</button></div>,
+        <SetSection key='bots' title={t('Bots · {count}', { count: roster.bots.length })}>{roster.bots.map(bot => <button key={bot.id} type='button' className='bt-set-row' onClick={() => actions.openSettings('bots', bot.id)}><span className='bt-set-bot'><BotAvatar bot={bot} size={28} badge={false} live={false} /><span className='bt-row-title'>{bot.name}</span>{bot.role ? <span className='bt-tag'>{bot.role}</span> : null}{isMainOf(roster, bot.id) ? <span className='bt-tag'>{t('Main Bot')}</span> : null}{bot.hidden && !isMainOf(roster, bot.id) ? <span className='bt-tag'>{t('Hidden')}</span> : null}</span><span className='bt-chevron'><ChevronRightIcon /></span></button>)}</SetSection>,
     ];
 }
 interface GroupsPageProps {
@@ -183,19 +209,16 @@ function GroupsPage({ roster, actions, run }: GroupsPageProps) {
     useEscape(() => setCreating(false), creating);
     return [
         creating
-            ? h(NewGroupForm, { key: 'create', roster: roster as never, actions: actions as never, run, onCancel: () => setCreating(false), onCreated: (room: {
+            ? <NewGroupForm key='create' roster={roster as never} actions={actions as never} run={run} onCancel={() => setCreating(false)} onCreated={(room: {
                     id: string;
-                }) => actions.openSettings('groups', room.id) })
-            : <div key='new' className='bt-actions'><button type='button' className='bt-soft bt-soft-sm bt-with-icon' disabled={roster.bots.length < 2} title={roster.bots.length < 2 ? t('A group chat needs at least two Bots') : undefined} onClick={() => setCreating(true)}>{h(PlusIcon)}{t('Create group chat')}</button></div>,
-        h(SetSection, { key: 'groups', title: t('Group chats · {count}', { count: roster.rooms.length }) }, roster.rooms.length === 0
-            ? h(EmptyState, {
-                icon: h(PeopleIcon), title: t('No group chats yet.'), hint: t('A group chat lets several Bots work on one thing with you.'),
-                action: roster.bots.length >= 2 ? { icon: h(PlusIcon), label: t('Create group chat'), onClick: () => setCreating(true) } : { icon: h(PlusIcon), label: t('Create Bot'), onClick: () => actions.openSettings('bots') },
-            })
+                }) => actions.openSettings('groups', room.id)} />
+            : <div key='new' className='bt-actions'><button type='button' className='bt-soft bt-soft-sm bt-with-icon' disabled={roster.bots.length < 2} title={roster.bots.length < 2 ? t('A group chat needs at least two Bots') : undefined} onClick={() => setCreating(true)}><PlusIcon />{t('Create group chat')}</button></div>,
+        <SetSection key='groups' title={t('Group chats · {count}', { count: roster.rooms.length })}>{roster.rooms.length === 0
+            ? <EmptyState icon={<PeopleIcon />} title={t('No group chats yet.')} hint={t('A group chat lets several Bots work on one thing with you.')} action={roster.bots.length >= 2 ? { icon: <PlusIcon />, label: t('Create group chat'), onClick: () => setCreating(true) } : { icon: <PlusIcon />, label: t('Create Bot'), onClick: () => actions.openSettings('bots') }} />
             : roster.rooms.map((room) => {
                 const admin = room.admin ? roster.byId[room.admin] : undefined;
-                return <button key={room.id} type='button' className='bt-set-row' onClick={() => actions.openSettings('groups', room.id)}><span className='bt-set-bot'>{h(RoomAvatar, { room, roster, size: 28 })}<span className='bt-row-title'>{room.name}</span><span className='bt-tag'>{t('{count} members', { count: room.members.length })}</span>{admin ? <span className='bt-tag bt-tag-admin'>{h(AdminStar)}{admin.name}</span> : null}{room.hidden ? <span className='bt-tag'>{t('Hidden')}</span> : null}</span><span className='bt-chevron'>{h(ChevronRightIcon)}</span></button>;
-            })),
+                return <button key={room.id} type='button' className='bt-set-row' onClick={() => actions.openSettings('groups', room.id)}><span className='bt-set-bot'><RoomAvatar room={room} roster={roster} size={28} /><span className='bt-row-title'>{room.name}</span><span className='bt-tag'>{t('{count} members', { count: room.members.length })}</span>{admin ? <span className='bt-tag bt-tag-admin'><AdminStar />{admin.name}</span> : null}{room.hidden ? <span className='bt-tag'>{t('Hidden')}</span> : null}</span><span className='bt-chevron'><ChevronRightIcon /></span></button>;
+            })}</SetSection>,
     ];
 }
 type PageMove = 'up' | 'in' | 'out';
@@ -247,7 +270,7 @@ export function SettingsDialog({ page, id, roster, actions, useUpdate, leaving =
     if (shown === 'usage' && !usageOpened)
         setUsageOpened(true);
     const errorLine = error ? <div className='bt-error' role='alert' style={{ padding: 0 }}>{error}</div> : null;
-    return <div className='bt-settings-layer' data-leaving={leaving || undefined}><div className='bt-scrim' onMouseDown={close}/><div className='bt-settings' role='dialog' aria-modal aria-label={t('Moon Bot settings')}><nav ref={nav.box} className='bt-settings-nav' aria-label={t('Settings pages')}><span ref={nav.thumb} className='bt-thumb' aria-hidden/>{pages.map(([key, text]) => <button key={key} type='button' className='bt-settings-item' aria-current={shown === key ? 'page' : undefined} onClick={() => actions.openSettings(key)}>{h(PAGE_ICONS[key] ?? InfoIcon)}{t(text)}</button>)}{actions.openShellSettingsPanel ? <button type='button' className='bt-settings-item bt-settings-shell' title={t('Models, providers, and the rest of Moon Bot')} onClick={() => { close(); actions.openShellSettingsPanel?.(); }}>{h(SlidersIcon)}{t('Advanced settings')}</button> : null}</nav><div className='bt-settings-main'><div className='bt-settings-head'>{back ? <button type='button' className='bt-icon-btn' aria-label={back} title={back} onClick={() => actions.openSettings(shown)}>{h(ChevronLeftIcon)}</button> : null}<h2 key={bot?.id ?? room?.id ?? shown}>{bot?.name ?? room?.name ?? label}</h2></div>{shown === 'usage' ? null : <div key={pageKey} className='bt-settings-scroll bt-settings-page' data-move={last.current.move}>{errorLine}{shown === 'tasks' ? h(TasksPage, { taskActions: actions as never }) : null}{shown === 'general' ? h(GeneralPage, { roster, actions, run }) : null}{shown === 'models' ? h(ProvidersPage, { actions: actions as never, run, Section: SetSection }) : null}{bot ? <div className='bt-settings-form'>{h(BotSettingsForm, { key: bot.id, bot: bot as never, roster: roster as never, actions: actions as never, run })}</div> : null}{shown === 'bots' && !bot ? h(BotsPage, { roster: roster as never, actions: actions as never, run }) : null}{room ? <div className='bt-settings-form'>{h(GroupSettingsForm, { key: room.id, room: room as never, roster: roster as never, actions: actions as never, run })}</div> : null}{shown === 'groups' && !room ? h(GroupsPage, { roster, actions, run }) : null}{shown === 'connectors' ? h(ConnectorsPage, { roster: roster as never, actions: actions as never, market: actions as never }) : null}{shown === 'remote' ? h(RelayPage, { relay: actions as never }) : null}{shown === 'capabilities' ? h(CapabilitiesPage, { roster: roster as never, actions: actions as never, run }) : null}{shown === 'schedules' ? h(SchedulesPage, { roster, actions, start: id ?? undefined }) : null}{shown === 'secrets' ? h(SecretsPage, { roster: roster as never, actions: actions as never, run, Section: SetSection }) : null}{shown === 'feedback' ? h(FeedbackPage, { actions, run, Section: SetSection, Row: SetRow }) : null}{shown === 'about' ? h(AboutPage, { useUpdate, actions, run, Section: SetSection, Row: SetRow }) : null}{shown === 'library' ? h(LibraryPage, { roster, actions }) : null}</div>}{usageOpened ? <div key='usage' className='bt-settings-scroll bt-settings-usage' data-off={shown === 'usage' ? undefined : ''} aria-hidden={shown === 'usage' ? undefined : true}>{shown === 'usage' ? errorLine : null}{h(UsagePage, { roster, actions, focusId: usageFocus })}</div> : null}</div><button type='button' className='bt-settings-close' aria-label={t('Close settings')} onClick={close}>{h(CloseIcon)}</button></div></div>;
+    return <div className='bt-settings-layer' data-leaving={leaving || undefined}><div className='bt-scrim' onMouseDown={close}/><div className='bt-settings' role='dialog' aria-modal aria-label={t('Moon Bot settings')}><nav ref={nav.box} className='bt-settings-nav' aria-label={t('Settings pages')}><span ref={nav.thumb} className='bt-thumb' aria-hidden/>{pages.map(([key, text]) => <button key={key} type='button' className='bt-settings-item' aria-current={shown === key ? 'page' : undefined} onClick={() => actions.openSettings(key)}>{h(PAGE_ICONS[key] ?? InfoIcon)}{t(text)}</button>)}{actions.openShellSettingsPanel ? <button type='button' className='bt-settings-item bt-settings-shell' title={t('Models, providers, and the rest of Moon Bot')} onClick={() => { close(); actions.openShellSettingsPanel?.(); }}><SlidersIcon />{t('Advanced settings')}</button> : null}</nav><div className='bt-settings-main'><div className='bt-settings-head'>{back ? <button type='button' className='bt-icon-btn' aria-label={back} title={back} onClick={() => actions.openSettings(shown)}><ChevronLeftIcon /></button> : null}<h2 key={bot?.id ?? room?.id ?? shown}>{bot?.name ?? room?.name ?? label}</h2></div>{shown === 'usage' ? null : <div key={pageKey} className='bt-settings-scroll bt-settings-page' data-move={last.current.move}>{errorLine}{shown === 'tasks' ? <TasksPage taskActions={actions as never} /> : null}{shown === 'general' ? h(GeneralPage, { roster, actions, run }) : null}{shown === 'models' ? h(ProvidersPage, { actions: actions as never, run, Section: SetSection }) : null}{bot ? <div className='bt-settings-form'><BotSettingsForm key={bot.id} bot={bot as never} roster={roster as never} actions={actions as never} run={run} /></div> : null}{shown === 'bots' && !bot ? h(BotsPage, { roster: roster as never, actions: actions as never, run }) : null}{room ? <div className='bt-settings-form'><GroupSettingsForm key={room.id} room={room as never} roster={roster as never} actions={actions as never} run={run} /></div> : null}{shown === 'groups' && !room ? h(GroupsPage, { roster, actions, run }) : null}{shown === 'connectors' ? <ConnectorsPage roster={roster as never} actions={actions as never} market={actions as never} /> : null}{shown === 'remote' ? <RelayPage relay={actions as never} /> : null}{shown === 'capabilities' ? <CapabilitiesPage roster={roster as never} actions={actions as never} run={run} /> : null}{shown === 'schedules' ? h(SchedulesPage, { roster, actions, start: id ?? undefined }) : null}{shown === 'secrets' ? h(SecretsPage, { roster: roster as never, actions: actions as never, run, Section: SetSection }) : null}{shown === 'feedback' ? h(FeedbackPage, { actions, run, Section: SetSection, Row: SetRow }) : null}{shown === 'about' ? h(AboutPage, { useUpdate, actions, run, Section: SetSection, Row: SetRow }) : null}{shown === 'library' ? <LibraryPage roster={roster} actions={actions} /> : null}</div>}{usageOpened ? <div key='usage' className='bt-settings-scroll bt-settings-usage' data-off={shown === 'usage' ? undefined : ''} aria-hidden={shown === 'usage' ? undefined : true}>{shown === 'usage' ? errorLine : null}<UsagePage roster={roster} actions={actions} focusId={usageFocus} /></div> : null}</div><button type='button' className='bt-settings-close' aria-label={t('Close settings')} onClick={close}><CloseIcon /></button></div></div>;
 }
 const failureMessage = (failure: unknown): string => (failure as {
     message?: string;

@@ -112,7 +112,7 @@ function OptionsInput({ node, onSubmit, keys }: {
     useOptionKeys(keys ? options.length : 0, (index: number) => choose(options[index]?.label ?? ''), ownRef);
     return <><div className='bt-q-list' role='group'>{options.map((option, index) => {
         const selected = multi && picked.includes(option.label);
-        return <button key={option.label} type='button' className='bt-q-opt' aria-pressed={multi ? selected : undefined} aria-keyshortcuts={keys ? keyLetter(index).toLowerCase() : undefined} onClick={() => choose(option.label)}>{keys ? <span className='bt-key' aria-hidden>{keyLetter(index)}</span> : null}<span className='bt-q-body'><span className='bt-q-label'>{option.label}</span>{option.description ? <span className='bt-q-desc'>{option.description}</span> : null}</span>{selected ? <span className='bt-q-check' title={t('Selected')}>{h(CheckIcon)}</span> : null}</button>;
+        return <button key={option.label} type='button' className='bt-q-opt' aria-pressed={multi ? selected : undefined} aria-keyshortcuts={keys ? keyLetter(index).toLowerCase() : undefined} onClick={() => choose(option.label)}>{keys ? <span className='bt-key' aria-hidden>{keyLetter(index)}</span> : null}<span className='bt-q-body'><span className='bt-q-label'>{option.label}</span>{option.description ? <span className='bt-q-desc'>{option.description}</span> : null}</span>{selected ? <span className='bt-q-check' title={t('Selected')}><CheckIcon /></span> : null}</button>;
     })}</div>{multi ? <div className='bt-q-foot'><button type='button' className='bt-q-submit' disabled={picked.length === 0} onClick={submit}>{t('Submit')}</button></div> : null}</>;
 }
 function SettledOptions({ node, answer }: {
@@ -121,7 +121,7 @@ function SettledOptions({ node, answer }: {
 }) {
     const selected = answerValues(answer, node)?.selected;
     const chosen = Array.isArray(selected) ? selected : [];
-    return <div className='bt-q-list' role='group' aria-label={t('Your answer')}>{optionsOf(node).map(option => <div key={option.label} className='bt-q-opt'><span className='bt-q-body'><span className='bt-q-label'>{option.label}</span>{option.description ? <span className='bt-q-desc'>{option.description}</span> : null}</span>{chosen.includes(option.label) ? <span className='bt-q-check' title={t('Selected')}>{h(CheckIcon)}</span> : null}</div>)}</div>;
+    return <div className='bt-q-list' role='group' aria-label={t('Your answer')}>{optionsOf(node).map(option => <div key={option.label} className='bt-q-opt'><span className='bt-q-body'><span className='bt-q-label'>{option.label}</span>{option.description ? <span className='bt-q-desc'>{option.description}</span> : null}</span>{chosen.includes(option.label) ? <span className='bt-q-check' title={t('Selected')}><CheckIcon /></span> : null}</div>)}</div>;
 }
 function ConfirmInput({ node, onSubmit }: {
     node: WidgetNode;
@@ -186,19 +186,19 @@ function WidgetNode({ node, ctx }: {
     switch (node.type) {
         case 'stack': {
             const children: readonly WidgetNode[] = Array.isArray(node.children) ? node.children : [];
-            return <div className='bt-widget-stack'>{children.map((child, index) => h(WidgetNode, { key: child.id ?? index, node: child, ctx }))}</div>;
+            return <div className='bt-widget-stack'>{children.map((child, index) => <WidgetNode key={child.id ?? index} node={child} ctx={ctx} />)}</div>;
         }
         case 'text':
-            return h(MarkdownText, { text: String(node.text ?? ''), labels: mdLabels(), variant: 'compact' });
+            return <MarkdownText text={String(node.text ?? '')} labels={mdLabels()} variant='compact' />;
         case 'metric': {
             const tone = node.tone !== undefined && ['good', 'warn', 'bad'].includes(node.tone) ? node.tone : undefined;
             return <div className='bt-widget-metric' data-tone={tone}><span className='bt-widget-metric-label'>{node.label}</span><span className='bt-widget-metric-value'>{node.value}</span></div>;
         }
-        case 'table': return h(WidgetTable, { node });
-        case 'options': return ctx.settled ? h(SettledOptions, { node, answer: ctx.answer }) : h(OptionsInput, { node, onSubmit: ctx.onSubmit, keys: ctx.keys });
-        case 'confirm': return ctx.settled ? h(SettledConfirm, { node, answer: ctx.answer }) : h(ConfirmInput, { node, onSubmit: ctx.onSubmit });
-        case 'form': return ctx.settled ? h(SettledForm, { node, answer: ctx.answer }) : h(FormInput, { node, onSubmit: ctx.onSubmit });
-        case 'progress': return h(WidgetProgress, { node });
+        case 'table': return <WidgetTable node={node} />;
+        case 'options': return ctx.settled ? <SettledOptions node={node} answer={ctx.answer} /> : <OptionsInput node={node} onSubmit={ctx.onSubmit} keys={ctx.keys} />;
+        case 'confirm': return ctx.settled ? <SettledConfirm node={node} answer={ctx.answer} /> : <ConfirmInput node={node} onSubmit={ctx.onSubmit} />;
+        case 'form': return ctx.settled ? <SettledForm node={node} answer={ctx.answer} /> : <FormInput node={node} onSubmit={ctx.onSubmit} />;
+        case 'progress': return <WidgetProgress node={node} />;
         default: return null;
     }
 }
@@ -211,7 +211,7 @@ export function WidgetView({ view, onSubmit, settled = false, answer = null }: {
     answer?: AnswerValue | null;
 }) {
     const ctx = { onSubmit, settled, answer, keys: !settled && countType(view, 'options') === 1 };
-    return h(WidgetNode, { node: view, ctx });
+    return <WidgetNode node={view} ctx={ctx} />;
 }
 // The card chrome every view wears, pending or settled: a title bar with a small
 // "View" tag, and a dismiss button while the card still waits for an answer.
@@ -225,7 +225,7 @@ export function WidgetCard({ title, view, onSubmit, onDismiss, raised = false, s
     answer?: AnswerValue | null;
 }) {
     const titleId = useId();
-    return <div className={settled ? 'bt-q bt-q-settled' : raised ? 'bt-q bt-q-raised' : 'bt-q'} role='group' aria-labelledby={titleId}><div className='bt-q-head'><div className='bt-q-text'><p className='bt-q-title' id={titleId}>{title}</p></div><span className='bt-q-badge'>{t('View')}</span>{onDismiss ? <button type='button' className='bt-q-x' aria-label={t('Dismiss view')} title={t('Dismiss')} onClick={onDismiss}>{h(CloseIcon)}</button> : null}</div>{h(WidgetView, { view, onSubmit, settled, answer })}</div>;
+    return <div className={settled ? 'bt-q bt-q-settled' : raised ? 'bt-q bt-q-raised' : 'bt-q'} role='group' aria-labelledby={titleId}><div className='bt-q-head'><div className='bt-q-text'><p className='bt-q-title' id={titleId}>{title}</p></div><span className='bt-q-badge'>{t('View')}</span>{onDismiss ? <button type='button' className='bt-q-x' aria-label={t('Dismiss view')} title={t('Dismiss')} onClick={onDismiss}><CloseIcon /></button> : null}</div><WidgetView view={view} onSubmit={onSubmit} settled={settled} answer={answer} /></div>;
 }
 // A view waiting for its answer, inline at its call or raised in the dock. Like a
 // pending question it hides on submit and comes back if the reply fails.
@@ -247,7 +247,7 @@ export function PendingView({ sessionId, view, actions, inline }: {
     };
     // Hidden, not unmounted, while the answer is on its way: if it fails the card comes
     // back with what the user had typed or picked.
-    return <div className={inline ? 'bt-q-inline' : 'bt-q-dock'} style={answered === view.id ? { display: 'none' } : undefined} onFocusCapture={hold} onPointerDownCapture={hold}>{h(WidgetCard, { key: view.id, title: view.title ?? '', view: view.view, onSubmit, onDismiss, raised: !inline })}</div>;
+    return <div className={inline ? 'bt-q-inline' : 'bt-q-dock'} style={answered === view.id ? { display: 'none' } : undefined} onFocusCapture={hold} onPointerDownCapture={hold}><WidgetCard key={view.id} title={view.title ?? ''} view={view.view} onSubmit={onSubmit} onDismiss={onDismiss} raised={!inline} /></div>;
 }
 // The show_view call in the transcript.
 export function WidgetCell({ sessionId, callId, args, done, isError, roster, actions, heldCards }: {
@@ -266,7 +266,7 @@ export function WidgetCell({ sessionId, callId, args, done, isError, roster, act
     if (record !== undefined && record.callId === callId) {
         if ((heldCards?.[heldCardKey('view', record.id)] ?? 0) > 0)
             return null;
-        return h(PendingView, { sessionId, view: record, actions, inline: true });
+        return <PendingView sessionId={sessionId} view={record} actions={actions} inline />;
     }
     // A refused call (bad blueprint) drew no card; don't render an empty one.
     if (done && isError)
@@ -283,7 +283,7 @@ export function WidgetCell({ sessionId, callId, args, done, isError, roster, act
     if (shown.error !== undefined || shown.interactive || args?.value?.('await_reply') === true) {
         return <span className='bt-q-gone' hidden/>;
     }
-    return <div className='bt-q-inline'>{h(WidgetCard, { title: shown.title, view: blueprint })}</div>;
+    return <div className='bt-q-inline'><WidgetCard title={shown.title} view={blueprint} /></div>;
 }
 // Views asked by a call the transcript does not draw wait above the composer,
 // mirroring the question dock.
@@ -299,7 +299,7 @@ export function WidgetDock({ sessionId, useRoster, useCards, useHeldCards, actio
     const held = useHeldCards?.(state => view !== undefined && (state[sessionId]?.[heldCardKey('view', view.id)] ?? 0) > 0) === true;
     if (view === undefined || (view.callId && drawn && !held))
         return null;
-    return h(PendingView, { sessionId, view, actions, inline: false });
+    return <PendingView sessionId={sessionId} view={view} actions={actions} inline={false} />;
 }
 export { WIDGET_CSS } from './widget-cell-css.ts';
 

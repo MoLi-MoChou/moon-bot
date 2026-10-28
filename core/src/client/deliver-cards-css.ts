@@ -44,5 +44,13 @@ export const DELIVER_CSS = `
 .bt-lib-copy{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
 .bt-lib-name{font-size:13px;line-height:18px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bt-lib-meta{font-size:12px;line-height:16px;color:var(--bt-ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:640px){
+.bt-lib-row{flex-wrap:wrap;padding:4px 4px 8px}
+.bt-lib-back{margin-left:auto}
+.bt-lib-back-label{display:none}
+.bt-lib-filters{gap:6px}
+.bt-lib-filters select{min-width:0;flex:1}
+.bt-fpreview{width:calc(100vw - 16px);height:calc(100vh - 24px);border-radius:12px}
+}
 @media (prefers-reduced-motion:reduce){.bt-dcard,.bt-fpreview-layer{animation:none;transition:none}}
 `

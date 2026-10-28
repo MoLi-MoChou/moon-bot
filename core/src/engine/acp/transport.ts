@@ -44,8 +44,10 @@ export class StdioTransport implements AcpTransport {
   }
 
   write(line: string): void {
-    const child = this.child
-    if (child?.stdin !== null && child !== undefined) child.stdin.write(`${line}\n`)
+    // A line nobody reads would leave its request waiting forever; fail it instead.
+    const stdin = this.child?.stdin
+    if (stdin === null || stdin === undefined) throw new Error('the agent process is not running')
+    stdin.write(`${line}\n`)
   }
 
   onLine(receive: (line: string) => void): void {

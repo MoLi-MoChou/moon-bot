@@ -79,7 +79,8 @@ test('a group round completes through the engine: delivery, turn events, group r
     toolsFor: () => [],
     definitions: [],
   }
-  const engine = new BuiltinRuntime({ services, emit: () => {} })
+  // One fanout for the engine and the bridge, as the service wires them.
+  const engine = new BuiltinRuntime({ services, emit: (sessionId, event) => emitEvent(sessionId, event) })
 
   const ctx = fakeContext()
   t.after(async () => { await ctx.dispose(); store.close(); rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }) })
@@ -146,7 +147,8 @@ test('a request between Bots round-trips through the engine and is recorded as a
     toolsFor: () => [],
     definitions: [],
   }
-  const engine = new BuiltinRuntime({ services, emit: () => {} })
+  // One fanout for the engine and the bridge, as the service wires them.
+  const engine = new BuiltinRuntime({ services, emit: (sessionId, event) => emitEvent(sessionId, event) })
   const ctx = fakeContext()
 
 

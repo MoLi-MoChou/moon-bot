@@ -149,6 +149,31 @@ test('an agent that exits between turns is started and initialized again on the 
   await runtime.stop()
 })
 
+test('a remote agent that is offline ends its turn through the fanout, not only the generator', async () => {
+  const fanout: EngineEvent[] = []
+  const offline = { connect: () => undefined, onUp: () => {} }
+  const runtime = new AcpRuntime({ transport: new RelayTransport(offline, 'laptop'), emit: (_id, event) => fanout.push(event) })
+  const events = await run(runtime, 'b1', 'hello')
+  assert.deepEqual(events.map(event => event.type), ['turn/start', 'turn/end'])
+  assert.deepEqual(fanout, events)
+  assert.match(JSON.stringify(events.at(-1)), /offline/)
+})
+
+test('the bridge leaves the fanout to the runtime: each event arrives once', async (t) => {
+  const { command, args } = mockAgent(t, [JSON.stringify({ sessionUpdate: 'agent_message', content: [{ type: 'text', text: 'Done.' }] })])
+  const fanout: string[] = []
+  // One fanout for the runtime and the bridge, as service/engine.ts wires them.
+  const emitEvent = (_id: string, event: EngineEvent): void => { fanout.push(event.type) }
+  const runtime = new AcpRuntime({ transport: new StdioTransport(command, args), emit: emitEvent })
+  t.after(() => runtime.stop())
+  const agent = engineAgentOf('b1', { runtime, emitEvent })
+  agent.followup({ content: [{ type: 'text', text: 'hello' }] })
+  const until = Date.now() + 5000
+  while ((agent.status === 'running' || fanout.length === 0) && Date.now() < until) await new Promise(resolve => setTimeout(resolve, 10))
+  assert.deepEqual(fanout, ['turn/start', 'user/message', 'assistant/stream', 'assistant/message', 'turn/end'])
+  await runtime.stop()
+})
+
 test('spawnAgent wiring: a torn line never corrupts the stream', () => {
   const seen: unknown[] = []
   const protocol = new LineProtocol(() => {}, message => { seen.push(message) })

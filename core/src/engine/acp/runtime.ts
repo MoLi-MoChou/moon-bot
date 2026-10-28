@@ -98,18 +98,24 @@ export class AcpRuntime implements AgentRuntime {
   }
 
   async *runTurn(input: TurnInput): AsyncIterable<EngineEvent> {
+    // A turn that cannot reach the agent still ends through the fanout: the router
+    // listens there, not on this generator.
+    const refused = (message: string): readonly EngineEvent[] => {
+      const events: readonly EngineEvent[] = [{ type: 'turn/start', turn: 1 }, { type: 'turn/end', turn: 1, reason: { kind: 'error', error: { message } } }]
+      for (const event of events) this.options.emit(input.sessionId, event)
+      return events
+    }
+    let acpId: string
     try {
       await this.start()
+      acpId = await this.openSession(input)
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      yield { type: 'turn/start', turn: 1 }
-      yield { type: 'turn/end', turn: 1, reason: { kind: 'error', error: { message } } }
+      yield* refused(error instanceof Error ? error.message : String(error))
       return
     }
-    const acpId = await this.openSession(input)
     const session = this.sessions.get(input.sessionId)
     if (session === undefined) {
-      yield { type: 'turn/end', turn: 1, reason: { kind: 'error', error: { message: 'the ACP session is gone' } } }
+      yield* refused('the ACP session is gone')
       return
     }
     session.turns += 1

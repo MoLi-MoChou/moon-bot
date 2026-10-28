@@ -81,7 +81,12 @@ try {
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } })
   page = await context.newPage()
   page.setDefaultTimeout(timeout)
-  page.on('console', message => { if (message.type() === 'error') problems.push(message.text()) })
+  // Resource loads fail on purpose here (the deliberate wrong password answers 401, and
+  // a favicon may 404); a thrown script error is the thing worth failing on.
+  page.on('console', message => {
+    if (message.type() !== 'error' || /Failed to load resource/.test(message.text())) return
+    problems.push(message.text())
+  })
   page.on('pageerror', error => problems.push(String(error)))
 
   // 1. The password page asks, and a wrong password is refused with a note.

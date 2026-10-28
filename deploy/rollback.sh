@@ -138,9 +138,14 @@ fi
 
 echo "rollback: to tag $previous_tag${previous_image:+ (image recorded)}"
 write_tag "$previous_tag"
-# Pull is best effort: update.sh records and tags the exact image, but a manual rollback
-# can use a registry tag when the old image is no longer in the local cache.
-$COMPOSE pull >/dev/null 2>&1 || true
+# Prefer the exact image recorded by update.sh. This matters after --restore: .env may
+# still name the failed registry/tag, so pulling that tag would restart the bad image.
+if [ -n "$previous_image" ] && docker image inspect "$previous_image" >/dev/null 2>&1; then
+  docker tag "$previous_image" "$REGISTRY:$previous_tag" >/dev/null 2>&1 || true
+else
+  # Pull is best effort for a manual rollback when the old image is not in the local cache.
+  $COMPOSE pull >/dev/null 2>&1 || true
+fi
 $COMPOSE up -d >/dev/null 2>&1
 if health; then
   echo "rollback: healthy — $previous_tag"

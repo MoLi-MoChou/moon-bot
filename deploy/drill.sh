@@ -22,7 +22,7 @@ OUTPUT="$ROOT/update-output"
 mkdir -p "$DEPLOY" "$DATA"
 chmod 777 "$ROOT" "$DEPLOY" "$DATA"
 cleanup() {
-  docker compose -f "$DEPLOY/docker-compose.yml" down >/dev/null 2>&1 || true
+  docker compose -p moon-bot-drill -f "$DEPLOY/docker-compose.yml" down >/dev/null 2>&1 || true
   docker image rm "$BAD_IMAGE" "$GOOD_IMAGE" >/dev/null 2>&1 || true
   rm -rf -- "$ROOT"
 }
@@ -48,10 +48,9 @@ MOON_BOT_SNAPSHOT_RETENTION=2
 EOF
 chmod 600 "$DEPLOY/.env"
 
-# Seed a harmless marker and a known SQLite schema version in the temporary data folder.
+# Seed only a harmless marker. The healthy service creates and migrates its own SQLite store;
+# pre-creating an empty database would not represent a real installation.
 printf 'before-drill\n' > "$DATA/marker.txt"
-docker run --rm --user 1000:1000 -e NODE_PATH=/opt/moon-bot/core/node_modules -v "$DATA:/data" --entrypoint node "$GOOD_IMAGE" \
-  -e 'const Database=require("better-sqlite3");const db=new Database("/data/store.sqlite3");db.pragma("user_version = 1");db.close()'
 
 wait_healthy() {
   i=0
@@ -66,12 +65,13 @@ wait_healthy() {
 }
 
 cd "$DEPLOY"
+export COMPOSE_PROJECT_NAME=moon-bot-drill
 docker compose up -d >/dev/null
 wait_healthy
 test "$(curl -fsS http://127.0.0.1:8297/healthz | tr -d '\n')" != ""
 
 # A healthy update proves the snapshot is made only after the old container stops.
-HEALTH_TRIES=3 HEALTH_WAIT=1 ./update.sh local > "$OUTPUT" 2>&1
+MOON_BOT_SKIP_PULL=1 HEALTH_TRIES=45 HEALTH_WAIT=1 ./update.sh local > "$OUTPUT" 2>&1
 SNAPSHOT=$(sed -n 's/^update: snapshot saved at //p' "$OUTPUT" | tail -1)
 test -n "$SNAPSHOT"
 test -f "$SNAPSHOT/data.tar.gz"
@@ -88,13 +88,13 @@ EOF
 docker build -q -t "$BAD_IMAGE" -f "$ROOT/Dockerfile.bad" "$ROOT" >/dev/null
 sed -i "s#MOON_BOT_REGISTRY=.*#MOON_BOT_REGISTRY=$BAD_REPOSITORY#" .env
 set +e
-HEALTH_TRIES=2 HEALTH_WAIT=1 ./update.sh local > "$OUTPUT" 2>&1
+MOON_BOT_SKIP_PULL=1 HEALTH_TRIES=10 HEALTH_WAIT=1 ./update.sh local > "$OUTPUT" 2>&1
 status=$?
 set -e
 test "$status" -ne 0
 grep -q 'leaving the new container for diagnosis' "$OUTPUT"
 grep -q 'rollback.sh --restore' "$OUTPUT"
-test "$(docker inspect moon-bot-drill --format '{{.State.Status}}')" = running
+test "$(docker inspect moon-bot-drill --format '{{.State.Status}}' 2>/dev/null || true)" = running
 
 # Explicit restore puts the old data back and starts the snapshot's previous image.
 HEALTH_TRIES=45 HEALTH_WAIT=1 ./rollback.sh --restore "$SNAPSHOT" > "$OUTPUT" 2>&1

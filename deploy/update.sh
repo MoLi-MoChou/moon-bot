@@ -31,6 +31,7 @@ SNAPSHOT_CONFIG=$(env_value MOON_BOT_SNAPSHOT_DIR)
 SNAPSHOT_CONFIG=${SNAPSHOT_CONFIG:-.snapshots}
 SNAPSHOT_RETENTION=$(env_value MOON_BOT_SNAPSHOT_RETENTION)
 SNAPSHOT_RETENTION=${SNAPSHOT_RETENTION:-5}
+SKIP_PULL=${MOON_BOT_SKIP_PULL:-0}
 
 case "$SNAPSHOT_RETENTION" in
   ''|*[!0-9]*) echo "update: MOON_BOT_SNAPSHOT_RETENTION must be a positive integer" >&2; exit 1 ;;
@@ -146,7 +147,12 @@ schema_image=${previous_image:-$REGISTRY:$current}
 
 # Pull first. A missing tag therefore leaves the container, .env and snapshots untouched.
 echo "update: pulling $target"
-if ! docker pull "$target_image" >/dev/null 2>&1; then
+if [ "$SKIP_PULL" = 1 ]; then
+  docker image inspect "$target_image" >/dev/null 2>&1 || {
+    echo "update: local image $target_image is not available" >&2
+    exit 1
+  }
+elif ! docker pull "$target_image" >/dev/null 2>&1; then
   echo "update: could not pull tag $target; nothing was changed" >&2
   exit 1
 fi

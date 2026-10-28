@@ -15,7 +15,6 @@ import { lookOf } from '../../../core/src/client/characters.ts'
 import { inkText } from '../../../core/src/client/inks.ts'
 import { MentionMirror, deleteMentionBefore, mentionChips } from '../../../core/src/client/mention-chips.tsx'
 import { asActions, type Team } from './team.ts'
-import { ActivityIndicator } from '../../../core/src/client/activity-row.tsx'
 import { ComposerMenu, detectTrigger, type TriggerContext, type TriggerItem } from './composer-menu.tsx'
 
 // The chat follows its end while the user is this close to it.
@@ -374,18 +373,11 @@ export function Chat({ sessionId, team }: { readonly sessionId: string, readonly
           h(ChatRows, { items: view.items, sessionId, roster, actions: cellActions, useUi: cellUi, clock: true }),
           pending.length > 0 ? h('div', { className: 'dsb-pending' }, h(ChatRows, { items: pending, sessionId, roster, actions: cellActions, useUi: cellUi })) : null,
           stream !== null && stream.text !== '' ? h(Bubbles, { texts: [stream.text], roster, selfId: bot?.id, actions: cellActions, streaming: true, sessionId, useUi: cellUi }) : null,
-          // The Bot views' activity row (from the header pill) draws itself in here.
+          // The host slot the activity row portals into. The header pill draws the row
+          // itself (as it does under DSH); a second indicator here portals a second row
+          // into this same slot.
           h('div', { 'data-chat-running': '' }),
-          h(ActivityIndicator, {
-            key: `activity:${sessionId}`,
-            sessionId,
-            useRoster: hooks.useRoster,
-            useSessionStatus: hooks.useSessionStatus,
-            useLive: hooks.useLive,
-            useSession: ((<R,>(select: (state: unknown) => R): R => select(null)) as never),
-            useWork: hooks.useWork as never,
-            actions: { clearLive: actions.clearLive },
-          }),
+
           question !== undefined ? h(PendingQuestion, { key: JSON.stringify([sessionId, question.id]), sessionId, question, actions, inline: true }) : null))),
     h('div', { className: 'dsb-composer-root' },
       h(ModelChoiceDock, { sessionId, useRoster: hooks.useRoster as unknown as ModelChoiceDockProps['useRoster'], actions: asActions<ModelChoiceActions>(actions) }),

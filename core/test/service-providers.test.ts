@@ -82,4 +82,18 @@ test('the providers page adds a provider, and a Bot on it runs its turn', async 
     reply = items.filter(item => item.kind === 'bot').at(-1)?.text ?? ''
   }
   assert.match(reply, /At your service\./)
+
+  // A provider added on this page can be removed from it again, key and all: the
+  // service's settings are the user's own layer, and the host's `unset` takes the route out.
+  const listed = (await call('providers', {})).value as { providers: { id: string, removable?: boolean }[] }
+  assert.equal(listed.providers.find(entry => entry.id === 'mocklab')?.removable, true)
+  const removed = await call('provider-remove', { provider: 'mocklab' })
+  assert.equal(removed.ok, true, JSON.stringify(removed.error))
+  const after = (await call('providers', {})).value as { providers: { id: string }[] }
+  assert.ok(!after.providers.some(entry => entry.id === 'mocklab'), 'the route is gone')
+  const readded = await call('provider-add', {
+    custom: true, provider: 'mocklab', api: 'openai-completions', baseURL: `http://127.0.0.1:${port}/v1`, models: ['mock-1'],
+  })
+  const back = (readded.value as { providers: { id: string, key?: { configured?: boolean } | null }[] }).providers
+  assert.notEqual(back.find(entry => entry.id === 'mocklab')?.key?.configured, true, 'its key went with it')
 })

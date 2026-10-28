@@ -69,7 +69,10 @@ export class FileSettings implements SettingsService {
 
   describe(): readonly SettingsSection[] {
     const file = this.load()
-    return Object.entries(file.sections).map(([ns, value]) => ({ ns, revision: file.revision, value }))
+    // Everything in this file was written through the service, so the whole value is the
+    // user's layer; there is no base layer that ships with a setup. The providers module
+    // reads `user` to know which routes may be removed.
+    return Object.entries(file.sections).map(([ns, value]) => ({ ns, revision: file.revision, value, user: value }))
   }
 
   async mutate(ns: string, operations: readonly SettingsOperation[], revision?: number): Promise<unknown> {
@@ -80,7 +83,8 @@ export class FileSettings implements SettingsService {
     const section = file.sections[ns] ??= {}
     for (const operation of operations) {
       if (operation.op === 'set') setAt(section, operation.path, operation.value)
-      else if (operation.op === 'remove') removeAt(section, operation.path)
+      // `unset` is the name the host modules use (DSH's settings vocabulary).
+      else if (operation.op === 'unset' || operation.op === 'remove') removeAt(section, operation.path)
     }
     file.revision += 1
     this.flush()

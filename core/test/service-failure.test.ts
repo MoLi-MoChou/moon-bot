@@ -131,6 +131,9 @@ test('the sent message reads as work before the model answers', async (t) => {
   const state = await call('state', {})
   const work = (state.value as { work?: { bots?: Record<string, { since?: number }> } } | undefined)?.work?.bots ?? {}
   assert.equal(typeof work.a?.since, 'number', JSON.stringify(state))
+  // The live frame travels over the SSE connection, so it is not in the buffer the instant
+  // send answers; wait for the barrier instead of racing the socket (CI lost that race).
+  await settle(() => feed.some(entry => entry.event === 'live'))
   assert.ok(feed.some(entry => entry.event === 'live'), 'the window is told to read the live figures')
 
   await settle(() => feed.some(entry => entry.event === 'message' && (entry.data.item as { kind?: string } | undefined)?.kind === 'bot'))

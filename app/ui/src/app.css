@@ -56,7 +56,7 @@ html[data-mac] .dsb-frame .dsb-side{padding-top:var(--dsb-band)}
 .dsb-pending .bt-ububble{opacity:.6}
 
 .dsb-composer-root{display:flex;flex-direction:column;align-items:center;padding:0 11px 13px 16px}
-.dsb-composer-wrap{width:100%;max-width:min(992px,100%)}
+.dsb-composer-wrap{position:relative;width:100%;max-width:min(992px,100%)}
 .dsb-composer{position:relative}
 .dsb-composer[data-multiline]{border-radius:18px!important}
 .dsb-composer-tools{order:1;display:flex;flex:none;align-self:flex-end}
@@ -72,6 +72,17 @@ html[data-mac] .dsb-frame .dsb-side{padding-top:var(--dsb-band)}
 [data-composer-card]:has(.dsb-send:disabled) .bt-voice{display:inline-grid}
 body[data-bt-room] [data-composer-card]:has(.dsb-send:disabled) .bt-mic:not([aria-pressed=true]){background:var(--bt-accent);color:var(--bt-accent-ink,#fff)}
 .dsb-composer-error{margin:0 0 6px 4px;font-size:12px;line-height:16px;color:var(--bt-danger)}
+
+/* Autocomplete trigger menu for @ and / */
+.dsb-trigger-menu{position:absolute;bottom:calc(100% + 8px);left:0;right:0;max-height:260px;overflow-y:auto;background:var(--bt-sidebar);border:1px solid color-mix(in srgb,var(--bt-ink) 12%,transparent);border-radius:14px;box-shadow:0 8px 24px color-mix(in srgb,var(--bt-ink) 14%,transparent);padding:6px;z-index:30;display:flex;flex-direction:column;gap:2px}
+.dsb-trigger-head{padding:4px 8px 2px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:color-mix(in srgb,var(--bt-ink) 45%,transparent)}
+.dsb-trigger-item{display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:9px;border:0;background:none;width:100%;text-align:left;font:inherit;color:var(--bt-ink);cursor:pointer;transition:background-color .1s ease}
+.dsb-trigger-item:hover,.dsb-trigger-item[data-active=true]{background:color-mix(in srgb,var(--bt-ink) 8%,transparent)}
+.dsb-trigger-icon{flex:none;display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;color:var(--bt-ink-2)}
+.dsb-trigger-info{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:1px}
+.dsb-trigger-title{font-size:13px;font-weight:500;line-height:18px;display:flex;align-items:center;gap:6px}
+.dsb-trigger-badge{font-size:10px;padding:1px 5px;border-radius:4px;background:color-mix(in srgb,var(--bt-ink) 10%,transparent);color:color-mix(in srgb,var(--bt-ink) 70%,transparent)}
+.dsb-trigger-sub{font-size:11px;line-height:15px;color:color-mix(in srgb,var(--bt-ink) 50%,transparent);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* Markdown in the bubbles (primitives.js). */
 .md_markdown{overflow-wrap:anywhere}

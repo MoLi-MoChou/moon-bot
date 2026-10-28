@@ -152,7 +152,7 @@ function TaskRow({ task, actions, onView, showBot, roster }: {
         void actions.scheduleDelete(task.sessionId, task.id).then((next) => onView(next as ScheduleView), () => setBusy(false));
     };
     const room = task.roomId === undefined ? undefined : roster.roomsById[task.roomId];
-    return <div className='bt-set-row bt-task' data-done={task.status === 'active' ? undefined : ''} data-busy={busy || undefined}>{showBot ? h(BotAvatar, { bot: task.botId === undefined ? undefined : roster.byId[task.botId], size: 28, badge: false, live: false }) : null}<span className='bt-set-copy'><span className='bt-task-title'>{task.title}</span><span className='bt-set-hint'>{[timingText(task), room ? t('in {name}', { name: room.name }) : ''].filter(Boolean).join(' · ')}</span>{task.prompt && task.prompt !== task.title ? <span className='bt-task-prompt'>{task.prompt}</span> : null}</span><span className='bt-task-next'>{nextText(task)}</span><button type='button' className='bt-mini bt-task-remove' data-confirm={confirming || undefined} disabled={busy} aria-label={confirming ? t('Click again to delete') : t('Delete task')} title={confirming ? undefined : t('Delete task')} onClick={remove}>{confirming ? t('Delete') : h(TrashIcon)}</button></div>;
+    return <div className='bt-set-row bt-task' data-done={task.status === 'active' ? undefined : ''} data-busy={busy || undefined}>{showBot ? <BotAvatar bot={task.botId === undefined ? undefined : roster.byId[task.botId]} size={28} badge={false} live={false} /> : null}<span className='bt-set-copy'><span className='bt-task-title'>{task.title}</span><span className='bt-set-hint'>{[timingText(task), room ? t('in {name}', { name: room.name }) : ''].filter(Boolean).join(' · ')}</span>{task.prompt && task.prompt !== task.title ? <span className='bt-task-prompt'>{task.prompt}</span> : null}</span><span className='bt-task-next'>{nextText(task)}</span><button type='button' className='bt-mini bt-task-remove' data-confirm={confirming || undefined} disabled={busy} aria-label={confirming ? t('Click again to delete') : t('Delete task')} title={confirming ? undefined : t('Delete task')} onClick={remove}>{confirming ? t('Delete') : <TrashIcon />}</button></div>;
 }
 const pad = (number: number): string => String(number).padStart(2, '0');
 function inAnHour(): string {
@@ -216,18 +216,13 @@ function TaskForm({ roster, actions, start, onDone, onCancel }: {
         } | null | undefined) => { setError(hostText(failure?.message ?? String(failure))); setBusy(false); });
     };
     const toggleDay = (day: number): void => setWeekdays(days => (days.includes(day) ? days.filter(item => item !== day) : [...days, day].sort()));
-    return <form className='bt-set-card bt-task-form' onSubmit={submit}><label className='bt-set-row bt-bs-row'><span className='bt-set-copy'><span className='bt-bs-label'>{t('Send to')}</span></span><select className='bt-select bt-task-bot' value={target} onChange={event => setTarget(inputValue(event))}><optgroup label={t('Bots')}>{roster.bots.map(bot => <option key={bot.id} value={bot.id}>{bot.name}</option>)}</optgroup>{roster.rooms.length > 0 ? <optgroup label={t('Group chats')}>{roster.rooms.map(room => <option key={room.id} value={room.id}>{room.name}</option>)}</optgroup> : null}</select></label><label className='bt-set-row bt-bs-row'><span className='bt-set-copy'><span className='bt-bs-label'>{t('Name')}</span></span><input className='bt-bs-input' value={title} maxLength={120} placeholder={t('Morning briefing')} autoFocus onChange={event => setTitle(inputValue(event))}/></label><label className='bt-set-row bt-bs-row bt-bs-stack'><span className='bt-set-copy'><span className='bt-bs-label'>{t('What to do')}</span></span><textarea className='bt-bs-input bt-bs-area' value={prompt} rows={3} placeholder={t('Sum up what changed since yesterday and what needs me today.')} onChange={event => setPrompt(inputValue(event))}/></label><div className='bt-set-row bt-bs-row bt-bs-stack'><span className='bt-set-copy'><span className='bt-bs-label'>{t('When')}</span></span>{h(Segmented, { label: t('When'), value: kind }, KINDS.map(([id, label]) => <button key={id} type='button' aria-pressed={kind === id} onClick={() => setKind(id)}>{t(label)}</button>))}<div key={kind} className='bt-task-when bt-veil'>{kind === 'at' ? <input className='bt-input' type='datetime-local' value={at} aria-label={t('Date and time')} onChange={event => setAt(inputValue(event))}/> : null}{kind === 'weekly' ? <div className='bt-task-days' role='group' aria-label={t('Days')}>{[1, 2, 3, 4, 5, 6, 7].map(day => <button key={day} type='button' className='bt-task-day' aria-pressed={weekdays.includes(day)} onClick={() => toggleDay(day)}>{when(Date.UTC(2024, 0, day), { weekday: 'narrow', timeZone: 'UTC' })}</button>)}</div> : null}{kind === 'daily' || kind === 'weekly' ? <input className='bt-input bt-task-time' type='time' value={time} aria-label={t('Time')} onChange={event => setTime(inputValue(event))}/> : null}{kind === 'every' ? <><span className='bt-task-every'>{t('Every')}</span><input className='bt-input bt-task-count' type='number' min={1} value={count} aria-label={t('How many')} onChange={event => setCount(inputValue(event))}/><select className='bt-select bt-task-unit' value={unit} aria-label={t('Unit')} onChange={event => setUnit(inputValue(event))}>{UNITS.map(([id, , label]) => <option key={id} value={id}>{t(label)}</option>)}</select></> : null}</div></div>{error ? <div className='bt-set-row'><span className='bt-danger bt-set-hint'>{error}</span></div> : null}<div className='bt-set-row bt-task-foot'><button type='button' className='bt-soft bt-soft-sm' onClick={onCancel}>{t('Cancel')}</button><button type='submit' className='bt-send bt-soft-sm' disabled={busy || !target || title.trim() === '' || prompt.trim() === ''}>{busy ? t('Creating…') : t('Create task')}</button></div></form>;
+    return <form className='bt-set-card bt-task-form' onSubmit={submit}><label className='bt-set-row bt-bs-row'><span className='bt-set-copy'><span className='bt-bs-label'>{t('Send to')}</span></span><select className='bt-select bt-task-bot' value={target} onChange={event => setTarget(inputValue(event))}><optgroup label={t('Bots')}>{roster.bots.map(bot => <option key={bot.id} value={bot.id}>{bot.name}</option>)}</optgroup>{roster.rooms.length > 0 ? <optgroup label={t('Group chats')}>{roster.rooms.map(room => <option key={room.id} value={room.id}>{room.name}</option>)}</optgroup> : null}</select></label><label className='bt-set-row bt-bs-row'><span className='bt-set-copy'><span className='bt-bs-label'>{t('Name')}</span></span><input className='bt-bs-input' value={title} maxLength={120} placeholder={t('Morning briefing')} autoFocus onChange={event => setTitle(inputValue(event))}/></label><label className='bt-set-row bt-bs-row bt-bs-stack'><span className='bt-set-copy'><span className='bt-bs-label'>{t('What to do')}</span></span><textarea className='bt-bs-input bt-bs-area' value={prompt} rows={3} placeholder={t('Sum up what changed since yesterday and what needs me today.')} onChange={event => setPrompt(inputValue(event))}/></label><div className='bt-set-row bt-bs-row bt-bs-stack'><span className='bt-set-copy'><span className='bt-bs-label'>{t('When')}</span></span><Segmented label={t('When')} value={kind}>{KINDS.map(([id, label]) => <button key={id} type='button' aria-pressed={kind === id} onClick={() => setKind(id)}>{t(label)}</button>)}</Segmented><div key={kind} className='bt-task-when bt-veil'>{kind === 'at' ? <input className='bt-input' type='datetime-local' value={at} aria-label={t('Date and time')} onChange={event => setAt(inputValue(event))}/> : null}{kind === 'weekly' ? <div className='bt-task-days' role='group' aria-label={t('Days')}>{[1, 2, 3, 4, 5, 6, 7].map(day => <button key={day} type='button' className='bt-task-day' aria-pressed={weekdays.includes(day)} onClick={() => toggleDay(day)}>{when(Date.UTC(2024, 0, day), { weekday: 'narrow', timeZone: 'UTC' })}</button>)}</div> : null}{kind === 'daily' || kind === 'weekly' ? <input className='bt-input bt-task-time' type='time' value={time} aria-label={t('Time')} onChange={event => setTime(inputValue(event))}/> : null}{kind === 'every' ? <><span className='bt-task-every'>{t('Every')}</span><input className='bt-input bt-task-count' type='number' min={1} value={count} aria-label={t('How many')} onChange={event => setCount(inputValue(event))}/><select className='bt-select bt-task-unit' value={unit} aria-label={t('Unit')} onChange={event => setUnit(inputValue(event))}>{UNITS.map(([id, , label]) => <option key={id} value={id}>{t(label)}</option>)}</select></> : null}</div></div>{error ? <div className='bt-set-row'><span className='bt-danger bt-set-hint'>{error}</span></div> : null}<div className='bt-set-row bt-task-foot'><button type='button' className='bt-soft bt-soft-sm' onClick={onCancel}>{t('Cancel')}</button><button type='submit' className='bt-send bt-soft-sm' disabled={busy || !target || title.trim() === '' || prompt.trim() === ''}>{busy ? t('Creating…') : t('Create task')}</button></div></form>;
 }
 // Settings has no schedule service to show: Automation tasks are off in DSH.
 function AutomationOff({ actions }: {
     actions: ScheduleActions;
 }) {
-    return <div className='bt-set-card bt-task-off'>{h(EmptyState, {
-        icon: h(ClockIcon),
-        title: t('Turn on scheduled tasks'),
-        hint: t('Scheduled tasks are turned off for this Bot.'),
-        ...(actions.openShellSettingsPanel ? { action: { label: t('Open settings'), onClick: actions.openShellSettingsPanel } } : {}),
-    })}</div>;
+    return <div className='bt-set-card bt-task-off'><EmptyState icon={<ClockIcon />} title={t('Turn on scheduled tasks')} hint={t('Scheduled tasks are turned off for this Bot.')} {...(actions.openShellSettingsPanel ? { action: { label: t('Open settings'), onClick: actions.openShellSettingsPanel } } : {})} /></div>;
 }
 export function SchedulesPage({ roster, actions, start }: {
     roster: ScheduleRoster;
@@ -239,7 +234,7 @@ export function SchedulesPage({ roster, actions, start }: {
     if (view === null)
         return <div className='bt-set-hint'>{t('Loading…')}</div>;
     if (!view.available)
-        return h(AutomationOff, { actions });
+        return <AutomationOff actions={actions} />;
     const shown: ScheduleListener = (next) => { publish(next); setAdding(false); };
     const byChat: [
         string,
@@ -252,23 +247,20 @@ export function SchedulesPage({ roster, actions, start }: {
             ReactNode,
             string,
             readonly Task[]
-        ] => [bot.id, h(BotAvatar, { bot, size: 18, badge: false, live: false }), bot.name, view.tasks.filter(task => task.botId === bot.id)]),
+        ] => [bot.id, <BotAvatar bot={bot} size={18} badge={false} live={false} />, bot.name, view.tasks.filter(task => task.botId === bot.id)]),
         ...roster.rooms.map((room): [
             string,
             ReactNode,
             string,
             readonly Task[]
-        ] => [room.id, h(RoomAvatar, { room, roster, size: 18 }), room.name, view.tasks.filter(task => task.botId === undefined && task.roomId === room.id)]),
+        ] => [room.id, <RoomAvatar room={room} roster={roster} size={18} />, room.name, view.tasks.filter(task => task.botId === undefined && task.roomId === room.id)]),
     ].filter(entry => entry[3].length > 0);
     return [
         adding
-            ? h(TaskForm, { key: 'form', roster, actions, start, onDone: shown, onCancel: () => setAdding(false) })
-            : <div key='add' className='bt-actions'><button type='button' className='bt-soft bt-soft-sm bt-with-icon' onClick={() => setAdding(true)}>{h(PlusIcon)}{t('New task')}</button></div>,
+            ? <TaskForm key='form' roster={roster} actions={actions} start={start} onDone={shown} onCancel={() => setAdding(false)} />
+            : <div key='add' className='bt-actions'><button type='button' className='bt-soft bt-soft-sm bt-with-icon' onClick={() => setAdding(true)}><PlusIcon />{t('New task')}</button></div>,
         byChat.length === 0 && !adding
-            ? <div key='none' className='bt-set-card'>{h(EmptyState, {
-                icon: h(ClockIcon), title: t('No scheduled tasks yet.'), hint: t('A scheduled task sends a prompt to a Bot or group on its own.'),
-                action: { icon: h(PlusIcon), label: t('New task'), onClick: () => setAdding(true) },
-            })}</div> : byChat.map(([id, avatar, name, tasks]) => <section key={id} className='bt-set-section'><h3 className='bt-task-head'>{avatar}{name}</h3><div className='bt-set-card'>{tasks.map(task => h(TaskRow, { key: task.id, task, actions, roster, onView: publish }))}</div></section>),
+            ? <div key='none' className='bt-set-card'><EmptyState icon={<ClockIcon />} title={t('No scheduled tasks yet.')} hint={t('A scheduled task sends a prompt to a Bot or group on its own.')} action={{ icon: <PlusIcon />, label: t('New task'), onClick: () => setAdding(true) }} /></div> : byChat.map(([id, avatar, name, tasks]) => <section key={id} className='bt-set-section'><h3 className='bt-task-head'>{avatar}{name}</h3><div className='bt-set-card'>{tasks.map(task => <TaskRow key={task.id} task={task} actions={actions} roster={roster} onView={publish} />)}</div></section>),
     ];
 }
 // A Bot's tasks in its settings form, with the way to add one.
@@ -286,8 +278,8 @@ export function BotSchedules({ bot, roster, actions }: {
     const tasks = view.available ? view.tasks.filter(task => task.botId === bot.id) : [];
     return <section className='bt-set-section'><h3>{t('Scheduled tasks')}</h3><div className='bt-set-card'>{!view.available
         ? <div className='bt-set-row bt-bs-row'><span className='bt-set-copy'><span className='bt-set-hint'>{t('Scheduled tasks are turned off for this Bot.')}</span></span>{actions.openShellSettingsPanel ? <button type='button' className='bt-soft bt-soft-sm' onClick={actions.openShellSettingsPanel}>{t('Open settings')}</button> : null}</div> : [
-        ...tasks.map(task => h(TaskRow, { key: task.id, task, actions, roster, onView: publish })),
-        <button key='new' type='button' className='bt-set-row bt-bs-row bt-gs-add' onClick={() => actions.openSettings('schedules', bot.id)}>{h(PlusIcon)}{t('New task')}</button>,
+        ...tasks.map(task => <TaskRow key={task.id} task={task} actions={actions} roster={roster} onView={publish} />),
+        <button key='new' type='button' className='bt-set-row bt-bs-row bt-gs-add' onClick={() => actions.openSettings('schedules', bot.id)}><PlusIcon />{t('New task')}</button>,
     ]}</div></section>;
 }
 // The details panel's line: the Bot's next tasks, or how to add one.
@@ -301,7 +293,7 @@ export function ScheduleSummary({ bot, actions }: {
     const view = useSchedules(actions);
     const tasks = view?.available ? view.tasks.filter(task => task.botId === bot.id && task.status === 'active') : [];
     return <div><div className='bt-section-title'>{t('Scheduled tasks')}</div>{tasks.length === 0
-        ? <button type='button' className='bt-more' onClick={() => actions.openSettings('schedules', bot.id)}>{view?.available === false ? t('Scheduled tasks are turned off for this Bot.') : t('No scheduled tasks yet. Add one')}</button> : <div className='bt-task-list'>{tasks.slice(0, 3).map(task => <button key={task.id} type='button' className='bt-task-line' onClick={() => actions.openSettings('schedules')}>{h(ClockIcon)}<span className='bt-task-line-title'>{task.title}</span><span className='bt-task-line-when'>{timingText(task)}</span></button>)}</div>}</div>;
+        ? <button type='button' className='bt-more' onClick={() => actions.openSettings('schedules', bot.id)}>{view?.available === false ? t('Scheduled tasks are turned off for this Bot.') : t('No scheduled tasks yet. Add one')}</button> : <div className='bt-task-list'>{tasks.slice(0, 3).map(task => <button key={task.id} type='button' className='bt-task-line' onClick={() => actions.openSettings('schedules')}><ClockIcon /><span className='bt-task-line-title'>{task.title}</span><span className='bt-task-line-when'>{timingText(task)}</span></button>)}</div>}</div>;
 }
 export const SCHEDULE_CSS = `
 .bt-task{gap:10px}

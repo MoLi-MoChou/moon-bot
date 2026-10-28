@@ -135,15 +135,15 @@ export function CommandPalette({ start, token, roster, actions, useSessions }: C
     ][] = [];
     const people: PaletteRow[] = [
         ...roster.bots.filter(bot => matchesName(bot.name, bot.role)).map(bot => ({
-            key: bot.id, avatar: h(BotAvatar, { bot, size: 24, badge: false, live: false }), title: bot.name,
+            key: bot.id, avatar: <BotAvatar bot={bot} size={24} badge={false} live={false} />, title: bot.name,
             subtitle: [bot.role, isMainOf(roster, bot.id) ? t('Main Bot') : ''].filter(Boolean).join(' · '), badge: bot.hidden ? t('Hidden') : undefined,
             run: async () => { if (bot.hidden)
                 await actions.setFlags(bot.id, { hidden: false }); actions.openSession(bot.id); },
         })),
         ...roster.rooms.filter(room => matchesName(room.name)).map(room => ({
-            key: room.id, avatar: h(RoomAvatar, { room: room as unknown as {
+            key: room.id, avatar: <RoomAvatar room={room as unknown as {
                     members: readonly string[];
-                }, roster, size: 24 }), title: room.name, subtitle: t('{count} members', { count: room.members.length }),
+                }} roster={roster} size={24} />, title: room.name, subtitle: t('{count} members', { count: room.members.length }),
             badge: room.hidden ? t('Hidden') : undefined,
             run: async () => { if (room.hidden)
                 await actions.setFlags(room.id, { hidden: false }); actions.openSession(room.id); },
@@ -167,19 +167,19 @@ export function CommandPalette({ start, token, roster, actions, useSessions }: C
         const room = roster.roomsById[id];
         return {
             key: `${id}:${turn}`, title: bot?.name ?? room?.name ?? t('Bot'), subtitle: snippet,
-            avatar: bot ? h(BotAvatar, { bot, size: 24, badge: false, live: false }) : h(RoomAvatar, { room: room as unknown as {
+            avatar: bot ? <BotAvatar bot={bot} size={24} badge={false} live={false} /> : <RoomAvatar room={room as unknown as {
                     members: readonly string[];
-                }, roster, size: 24 }),
+                }} roster={roster} size={24} />,
             run: () => actions.openSession(id),
         };
     });
     if (messages.length)
         sections.push([t('Messages'), messages]);
     const commands: PaletteRow[] = [
-        { key: 'cmd:new', icon: h(PlusIcon), title: t('New chat'), run: () => actions.openNewChat('new') },
-        { key: 'cmd:bot', icon: h(PlusIcon), title: t('Create Bot'), run: () => actions.openNewChat('create') },
-        { key: 'cmd:group', icon: h(PeopleIcon), title: t('Create group chat'), run: () => actions.openNewChat('group') },
-        { key: 'cmd:settings', icon: h(GearIcon), title: t('Bot settings'), run: () => actions.openSettings('general') },
+        { key: 'cmd:new', icon: <PlusIcon />, title: t('New chat'), run: () => actions.openNewChat('new') },
+        { key: 'cmd:bot', icon: <PlusIcon />, title: t('Create Bot'), run: () => actions.openNewChat('create') },
+        { key: 'cmd:group', icon: <PeopleIcon />, title: t('Create group chat'), run: () => actions.openNewChat('group') },
+        { key: 'cmd:settings', icon: <GearIcon />, title: t('Bot settings'), run: () => actions.openSettings('general') },
     ].filter(command => matchesName(command.title));
     if (commands.length)
         sections.push([t('Commands'), commands]);
@@ -199,7 +199,7 @@ export function CommandPalette({ start, token, roster, actions, useSessions }: C
         close();
     };
     let index = -1;
-    return <div className='bt-palette-layer' data-leaving={leaving || undefined}><div className='bt-backdrop' onMouseDown={close}/><div className='bt-palette' role='dialog' aria-label={t('Search')} aria-modal><div className='bt-palette-head'><span className='bt-palette-glyph' aria-hidden>{h(SearchIcon)}</span><input ref={input} autoFocus value={query} placeholder={t('Search Bots, chats and messages')} aria-label={t('Search')} role='combobox' aria-expanded aria-controls='bt-palette-list' onChange={(event: React.ChangeEvent<HTMLInputElement>) => { setQuery(event.target.value); setCursor(0); }} onKeyDown={(event: React.KeyboardEvent<HTMLInputElement>) => {
+    return <div className='bt-palette-layer' data-leaving={leaving || undefined}><div className='bt-backdrop' onMouseDown={close}/><div className='bt-palette' role='dialog' aria-label={t('Search')} aria-modal><div className='bt-palette-head'><span className='bt-palette-glyph' aria-hidden><SearchIcon /></span><input ref={input} autoFocus value={query} placeholder={t('Search Bots, chats and messages')} aria-label={t('Search')} role='combobox' aria-expanded aria-controls='bt-palette-list' onChange={(event: React.ChangeEvent<HTMLInputElement>) => { setQuery(event.target.value); setCursor(0); }} onKeyDown={(event: React.KeyboardEvent<HTMLInputElement>) => {
         if (event.nativeEvent.isComposing)
             return;
         if (event.key === 'ArrowDown') {
@@ -214,11 +214,8 @@ export function CommandPalette({ start, token, roster, actions, useSessions }: C
             event.preventDefault();
             choose(rows[active]);
         }
-    }}/>{query ? <button type='button' className='bt-palette-clear' aria-label={t('Clear search')} onClick={() => { setQuery(''); setCursor(0); }}>{h(CloseIcon)}</button> : null}</div><div ref={listRef as Ref<HTMLDivElement>} id='bt-palette-list' className='bt-palette-list' role='listbox' aria-label={t('Results')}><span ref={glide.thumb as Ref<HTMLSpanElement>} className='bt-thumb' aria-hidden/>{rows.length === 0
-        ? h(EmptyState, {
-            icon: h(SearchIcon), title: t('No results for “{query}”', { query: query.trim() }), hint: t('Try a Bot name or words from a message'),
-            action: { label: t('Clear search'), onClick: () => { setQuery(''); setCursor(0); input.current?.focus(); } },
-        })
+    }}/>{query ? <button type='button' className='bt-palette-clear' aria-label={t('Clear search')} onClick={() => { setQuery(''); setCursor(0); }}><CloseIcon /></button> : null}</div><div ref={listRef as Ref<HTMLDivElement>} id='bt-palette-list' className='bt-palette-list' role='listbox' aria-label={t('Results')}><span ref={glide.thumb as Ref<HTMLSpanElement>} className='bt-thumb' aria-hidden/>{rows.length === 0
+        ? <EmptyState icon={<SearchIcon />} title={t('No results for “{query}”', { query: query.trim() })} hint={t('Try a Bot name or words from a message')} action={{ label: t('Clear search'), onClick: () => { setQuery(''); setCursor(0); input.current?.focus(); } }} />
         : sections.map(([title, items]) => <><div className='bt-palette-section' role='presentation' data-flip={`section:${title}`}>{title}</div>{items.map((row) => {
             index += 1;
             const at = index;

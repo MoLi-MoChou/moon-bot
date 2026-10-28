@@ -191,7 +191,7 @@ function GroupReplies({ sessionId, callId, done, content, roster, actions, useUi
     return <div className='bt-group-replies'>{stackReplies(replies).map(({ reply, index, texts, time, duration }) => {
         const bot = roster.byId[reply.botId] ?? { id: reply.botId, name: reply.name, color: reply.color ?? 'gray' };
         if (reply.kind === 'user') {
-            return <div key={`user-${index}`} className='bt-urow'><div className='bt-ububble'>{h(MarkdownText, { text: reply.text, labels: mdLabels(), variant: 'compact' })}{time !== undefined && Number.isFinite(time) ? <div className='bt-utime' title={clockLabel(time)}>{messageClock(time)}</div> : null}</div></div>;
+            return <div key={`user-${index}`} className='bt-urow'><div className='bt-ububble'><MarkdownText text={reply.text} labels={mdLabels()} variant='compact' />{time !== undefined && Number.isFinite(time) ? <div className='bt-utime' title={clockLabel(time)}>{messageClock(time)}</div> : null}</div></div>;
         }
         if (reply.kind === 'failed') {
             return <div key={`${reply.botId}-${index}`} className='bt-event bt-event-error' role='status' title={[reply.code, reply.status, reply.text].filter(Boolean).join(' · ')}>{t('{name} could not answer: {reason}', { name: bot.name, reason: failureLabel(reply.code ?? t('Unknown error'), reply.text) })}</div>;
@@ -209,7 +209,7 @@ function GroupReplies({ sessionId, callId, done, content, roster, actions, useUi
             return <div key={`${reply.botId}-${index}`} className='bt-event'>{t('{name} was cut off by a restart again and stopped', { name: bot.name })}</div>;
         }
         if (reply.kind === 'approval' || reply.kind === 'working') {
-            return <div key={`${reply.botId}-${index}`} className='bt-event'><button type='button' className='bt-event-whole' onClick={() => actions.showDetails(sessionId)}>{h(BotMark, { bot, size: 16 })}<span className='bt-event-name'>{t(reply.kind === 'working' ? '{name} started on it' : '{name} paused for your approval', { name: bot.name })}</span></button></div>;
+            return <div key={`${reply.botId}-${index}`} className='bt-event'><button type='button' className='bt-event-whole' onClick={() => actions.showDetails(sessionId)}><BotMark bot={bot} size={16} /><span className='bt-event-name'>{t(reply.kind === 'working' ? '{name} started on it' : '{name} paused for your approval', { name: bot.name })}</span></button></div>;
         }
         if (reply.kind === 'stopped') {
             return <div key={`${reply.botId}-${index}`} className='bt-event'>{t("You stopped {name}'s work", { name: bot.name })}</div>;
@@ -217,12 +217,12 @@ function GroupReplies({ sessionId, callId, done, content, roster, actions, useUi
         if (reply.kind === 'done') {
             return <div key={`${reply.botId}-${index}`} className='bt-event'>{t('{name} finished its work', { name: bot.name })}</div>;
         }
-        return h(GroupMessage, { key: `${reply.botId}-${index}`, bot, texts, room, roster, actions, msgKey: callId ? `${sessionId}:${callId}:${index}` : undefined, useUi, time, duration });
+        return <GroupMessage key={`${reply.botId}-${index}`} bot={bot} texts={texts} room={room} roster={roster} actions={actions} msgKey={callId ? `${sessionId}:${callId}:${index}` : undefined} useUi={useUi} time={time} duration={duration} />;
     })}{pending.map((id) => {
         const bot = roster.byId[id];
         if (!bot)
             return null;
-        return <div key={`pending-${id}`} className='bt-activity'>{h(BotMark, { bot: bot, size: 22, state: speakerTool ? toolState(speakerTool) : 'thinking' })}{h(Shimmer, null, speakerDoing ? `${bot.name} · ${speakerDoing}…` : t('{name} is typing…', { name: bot.name }))}</div>;
+        return <div key={`pending-${id}`} className='bt-activity'><BotMark bot={bot} size={22} state={speakerTool ? toolState(speakerTool) : 'thinking'} /><Shimmer>{speakerDoing ? `${bot.name} · ${speakerDoing}…` : t('{name} is typing…', { name: bot.name })}</Shimmer></div>;
     })}</div>;
 }
 // Tells the docks which card calls the transcript draws, so a card shows in one place.
@@ -237,28 +237,28 @@ function renderCall(call: ChatCall, { sessionId, roster, actions, useUi, useWork
             const target = findBot(arg('to')) ?? { name: arg('to') ?? '…', color: 'gray' };
             if (done && call.isError)
                 return <div className='bt-event'>{t("Couldn't message {name}", { name: target.name })}</div>;
-            return h(EventLine, { prefix: t('Messaged'), bots: [target], onOpen: bot => { if (bot.id)
-                    actions.openExchange(self?.id ?? sessionId, bot.id); }, whole: true });
+            return <EventLine prefix={t('Messaged')} bots={[target]} onOpen={bot => { if (bot.id)
+                    actions.openExchange(self?.id ?? sessionId, bot.id); }} whole />;
         }
         case 'stop_bot': {
             const target = findBot(arg('bot')) ?? { name: arg('bot') ?? '…', color: 'gray' };
             if (done && call.isError)
                 return <div className='bt-event'>{t("Couldn't stop {name}", { name: target.name })}</div>;
-            return h(EventLine, { prefix: t('Stopped'), bots: [target], onOpen: bot => { if (bot.id)
-                    actions.openExchange(self?.id ?? sessionId, bot.id); }, whole: true });
+            return <EventLine prefix={t('Stopped')} bots={[target]} onOpen={bot => { if (bot.id)
+                    actions.openExchange(self?.id ?? sessionId, bot.id); }} whole />;
         }
         case 'create_bot': {
             const created = findBot(arg('name'));
             if (!done || created === undefined)
                 return null;
-            return h(EventLine, { prefix: t('Created'), bots: [created], onOpen: bot => actions.openSession(bot.id) });
+            return <EventLine prefix={t('Created')} bots={[created]} onOpen={bot => actions.openSession(bot.id)} />;
         }
         case 'update_bot': {
             const target = findBot(arg('name')) ?? findBot(arg('bot')) ?? (arg('bot') ? undefined : self);
-            return done && target ? h(EventLine, { prefix: t('Updated'), bots: [target], onOpen: bot => actions.openSession(bot.id) }) : null;
+            return done && target ? <EventLine prefix={t('Updated')} bots={[target]} onOpen={bot => actions.openSession(bot.id)} /> : null;
         }
         case 'group_relay':
-            return h(GroupReplies, { sessionId, callId: call.callId, done, content: call.content, roster, actions, useUi, useWork });
+            return <GroupReplies sessionId={sessionId} callId={call.callId} done={done} content={call.content} roster={roster} actions={actions} useUi={useUi} useWork={useWork} />;
         case 'create_group':
         case 'update_group':
         case 'delete_group':
@@ -273,7 +273,7 @@ function renderCall(call: ChatCall, { sessionId, roster, actions, useUi, useWork
                 return <div className='bt-event' title={result}>{t(verbs[1])}</div>;
             const name = named[2];
             const room = roster.rooms.find(entry => entry.name === name);
-            return h(GroupEvent, { prefix: t(verbs[0]), room: tool === 'delete_group' ? undefined : room, name, roster, actions });
+            return <GroupEvent prefix={t(verbs[0])} room={tool === 'delete_group' ? undefined : room} name={name} roster={roster} actions={actions} />;
         }
         case 'ask_user': {
             const question = roster.questions?.[sessionId];
@@ -282,14 +282,14 @@ function renderCall(call: ChatCall, { sessionId, roster, actions, useUi, useWork
                 return <span className='bt-q-gone' hidden/>;
             if ((heldCards?.[heldCardKey('question', question.id)] ?? 0) > 0)
                 return null;
-            return h(PendingQuestion, { key: JSON.stringify([sessionId, question.id]), sessionId, question, actions, inline: true });
+            return <PendingQuestion key={JSON.stringify([sessionId, question.id])} sessionId={sessionId} question={question} actions={actions} inline />;
         }
         case 'show_view':
             // The cell's arguments reader forwards the tool's accessor unchanged, as the JS did;
             // its declared type says a key never misses, which the host's arguments do not promise.
-            return h(WidgetCell, { sessionId, callId: call.callId ?? '', args: { text: arg, value: argValue } as Parameters<typeof WidgetCell>[0]['args'], done, isError: call.isError ?? false, roster, actions, heldCards });
+            return <WidgetCell sessionId={sessionId} callId={call.callId ?? ''} args={{ text: arg, value: argValue } as Parameters<typeof WidgetCell>[0]['args']} done={done} isError={call.isError ?? false} roster={roster} actions={actions} heldCards={heldCards} />;
         case 'request_secret':
-            return h(SecretToolCell, { sessionId, callId: call.callId ?? '', name: arg('name'), done, content: call.content, roster, actions, heldCards });
+            return <SecretToolCell sessionId={sessionId} callId={call.callId ?? ''} name={arg('name')} done={done} content={call.content} roster={roster} actions={actions} heldCards={heldCards} />;
         case 'ask_user_question': {
             if (!done)
                 return null;
@@ -307,17 +307,17 @@ function renderCall(call: ChatCall, { sessionId, roster, actions, useUi, useWork
             const question = Array.isArray(questions) ? questions[0] : undefined;
             if (!answer)
                 return null;
-            return <div className='bt-q-inline'>{h(SettledQuestion, { question, answer })}</div>;
+            return <div className='bt-q-inline'><SettledQuestion question={question} answer={answer} /></div>;
         }
         case 'read_group_chat': {
             if (!done)
                 return null;
             const room = roster.rooms.find(entry => entry.name === arg('group'));
-            return room ? h(GroupEvent, { prefix: t('Read'), room, roster, actions }) : null;
+            return room ? <GroupEvent prefix={t('Read')} room={room} roster={roster} actions={actions} /> : null;
         }
         case 'remember':
         case 'forget':
-            return done && !call.isError ? h(MemoryEvent, { sessionId, scope: arg('scope'), result: contentText(call.content), roster, actions, findBot, turnKey, callId: call.callId }) : null;
+            return done && !call.isError ? <MemoryEvent sessionId={sessionId} scope={arg('scope')} result={contentText(call.content)} roster={roster} actions={actions} findBot={findBot} turnKey={turnKey} callId={call.callId} /> : null;
         default:
             return null;
     }

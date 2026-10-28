@@ -174,9 +174,9 @@ export function NewChat({ mode, roster, actions }: NewChatProps) {
     });
     const options: Option[] = [];
     if (!group && picked.length === 0 && mode !== 'search' && wanted === '') {
-        options.push({ key: 'new', icon: h(PlusIcon), label: t('Create new Bot'), run: createBot });
+        options.push({ key: 'new', icon: <PlusIcon />, label: t('Create new Bot'), run: createBot });
         if (LEAN.groups)
-            options.push({ key: 'group', icon: h(PeopleIcon), label: t('Create group chat'), run: () => { setGroup(true); setCursor(0); inputRef.current?.focus(); } });
+            options.push({ key: 'group', icon: <PeopleIcon />, label: t('Create group chat'), run: () => { setGroup(true); setCursor(0); inputRef.current?.focus(); } });
         // A team holds at most one DSH Agent; the entry exists only while there is none.
         if (LEAN.dshAgent && (roster.agents ?? []).length === 0 && actions.addAgent !== undefined) {
             options.push({ key: 'agent', icon: h(FishLogo, { size: 16 }), label: t('Add Agent'), run: () => run(async () => { await actions.addAgent?.(); close(); }) });
@@ -186,7 +186,7 @@ export function NewChat({ mode, roster, actions }: NewChatProps) {
         options.push({ key: bot.id, bot, label: bot.name, hint: choosingAdmin ? t('Make admin') : group || picked.length > 0 ? t('Add to group chat') : undefined, run: () => openBot(bot) });
     }
     if (wanted !== '' && !exact && mode !== 'search')
-        options.push({ key: 'create', icon: h(PlusIcon), label: t('Create new Bot “{name}”', { name: query.trim() }), run: createBot });
+        options.push({ key: 'create', icon: <PlusIcon />, label: t('Create new Bot “{name}”', { name: query.trim() }), run: createBot });
     const active = Math.min(cursor, Math.max(options.length - 1, 0));
     const listed = options.map(option => option.key).join('\n');
     const glide = useGlide(`${active}\n${listed}`, { axis: 'y', ...QUICK_EDGES });
@@ -194,11 +194,7 @@ export function NewChat({ mode, roster, actions }: NewChatProps) {
     const drop = useRef<HTMLDivElement | null>(null);
     useMorph(drop, listed);
     if (draft) {
-        return <div className='bt-pane' style={{ left: paneLeft }}>{h(CreateBot, {
-            roster, actions, start: draft, brief: message.trim(), canGoBack: draft.fromList,
-            onBack: draft.fromList ? () => { setDraft(null); setTimeout(() => inputRef.current?.focus()); } : close,
-            onCreated: created,
-        })}</div>;
+        return <div className='bt-pane' style={{ left: paneLeft }}><CreateBot roster={roster} actions={actions} start={draft} brief={message.trim()} canGoBack={draft.fromList} onBack={draft.fromList ? () => { setDraft(null); setTimeout(() => inputRef.current?.focus()); } : close} onCreated={created} /></div>;
     }
     const adminBot = admin === null ? undefined : roster.byId[admin];
     const recipients = adminBot ? [adminBot, ...pickedBots] : pickedBots;
@@ -209,7 +205,7 @@ export function NewChat({ mode, roster, actions }: NewChatProps) {
         else if (admin !== null)
             setAdmin(null);
     };
-    return <div className='bt-pane' style={{ left: paneLeft }}><div className='bt-newchat' role='dialog' aria-label={mode === 'search' ? t('Search') : t('New chat')}><div className='bt-to'><span className='bt-to-label'>{t('To:')}</span>{adminBot ? <span key={adminBot.id} className='bt-token bt-token-admin' title={t('Admin')}>{h(BotMark, { bot: adminBot, size: 16 })}{adminBot.name}{h(AdminStar)}<button type='button' aria-label={t('Remove {name}', { name: adminBot.name })} onClick={() => setAdmin(null)}>×</button></span> : null}{choosingAdmin ? <span className='bt-to-star' aria-hidden>{h(AdminStar)}</span> : null}{pickedBots.map(bot => <span key={bot.id} className='bt-token'>{h(BotMark, { bot: bot, size: 16 })}{bot.name}<button type='button' aria-label={t('Remove {name}', { name: bot.name })} onClick={() => setPicked(current => current.filter(id => id !== bot.id))}>×</button></span>)}<input ref={inputRef} autoFocus value={query} aria-label={t('Recipient')} placeholder={mode === 'search' ? t('Search Bots…') : choosingAdmin ? t('Choose the group admin') : group ? t('Who to chat with…') : t('Start a chat with…')} onChange={(event) => { setQuery(event.target.value); setCursor(0); }} onKeyDown={(event) => {
+    return <div className='bt-pane' style={{ left: paneLeft }}><div className='bt-newchat' role='dialog' aria-label={mode === 'search' ? t('Search') : t('New chat')}><div className='bt-to'><span className='bt-to-label'>{t('To:')}</span>{adminBot ? <span key={adminBot.id} className='bt-token bt-token-admin' title={t('Admin')}><BotMark bot={adminBot} size={16} />{adminBot.name}<AdminStar /><button type='button' aria-label={t('Remove {name}', { name: adminBot.name })} onClick={() => setAdmin(null)}>×</button></span> : null}{choosingAdmin ? <span className='bt-to-star' aria-hidden><AdminStar /></span> : null}{pickedBots.map(bot => <span key={bot.id} className='bt-token'><BotMark bot={bot} size={16} />{bot.name}<button type='button' aria-label={t('Remove {name}', { name: bot.name })} onClick={() => setPicked(current => current.filter(id => id !== bot.id))}>×</button></span>)}<input ref={inputRef} autoFocus value={query} aria-label={t('Recipient')} placeholder={mode === 'search' ? t('Search Bots…') : choosingAdmin ? t('Choose the group admin') : group ? t('Who to chat with…') : t('Start a chat with…')} onChange={(event) => { setQuery(event.target.value); setCursor(0); }} onKeyDown={(event) => {
         if (event.nativeEvent.isComposing)
             return;
         if (event.key === 'ArrowDown') {
@@ -226,16 +222,11 @@ export function NewChat({ mode, roster, actions }: NewChatProps) {
         }
         else if (event.key === 'Backspace' && query === '')
             unpick();
-    }}/>{group && admin !== null ? <button type='button' className='bt-send bt-to-create' disabled={busy || picked.length === 0} title={picked.length === 0 ? t('Add at least one more Bot') : undefined} onClick={createGroup}>{t('Create group chat')}</button> : null}<button type='button' className='bt-x' aria-label={t('Close new chat')} onClick={close}>×</button></div><div ref={drop} className='bt-drop'><div ref={glide.box as Ref<HTMLDivElement>} role='listbox' aria-label={t('Recipients')} className='bt-drop-list'><span ref={glide.thumb as Ref<HTMLSpanElement>} className='bt-thumb' aria-hidden/>{options.length === 0 ? h(EmptyState, {
-        compact: true, icon: h(mode === 'search' ? SearchIcon : PlusIcon),
-        title: mode === 'search' ? t('No Bots match') : t('Type a name to create a Bot'),
-        ...(mode === 'search' && wanted ? { hint: t('Try another name, or clear the search.') } : {}),
-        ...(mode === 'search' && query ? { action: { label: t('Clear search'), onClick: () => { setQuery(''); setCursor(0); inputRef.current?.focus(); } } } : {}),
-    })
-        : options.map((option, index) => <button key={option.key} type='button' role='option' className='bt-option' aria-selected={index === active} data-flip={option.key} onMouseEnter={() => setCursor(index)} onClick={option.run}>{option.bot ? h(BotMark, { bot: option.bot, size: 22 }) : <span className='bt-option-icon'>{option.icon as never}</span>}<span className='bt-option-label'>{option.label}</span>{option.hint && index === active ? <span className='bt-option-hint'>{option.hint}</span> : null}</button>)}</div></div><div className='bt-nc-spacer'/>{error ? <div className='bt-error'>{error}</div> : null}<div className='bt-nc-compose'><div className='bt-nc-card'><span className='bt-nc-plus' aria-hidden>{h(PlusIcon)}</span><textarea rows={1} value={message} placeholder={placeholder} aria-label={placeholder} onChange={event => setMessage((event.target as HTMLTextAreaElement).value)} onKeyDown={(event) => {
+    }}/>{group && admin !== null ? <button type='button' className='bt-send bt-to-create' disabled={busy || picked.length === 0} title={picked.length === 0 ? t('Add at least one more Bot') : undefined} onClick={createGroup}>{t('Create group chat')}</button> : null}<button type='button' className='bt-x' aria-label={t('Close new chat')} onClick={close}>×</button></div><div ref={drop} className='bt-drop'><div ref={glide.box as Ref<HTMLDivElement>} role='listbox' aria-label={t('Recipients')} className='bt-drop-list'><span ref={glide.thumb as Ref<HTMLSpanElement>} className='bt-thumb' aria-hidden/>{options.length === 0 ? <EmptyState compact icon={h(mode === 'search' ? SearchIcon : PlusIcon)} title={mode === 'search' ? t('No Bots match') : t('Type a name to create a Bot')} {...(mode === 'search' && wanted ? { hint: t('Try another name, or clear the search.') } : {})} {...(mode === 'search' && query ? { action: { label: t('Clear search'), onClick: () => { setQuery(''); setCursor(0); inputRef.current?.focus(); } } } : {})} />
+        : options.map((option, index) => <button key={option.key} type='button' role='option' className='bt-option' aria-selected={index === active} data-flip={option.key} onMouseEnter={() => setCursor(index)} onClick={option.run}>{option.bot ? <BotMark bot={option.bot} size={22} /> : <span className='bt-option-icon'>{option.icon as never}</span>}<span className='bt-option-label'>{option.label}</span>{option.hint && index === active ? <span className='bt-option-hint'>{option.hint}</span> : null}</button>)}</div></div><div className='bt-nc-spacer'/>{error ? <div className='bt-error'>{error}</div> : null}<div className='bt-nc-compose'><div className='bt-nc-card'><span className='bt-nc-plus' aria-hidden><PlusIcon /></span><textarea rows={1} value={message} placeholder={placeholder} aria-label={placeholder} onChange={event => setMessage((event.target as HTMLTextAreaElement).value)} onKeyDown={(event) => {
         if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
             event.preventDefault();
             void sendMessage();
         }
-    }}/><button type='button' className='bt-nc-send' aria-label={t('Send message')} disabled={busy || message.trim() === '' || picked.length === 0} onClick={sendMessage}>{h(ArrowUpIcon)}</button></div></div></div></div>;
+    }}/><button type='button' className='bt-nc-send' aria-label={t('Send message')} disabled={busy || message.trim() === '' || picked.length === 0} onClick={sendMessage}><ArrowUpIcon /></button></div></div></div></div>;
 }

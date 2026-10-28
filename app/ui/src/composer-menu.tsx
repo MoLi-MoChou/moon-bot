@@ -92,7 +92,7 @@ export function ComposerMenu({
         title: `@${everyoneWord}`,
         badge: t('Group'),
         subtitle: t('Call all Bots in this group chat'),
-        icon: h(PeopleIcon),
+        icon: <PeopleIcon />,
         textToInsert: `@${everyoneWord} `,
       })
     }
@@ -110,7 +110,7 @@ export function ComposerMenu({
         title: `@${bot.name}`,
         badge: bot.role || undefined,
         subtitle: bot.role ? t('Bot · {role}', { role: bot.role }) : t('Bot'),
-        icon: h(BotAvatar, { bot: bot as unknown as MarkBot, size: 20 }),
+        icon: <BotAvatar bot={bot as unknown as MarkBot} size={20} />,
         textToInsert: `@${bot.name} `,
       })
     }
@@ -121,7 +121,7 @@ export function ComposerMenu({
         title: '/clear',
         badge: t('New chat'),
         subtitle: t('Start a fresh conversation part, keeping past messages saved'),
-        icon: h(PlusIcon),
+        icon: <PlusIcon />,
         onSelect: () => { actions.openNewChat('own') },
       },
       {
@@ -129,7 +129,7 @@ export function ComposerMenu({
         title: '/settings',
         badge: t('Settings'),
         subtitle: t('Adjust preferences, theme appearance, and language'),
-        icon: h(GearIcon),
+        icon: <GearIcon />,
         onSelect: () => { actions.openSettings('general') },
       },
       {
@@ -137,7 +137,7 @@ export function ComposerMenu({
         title: '/models',
         badge: t('Models'),
         subtitle: t('Configure AI models, API keys, and providers'),
-        icon: h(SlidersIcon),
+        icon: <SlidersIcon />,
         onSelect: () => { actions.openSettings('models') },
       },
       {
@@ -145,7 +145,7 @@ export function ComposerMenu({
         title: '/connectors',
         badge: t('Market'),
         subtitle: t('Manage ACP agent connectors, MCP tools, and plugins'),
-        icon: h(PlugIcon),
+        icon: <PlugIcon />,
         onSelect: () => { actions.openConnectors() },
       },
       {
@@ -153,7 +153,7 @@ export function ComposerMenu({
         title: '/tasks',
         badge: t('Schedules'),
         subtitle: t('View and manage periodic tasks, reminders, and schedules'),
-        icon: h(CalendarIcon),
+        icon: <CalendarIcon />,
         onSelect: () => { actions.openSettings('schedules') },
       },
       {
@@ -161,7 +161,7 @@ export function ComposerMenu({
         title: '/memory',
         badge: t('Memory'),
         subtitle: t('Search and review what this Bot has remembered'),
-        icon: h(MemoryIcon),
+        icon: <MemoryIcon />,
         onSelect: () => { actions.openMemory(sessionId) },
       },
       {
@@ -169,7 +169,7 @@ export function ComposerMenu({
         title: '/voice',
         badge: t('Voice'),
         subtitle: t('Start voice chat or audio dictation'),
-        icon: h(MicIcon, { size: 16 }),
+        icon: <MicIcon size={16} />,
         onSelect: () => { actions.openVoice(sessionId) },
       },
     ]
@@ -197,40 +197,20 @@ export function ComposerMenu({
 
   if (items.length === 0) return null
 
-  return h('div', {
-    ref: menuRef,
-    className: 'dsb-trigger-menu',
-    role: 'listbox',
-    'aria-label': trigger.kind === 'mention' ? t('Mentions') : t('Commands'),
-  },
-    h('div', { className: 'dsb-trigger-head' },
-      trigger.kind === 'mention' ? t('Mention Bot') : t('Quick Commands')
-    ),
-    items.map((item, index) => {
+  return <div ref={menuRef} className='dsb-trigger-menu' role='listbox' aria-label={trigger.kind === 'mention' ? t('Mentions') : t('Commands')}>
+    <div className='dsb-trigger-head'>{trigger.kind === 'mention' ? t('Mention Bot') : t('Quick Commands')}</div>
+    {items.map((item, index) => {
       const isActive = index === activeIndex
-      return h('button', {
-        key: item.id,
-        type: 'button',
-        className: 'dsb-trigger-item',
-        'data-active': isActive,
-        'data-index': index,
-        role: 'option',
-        'aria-selected': isActive,
-        onMouseEnter: () => onActiveIndexChange(index),
-        onMouseDown: (e: React.MouseEvent) => {
+      return <button key={item.id} type='button' className='dsb-trigger-item' data-active={isActive} data-index={index} role='option' aria-selected={isActive} onMouseEnter={() => onActiveIndexChange(index)} onMouseDown={(e: React.MouseEvent) => {
           e.preventDefault()
           onPick(item)
-        },
-      },
-        h('span', { className: 'dsb-trigger-icon' }, item.icon),
-        h('span', { className: 'dsb-trigger-info' },
-          h('span', { className: 'dsb-trigger-title' },
-            item.title,
-            item.badge ? h('span', { className: 'dsb-trigger-badge' }, item.badge) : null
-          ),
-          item.subtitle ? h('span', { className: 'dsb-trigger-sub' }, item.subtitle) : null
-        )
-      )
-    })
-  )
+        }}>
+        <span className='dsb-trigger-icon'>{item.icon}</span>
+        <span className='dsb-trigger-info'>
+          <span className='dsb-trigger-title'>{item.title}{item.badge ? <span className='dsb-trigger-badge'>{item.badge}</span> : null}</span>
+          {item.subtitle ? <span className='dsb-trigger-sub'>{item.subtitle}</span> : null}
+        </span>
+      </button>
+    })}
+  </div>
 }

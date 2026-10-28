@@ -114,7 +114,7 @@ interface SecretHeadProps {
     onClose?: (() => void) | undefined;
 }
 function SecretHead({ bot, title, detail, name, onClose }: SecretHeadProps) {
-    return <div className='bt-q-head bt-secret-head'><span className='bt-secret-who'>{h(BotMark, { bot, size: 28 })}<span className='bt-secret-lock'>{h(LockIcon)}</span></span><div className='bt-q-text'><p className='bt-q-title'>{title}</p><div className='bt-q-detail'><code className='bt-secret-name'>{name}</code>{detail ? ` · ${detail}` : ''}</div></div>{onClose ? <button type='button' className='bt-q-x' aria-label={t('Cancel the request')} title={t('Cancel')} onClick={onClose}>{h(CloseIcon)}</button> : null}</div>;
+    return <div className='bt-q-head bt-secret-head'><span className='bt-secret-who'><BotMark bot={bot} size={28} /><span className='bt-secret-lock'><LockIcon /></span></span><div className='bt-q-text'><p className='bt-q-title'>{title}</p><div className='bt-q-detail'><code className='bt-secret-name'>{name}</code>{detail ? ` · ${detail}` : ''}</div></div>{onClose ? <button type='button' className='bt-q-x' aria-label={t('Cancel the request')} title={t('Cancel')} onClick={onClose}><CloseIcon /></button> : null}</div>;
 }
 export interface SecretCardProps {
     sessionId: string;
@@ -153,7 +153,7 @@ export function SecretCard({ sessionId, bot, request, roster, actions, inline = 
     const allow = (): void => { if (!busy)
         void run(() => actions.secretAllow(request.id)); };
     const filling = request.kind === 'fill' || replacing;
-    const warn = insecure() ? <div className='bt-secret-warn' role='note'>{h(WarnIcon)}{t('This page is not on HTTPS: the key crosses the network unencrypted.')}</div> : null;
+    const warn = insecure() ? <div className='bt-secret-warn' role='note'><WarnIcon />{t('This page is not on HTTPS: the key crosses the network unencrypted.')}</div> : null;
     return <div className='bt-q bt-secret' role='group' aria-describedby={noteId} data-kind={request.kind} onFocusCapture={hold} onPointerDownCapture={hold} onKeyDown={(event: React.KeyboardEvent<HTMLDivElement>) => {
         if (event.key !== 'Escape' || busy)
             return;
@@ -163,13 +163,7 @@ export function SecretCard({ sessionId, bot, request, roster, actions, inline = 
             setReplacing(false);
         else
             void cancel();
-    }}>{h(SecretHead, {
-        bot,
-        title: request.kind === 'allow' ? t('Let {bot} use {name}?', { bot: bot.name, name: request.name }) : t('{name} needs a key', { name: bot.name }),
-        detail: request.purpose,
-        name: request.name,
-        onClose: busy ? undefined : cancel,
-    })}{request.kind === 'allow' ? <div className='bt-secret-saved'>{h(KeyIcon)}{t('Saved for {scope}', { scope: scopeLabel(secret?.scope, roster) })}</div> : null}{filling ? <div className='bt-secret-body'><label className='bt-q-field bt-secret-field'>{h(MaskedInput, { value, onChange: next => { hold(); setValue(next); }, onEnter: save, label: t('Value of {name}', { name: request.name }), autoFocus: replacing })}</label>{request.kind === 'fill' ? h(ScopeSwitch, { value: scope, onChange: next => { hold(); setScope(next); }, bot }) : null}</div> : null}<div className='bt-secret-note' id={noteId}>{t("{bot} never sees the value. It reaches {bot}'s shell as ", { bot: bot.name })}<code>{`$MOON_BOT_SECRET_${request.name}`}</code>.{filling && value !== '' && !long ? t(' At least {count} characters.', { count: MIN_VALUE }) : ''}</div>{warn}{error ? <div className='bt-secret-error' role='alert'>{error}</div> : null}<div className='bt-q-foot'>{request.kind === 'allow' && !replacing ? <button type='button' className='bt-q-btn' disabled={busy} onClick={() => { hold(); setReplacing(true); }}>{t('Replace value')}</button> : null}<button type='button' className='bt-q-btn' disabled={busy} onClick={cancel}>{t('Cancel')}</button>{filling
+    }}><SecretHead bot={bot} title={request.kind === 'allow' ? t('Let {bot} use {name}?', { bot: bot.name, name: request.name }) : t('{name} needs a key', { name: bot.name })} detail={request.purpose} name={request.name} onClose={busy ? undefined : cancel} />{request.kind === 'allow' ? <div className='bt-secret-saved'><KeyIcon />{t('Saved for {scope}', { scope: scopeLabel(secret?.scope, roster) })}</div> : null}{filling ? <div className='bt-secret-body'><label className='bt-q-field bt-secret-field'><MaskedInput value={value} onChange={next => { hold(); setValue(next); }} onEnter={save} label={t('Value of {name}', { name: request.name })} autoFocus={replacing} /></label>{request.kind === 'fill' ? <ScopeSwitch value={scope} onChange={next => { hold(); setScope(next); }} bot={bot} /> : null}</div> : null}<div className='bt-secret-note' id={noteId}>{t("{bot} never sees the value. It reaches {bot}'s shell as ", { bot: bot.name })}<code>{`$MOON_BOT_SECRET_${request.name}`}</code>.{filling && value !== '' && !long ? t(' At least {count} characters.', { count: MIN_VALUE }) : ''}</div>{warn}{error ? <div className='bt-secret-error' role='alert'>{error}</div> : null}<div className='bt-q-foot'>{request.kind === 'allow' && !replacing ? <button type='button' className='bt-q-btn' disabled={busy} onClick={() => { hold(); setReplacing(true); }}>{t('Replace value')}</button> : null}<button type='button' className='bt-q-btn' disabled={busy} onClick={cancel}>{t('Cancel')}</button>{filling
         ? <button type='button' className='bt-q-submit' disabled={!long || busy} onClick={save}>{busy ? t('Saving…') : t('Save')}</button> : <button type='button' className='bt-q-submit' disabled={busy} onClick={allow}>{busy ? t('Allowing…') : t('Allow')}</button>}</div></div>;
 }
 function SettledSecret({ bot, request, roster }: {
@@ -181,7 +175,7 @@ function SettledSecret({ bot, request, roster }: {
     const text = canceled ? t('{bot} asked for {name}', { bot: bot.name, name: request.name })
         : request.status === 'allowed' ? t('Allowed {bot} to use {name}', { bot: bot.name, name: request.name })
             : t('Saved {name}', { name: request.name });
-    return <div className='bt-q bt-q-settled bt-secret bt-secret-done' role='group' aria-label={text} data-status={request.status}><div className='bt-q-head'><span className='bt-secret-who'>{h(BotMark, { bot, size: 22 })}</span><div className='bt-q-text'><p className='bt-q-title'>{text}{canceled ? null : <span className='bt-secret-scope-tag'>{` · ${scopeLabel(request.scope, roster)}`}</span>}</p></div>{canceled ? <span className='bt-q-badge'>{t('Canceled')}</span> : <span className='bt-q-check bt-secret-check' title={t('Done')}>{h(CheckIcon)}</span>}</div></div>;
+    return <div className='bt-q bt-q-settled bt-secret bt-secret-done' role='group' aria-label={text} data-status={request.status}><div className='bt-q-head'><span className='bt-secret-who'><BotMark bot={bot} size={22} /></span><div className='bt-q-text'><p className='bt-q-title'>{text}{canceled ? null : <span className='bt-secret-scope-tag'>{` · ${scopeLabel(request.scope, roster)}`}</span>}</p></div>{canceled ? <span className='bt-q-badge'>{t('Canceled')}</span> : <span className='bt-q-check bt-secret-check' title={t('Done')}><CheckIcon /></span>}</div></div>;
 }
 interface RequestViewProps {
     sessionId: string;
@@ -192,8 +186,8 @@ interface RequestViewProps {
 }
 function RequestView({ sessionId, bot, request, roster, actions }: RequestViewProps) {
     return request.status === 'pending'
-        ? h(SecretCard, { key: JSON.stringify([sessionId, request.id, request.kind]), sessionId, bot, request, roster, actions, inline: true })
-        : h(SettledSecret, { bot, request, roster });
+        ? <SecretCard key={JSON.stringify([sessionId, request.id, request.kind])} sessionId={sessionId} bot={bot} request={request} roster={roster} actions={actions} inline />
+        : <SettledSecret bot={bot} request={request} roster={roster} />;
 }
 // What a client may pass as a call's content; only the text blocks matter here.
 export type SecretContent = Parameters<typeof contentText>[0];
@@ -217,9 +211,9 @@ export function SecretToolCell({ sessionId, callId, name, done, content, roster,
     if (request?.status === 'pending' && (heldCards[heldCardKey('secret', request.id)] ?? 0) > 0)
         return null;
     if (request)
-        return <div className='bt-q-inline'>{h(RequestView, { sessionId, bot, request, roster, actions })}</div>;
+        return <div className='bt-q-inline'><RequestView sessionId={sessionId} bot={bot} request={request} roster={roster} actions={actions} /></div>;
     if (done && /already saved/.test(contentText(content))) {
-        return <div className='bt-event'><span className='bt-secret-event'>{h(KeyIcon)}{t('{bot} is using {name}', { bot: bot.name, name: name ?? t('a saved key') })}</span></div>;
+        return <div className='bt-event'><span className='bt-secret-event'><KeyIcon />{t('{bot} is using {name}', { bot: bot.name, name: name ?? t('a saved key') })}</span></div>;
     }
     return null;
 }
@@ -246,5 +240,5 @@ export function SecretDock({ sessionId, useRoster, useCards, useHeldCards, actio
     const waiting = (roster.secretRequests?.[bot.id] ?? []).filter(entry => entry.status === 'pending' && !drawn(entry));
     if (waiting.length === 0)
         return null;
-    return <div className='bt-q-dock bt-secret-dock'>{waiting.map(request => h(SecretCard, { key: JSON.stringify([sessionId, request.id, request.kind]), sessionId, bot, request, roster, actions }))}</div>;
+    return <div className='bt-q-dock bt-secret-dock'>{waiting.map(request => <SecretCard key={JSON.stringify([sessionId, request.id, request.kind])} sessionId={sessionId} bot={bot} request={request} roster={roster} actions={actions} />)}</div>;
 }

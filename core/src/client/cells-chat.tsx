@@ -113,7 +113,7 @@ const scrollParent = (node: Element | null): Element | null => {
 };
 function EarlierUser({ row }: EarlierUserProps) {
     const { shown, folded, control } = useFold(row.text ?? '');
-    const body = row.text ? h(MarkdownText, { text: shown, labels: mdLabels(), variant: 'compact' }) : null;
+    const body = row.text ? <MarkdownText text={shown} labels={mdLabels()} variant='compact' /> : null;
     return <div className='bt-urow'><div className='bt-ububble' data-folded={folded || undefined}>{control ? <div className='bt-fold-body'>{body}</div> : body}{control}{row.images ? <span className='bt-uimages'>{row.images === 1 ? t('1 image') : t('{count} images', { count: row.images })}</span> : null}</div></div>;
 }
 // The chat line a failed turn leaves: what failed, in words a person reads, and the
@@ -192,8 +192,8 @@ export function EarlierParts({ sessionId, roster, actions }: EarlierPartsProps) 
         observer.observe(node);
         return () => observer.disconnect();
     }, [view.cursor, view.loading, view.failed]);
-    return <div className='bt-earlier' role='feed' aria-label={t('Earlier messages')} aria-busy={view.loading}><div ref={top} className='bt-earlier-top'>{view.loading ? h(Shimmer, null, t('Loading earlier messages…'))
-        : view.failed ? <button type='button' className='bt-soft' onClick={() => load(view.cursor)}>{t('Couldn’t load earlier messages · Retry')}</button> : view.cursor ? <button type='button' className='bt-soft' onClick={() => load(view.cursor)}>{t('Load earlier')}</button> : null}</div>{h(ChatRows, { items: view.items, sessionId, roster, actions })}{h(PartLine, { time: view.startedAt })}</div>;
+    return <div className='bt-earlier' role='feed' aria-label={t('Earlier messages')} aria-busy={view.loading}><div ref={top} className='bt-earlier-top'>{view.loading ? <Shimmer>{t('Loading earlier messages…')}</Shimmer>
+        : view.failed ? <button type='button' className='bt-soft' onClick={() => load(view.cursor)}>{t('Couldn’t load earlier messages · Retry')}</button> : view.cursor ? <button type='button' className='bt-soft' onClick={() => load(view.cursor)}>{t('Load earlier')}</button> : null}</div>{h(ChatRows, { items: view.items, sessionId, roster, actions })}<PartLine time={view.startedAt} /></div>;
 }
 // A Bot chat's entries as the host lists them (the `earlier` and `chat` endpoints): the
 // Bot's messages in a row are one block, and a thin line marks where a part begins.
@@ -235,20 +235,20 @@ export function ChatRows({ items, sessionId, roster, actions, useUi, clock = fal
 // `useUi` gives a block its reactions and its Reply tool.
 function chatRow(row: ChatStackedRow, key: number, { sessionId, selfId, roster, actions, useUi }: ChatRowContext) {
     switch (row.kind) {
-        case 'divider': return h(PartLine, { key, time: row.time });
-        case 'user': return h(EarlierUser, { key, row });
-        case 'answer': return h(AnsweredReply, { key, node: { data: row } });
-        case 'bot': return h(Bubbles, { key, texts: row.texts, roster, selfId, actions, sessionId: useUi ? sessionId : undefined, msgKey: useUi ? `${sessionId}:${row.time}` : undefined, useUi, fold: FOLD_HUGE });
+        case 'divider': return <PartLine key={key} time={row.time} />;
+        case 'user': return <EarlierUser key={key} row={row} />;
+        case 'answer': return <AnsweredReply key={key} node={{ data: row }} />;
+        case 'bot': return <Bubbles key={key} texts={row.texts} roster={roster} selfId={selfId} actions={actions} sessionId={useUi ? sessionId : undefined} msgKey={useUi ? `${sessionId}:${row.time}` : undefined} useUi={useUi} fold={FOLD_HUGE} />;
         case 'error':
-            return h(TurnErrorRow, { key, code: row.code, text: row.text });
+            return <TurnErrorRow key={key} code={row.code} text={row.text} />;
         case 'event': {
             if (row.role === 'report')
-                return h(GroupEvent, { key, prefix: t('Replies from'), room: row.roomId === undefined ? undefined : roster.roomsById[row.roomId], name: t('a group chat'), roster, actions });
+                return <GroupEvent key={key} prefix={t('Replies from')} room={row.roomId === undefined ? undefined : roster.roomsById[row.roomId]} name={t('a group chat')} roster={roster} actions={actions} />;
             const known = row.botId === undefined ? undefined : roster.byId[row.botId];
             const other = known ?? { id: row.botId ?? '', name: row.name ?? t('a Bot'), color: 'gray' };
             const prefix = row.role === 'stopped' ? t('Stopped by') : row.role === 'reply' ? t('Reply from') : t('Message from');
-            return h(EventLine, { key, prefix, bots: [other], onOpen: () => { if (selfId && other.id)
-                    actions.openExchange(selfId, other.id); }, whole: true });
+            return <EventLine key={key} prefix={prefix} bots={[other]} onOpen={() => { if (selfId && other.id)
+                    actions.openExchange(selfId, other.id); }} whole />;
         }
         default: return null;
     }
@@ -280,14 +280,14 @@ export interface EventLineProps {
 export function EventLine({ prefix, bots, joiner = t('and'), onOpen, whole = false }: EventLineProps) {
     const only = bots[0];
     if (whole && bots.length === 1 && only !== undefined) {
-        return <div className='bt-event'><button type='button' className='bt-event-whole' title={only.name} onClick={() => onOpen?.(only)}><span>{prefix}</span>{h(BotMark, { bot: markOf(only), size: 16 })}<span className='bt-event-name'>{only.name}</span></button></div>;
+        return <div className='bt-event'><button type='button' className='bt-event-whole' title={only.name} onClick={() => onOpen?.(only)}><span>{prefix}</span><BotMark bot={markOf(only)} size={16} /><span className='bt-event-name'>{only.name}</span></button></div>;
     }
     const parts: ReactNode[] = [];
     parts.push(<span key='p'>{prefix}</span>);
     bots.forEach((bot, index) => {
         if (index > 0)
             parts.push(<span key={`j${index}`}>{joiner}</span>);
-        parts.push(<button key={bot.id ?? index} type='button' onClick={() => onOpen?.(bot)}>{h(BotMark, { bot: markOf(bot), size: 16 })}{bot.name}</button>);
+        parts.push(<button key={bot.id ?? index} type='button' onClick={() => onOpen?.(bot)}><BotMark bot={markOf(bot)} size={16} />{bot.name}</button>);
     });
     return <div className='bt-event'>{parts}</div>;
 }
@@ -300,7 +300,7 @@ export interface GroupEventProps {
 }
 // A centered event line that names a group chat and opens it.
 export function GroupEvent({ prefix, room, name, roster, actions }: GroupEventProps) {
-    return <div className='bt-event'><span>{prefix}</span>{room ? <button type='button' onClick={() => actions.openSession(room.id)}>{h(RoomAvatar, { room, roster, size: 16 })}{room.name}</button> : name ? <span>{name}</span> : null}</div>;
+    return <div className='bt-event'><span>{prefix}</span>{room ? <button type='button' onClick={() => actions.openSession(room.id)}><RoomAvatar room={room} roster={roster} size={16} />{room.name}</button> : name ? <span>{name}</span> : null}</div>;
 }
 export function Shimmer({ children }: ShimmerProps) {
     return <span className='bt-shimmer'>{children}</span>;

@@ -167,7 +167,7 @@ export function ThinkingRow({ text, live, at, ms, viewKey }: ThinkingRowProps) {
         measure();
     }, [text, open]);
     const title = live ? t('Thinking') : t('Thought it through');
-    return <details className='bt-think' open={open} onToggle={toggle}><summary>{title}{live && at !== undefined ? h(Elapsed, { at, className: 'bt-think-time' }) : null}{!live && ms !== undefined ? <span className='bt-think-time'>{`· ${elapsedLabel(Math.max(1000, ms))}`}</span> : null}</summary><div ref={box} className='bt-think-text' role='region' aria-label={title} tabIndex={0} data-fade={fade} onScroll={measure}>{text}</div></details>;
+    return <details className='bt-think' open={open} onToggle={toggle}><summary>{title}{live && at !== undefined ? <Elapsed at={at} className='bt-think-time' /> : null}{!live && ms !== undefined ? <span className='bt-think-time'>{`· ${elapsedLabel(Math.max(1000, ms))}`}</span> : null}</summary><div ref={box} className='bt-think-text' role='region' aria-label={title} tabIndex={0} data-fade={fade} onScroll={measure}>{text}</div></details>;
 }
 // The files a finished turn changed or delivered, linked from inline code in its
 // reply as in DSH's own chat. DSH resolves them for the step that closes the turn.
@@ -227,15 +227,9 @@ export function AssistantCell({ node, groupPart, sessionId, openFile, fileMentio
     return <>{relays.map(relay => {
         const source = relay.source ?? {};
         const sender = (source.senderSessionId === undefined ? undefined : roster.byId[source.senderSessionId]) ?? { id: source.senderSessionId ?? '', name: source.senderName ?? t('a Bot'), color: 'gray' };
-        return h(EventLine, {
-            key: relay.seq,
-            prefix: source.role === 'stopped' ? t('Stopped by') : source.role === 'reply' ? t('Reply from') : t('Message from'),
-            bots: [sender],
-            onOpen: () => { if (sender.id)
-                actions.openExchange(selfId, sender.id); },
-            whole: true,
-        });
-    })}{workHere ? h(WorkLine, { steps: members, tools, ms: workMs, sessionId, turn: data.turn }) : null}{texts.length ? h(Bubbles, { texts, roster, selfId, actions, streaming: running, sessionId, msgKey: `${sessionId}:${data.turn}:${node.key ?? data.seq ?? ''}`, useUi, mentions, fold: FOLD_HUGE }) : null}</>;
+        return <EventLine key={relay.seq} prefix={source.role === 'stopped' ? t('Stopped by') : source.role === 'reply' ? t('Reply from') : t('Message from')} bots={[sender]} onOpen={() => { if (sender.id)
+                actions.openExchange(selfId, sender.id); }} whole />;
+    })}{workHere ? <WorkLine steps={members} tools={tools} ms={workMs} sessionId={sessionId} turn={data.turn} /> : null}{texts.length ? <Bubbles texts={texts} roster={roster} selfId={selfId} actions={actions} streaming={running} sessionId={sessionId} msgKey={`${sessionId}:${data.turn}:${node.key ?? data.seq ?? ''}`} useUi={useUi} mentions={mentions} fold={FOLD_HUGE} /> : null}</>;
 }
 // A change remember or forget made, which opens the memory it changed. Refusals and
 // entries already saved changed nothing and show no line.
@@ -270,7 +264,7 @@ export function MemoryEvent({ sessionId, scope, result, roster, actions, findBot
     if (!firstMemoryLine(turnKey, team ? 'team' : target.id, callId))
         return null;
     const label = team ? t('Team memory updated') : target === self ? t('Memory updated') : t("Updated {name}'s memory", { name: target.name });
-    return <div className='bt-event'><button type='button' title={result} onClick={() => actions.openMemory(target.id)}>{h(MemoryIcon)}{label}</button></div>;
+    return <div className='bt-event'><button type='button' title={result} onClick={() => actions.openMemory(target.id)}><MemoryIcon />{label}</button></div>;
 }
 // Transcript rows report what is in flight to the one activity row at the tail.
 export function useLiveNote(actions: CellActions, sessionId: string, id: string, entry: LiveNote | null): void {

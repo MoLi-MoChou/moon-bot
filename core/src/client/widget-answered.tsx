@@ -43,7 +43,7 @@ export function AnsweredView({ node }: {
         return null;
     const answers = Array.isArray(payload?.answers) ? payload.answers : [];
     const answer = answers.find(entry => entry.id === view.id) ?? answers[0] ?? null;
-    return <div className='bt-q-inline'>{h(WidgetCard, { title: view.title ?? '', view: view.view as Parameters<typeof WidgetCard>[0]['view'], settled: true, answer })}</div>;
+    return <div className='bt-q-inline'><WidgetCard title={view.title ?? ''} view={view.view as Parameters<typeof WidgetCard>[0]['view']} settled answer={answer} /></div>;
 }
 // A question reply node carries either questions (data.questions) or a view answer
 // (JSON text discriminated by kind); each shape gets its own renderer.
@@ -52,10 +52,10 @@ export function AnsweredReply({ node }: {
 }) {
     // The same call as before: a node the shell hands over without data draws nothing.
     if (node === undefined)
-        return h(AnsweredCell, { node: node as unknown as AnsweredNode });
+        return <AnsweredCell node={node as unknown as AnsweredNode} />;
     const data = node.data ?? {};
     if (Array.isArray(data.views) && data.views.length > 0)
-        return h(AnsweredView, { node });
+        return <AnsweredView node={node} />;
     if (!Array.isArray(data.questions) || data.questions.length === 0) {
         let parsed = null;
         try {
@@ -65,7 +65,7 @@ export function AnsweredReply({ node }: {
             parsed = null;
         }
         if (parsed?.kind === 'answer_to_pending_view')
-            return h(AnsweredView, { node });
+            return <AnsweredView node={node} />;
     }
-    return h(AnsweredCell, { node: node as unknown as AnsweredNode });
+    return <AnsweredCell node={node as unknown as AnsweredNode} />;
 }

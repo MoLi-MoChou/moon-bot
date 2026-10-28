@@ -260,5 +260,5 @@ export function ActivityIndicator({ sessionId, useRoster, useSessionStatus, useL
     const host = useRunningHost(running);
     if (!host || phase === null || !shown)
         return null;
-    return createPortal(<div className='bt-typing' data-exiting={phase === 'out' ? '' : undefined} aria-hidden>{bot ? h(BotMark, { bot, size: 28, state: markState.current, live: true, pokeable: true }) : h(RoomAvatar, { room: room as RoomAvatarProps['room'], roster, size: 28 })}<span className='bt-typing-text'><span key={`${shown.key}:${shown.at}`} className='bt-typing-label'>{h(Shimmer, null, shown.text)}<span className='bt-dots' aria-hidden><i /><i /><i /></span></span>{h(Elapsed, { at: Math.max(turnAt ?? runAt.current, inputAt), className: 'bt-typing-time' })}</span></div>, host);
+    return createPortal(<div className='bt-typing' data-exiting={phase === 'out' ? '' : undefined} aria-hidden>{bot ? <BotMark bot={bot} size={28} state={markState.current} live pokeable /> : <RoomAvatar room={room as RoomAvatarProps['room']} roster={roster} size={28} />}<span className='bt-typing-text'><span key={`${shown.key}:${shown.at}`} className='bt-typing-label'><Shimmer>{shown.text}</Shimmer><span className='bt-dots' aria-hidden><i /><i /><i /></span></span><Elapsed at={Math.max(turnAt ?? runAt.current, inputAt)} className='bt-typing-time' /></span></div>, host);
 }

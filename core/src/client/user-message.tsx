@@ -140,7 +140,7 @@ function UserText({ text, bots, referenceLabels, skillNames, references, actions
     };
 }) {
     return userTextParts(text, bots, referenceLabels).map((part, index) => ('bot' in part
-        ? <button key={index} type='button' className='bt-umention' title={`@${part.bot.name}`} onClick={() => actions.openSession(part.bot.id)}>{h(BotMark, { bot: part.bot, size: 16 })}{part.label}</button> : <>{ui.projectUserText(part.text, referenceLabels, skillNames, 'skill', references)}</>));
+        ? <button key={index} type='button' className='bt-umention' title={`@${part.bot.name}`} onClick={() => actions.openSession(part.bot.id)}><BotMark bot={part.bot} size={16} />{part.label}</button> : <>{ui.projectUserText(part.text, referenceLabels, skillNames, 'skill', references)}</>));
 }
 function Attachments({ attachments, renderMessageImages }: {
     attachments: ContentBlock[];
@@ -165,7 +165,7 @@ function CopyButton({ text }: {
     const copy = () => {
         void navigator.clipboard?.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1000); });
     };
-    return <button type='button' className='bt-tool' aria-label={copied ? t('Copied') : t('Copy')} title={copied ? t('Copied') : t('Copy')} onClick={copy}>{copied ? h(CheckIcon) : h(CopyIcon)}</button>;
+    return <button type='button' className='bt-tool' aria-label={copied ? t('Copied') : t('Copy')} title={copied ? t('Copied') : t('Copy')} onClick={copy}>{copied ? <CheckIcon /> : <CopyIcon />}</button>;
 }
 const clock = (time: number | undefined): string | undefined => (typeof time === 'number' ? new Date(time).toLocaleTimeString(dateLocale(), { hour: 'numeric', minute: '2-digit' }) : undefined);
 // A sent message, or one that joined a running turn ("steering").
@@ -180,7 +180,7 @@ export function UserMessageCell({ node, sessionId, useRoster, actions, renderMes
     const groupTime = roster.roomsById?.[sessionId] && time !== undefined ? messageClock(time) : undefined;
     const { shown, folded, control } = useFold(text, { markdown: false });
     const body = h(UserText, { text: shown, bots: mentionableBots(roster, sessionId), referenceLabels, skillNames: data.skillNames ?? [], references, actions });
-    return <div className='bt-umsg' data-steering={steering || undefined}><div className='bt-ustack'>{attachments.length > 0 ? h(Attachments, { attachments, renderMessageImages }) : null}{text !== '' || rest.length > 0 ? <div className='bt-ubody' title={clock(data.time)} data-folded={folded || undefined}>{control ? <div className='bt-fold-body'>{body}</div> : body}{control}{rest.map((block, index) => (ui.JsonBlock ? h(ui.JsonBlock, { key: index, label: t('Content'), payload: block }) : null))}</div> : null}{referenceLabels.length > 0 ? <div className='bt-urefs'>{t('Referenced {labels}', { labels: referenceLabels.join(t(', ')) })}</div> : null}{groupTime && time !== undefined ? <div className='bt-utime' title={clockLabel(time)}>{groupTime}</div> : null}</div>{text === '' ? null : <div className='bt-utools'>{h(CopyButton, { text })}</div>}</div>;
+    return <div className='bt-umsg' data-steering={steering || undefined}><div className='bt-ustack'>{attachments.length > 0 ? <Attachments attachments={attachments} renderMessageImages={renderMessageImages} /> : null}{text !== '' || rest.length > 0 ? <div className='bt-ubody' title={clock(data.time)} data-folded={folded || undefined}>{control ? <div className='bt-fold-body'>{body}</div> : body}{control}{rest.map((block, index) => (ui.JsonBlock ? h(ui.JsonBlock, { key: index, label: t('Content'), payload: block }) : null))}</div> : null}{referenceLabels.length > 0 ? <div className='bt-urefs'>{t('Referenced {labels}', { labels: referenceLabels.join(t(', ')) })}</div> : null}{groupTime && time !== undefined ? <div className='bt-utime' title={clockLabel(time)}>{groupTime}</div> : null}</div>{text === '' ? null : <div className='bt-utools'><CopyButton text={text} /></div>}</div>;
 }
 export const USER_MESSAGE_CSS = `
 .bt-umsg{display:flex;flex-direction:row-reverse;align-items:center;justify-content:flex-start;gap:4px}

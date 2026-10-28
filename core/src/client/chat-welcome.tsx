@@ -54,11 +54,11 @@ export function ChatWelcome({ sessionId, useRoster }: ChatWelcomeProps) {
         return null;
     const bot = roster.byId?.[sessionId] as WelcomeBot | undefined;
     const art = bot
-        ? h(BotAvatar, { bot, size: 56, main: isMainOf(roster, bot.id), admin: false, badge: false })
-        : h(RoomAvatar, { room: roster.roomsById[sessionId] as unknown as {
+        ? <BotAvatar bot={bot} size={56} main={isMainOf(roster, bot.id)} admin={false} badge={false} />
+        : <RoomAvatar room={roster.roomsById[sessionId] as unknown as {
                 members: readonly string[];
-            }, roster, size: 56 });
-    return <div className='bt-welcome'>{h(EmptyState, { art, title: copy.title, hint: copy.hint })}</div>;
+            }} roster={roster} size={56} />;
+    return <div className='bt-welcome'><EmptyState art={art} title={copy.title} hint={copy.hint} /></div>;
 }
 export const WELCOME_CSS = `
 .bt-welcome{display:none;padding:0 23px 12px}

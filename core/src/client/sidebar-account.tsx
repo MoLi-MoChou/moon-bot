@@ -170,7 +170,7 @@ export function AccountLauncher({ seat = true, settingsOpen, openSettings, openO
                 [t('Switch to classic Agent mode'), SwitchIcon, () => actions.setSurface('agent')] as MenuItem,
             ]] : []),
     ];
-    return <><button ref={button} type='button' className='bt-account' aria-label={t('Account')} aria-haspopup='menu' aria-expanded={open} onClick={toggle}><span className='bt-you' aria-hidden>{h(MoonBotMark, { size: 24 })}</span></button>{open && box ? createPortal(<div ref={menu} className='bt-menu bt-menu-up bt-account-menu' role='menu' aria-label={t('Account')} style={box}>{groups.map((group, index) => <>{index > 0 ? <div className='bt-menu-sep' role='separator'/> : null}{group.map(([label, Icon, run, hint]) => <button key={label} type='button' role='menuitem' onClick={() => { setOpen(false); void Promise.resolve(run()).catch(error => actions.reportError(error, 'menu')); }}>{h(Icon)}<span className='bt-menu-label'>{label}</span>{hint ? <span className='bt-menu-hint'>{hint}</span> : null}</button>)}</>)}</div>, document.body) : null}</>;
+    return <><button ref={button} type='button' className='bt-account' aria-label={t('Account')} aria-haspopup='menu' aria-expanded={open} onClick={toggle}><span className='bt-you' aria-hidden><MoonBotMark size={24} /></span></button>{open && box ? createPortal(<div ref={menu} className='bt-menu bt-menu-up bt-account-menu' role='menu' aria-label={t('Account')} style={box}>{groups.map((group, index) => <>{index > 0 ? <div className='bt-menu-sep' role='separator'/> : null}{group.map(([label, Icon, run, hint]) => <button key={label} type='button' role='menuitem' onClick={() => { setOpen(false); void Promise.resolve(run()).catch(error => actions.reportError(error, 'menu')); }}>{h(Icon)}<span className='bt-menu-label'>{label}</span>{hint ? <span className='bt-menu-hint'>{hint}</span> : null}</button>)}</>)}</div>, document.body) : null}</>;
 }
 // Opens the Main Bot whenever the main view holds no Bot conversation, the way
 // The view always lands on a Bot rather than an empty New Session page.
@@ -215,7 +215,7 @@ export function FooterAccount(props: TSidebarProps & {
     const seated = props.useUi(value => value.accountSeated === true);
     if (seated)
         return null;
-    return <span className='bt-foot-account'>{h(AccountLauncher, { ...props, seat: false })}</span>;
+    return <span className='bt-foot-account'><AccountLauncher {...props} seat={false} /></span>;
 }
 // The only entry registered in every mode: in Agent mode the whole Bot surface is
 // withdrawn, and this button in the shell's own footer is the way back.
@@ -229,13 +229,13 @@ export function BotReturn({ wide, useSurface, actions }: {
     const mode = useSurface(value => value.mode);
     if (mode !== 'agent')
         return null;
-    return <button type='button' className='bt-return' aria-label={t('Moon Bot')} title={t('Moon Bot')} onClick={() => actions.setSurface('bot')}>{h(MoonBotMark, { size: 20 })}{wide ? <span className='bt-return-name'>{t('Moon Bot')}</span> : null}</button>;
+    return <button type='button' className='bt-return' aria-label={t('Moon Bot')} title={t('Moon Bot')} onClick={() => actions.setSurface('bot')}><MoonBotMark size={20} />{wide ? <span className='bt-return-name'>{t('Moon Bot')}</span> : null}</button>;
 }
 // Agent mode has none of the shell-group styles, so the return button carries its own.
 export function BrandMark({ size = 24 }: {
     readonly size?: number;
 }) {
-    return <span className='bt-brand-whale'>{h(MoonBotMark, { size })}</span>;
+    return <span className='bt-brand-whale'><MoonBotMark size={size} /></span>;
 }
 export function BrandName() {
     return <span style={{ fontWeight: 600, fontSize: 14 }}>{productName()}</span>;

@@ -129,14 +129,14 @@ export function ownerFace(owner: UsageOwner, roster: UsageRoster): Face {
         const role = bot.role?.trim() ?? '';
         return {
             kind: 'bot', name, sub: owner.deleted ? t('Deleted') : role.toLowerCase() === name.toLowerCase() ? '' : role,
-            paint: paintCss(colorOf(bot)), stops: GRADIENTS[colorOf(bot)], glyph: size => h(BotAvatar, { bot, size, badge: false, live: false }),
+            paint: paintCss(colorOf(bot)), stops: GRADIENTS[colorOf(bot)], glyph: size => <BotAvatar bot={bot} size={size} badge={false} live={false} />,
         };
     }
     if (owner.kind === 'room') {
         const room = roster.roomsById[owner.id];
         return {
             kind: 'room', name: owner.name || t('Deleted group chat'), sub: owner.deleted ? t('Deleted') : t('Group chat'),
-            paint: 'var(--bt-us-rest)', glyph: size => (room ? h(RoomAvatar, { room, roster, size }) : glyphBox(size, ChatsIcon)),
+            paint: 'var(--bt-us-rest)', glyph: size => (room ? <RoomAvatar room={room} roster={roster} size={size} /> : glyphBox(size, ChatsIcon)),
         };
     }
     if (owner.kind === 'agent') {

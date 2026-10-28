@@ -249,8 +249,8 @@ export function BotPanel({ pane, leaving, roster, actions, useSessions, useSessi
         setLanded(true); }}>{leaving ? null : <div className='bt-panel-grip' role='separator' aria-orientation='vertical' aria-label={t('Resize panel')} onPointerDown={startResize}/>}{
     // Over the whole window while dragging: the cursor stays a resize cursor and the
     // pages underneath (the chat, the guest) see no pointer.
-    dragging ? createPortal(<div className='bt-drag-shield' aria-hidden/>, document.body) : null}{hasStrip && bot ? h(PanelStrip, { bot, subject: pane.id, view, ids: tabState.ids, active, reading, onView: switchView, actions: panelActions, useBrowserPages }) : null}{view === 'browser' && bot
-        ? h(BrowserView, { key: `browser:${active}`, bot, tabId: active, leaving, landed: landed && !settling, actions, useBrowserPages })
+    dragging ? createPortal(<div className='bt-drag-shield' aria-hidden/>, document.body) : null}{hasStrip && bot ? <PanelStrip bot={bot} subject={pane.id} view={view} ids={tabState.ids} active={active} reading={reading} onView={switchView} actions={panelActions} useBrowserPages={useBrowserPages} /> : null}{view === 'browser' && bot
+        ? <BrowserView key={`browser:${active}`} bot={bot} tabId={active} leaving={leaving} landed={landed && !settling} actions={actions} useBrowserPages={useBrowserPages} />
         : <div key={`details:${pane.id}:${pane.renaming ? 'rename' : ''}:${pane.tab ?? ''}`} className='bt-panel-view'>{h(DetailsDrawer, {
             sessionId: pane.id, startRenaming: pane.renaming, startTab: pane.tab, hasStrip,
             roster, actions: panelActions, useSessions, useSessionStatus, useActivity, useWork, useBrowserTabs, useBrowserPages,

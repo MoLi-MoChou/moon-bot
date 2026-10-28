@@ -83,7 +83,7 @@ export function RelayPage({ relay }: { relay: RelayActions }) {
         <section className='bt-set-section'><h3>{t('Invited agents')}</h3><div className='bt-set-card'>
             {invites === null ? <div className='bt-set-row'><span className='bt-set-hint'>{t('Loading…')}</span></div>
                 : invites.length === 0 ? <div className='bt-set-row'><span className='bt-set-hint'>{t('No remote agents yet.')}</span></div>
-                : invites.map(invite => h(InviteRow, { key: invite.agentId, invite, relay, onChanged: setInvites }))}
+                : invites.map(invite => <InviteRow key={invite.agentId} invite={invite} relay={relay} onChanged={setInvites} />)}
         </div></section>
     </>;
 }

@@ -68,5 +68,5 @@ export function PermissionPicker({ catalog, saved, onPick, repick = false }: Per
         }
         send(value);
     };
-    return h(Segmented, { label: t('Permissions'), value: current }, catalog.options.map(option => <button key={option.value} type='button' aria-pressed={option.value === current} title={option.description} onClick={() => pick(option.value)} className={presetDanger(option.value) ? 'bt-perm-danger' : undefined}>{presetName(option.value, catalog)}</button>));
+    return <Segmented label={t('Permissions')} value={current}>{catalog.options.map(option => <button key={option.value} type='button' aria-pressed={option.value === current} title={option.description} onClick={() => pick(option.value)} className={presetDanger(option.value) ? 'bt-perm-danger' : undefined}>{presetName(option.value, catalog)}</button>)}</Segmented>;
 }

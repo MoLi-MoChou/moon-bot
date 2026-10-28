@@ -181,7 +181,7 @@ export function ErrorToast({ useUi, actions }: ErrorToastProps) {
     }, [toast?.token]);
     if (!toast)
         return null;
-    return <div className='bt-toast' role='alert' data-leaving={leaving || undefined}><span className='bt-toast-text'>{toast.text}</span><button type='button' className='bt-toast-link' onClick={() => { actions.dismissToast(toast.token); actions.openSettings('feedback'); }}>{t('Details')}</button><button type='button' className='bt-icon-btn bt-toast-close' aria-label={t('Dismiss')} onClick={() => actions.dismissToast(toast.token)}>{h(CloseIcon)}</button></div>;
+    return <div className='bt-toast' role='alert' data-leaving={leaving || undefined}><span className='bt-toast-text'>{toast.text}</span><button type='button' className='bt-toast-link' onClick={() => { actions.dismissToast(toast.token); actions.openSettings('feedback'); }}>{t('Details')}</button><button type='button' className='bt-icon-btn bt-toast-close' aria-label={t('Dismiss')} onClick={() => actions.dismissToast(toast.token)}><CloseIcon /></button></div>;
 }
 export const FEEDBACK_CSS = `
 .bt-fb-what{cursor:default}

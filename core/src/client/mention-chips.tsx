@@ -114,23 +114,9 @@ export function MentionMirror({ field, text, chips, composing = false }: {
     sync()
     return () => { observer.disconnect(); input.removeEventListener('scroll', sync) }
   }, [field])
-  return h('div', {
-    ref: mirror,
-    className: 'bt-mention-mirror',
-    ...(composing ? { 'data-composing': 'true' } : {}),
-    'aria-hidden': 'true',
-  },
-    chipSegments(text, chips).map((segment, index) => (segment.kind === 'chip'
-      ? h('span', {
-          key: index,
-          className: 'bt-mention-chip',
-          'data-kind': segment.chip.kind,
-          style: inkOf(segment.chip),
-        }, `@${segment.chip.name}`)
-      : h(Fragment, { key: index }, segment.text))),
-    // A textarea keeps the line box after a trailing newline; the mirror needs a grapheme
-    // to paint that last empty line.
-    text.endsWith('\n') ? '\u200b' : null)
+  return <div ref={mirror} className='bt-mention-mirror' {...(composing ? { 'data-composing': 'true' } : {})} aria-hidden='true'>{chipSegments(text, chips).map((segment, index) => (segment.kind === 'chip'
+      ? <span key={index} className='bt-mention-chip' data-kind={segment.chip.kind} style={inkOf(segment.chip)}>{`@${segment.chip.name}`}</span>
+      : h(Fragment, { key: index }, segment.text)))}{/* A textarea keeps the line box after a trailing newline; the mirror needs a grapheme to paint that last empty line. */}{text.endsWith('\n') ? '\u200b' : null}</div>
 }
 
 // The layers' styles. Colors come from the theme tokens and each Bot's ink, radii from

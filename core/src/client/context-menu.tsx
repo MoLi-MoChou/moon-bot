@@ -86,7 +86,7 @@ export function ContextMenu({ menu, roster, actions, leaving = false }: {
         setPlace({ left: Math.max(8, Math.min(menu.x, window.innerWidth - box.width - 8)), top: Math.max(8, Math.min(menu.y, window.innerHeight - box.height - 8)) });
     }, [menu.x, menu.y]);
     if (menu.kind === 'agent' || menu.kind === 'agent-session')
-        return h(AgentMenu, { menu, roster, actions, leaving });
+        return <AgentMenu menu={menu} roster={roster} actions={actions} leaving={leaving} />;
     const bot = roster.byId[menu.id];
     const room = roster.roomsById[menu.id];
     const entry = bot ?? room;

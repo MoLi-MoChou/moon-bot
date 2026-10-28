@@ -22,4 +22,4 @@ followSystemAppearance()
 
 const root = document.getElementById('root')
 if (root === null) throw new Error('the window has no #root')
-createRoot(root).render(h(App))
+createRoot(root).render(<App />)

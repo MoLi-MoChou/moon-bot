@@ -331,6 +331,10 @@ export function Chat({ sessionId, team }: { readonly sessionId: string, readonly
   const follow = useRef(true)
   const question = (roster.questions as Record<string, { id: string } | undefined> | undefined)?.[sessionId]
   const running = hooks.useSessionStatus(map => map.get(sessionId)?.running === true)
+  // A message still pending while a turn runs sits behind that turn in the Session's
+  // queue; between turns the first one is the turn that is starting, and only the rest
+  // wait for a later one.
+  const queued = Math.max(0, pending.length - (running ? 0 : 1))
 
   useLayoutEffect(() => {
     const node = scroller.current
@@ -357,7 +361,10 @@ export function Chat({ sessionId, team }: { readonly sessionId: string, readonly
         {earlier !== null ? <div className='bt-earlier-top'>{earlier}</div> : null}
         <div className='dsb-flow' data-chat-flow='' role='feed' aria-label={name} aria-busy={view.loading}>
           {h(ChatRows, { items: view.items, sessionId, roster, actions: cellActions, useUi: cellUi, clock: true })}
-          {pending.length > 0 ? <div className='dsb-pending'>{h(ChatRows, { items: pending, sessionId, roster, actions: cellActions, useUi: cellUi })}</div> : null}
+          {pending.length > 0 ? <div className='dsb-pending'>
+            {queued > 0 ? <span className='bt-pending-queued' title={t('Waiting for the running turn to finish')}>{t('Queued')}</span> : null}
+            {h(ChatRows, { items: pending, sessionId, roster, actions: cellActions, useUi: cellUi })}
+          </div> : null}
           {stream !== null && stream.text !== '' ? <Bubbles texts={[stream.text]} roster={roster} selfId={bot?.id} actions={cellActions} streaming sessionId={sessionId} useUi={cellUi} /> : null}
           {/* The host slot the activity row portals into. The header pill draws the row itself (as it does under DSH); a second indicator here portals a second row into this same slot. */}
           <div data-chat-running='' />

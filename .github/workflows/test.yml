@@ -40,6 +40,21 @@ jobs:
       - run: npm run lint
       - run: npm run eval
 
+  package:
+    name: Connect package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci --no-fund --no-audit
+        working-directory: .
+      # The tarball a publish would upload, installed and run: the checkout hides the
+      # failure this catches (types under node_modules). No agent CLI exists here, which
+      # is the case the doctor check has to survive.
+      - run: npm run verify:package -w moon-bot-connect
+
   scan:
     name: Leak scan
     runs-on: ubuntu-latest

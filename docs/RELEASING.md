@@ -66,7 +66,8 @@ To publish by hand instead, run `npm run verify:package -w moon-bot-connect` and
 `npm publish -w moon-bot-connect --access public` from a machine that is logged in. A first
 publish of a new package answers `202 Accepted`: the metadata shows up first and the
 tarball can 404 for a few minutes while the registry processes it — retry `npm view` rather
-than republishing. If the account requires 2FA for publishing, use an **Automation** token
+than republishing. `verify:package` runs in the `Test` workflow too, on a runner with no
+agent CLI installed (the case that made its doctor check fail once). If the account requires 2FA for publishing, use an **Automation** token
 (a Publish token aborts with `EOTP`), or stage with `npm stage publish` and approve later
 with `npm stage approve <id>`.
 

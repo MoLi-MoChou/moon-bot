@@ -4,6 +4,7 @@
 // handoffs module keeps, so a dispatched job shows who sent it; recently finished rows
 // are a small ring this module fills from turn/end, since the host keeps no history of
 // finished turns. Stopping goes through the same cancel a Main Bot's stop_bot uses.
+import type { TaskHold } from '../shared/rpc.ts'
 import type { HostRuntime } from './runtime.js'
 
 /** What this module reads off the runtime: the turn and handoff views install theirs at
@@ -13,6 +14,7 @@ interface PanelRuntime extends HostRuntime {
   workOf?(info: unknown): string | undefined
   workAsker?(workId: string): { readonly senderSessionId?: string } | undefined
   waitingView?(): Readonly<Record<string, { readonly bots: readonly string[]; readonly rooms: readonly string[]; readonly for: readonly string[] }>>
+  approvalsView?(): readonly { readonly botId: string; readonly sessionId: string; readonly tool?: string; readonly at: number }[]
 }
 
 /** A live Session as the stop reads it: its running turn, or the send it has not started
@@ -29,6 +31,8 @@ interface PanelLive {
 interface PanelAgent {
   pendingTurns?(): number
   readonly inbox?: { readonly nextTurn: readonly unknown[] } | undefined
+  /** A runner's explicit state; only `running` is enough to report engine-busy. */
+  readonly status?: 'running' | 'idle' | string
   cancel?(cause: { readonly kind: string }): void
 }
 
@@ -46,6 +50,8 @@ export interface TaskRunningView {
   readonly fromName?: string
   /** Messages waiting behind the running turn (the engine's queue); absent when none. */
   readonly queued?: number
+  /** A reason is included only when the host has a matching live fact. */
+  readonly hold?: TaskHold
 }
 
 export interface TaskDoneView {
@@ -64,6 +70,8 @@ export interface TaskWaitingView {
   readonly botId: string
   readonly botName: string
   readonly for: readonly string[]
+  /** A reason is included only when the host has a matching live fact. */
+  readonly hold?: TaskHold
 }
 
 export interface TasksView {
@@ -115,15 +123,13 @@ export function install(rt: PanelRuntime): void {
   // stub, so the host branches that read it (duplicate-request checks in tools/shared,
   // the shutdown cancel in resume, the group relay in groups) never see queued input.
   // This panel reads `pendingTurns()` instead and does not depend on that inbox.
-  const queuedOf = async (sessionId: string): Promise<number> => {
-    if (rt.live.get(sessionId)?.turn === undefined) return 0
-    try {
-      const agent = await rt.resolveAgent(sessionId) as PanelAgent | undefined
-      if (agent?.pendingTurns !== undefined) return agent.pendingTurns()
-      return agent?.inbox?.nextTurn.length ?? 0
-    } catch {
-      return 0
-    }
+  const agentOf = async (sessionId: string): Promise<PanelAgent | undefined> => {
+    try { return await rt.resolveAgent(sessionId) as PanelAgent | undefined } catch { return undefined }
+  }
+
+  const queueOf = (agent: PanelAgent | undefined): number => {
+    if (agent?.pendingTurns !== undefined) return agent.pendingTurns()
+    return agent?.inbox?.nextTurn.length ?? 0
   }
 
   const tasksView = async (): Promise<TasksView> => {
@@ -144,13 +150,23 @@ export function install(rt: PanelRuntime): void {
       }
       return row
     })
+    const approvalSessions = new Set((rt.approvalsView?.() ?? []).map(entry => entry.sessionId))
+    const waitingFacts = rt.waitingView?.() ?? {}
     const running = await Promise.all(rows.map(async row => {
-      const queued = await queuedOf(row.sessionId)
-      return queued > 0 ? { ...row, queued } : row
+      const live = rt.live.get(row.sessionId)
+      const agent = await agentOf(row.sessionId)
+      const queued = live?.turn === undefined ? 0 : queueOf(agent)
+      const hold: TaskHold | undefined = approvalSessions.has(row.sessionId) ? 'approval'
+        : queued > 0 ? 'queued'
+          : agent?.status === 'running' && rt.live.get(row.sessionId)?.turn === undefined ? 'engine-busy'
+            : undefined
+      return hold === undefined
+        ? queued > 0 ? { ...row, queued } : row
+        : { ...row, ...(queued > 0 ? { queued } : {}), hold }
     }))
     running.sort((a, b) => b.since - a.since)
-    const waiting: TaskWaitingView[] = Object.entries(rt.waitingView?.() ?? {}).map(([botId, entry]) => ({
-      botId, botName: nameOf(botId), for: [...entry.bots, ...entry.rooms, ...entry.for].slice(0, 6),
+    const waiting: TaskWaitingView[] = Object.entries(waitingFacts).map(([botId, entry]) => ({
+      botId, botName: nameOf(botId), for: [...entry.bots, ...entry.rooms, ...entry.for].slice(0, 6), hold: 'handoff',
     }))
     return { running, completed: [...done], waiting }
   }

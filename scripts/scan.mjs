@@ -23,7 +23,8 @@ const VENDORS = /\b(qwen|minimax|stepfun|kimi|moonshot|zhipu|glm|mimo|anthropic|
 // Files that define the look (characters, inks, logos, themes). Vendor names there are
 // brand references; elsewhere they name model routes and can stay.
 const LOOK_FILES = /(^|\/)(src\/client\/(inks|characters|mark|themes|styles)\.js|dev\/(mascot-outlines|characters)\.mjs)$/
-const NOT_PUBLIC = /(^|[\s(`'"]|\.\.\/)(spec|research|backup|shots|attachments|workspace)\/|\.dsh-home/
+// Private checkout folders are forbidden, while the versioned docs/research tree is public.
+const NOT_PUBLIC = /(^|[\s(`'"]|\.\.\/)(spec|backup|shots|attachments|workspace)\/|\.dsh-home/
 // Migration code and its tests must name the legacy ids (old package name, old theme and
 // color keys) to move saved data over; there, and on lines that say "legacy" (旧版), old names stay.
 const LEGACY_FILES = /(^|\/)(src\/client\/storage\.js|test\/legacy[\w-]*\.test\.js)$/
@@ -59,8 +60,9 @@ const TEXT_RULES = [
   // Moon Bot patch: DS Bot's former name is this fork's name, so the two rules that kept
   // it out are dropped.
   { id: 'legacy-name-in-migration', level: KEEP, re: /\bdsh-bot\b|DeepSeek Bot\b/gi, onlyLegacy: true, summary: true },
-  // Drafts and local-only material.
-  { id: 'draft-marker', level: MUST, re: /TBD\(|DRAFT for|草稿/g },
+  // Unambiguous English draft markers are local-only material. The Chinese word 草稿 is
+  // also a normal product term (for example, a composer draft), so it is not a leak marker.
+  { id: 'draft-marker', level: MUST, re: /TBD\(|DRAFT for/g },
   { id: 'not-public-path-in-docs', level: MUST, re: new RegExp(NOT_PUBLIC.source, 'g'), files: /\.md$/ },
   { id: 'not-public-path-in-code', level: KEEP, re: new RegExp(NOT_PUBLIC.source, 'g'), notFiles: /\.md$/ },
   { id: 'public-ip', level: KEEP, re: /\b(?!(127|10|0)\.)(?!192\.168\.)(?!172\.(1[6-9]|2\d|3[01])\.)(?!192\.0\.2\.|198\.51\.100\.|203\.0\.113\.|169\.254\.)(\d{1,3}\.){3}\d{1,3}\b/g, unless: /version|v\d|@\d/i },

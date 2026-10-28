@@ -46,4 +46,14 @@ jobs:
       - name: Publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish -w moon-bot-connect --access public --provenance
+        run: |
+          # A version that is already on the registry cannot be published again (and the
+          # registry answers a first publish asynchronously: metadata first, the tarball a
+          # few minutes later). Re-running a tag, or publishing by hand before tagging,
+          # must stay a green no-op instead of a red job.
+          version=$(node -p "require('./connect/package.json').version")
+          if npm view "moon-bot-connect@$version" version >/dev/null 2>&1; then
+            echo "::notice::moon-bot-connect@$version is already published; nothing to upload"
+            exit 0
+          fi
+          npm publish -w moon-bot-connect --access public --provenance

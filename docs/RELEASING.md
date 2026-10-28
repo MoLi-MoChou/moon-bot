@@ -59,9 +59,16 @@ the product does not publish it and the reverse.
 
 The workflow needs one repository secret, **`NPM_TOKEN`**: a granular token with
 read-and-write access to `moon-bot-connect`. Without it the job fails at the publish step
-and nothing reaches the registry. To publish by hand instead, run
-`npm run verify:package -w moon-bot-connect` and then
-`npm publish -w moon-bot-connect --access public` from a machine that is logged in.
+and nothing reaches the registry. Re-running a tag for a version that is already published
+is a green no-op — the job checks the registry first.
+
+To publish by hand instead, run `npm run verify:package -w moon-bot-connect` and then
+`npm publish -w moon-bot-connect --access public` from a machine that is logged in. A first
+publish of a new package answers `202 Accepted`: the metadata shows up first and the
+tarball can 404 for a few minutes while the registry processes it — retry `npm view` rather
+than republishing. If the account requires 2FA for publishing, use an **Automation** token
+(a Publish token aborts with `EOTP`), or stage with `npm stage publish` and approve later
+with `npm stage approve <id>`.
 
 ## Deploying a release to a server
 

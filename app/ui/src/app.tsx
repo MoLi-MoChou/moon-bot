@@ -14,6 +14,30 @@ import { asViews, createTeam, type Team } from './team.ts'
 // The width at which the sidebar becomes a drawer (app.css has the matching breakpoint).
 const NARROW = '(max-width: 640px)'
 
+// A touch keyboard's Return belongs to the text: it inserts a line and the send button
+// sends. The composer's own key handler keeps Return-to-send for a fine pointer, so the
+// newline is inserted here, ahead of it, and the controlled field learns it from `input`.
+const TRIGGER_MENU = '.dsb-trigger-menu'
+
+function installTouchNewline(root: HTMLElement): () => void {
+  const onKey = (event: KeyboardEvent): void => {
+    if (event.key !== 'Enter' || event.shiftKey || event.isComposing || event.keyCode === 229) return
+    if (!matchMedia('(pointer: coarse)').matches) return
+    if (!(event.target instanceof HTMLTextAreaElement) || !event.target.hasAttribute('data-composer-input')) return
+    // The @/ menu is a suggestion list: while it is open, Return picks the highlighted item.
+    if (document.querySelector(TRIGGER_MENU) !== null) return
+    const field = event.target
+    event.preventDefault()
+    event.stopPropagation()
+    const start = field.selectionStart ?? field.value.length
+    const end = field.selectionEnd ?? start
+    field.setRangeText('\n', start, end, 'end')
+    field.dispatchEvent(new Event('input', { bubbles: true }))
+  }
+  root.addEventListener('keydown', onKey, true)
+  return () => root.removeEventListener('keydown', onKey, true)
+}
+
 // The browser's width, repainted when the window crosses the drawer's breakpoint.
 function useNarrow(): boolean {
   const [narrow, setNarrow] = useState(() => matchMedia(NARROW).matches)
@@ -93,6 +117,11 @@ export function App(): ReactElement {
   const shown = hooks.useShown(id => id)
   const prefs = hooks.useRoster(value => value.prefs)
   applyTheme(prefs)
+  // Return on a phone's keyboard never sends; it belongs to the text.
+  useEffect(() => {
+    const node = main.current
+    return node === null ? undefined : installTouchNewline(node)
+  }, [])
   // A phone shows one surface at a time: the sidebar's state says how it would look in a
   // wide window, so the drawer always opens on the expanded list.
   const sidebar = wide || narrow

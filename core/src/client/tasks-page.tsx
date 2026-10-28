@@ -87,11 +87,16 @@ export function TasksPage({ taskActions }: { taskActions: TaskActions }) {
             {answer === null ? <div className='bt-set-row'><span className='bt-set-hint'>{t('Loading…')}</span></div>
                 : running.length === 0 ? <div className='bt-set-row'><span className='bt-set-hint'>{t('Nobody is working right now.')}</span></div>
                 : running.map(task => <div key={task.sessionId} className='bt-task-row'>
-                    <span className='bt-task-who'><span className='bt-task-name'>{task.botName}</span>
-                        <span className='bt-task-sub'>{doingText(task)}{task.roomName !== undefined ? ` · ${task.roomName}` : ''}</span></span>
+                    <button type='button' className='bt-task-who' onClick={() => taskActions.openSession(task.sessionId)}>
+                        <span className='bt-task-name'>{task.botName}</span>
+                        <span className='bt-task-sub'>{doingText(task)}{task.roomName !== undefined ? ` · ${task.roomName}` : ''}</span>
+                    </button>
                     {task.fromName !== undefined ? <span className='bt-task-from'>{t('for {name}', { name: task.fromName })}</span> : null}
-                    <span className='bt-task-clock' data-now={now}>{elapsed(now - task.since)}</span>
-                    <button type='button' className='bt-soft bt-soft-sm' disabled={busy === task.sessionId} onClick={() => stop(task)}>{t('Stop')}</button>
+                    <span className='bt-task-clock'>{elapsed(now - task.since)}</span>
+                    <button type='button' className='bt-soft bt-soft-sm bt-task-stop' disabled={busy === task.sessionId}
+                        title={t('Stop {name}', { name: task.botName })}
+                        aria-label={t('Stop {name}', { name: task.botName })}
+                        onClick={() => stop(task)}>{busy === task.sessionId ? t('Stopping…') : t('Stop')}</button>
                 </div>)}
             {error !== null ? <div className='bt-connector-error' role='alert'>{error}</div> : null}
         </div></section>
@@ -113,9 +118,13 @@ export const TASKS_CSS = `
 .bt-task-row{display:flex;align-items:center;gap:10px;padding:8px 12px;min-height:48px;border:0;background:none;width:100%;text-align:left;font:inherit;color:inherit}
 .bt-task-done{cursor:pointer;border-radius:8px}
 .bt-task-done:hover{background:var(--bt-hover)}
-.bt-task-who{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.bt-task-who{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;border-radius:8px}
+button.bt-task-who:hover .bt-task-name{color:var(--bt-accent)}
 .bt-task-name{font-size:13px;line-height:18px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bt-task-sub{font-size:11px;line-height:15px;color:var(--bt-ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bt-task-from{flex:none;font-size:11px;line-height:15px;color:var(--bt-ink-3)}
 .bt-task-clock{flex:none;font-size:12px;line-height:16px;color:var(--bt-ink-2);font-variant-numeric:tabular-nums}
+.bt-task-stop{flex:none;color:var(--bt-warn)}
+.bt-task-stop:hover:not(:disabled){background:color-mix(in srgb,var(--bt-warn) 12%,var(--bt-hover))}
+@media (max-width:640px){.bt-task-from{display:none}}
 `;

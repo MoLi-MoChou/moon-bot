@@ -43,7 +43,9 @@ async function start({ services = {}, workspaces = [], llm, team: saved = TEAM, 
   const previousHome = process.env.DSH_HOME
   process.env.DSH_HOME = dsh
 
-  const ctx = fakeContext({ services })
+  // The normal test assembly has a read-only policy, so an external folder is safe without
+  // an approval request. Tests for missing dependency behavior override it with undefined.
+  const ctx = fakeContext({ services: { sandboxPolicy: { resolve: () => ({ mode: 'read-only' }) }, ...services } })
   const created = []
   const cwds = new Map()
   const agents = new Map()
@@ -246,6 +248,16 @@ test('a running Bot moves at its next step and carries that step\'s input along'
   assert.deepEqual(agentOf('s1').calls.map(([kind, message]) => [kind, message.source.role ?? textOf(message)]), [['followup', 'handoff'], ['followup', 'Now build it']])
   // The fresh part is where it should be, so its steps go on.
   assert.equal(await preStep('s1'), 'next')
+})
+
+test('an out-of-team folder is denied when the sandbox policy is missing', async (t) => {
+  const env = await start({ services: { sandboxPolicy: undefined } })
+  t.after(env.stop)
+  const before = JSON.stringify(env.state())
+  assert.equal((await env.call('update-bot', { id: 'b', workDir: env.project })).error?.message,
+    `Working in ${env.project} needs a sandbox policy, so nothing changed. The user can make this change in the settings.`)
+  assert.equal(JSON.stringify(env.state()), before)
+  assert.equal(env.state().bots.b.workDir, undefined)
 })
 
 test('a folder outside the team workspace needs the user\'s approval', async (t) => {

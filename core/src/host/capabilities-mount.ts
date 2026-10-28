@@ -40,6 +40,8 @@ export interface CapabilityMounts {
   trackBotAgents(bot: StoredBot): Promise<void>
   statusFor(botId: string, name: string): CapabilityStatus | undefined
   statusesView(): Record<string, Record<string, CapabilityStatus>>
+  /** The tools a capability currently serves, by its own name; packs merge their children. */
+  toolsView(): Record<string, readonly string[]>
   /** The `rt.secretsChanged` hook: a secret changed, so re-out everything. */
   wrapSecretsChanged(previous: (() => void) | undefined): () => void
   dispose(): Promise<void>
@@ -100,7 +102,12 @@ export function createCapabilityMounts({ rt, state, library, expand }: MountOpti
           if (status) statuses[name] = status
           continue
         }
-        const children = (item.items ?? []).map(child => statusFor(bot.id, child)).filter((status): status is CapabilityStatus => status !== undefined)
+        // Only MCP children have a mount: a skill in the same pack has no connection to
+        // report, and a missing mount is not the pack's error.
+        const children = (item.items ?? [])
+          .filter(child => library()[child]?.kind === 'mcp')
+          .map(child => statusFor(bot.id, child))
+          .filter((status): status is CapabilityStatus => status !== undefined)
         const status = children.find(item => item.state === 'error')
           ?? children.find(item => item.state === 'needs-approval')
           ?? children.find(item => item.state === 'connecting')
@@ -108,6 +115,24 @@ export function createCapabilityMounts({ rt, state, library, expand }: MountOpti
         if (status) statuses[name] = status
       }
       result[bot.id] = statuses
+    }
+    return result
+  }
+  const toolsOf = (name: string): readonly string[] => {
+    const names = rt.toolRegistry?.names() ?? []
+    return names.filter(tool => tool.startsWith(`mcp__${name}__`))
+  }
+  const toolsView = (): Record<string, readonly string[]> => {
+    const result: Record<string, readonly string[]> = {}
+    for (const item of Object.values(library())) {
+      if (item.kind === 'mcp') {
+        const tools = toolsOf(item.name)
+        if (tools.length > 0) result[item.name] = tools
+        continue
+      }
+      if (item.kind !== 'pack') continue
+      const tools = (item.items ?? []).flatMap(child => toolsOf(child))
+      if (tools.length > 0) result[item.name] = [...new Set(tools)]
     }
     return result
   }
@@ -320,6 +345,6 @@ export function createCapabilityMounts({ rt, state, library, expand }: MountOpti
 
   return {
     reconcile, scheduleReconcile, ensureCapabilities, prepare, trackAgent, trackBotAgents,
-    statusFor, statusesView, wrapSecretsChanged, dispose,
+    statusFor, statusesView, toolsView, wrapSecretsChanged, dispose,
   }
 }

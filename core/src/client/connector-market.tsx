@@ -15,6 +15,7 @@ import {
 export interface MarketActions {
   secretSet: (payload: { name: string; value: string; purpose: string }) => Promise<unknown>;
   saveCapability: (item: Record<string, unknown>) => Promise<unknown>;
+  openSettings?: (page: string) => void;
 }
 
 const CATEGORY_LABELS: Record<string, () => string> = {
@@ -126,74 +127,8 @@ function InstallForm({
   );
 }
 
-function CustomConnectorForm({ market, onClose }: { market: MarketActions; onClose: () => void }) {
-  const [name, setName] = useState('');
-  const [transport, setTransport] = useState<'stdio' | 'streamable-http'>('stdio');
-  const [target, setTarget] = useState('');
-  const [desc, setDesc] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const id = name.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').slice(0, 32);
-    if (!id || !target.trim()) { setError(t('Please fill in the name and command or URL.')); return; }
-    setBusy(true);
-    setError(null);
-    const item: Record<string, unknown> = {
-      name: id,
-      kind: 'mcp',
-      description: desc.trim() || `${name} MCP Server`,
-      transport,
-      ...(transport === 'stdio'
-        ? { command: target.trim().split(/\s+/)[0] ?? 'npx', args: target.trim().split(/\s+/).slice(1) }
-        : { url: target.trim() }),
-    };
-    market.saveCapability(item).then(onClose, failure => setError(failure?.message ?? String(failure))).finally(() => setBusy(false));
-  };
-
-  return (
-    <form className='bt-market-form' onSubmit={submit}>
-      <div className='bt-market-form-head'>
-        <div className='bt-market-form-title-row'>
-          <span className='bt-market-icon bt-market-form-icon'><DefaultConnectorLogo size={28} /></span>
-          <div className='bt-market-form-info'>
-            <span className='bt-market-name'>{t('Custom MCP server')}</span>
-            <span className='bt-market-desc'>{t('Enter any command or HTTP endpoint to connect any community or custom MCP server.')}</span>
-          </div>
-        </div>
-      </div>
-      <label className='bt-q-field bt-secret-field'>
-        <span className='bt-set-hint'>{t('Name')}</span>
-        <input className='bt-input' autoFocus placeholder='my-custom-tool' value={name} onChange={e => setName(e.target.value)} />
-      </label>
-      <label className='bt-q-field bt-secret-field'>
-        <span className='bt-set-hint'>{t('Type')}</span>
-        <select className='bt-input' value={transport} onChange={e => setTransport(e.target.value as 'stdio' | 'streamable-http')}>
-          <option value='stdio'>{t('Local command (stdio)')}</option>
-          <option value='streamable-http'>{t('HTTP server (streamable-http)')}</option>
-        </select>
-      </label>
-      <label className='bt-q-field bt-secret-field'>
-        <span className='bt-set-hint'>{transport === 'stdio' ? t('Command') : t('URL')}</span>
-        <input className='bt-input' placeholder={transport === 'stdio' ? 'npx -y any-mcp-server' : 'https://mcp.example.com/mcp'} value={target} onChange={e => setTarget(e.target.value)} />
-      </label>
-      <label className='bt-q-field bt-secret-field'>
-        <span className='bt-set-hint'>{t('Description')}</span>
-        <input className='bt-input' placeholder={t('What this tool does')} value={desc} onChange={e => setDesc(e.target.value)} />
-      </label>
-      {error ? <div className='bt-connector-error' role='alert'>{error}</div> : null}
-      <div className='bt-connector-form-row'>
-        <button type='button' className='bt-soft bt-soft-sm' disabled={busy} onClick={onClose}>{t('Cancel')}</button>
-        <button type='submit' className='bt-soft bt-soft-sm' disabled={busy || !name.trim() || !target.trim()}>{busy ? t('Adding…') : t('Add capability')}</button>
-      </div>
-    </form>
-  );
-}
-
-export function ConnectorCatalog({ market, capabilities }: { market: MarketActions; capabilities?: readonly { name: string }[] | undefined }) {
+export function ConnectorCatalog({ market, capabilities, onCustom }: { market: MarketActions; capabilities?: readonly { name: string }[] | undefined; onCustom?: (() => void) | undefined }) {
   const [installing, setInstalling] = useState<ConnectorCatalogEntry | null>(null);
-  const [customOpen, setCustomOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<ConnectorCategory | 'all'>('all');
   const [search, setSearch] = useState('');
 
@@ -222,10 +157,11 @@ export function ConnectorCatalog({ market, capabilities }: { market: MarketActio
           <p className='bt-market-note'>{t('One click adds the MCP service as a capability every Bot can use.')}</p>
         </div>
         <div className='bt-market-actions'>
-          <button type='button' className='bt-soft bt-soft-sm bt-market-custom-btn' onClick={() => setCustomOpen(true)}>
+          <button type='button' className='bt-soft bt-soft-sm bt-market-custom-btn' onClick={() => onCustom?.()}>
             <PlusIcon />
             <span>{t('Custom MCP')}</span>
           </button>
+          {market.openSettings === undefined ? null : <button type='button' className='bt-soft bt-soft-sm' onClick={() => market.openSettings?.('capabilities')}>{t('Installed capabilities')}</button>}
           <div className='bt-market-search'>
             <span className='bt-market-search-icon'><SearchIcon /></span>
             <input type='text' className='bt-market-search-input' placeholder={t('Search connectors…')} value={search} onChange={e => setSearch(e.target.value)} />
@@ -248,9 +184,7 @@ export function ConnectorCatalog({ market, capabilities }: { market: MarketActio
         })}
       </div>
 
-      {customOpen ? (
-        <CustomConnectorForm market={market} onClose={() => setCustomOpen(false)} />
-      ) : installing !== null ? (
+      {installing !== null ? (
         <InstallForm key={installing.id} entry={installing} isInstalled={installedSet.has(installing.id)} market={market} onClose={() => setInstalling(null)} />
       ) : filtered.length === 0 ? (
         <div className='bt-market-empty'>

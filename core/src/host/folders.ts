@@ -119,7 +119,10 @@ export function install(rt: HostRuntime): void {
   // A folder, as a real path, as a working folder: undefined for the team workspace.
   async function workFolder(path: string): Promise<string | undefined> {
     if (await guarded(path)) throw new Error(`${path} holds another runtime's data, so Bots cannot work there`)
-    return path === await realTeam() ? undefined : path
+    const team = await realTeam()
+    if (team !== undefined && within(path, team)) return path === team ? undefined : path
+    if (ctx.get<SandboxPolicy>('sandboxPolicy') === undefined) throw new Error(`Working in ${path} needs a sandbox policy, so nothing changed. The user can make this change in the settings.`)
+    return path
   }
 
   // The user moves the team workspace. Bots and groups without a folder of their own move on
@@ -165,8 +168,9 @@ export function install(rt: HostRuntime): void {
   // it is not allowed.
   async function approveFolder(exec: ToolExecution | ToolContext, { path, sessions = [], who, toolName }: ApproveFolderInput): Promise<void> {
     const team = await realTeam()
+    if (path === undefined || (team !== undefined && within(path, team))) return
     const policy = ctx.get<SandboxPolicy>('sandboxPolicy')
-    if (path === undefined || (team !== undefined && within(path, team)) || policy === undefined) return
+    if (policy === undefined) throw new Error(`Working in ${path} needs a sandbox policy, so nothing changed. The user can make this change in the settings.`)
     const agents = await Promise.all(sessions.map(id => rt.resolveAgent(id)))
     const modes = [policy.resolve(), ...agents.map(agent => policy.resolve({ session: agent.session }))].map(entry => entry.mode)
     if (!modes.includes('workspace-write')) return

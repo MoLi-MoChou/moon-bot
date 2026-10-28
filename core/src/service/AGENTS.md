@@ -4,7 +4,7 @@ Fastify 服务、host 装配、凭证与设置、调度、审批桥、远程中�
 
 ## 装配唯一入口
 
-- [`engine.ts`](engine.ts) 的 `wireService()` 是唯一装配入口：ServiceContext + runtime（`createRuntime`）+ SQLite store + BuiltinRuntime + PolicyEngine + RelayRegistry + attachments/approval。新服务在 `wireService` 里接。
+- [`engine.ts`](engine.ts) 的 `wireService()` 是唯一装配入口：ServiceContext + runtime（`createRuntime`）+ SQLite store + BuiltinRuntime + PolicyEngine + RelayRegistry + 附件与审批桥。新服务在 `wireService` 里接。
 - [`server.ts`](server.ts) 只做壳：鉴权、cookie、静态资源、`POST /api/bot`（转给 host 捕获的 route）、`GET /api/bot/feed` 的 SSE、`/healthz`、`/login`、relay 的 WebSocket upgrade。不要在 `server.ts` 里写业务；业务在 host 的 [`channel/`](../host/channel/)。
 - [`main.ts`](main.ts) 只读环境变量并启动（`MOON_BOT_DATA`/`PASSWORD`/`WEB_HOST`/`WEB_PORT`/`UI`，旧名 `MOCHOU_*`/`DSH_BOT_*` 仍兼容）；桌面 app 的 `service-host.ts` 用 `startService` 起同一套。
 

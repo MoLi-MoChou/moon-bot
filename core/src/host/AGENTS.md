@@ -33,7 +33,7 @@ host 是产品的服务端：Bot 名单、回合、群聊、记忆、定时、�
 
 ## 数据与路径
 
-- 团队 home 里有 `state.json`、`store.sqlite3`、`settings.json`、`credentials.json`、`secrets.json`、`logs/`、`attachments/` 等。host 只写 home 内的路径；工作区路径由 `folders.ts` 校验，不要绕开它自己拼。
+- 团队 home 里有 `state.json`、`store.sqlite3`、`settings.json`、`credentials.json`、`secrets.json`，以及 `logs`、`attachments` 两个目录。host 只写 home 内的路径；工作区路径由 `folders.ts` 校验，不要绕开它自己拼。
 - 测试用临时目录，跑完删除；绝不指向真实数据目录（根硬规则 5）。错误和日志里不带密钥和 home 绝对路径（由 `diagnostics.ts` 清理）。
 
 ## 门禁

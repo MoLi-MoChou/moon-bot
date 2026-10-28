@@ -79,7 +79,7 @@ test('a refused key ends the turn with AUTH and leaves the chat the key-free rea
   const server = await errorServer(401, JSON.stringify({ error: { message: 'invalid api key sk-live-abcdef123456' } }))
   t.after(() => void server.close())
   const store = withStore(t)
-  const { engine, events } = engineOver(store, () => ({ id: 'mock-1', baseUrl: server.url, api: 'openai-completions', apiKey: 'sk-live-abcdef123456' }))
+  const { engine, events } = engineOver(store, () => ({ id: 'mock-1', baseUrl: server.url, api: 'openai-completions', apiKey: 'sk-test-abcdef123456' }))
 
   const collected = await runTurn(engine)
   assert.deepEqual(events.map(event => event.type), collected.map(event => event.type))

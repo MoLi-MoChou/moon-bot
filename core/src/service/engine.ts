@@ -20,6 +20,7 @@ import { LEAN_HIDDEN_TOOLS } from '../shared/lean.ts'
 import { resolveModelSpec } from '../shared/model-catalog.ts'
 import { openStore, type Store } from '../store/db.ts'
 import { ServiceContext } from './context.ts'
+import { historyPageOf } from './history-page.ts'
 import { FileAttachments } from './attachments.ts'
 import { ServiceApproval } from './approval.ts'
 import { MemorySync } from './memory-sync.ts'
@@ -308,52 +309,9 @@ ${task.prompt}` }],
 
   context.resolveAgentWith(agentOf)
 
-  // A history page from the store: each row becomes the session event the chat's
-  // pagers read (user and assistant messages; tool results are live-view only).
-  context.pageWith(async input => {
-    const sessionId = input.address.sessionId
-    const limit = Math.max(1, input.maxMessages ?? 60) + 1
-    const rows = store.sessions.pageBetween(sessionId, {
-      ...(input.throughSeq !== undefined ? { throughSeq: input.throughSeq } : {}),
-      ...(input.beforeSeq !== undefined ? { beforeSeq: input.beforeSeq } : {}),
-      limit,
-    })
-    const max = Math.max(1, input.maxMessages ?? 60)
-    const hasMore = rows.length > max
-    const shown = hasMore ? rows.slice(0, max) : rows
-    return {
-      records: shown.flatMap((row): { seq: number, event: { type: string, time: number, data: unknown } }[] => {
-        if (row.role === 'user') {
-          return [{ seq: row.seq, event: { type: 'user/message', time: row.createdAt, data: { content: row.content, source: row.source } } }]
-        }
-        if (row.role === 'assistant') {
-          return [{ seq: row.seq, event: { type: 'assistant/message', time: row.createdAt, data: { message: { content: row.content }, turn: row.turn ?? undefined } } }]
-        }
-        // The engine's row for a failed turn: the chat draws it as the error line the
-        // live turn/end already showed. A turn hidden from the chat stays out of it.
-        if (row.role === 'system' && (row.source as { readonly kind?: unknown } | null)?.kind === 'turn-error') {
-          const source = row.source as { readonly code?: unknown; readonly status?: unknown }
-          const text = row.content.flatMap(block => (block.type === 'text' && typeof block.text === 'string' ? [block.text] : [])).join('\n')
-          return [{
-            seq: row.seq,
-            event: {
-              type: 'turn/error',
-              time: row.createdAt,
-              data: {
-                turn: row.turn ?? undefined,
-                error: {
-                  ...(typeof source.code === 'string' ? { code: source.code } : {}),
-                  ...(text !== '' ? { message: text } : {}),
-                },
-              },
-            },
-          }]
-        }
-        return []
-      }),
-      hasMore,
-    }
-  })
+  // A history page from the store, in its own module: the chat's pagers and the failed
+  // turn's line share it.
+  context.pageWith(historyPageOf(store))
 
   return {
     context, runtime, store, engine, relay, agentOf, emitEvent,

@@ -3,6 +3,7 @@
 import type { ModelEntry } from './model-menu.tsx'
 import type { SecretActions, SecretEntry, SecretRequest } from './secret-card.tsx'
 import type { Connector, ConnectorActions } from './connectors.tsx'
+import type { Capability, CapabilityStatus } from './capability-types.ts'
 import type { RelayActions } from './relay-page.tsx'
 import type { TaskActions } from './tasks-page.tsx'
 import type { FolderMenuActions } from './folder-menu.tsx'
@@ -73,6 +74,9 @@ export interface SettingsRoster {
   mainBotIds?: readonly string[]
   memory?: boolean
   connectors?: Connector[]
+  capabilities?: readonly Capability[]
+  capabilityStatuses?: Readonly<Record<string, Readonly<Record<string, CapabilityStatus | undefined>> | undefined>>
+  capabilityTools?: Readonly<Record<string, readonly string[]>>
   secrets?: readonly SecretEntry[]
   secretRequests?: Record<string, readonly SecretRequest[] | undefined>
 }

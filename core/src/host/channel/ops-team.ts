@@ -94,6 +94,7 @@ function createLive(rt: ChannelRuntime): () => TeamLive {
     memoryReviews: rt.memoryReviews(),
     connectors: rt.connectorsView(),
     capabilityStatuses: rt.capabilityStatusesView(),
+    capabilityTools: rt.capabilityToolsView(),
   })
 }
 

@@ -101,6 +101,7 @@ export function FileKindIcon({ kind, size = 15 }: {
 // A shelf of books: everything the team has handed over, kept in one place.
 export const RelayIcon = lineIcon(['M10 3v3.2', 'M10 11.8V15', 'M6.4 6.6a5 5 0 000 6.8', 'M13.6 6.6a5 5 0 010 6.8']);
 export const LibraryIcon = lineIcon(['M4 4.5h3.2v11H4z', 'M8.7 4.5h3.2v11H8.7z', 'M14.6 5.2l2.2.5-2.1 10.3-2.2-.5z']);
+export const TasksIcon = lineIcon(['M6.5 5.5h9.5', 'M6.5 10h9.5', 'M6.5 14.5h7', 'M4 5.5h.01', 'M4 10h.01', 'M4 14.5h.01']);
 // Defined here, after the icons: SettingsDialog only reads them at render time.
 // Two speech bubbles, the back one peeking out: a group chat.
 export const ChatsIcon = lineIcon(['M3.5 5.5A1.5 1.5 0 0 1 5 4h7a1.5 1.5 0 0 1 1.5 1.5V10A1.5 1.5 0 0 1 12 11.5H8L5 14v-2.5A1.5 1.5 0 0 1 3.5 10z', 'M13.5 7.5H15A1.5 1.5 0 0 1 16.5 9v4.5A1.5 1.5 0 0 1 15 15v2l-2.5-2h-3A1.5 1.5 0 0 1 8 13.5V13']);

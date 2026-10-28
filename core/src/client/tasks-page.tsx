@@ -52,6 +52,15 @@ export interface TaskFilters {
     readonly state: TaskStateFilter;
     readonly botId: string;
 }
+export function filterTasks(answer: TasksAnswer, filters: TaskFilters): TasksAnswer {
+    const byBot = (task: { botId: string }): boolean => filters.botId === 'all' || task.botId === filters.botId;
+    const include = (kind: Exclude<TaskStateFilter, 'all'>): boolean => filters.state === 'all' || filters.state === kind;
+    return {
+        running: include('running') ? answer.running.filter(byBot) : [],
+        waiting: include('waiting') ? answer.waiting.filter(byBot) : [],
+        completed: include('completed') ? answer.completed.filter(byBot) : [],
+    };
+}
 /** What `task-stop` answers: whether a running turn was there to cancel. */
 export interface TaskStopAnswer {
     readonly stopped?: boolean;
@@ -160,11 +169,11 @@ export function TasksBoard({ state, onOpen }: TasksBoardProps) {
     const completed = answer?.completed ?? [];
     const waiting = answer?.waiting ?? [];
     const bots = [...new Map([...running, ...waiting, ...completed].map(task => [task.botId, task.botName])).entries()];
-    const byBot = (task: { botId: string }): boolean => filters.botId === 'all' || task.botId === filters.botId;
+    const filtered = filterTasks({ running, waiting, completed }, filters);
+    const shownRunning = filtered.running;
+    const shownWaiting = filtered.waiting;
+    const shownCompleted = filtered.completed;
     const show = (kind: Exclude<TaskStateFilter, 'all'>): boolean => filters.state === 'all' || filters.state === kind;
-    const shownRunning = running.filter(byBot);
-    const shownWaiting = waiting.filter(byBot);
-    const shownCompleted = completed.filter(byBot);
     return <>
         {notice !== null ? <div className='bt-tasks-notice' role='status'>{notice}</div> : null}
         {error !== null ? <div className='bt-connector-error' role='alert'>{error}</div> : null}

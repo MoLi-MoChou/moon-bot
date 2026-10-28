@@ -25,6 +25,8 @@ const module = { exports: {} as {
   elapsed: (ms: number) => string
   doingText: (task: Record<string, unknown>, translate?: (key: string, params?: Record<string, unknown>) => string) => string
   reasonText: (reason: string) => string
+  holdText: (hold: string | undefined) => string | undefined
+  filterTasks: (answer: { running: readonly Record<string, unknown>[]; completed: readonly Record<string, unknown>[]; waiting: readonly Record<string, unknown>[] }, filters: { state: string; botId: string }) => { running: readonly Record<string, unknown>[]; completed: readonly Record<string, unknown>[]; waiting: readonly Record<string, unknown>[] }
   TasksBoard: (props: { state: State; onOpen: (sessionId: string) => void }) => unknown
 } }
 runInNewContext(bundle.outputFiles[0].text, {
@@ -45,7 +47,7 @@ runInNewContext(bundle.outputFiles[0].text, {
     return platform[name] as unknown
   },
 })
-const { elapsed, doingText, reasonText, TasksBoard } = module.exports
+const { elapsed, doingText, reasonText, holdText, filterTasks, TasksBoard } = module.exports
 
 // The element tree the fake createElement builds: walk every node for its text and props.
 const elements = (node: unknown): { props: Record<string, unknown>; children?: readonly unknown[] }[] => {
@@ -73,6 +75,25 @@ const rows = (patch: Partial<State> = {}): State => ({
   ...patch,
 })
 const running = (patch: Record<string, unknown> = {}) => ({ sessionId: 'chat:b1', botId: 'b1', botName: 'Writer', since: 1_000, ...patch })
+
+test('hold copy is omitted when no fact is present', () => {
+  assert.equal(holdText(undefined), undefined)
+  assert.equal(holdText('approval'), 'Waiting for your approval')
+  const tree = TasksBoard({ state: rows({ answer: { running: [running()], completed: [], waiting: [] } }), onOpen: () => {} })
+  assert.doesNotMatch(textOf(tree), /approval|queued|Engine busy/)
+  const labels = propsOf(tree).map(props => props['aria-label']).filter(label => typeof label === 'string')
+  assert.ok(labels.includes('Filter by state'))
+  assert.ok(labels.includes('Filter by Bot'))
+})
+
+test('task filters select a state and Bot without changing the host answer', () => {
+  const answer = { running: [running({ botId: 'b1' }), running({ botId: 'b2' })], waiting: [{ botId: 'b1' }], completed: [{ botId: 'b2' }] }
+  const filtered = filterTasks(answer, { state: 'running', botId: 'b2' })
+  assert.equal(filtered.running.length, 1)
+  assert.equal(filtered.running[0]?.botId, 'b2')
+  assert.equal(filtered.waiting.length, 0)
+  assert.equal(filtered.completed.length, 0)
+})
 
 test('the clocks read as minutes and seconds, then hours', () => {
   assert.equal(elapsed(0), '0:00')

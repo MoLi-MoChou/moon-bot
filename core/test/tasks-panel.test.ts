@@ -8,6 +8,7 @@ import { install } from '../src/host/tasks-panel.ts'
 
 interface AgentStub {
   readonly inbox?: { readonly nextTurn: readonly unknown[] } | undefined
+  readonly status?: string
   pendingTurns?(): number
   cancel?(cause: { readonly kind: string }): void
 }
@@ -16,6 +17,7 @@ interface Row {
   readonly sessionId: string
   readonly botName: string
   readonly queued?: number
+  readonly hold?: string
 }
 
 interface View {
@@ -35,6 +37,8 @@ interface Options {
   readonly live?: Record<string, { readonly turn?: number; readonly sentAt?: number }>
   readonly work?: Record<string, { readonly since?: number; readonly tool?: string; readonly roomId?: string }>
   readonly agent?: (sessionId: string) => AgentStub | undefined
+  readonly approvals?: readonly { readonly sessionId: string }[]
+  readonly waiting?: Record<string, { readonly bots: readonly string[]; readonly rooms: readonly string[]; readonly for: readonly string[] }>
   readonly cancels?: { readonly kind: string }[]
 }
 
@@ -49,7 +53,8 @@ function panel(options: Options = {}): Panel {
     workView: () => options.work ?? {},
     workOf: () => undefined,
     workAsker: () => undefined,
-    waitingView: () => ({}),
+    waitingView: () => options.waiting ?? {},
+    approvalsView: () => options.approvals ?? [],
     resolveAgent: async (sessionId: string) => {
       const agent = options.agent?.(sessionId)
       if (agent === undefined || options.cancels === undefined) return agent
@@ -59,6 +64,48 @@ function panel(options: Options = {}): Panel {
   install(rt as never)
   return rt as unknown as Panel
 }
+
+test('approval pending is the only approval hold fact', async () => {
+  const view = await panel({
+    work: { b1: { since: 1_000 } },
+    live: { 'chat:b1': { turn: 4 } },
+    approvals: [{ sessionId: 'chat:b1' }],
+  }).tasksView()
+  assert.equal(view.running[0]?.hold, 'approval')
+})
+
+test('a queued followup is reported as queued, but a send trigger is not', async () => {
+  const view = await panel({
+    work: { b1: { since: 1_000 } },
+    live: { 'chat:b1': { turn: 4 } },
+    agent: () => ({ pendingTurns: () => 1 }),
+  }).tasksView()
+  assert.equal(view.running[0]?.hold, 'queued')
+  const sent = await panel({
+    work: { b1: { since: 1_000 } },
+    live: { 'chat:b1': { sentAt: 1_000 } },
+    agent: () => ({ pendingTurns: () => 1 }),
+  }).tasksView()
+  assert.equal(sent.running[0]?.hold, undefined)
+})
+
+test('handoff waiting is explicit and idle rows have no guessed hold', async () => {
+  const waiting = await panel({
+    waiting: { b1: { bots: ['b2'], rooms: [], for: [] } },
+  }).tasksView()
+  assert.equal(waiting.waiting[0]?.hold, 'handoff')
+  const idle = await panel({ work: { b1: { since: 1_000 } }, live: { 'chat:b1': { turn: 4 } } }).tasksView()
+  assert.equal(idle.running[0]?.hold, undefined)
+})
+
+test('an explicit running engine without a started turn reports engine-busy', async () => {
+  const view = await panel({
+    work: { b1: { since: 1_000 } },
+    live: { 'chat:b1': { sentAt: 1_000 } },
+    agent: () => ({ status: 'running' }),
+  }).tasksView()
+  assert.equal(view.running[0]?.hold, 'engine-busy')
+})
 
 test('a running turn counts the followups waiting behind it', async () => {
   const view = await panel({

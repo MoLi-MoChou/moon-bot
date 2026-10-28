@@ -158,7 +158,7 @@ export function install(rt: PanelRuntime): void {
       const queued = live?.turn === undefined ? 0 : queueOf(agent)
       const hold: TaskHold | undefined = approvalSessions.has(row.sessionId) ? 'approval'
         : queued > 0 ? 'queued'
-          : agent?.status === 'running' && rt.live.get(row.sessionId)?.turn === undefined ? 'engine-busy'
+          : agent?.status === 'running' && live?.turn === undefined ? 'engine-busy'
             : undefined
       return hold === undefined
         ? queued > 0 ? { ...row, queued } : row

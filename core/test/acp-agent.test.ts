@@ -4,12 +4,13 @@
 // opencode. Two AgentRuntime implementations now exist — the plan's own proof that the
 // seam is replaceable.
 import assert from 'node:assert/strict'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { AcpRuntime, eventsOfUpdate } from '../src/engine/acp/runtime.ts'
-import { StdioTransport } from '../src/engine/acp/transport.ts'
+import { RelayTransport, StdioTransport } from '../src/engine/acp/transport.ts'
+import { engineAgentOf } from '../src/engine/builtin/bridge.ts'
 import { LineProtocol } from '../src/engine/acp/protocol.ts'
 import type { EngineEvent } from '../src/engine/events.ts'
 
@@ -108,6 +109,44 @@ test('an agent that dies takes its turn to an error end, not a hang', async (t) 
   void outcome
   await runtime.stop()
   assert.ok(true)
+})
+
+// An agent that answers one prompt and then exits; it logs each start and exit to argv[2].
+const ONE_SHOT_AGENT = `
+require('node:fs').appendFileSync(process.argv[2], 'up\\n')
+process.on('exit', () => require('node:fs').appendFileSync(process.argv[2], 'down\\n'))
+const send = (object) => process.stdout.write(JSON.stringify(object) + '\\n')
+require('node:readline').createInterface({ input: process.stdin }).on('line', (line) => {
+  const message = JSON.parse(line)
+  if (message.id === undefined) return
+  if (message.method === 'session/new') send({ jsonrpc: '2.0', id: message.id, result: { sessionId: 'acp-1' } })
+  else if (message.method === 'session/prompt') {
+    send({ jsonrpc: '2.0', id: message.id, result: { stopReason: 'end_turn' } })
+    setTimeout(() => process.exit(0), 20)
+  } else send({ jsonrpc: '2.0', id: message.id, result: {} })
+})
+`
+
+test('an agent that exits between turns is started and initialized again on the next turn', async (t) => {
+  const dir = mkdtempSync(join(tmpdir(), 'acp-restart-'))
+  t.after(() => rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }))
+  writeFileSync(join(dir, 'agent.cjs'), ONE_SHOT_AGENT)
+  const starts = join(dir, 'starts.log')
+  const runtime = new AcpRuntime({ transport: new StdioTransport(process.execPath, [join(dir, 'agent.cjs'), starts]), emit: () => {} })
+  t.after(() => runtime.stop())
+  const first = await run(runtime, 'b1', 'hello')
+  assert.deepEqual(first.at(-1), { type: 'turn/end', turn: 1, reason: { kind: 'completed' } })
+  // The child exits after its answer; give the parent its exit event before turn two.
+  const until = Date.now() + 5000
+  while (!readFileSync(starts, 'utf8').includes('down') && Date.now() < until) await new Promise(resolve => setTimeout(resolve, 10))
+  await new Promise(resolve => setTimeout(resolve, 100))
+  const second = await Promise.race([
+    run(runtime, 'b1', 'again').then(events => events.at(-1)),
+    new Promise<string>(resolve => { setTimeout(() => resolve('still waiting'), 3000) }),
+  ])
+  assert.deepEqual(second, { type: 'turn/end', turn: 1, reason: { kind: 'completed' } })
+  assert.equal(readFileSync(starts, 'utf8').split('\n').filter(line => line === 'up').length, 2)
+  await runtime.stop()
 })
 
 test('spawnAgent wiring: a torn line never corrupts the stream', () => {

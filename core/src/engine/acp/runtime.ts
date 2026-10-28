@@ -70,6 +70,10 @@ export class AcpRuntime implements AgentRuntime {
           // The agent on the other end is gone; its session ids died with it. A
           // reconnected agent gets fresh sessions on the next turn.
           this.sessions.clear()
+          // The next agent (a respawned child, a new relay connection) has not seen
+          // initialize, and a torn line of the old one must not prefix its first line.
+          this.started = undefined
+          this.wire = undefined
         })
         await this.options.transport.open()
         const result = await this.request('initialize', {
@@ -183,7 +187,13 @@ export class AcpRuntime implements AgentRuntime {
     const id = this.nextId++
     return new Promise((resolve, reject) => {
       this.pending.set(id, { resolve, reject })
-      this.protocol.send({ jsonrpc: '2.0', id, method, params })
+      try {
+        this.protocol.send({ jsonrpc: '2.0', id, method, params })
+      } catch (error) {
+        // A wire that is down answers nothing; the waiter must not outlive it.
+        this.pending.delete(id)
+        reject(error instanceof Error ? error : new Error(String(error)))
+      }
     })
   }
 

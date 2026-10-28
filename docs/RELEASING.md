@@ -45,6 +45,24 @@ without a shell:
 curl -s https://<server>:8290/healthz      # {"ok":true,"revision":"abc1234"}
 ```
 
+## Publishing the connect CLI
+
+`moon-bot-connect` is a separate npm package with its own version and tag; a release of
+the product does not publish it and the reverse.
+
+1. `node scripts/version.mjs connect X.Y.Z` (prints the tag it implies), commit.
+2. `git tag connect-vX.Y.Z && git push origin main connect-vX.Y.Z`.
+3. `.github/workflows/publish-connect.yml` checks the tag against
+   `connect/package.json`, runs `npm run verify:package -w moon-bot-connect` (packs the
+   tarball, installs it into a throwaway prefix and runs the installed bin) and only then
+   runs `npm publish --access public --provenance`.
+
+The workflow needs one repository secret, **`NPM_TOKEN`**: a granular token with
+read-and-write access to `moon-bot-connect`. Without it the job fails at the publish step
+and nothing reaches the registry. To publish by hand instead, run
+`npm run verify:package -w moon-bot-connect` and then
+`npm publish -w moon-bot-connect --access public` from a machine that is logged in.
+
 ## Deploying a release to a server
 
 A first install (or a rebuild of the whole stack) is one command:

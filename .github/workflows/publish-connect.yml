@@ -1,0 +1,49 @@
+name: Publish connect
+
+# The moon-bot-connect CLI on npm (docs/RELEASING.md). It is a separate package with its
+# own version and its own tag: `connect-vX.Y.Z`. The job refuses a tag that does not match
+# connect/package.json, verifies the exact tarball it is about to upload, and publishes
+# with provenance so the registry can show where the artifact was built.
+#
+# Needs one repository secret: NPM_TOKEN, a granular token with read-and-write access to
+# the moon-bot-connect package (or an automation token). Nothing here reads it into a file.
+on:
+  push:
+    tags: ['connect-v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: publish-connect-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: npm publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - name: Check the tag matches connect/package.json
+        if: startsWith(github.ref, 'refs/tags/connect-v')
+        run: |
+          expected="connect-v$(node -p "require('./connect/package.json').version")"
+          if [ "$expected" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::the tag $GITHUB_REF_NAME does not match $expected (bump connect/package.json first)"
+            exit 1
+          fi
+      - name: Install
+        run: ELECTRON_SKIP_BINARY_DOWNLOAD=1 npm ci --no-audit --no-fund
+      - name: Build and verify the tarball
+        run: npm run verify:package -w moon-bot-connect
+      - name: Publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish -w moon-bot-connect --access public --provenance

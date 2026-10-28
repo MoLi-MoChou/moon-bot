@@ -65,14 +65,16 @@
 
 ### 合并冲突
 
-- **`core/client.js`**：不要手工解决。先解决 `core/src/client/` 里的冲突，再在 `core/` 里运行 `npm run build`，提交新生成的 `client.js`。
+- **`core/client.js`**：它是生成物、从不提交，只有在两边都误提交时才会冲突。先解决 `core/src/client/`，把生成文件从合并里去掉（`git checkout --ours core/client.js` 后 `npm run build`）。
 - **`CHANGELOG.md`**：Pull Request 不改它，所以不应该冲突。如果冲突了，两边都保留。
 
 ### 发版（维护者）
 
 1. 向 `dev` 提一个 Pull Request：修改 `core/package.json` 里的版本号，根据已合并 Pull Request 的 Changelog 句子写 `CHANGELOG.md` 的这一版。
 2. 提一个从 `dev` 到 `main` 的 Pull Request，标题为 `release: vX.Y.Z`。在描述里列出这一版所有的 `Fixes #<号>`，合并时这些 Issue 会一起关闭。
-3. 合并前在 Windows 真机上做一遍[发版前真机检查](docs/dev/release-checklist.md)，改动涉及 macOS 时在 macOS 上也做一遍，结果贴在这个 PR 里。用 merge commit 合并，在 `main` 上发布 GitHub Release `vX.Y.Z`。Release 工作流会检查 tag 与版本号一致、且在 `main` 上，跑完检查后把包发到 npm（预发布版本发到 npm 的 `next` 标签）。不要手动 `npm publish`。
+3. 用 `node scripts/version.mjs X.Y.Z` 定版本，把 `main` 推到该提交并打 tag：`git tag vX.Y.Z && git push origin main vX.Y.Z`。完整流程见 [docs/RELEASING.md](docs/RELEASING.md)。
+4. tag 驱动两件产物：Desktop 工作流构建 Windows 安装版/便携版与 Linux AppImage、跑打包后应用检查并发布**预发布**（含更新元数据）；Web image 工作流先跑浏览器端到端，绿了才把镜像推到 GHCR（`:vX.Y.Z`、`:main`、`:latest` 和短 sha tag）。
+5. 服务器用 `deploy/update.sh` 升级（不健康自动回滚）或 `deploy/rollback.sh` 回滚。`moon-bot-connect` CLI 独立版本、独立 tag（`connect-vX.Y.Z`），发版需要 `NPM_TOKEN` secret。
 4. 热修：从 `main` 切 `fix/hot-<短名>`，向 `main` 提 Pull Request，发一个补丁版本，再把 `main` 合回 `dev`。
 
 ## 搭建环境
@@ -84,7 +86,7 @@
 - 仅测试台需要：pnpm `11`，以及插件测试所用 DSH 版本的 DeepSeek Harness 源码。
 
 ```sh
-git clone https://github.com/Fei2411/DeepSeek-Bot.git ds-bot-repo
+git clone https://github.com/MoLi-MoChou/moon-bot.git moon-bot
 cd ds-bot-repo/ds-bot
 
 # 插件自己的构建工具（只有 esbuild）。
@@ -113,7 +115,7 @@ git -C deepseek-harness checkout dsh-v0.2.1-rc.2
 |---|---|
 | `core/index.js`、`core/src/host/` | 服务端：Bot 名册与存储、工具、回合与投递、群聊、对话分段与搜索索引、图片、Bot 浏览器桥接、`api/bot` 通道 |
 | `core/src/client/` | 浏览器端：侧栏、聊天、面板与对话框、主题、角色、Bot 浏览器面板 |
-| `core/client.js` | 由 `scripts/build-client.mjs` 从 `src/client/` 生成。它被提交进仓库，这样用 Git 安装时不需要构建 |
+| `core/client.js` | 由 `scripts/build-client.ts` 在安装与构建时生成。从不提交，`.gitignore` 里有它 |
 | `core/web-search.js` | `auto` 网页搜索提供方。不依赖 Bot 团队代码 |
 | `core/cordis.patch.yml` | 插件带的 profile patch |
 | `core/test/` | 单元测试和测试数据 |
@@ -126,7 +128,7 @@ git -C deepseek-harness checkout dsh-v0.2.1-rc.2
 ```sh
 npm run build                          # src/client → client.js
 npm test                               # 单元测试；client.js 过期时也会失败
-node scripts/build-client.mjs --check  # client.js 与 src/client 一致
+node scripts/build-client.ts --check   # client.js 与 src/client 一致
 npm run lint                           # oxlint
 ```
 
@@ -160,7 +162,7 @@ dev/bench.sh dev 3081 8771 reset    # 模拟模型 + DSH Web；数据在 ../.dsh
 ## 写改动
 
 - 一个改动只做一件事。
-- 不要手改 `client.js`。改 `src/client/`，运行 `npm run build`，两者一起提交。
+- 不要手改 `client.js`，也不要提交它。改 `src/client/`，运行 `npm run build`。
 - 在 `src/client/` 里，颜色用 `--bt-*` 变量，圆角只用 4、6、8、10、12、16、18、20、22、999px 和 50% 这几档，弹簧用 `motion.js` 里的。有单元测试检查这三项。测试之前就写成的地方列在 `test/style-debt.json` 里，这份清单只减不增。改掉一处后，运行 `node scripts/style-debt.mjs --write` 更新清单。
 - 跟随改动周围代码的风格。只有当代码本身看不出原因时才写注释。
 - 提交说明用英文。标题简短，用祈使句（如 "Keep group replies visible"），在正文里写原因。

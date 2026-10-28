@@ -65,15 +65,16 @@ Keep one pull request to one issue. Split a large change into several pull reque
 
 ### Merge conflicts
 
-- **`core/client.js`**: never resolve it by hand. Resolve the conflicts in `core/src/client/`, run `npm run build` in `core/` and commit the new `client.js`.
+- **`core/client.js`**: it is generated and never committed, so it conflicts only if both sides committed it by mistake. Resolve `core/src/client/` and drop the generated file from the merge (`git checkout --ours core/client.js` then `npm run build`).
 - **`CHANGELOG.md`**: pull requests do not change it, so it should not conflict. If it does, keep both sides.
 
 ### Releases (maintainer)
 
-1. In a pull request into `dev`, set the version in `core/package.json` and write the `CHANGELOG.md` section from the Changelog sentences of the merged pull requests.
-2. Open a pull request from `dev` into `main` titled `release: vX.Y.Z`. List every `Fixes #<number>` of the release in its description, so that these issues close when it is merged.
-3. Before you merge it, run the [release checklist](docs/dev/release-checklist.md) (in Chinese) on a real Windows machine, and on macOS when the change touches it, and post the result in the pull request. Merge it with a merge commit and publish a GitHub release `vX.Y.Z` on `main`. The Release workflow checks that the tag matches the version and is on `main`, runs the checks and publishes the package to npm (a pre-release version under the npm tag `next`). Do not run `npm publish` by hand.
-4. For a hotfix, start `fix/hot-<name>` from `main`, open the pull request into `main`, release a patch version, then merge `main` into `dev`.
+1. Make sure `main` is green: only merges that pass the three checks reach it.
+2. Set the version with `node scripts/version.mjs X.Y.Z` (each release gets its own version), then fast-forward `main` and push a tag: `git tag vX.Y.Z && git push origin main vX.Y.Z`. The procedure is in [docs/RELEASING.md](docs/RELEASING.md).
+3. The tag drives both artifacts: the Desktop workflow builds the Windows installer and portable exe and the Linux AppImage, runs the packaged-app check and publishes a **pre-release** with the update metadata; the Web image workflow runs the browser end-to-end check and only then pushes the image to GHCR (`:vX.Y.Z`, `:main`, `:latest`, and a short-sha tag).
+4. Servers move with `deploy/update.sh` (auto-rollback when the new image does not become healthy) or `deploy/rollback.sh`. The `moon-bot-connect` CLI is versioned and published separately (its own `connect-vX.Y.Z` tag); it needs the `NPM_TOKEN` secret.
+5. For a hotfix, start `fix/hot-<name>` from `main`, merge it into `main`, release a patch version, then merge `main` into `dev`.
 
 ## Set up
 
@@ -84,12 +85,11 @@ You need:
 - Nothing else: the tests, the bench and the app run on Node 22.18+ and npm.
 
 ```sh
-git clone https://github.com/Fei2411/DeepSeek-Bot.git ds-bot-repo
+git clone https://github.com/MoLi-MoChou/moon-bot.git moon-bot
 cd moon-bot
 
 # The build tool and the types; nothing else is needed to build or test.
-(cd core && npm ci)
-(cd app && npm ci)
+npm ci                                 # one root install for the three workspaces
 ```
 
 There is no host to install: the tests, the bench, the app and Docker all run on
@@ -103,7 +103,7 @@ the runtime in this repository (Node 22.18+).
 | `core/src/engine/` | The `AgentRuntime` seam: the built-in engine (pi kernel), the ACP adapter, the tool registry, the policy engine, the MCP connector |
 | `core/src/store/`, `core/src/service/` | The SQLite store, and the Fastify service with its scheduler and wiring |
 | `core/src/client/` | The browser side: sidebar, chat, panels and dialogs, themes, characters, the Bot browser panel |
-| `core/client.js` | Generated from `src/client/` by `scripts/build-client.ts`. It is committed, so the service serves it without a build step |
+| `core/client.js` | Generated from `src/client/` by `scripts/build-client.ts` at install and build time. Never committed: `.gitignore` carries it |
 | `core/src/web-search/` | The `auto` web-search provider. It does not depend on the Bot team code |
 | `core/test/` | Unit tests and fixtures |
 | `core/dev/` | The mock model, the bench, the smoke test, the character generator, and two tools for real models: the steward evaluation and a logging pass-through |
@@ -115,7 +115,7 @@ Run these in `core/`:
 ```sh
 npm run build                          # src/client → client.js
 npm test                               # unit tests; they also fail if client.js is stale
-node scripts/build-client.mjs --check  # client.js matches src/client
+node scripts/build-client.ts --check   # client.js matches src/client
 npm run lint                           # oxlint
 ```
 
@@ -149,7 +149,7 @@ For a change to the Bot browser, check it in the app (`cd app && npm start`), wi
 ## Write a change
 
 - Keep a change to one subject.
-- Do not edit `client.js` by hand. Change `src/client/`, run `npm run build` and commit both.
+- Do not edit `client.js` by hand and never commit it. Change `src/client/` and run `npm run build`.
 - In `src/client/`, take colors from the `--bt-*` variables, corner radii from the steps 4, 6, 8, 10, 12, 16, 18, 20, 22, 999px and 50%, and springs from `motion.js`. A unit test checks this. The places written before the test are listed in `test/style-debt.json`; that list only gets shorter. When you remove one, run `node scripts/style-debt.mjs --write` to update it.
 - Follow the style of the code around your change. Write a comment only when the reason for the code is not clear from the code itself.
 - Write commit messages in English. Use a short subject in the imperative mood ("Keep group replies visible") and explain the reason in the body.

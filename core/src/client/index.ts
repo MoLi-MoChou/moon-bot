@@ -27,6 +27,7 @@ import { installHeaderNavigation } from './header-navigation.ts'
 import { installLocale, t } from './i18n.ts'
 import { installImeGuard } from './ime-guard.ts'
 import { MEMBER_CSS, MemberDock } from './member-status.tsx'
+import { MENTION_CHIPS_CSS } from './mention-chips.tsx'
 import { ModelChoiceDock, DeepSeekSignIn } from './model-choice.tsx'
 import { MODEL_CSS } from './model-menu-css.ts'
 import { listedOpener } from './open-listed.ts'
@@ -177,6 +178,7 @@ export function apply(ctx: ClientContext): void {
     () => installCompiledStyles(ABOUT_CSS, 'about'),
     () => installCompiledStyles(MEMBER_CSS, 'members'),
     () => installCompiledStyles(USER_MESSAGE_CSS, 'user-messages'),
+    () => installCompiledStyles(MENTION_CHIPS_CSS, 'mention-chips'),
     () => installCompiledStyles(WIDGET_CSS, 'widgets'),
     () => installCompiledStyles(EMPTY_STATE_CSS + WELCOME_CSS + PROCESS_CSS + RETRY_CSS + STARTERS_CSS + FILES_PANEL_CSS + DELIVER_CSS, 'work-process'),
     ...(client.browsers ? [() => installCompiledStyles(BROWSER_CSS, 'browser')] : []),

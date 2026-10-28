@@ -81,16 +81,29 @@ curl -fsSL https://raw.githubusercontent.com/MoLi-MoChou/moon-bot/main/deploy/in
 
 It writes `.env` once (generating a password and printing it), starts the container on 8290 and
 waits for `/healthz`; the data folder is created empty and never touched again. To upgrade an
-install, either rerun it (`--tag vX.Y.Z`) or use `deploy/update.sh` in the install directory:
-it records the running tag, pulls, restarts, and rolls itself back when the new tag does not
-become healthy. `deploy/rollback.sh` repeats that by hand.
+install, either rerun it (`--tag vX.Y.Z`) or use `deploy/update.sh` in the install directory.
+The update script pulls before changing `.env`, stops the container before archiving `data/`,
+records SQLite `user_version`, and retains a bounded number of private snapshots. It only
+performs an automatic image rollback when the schema is unchanged and inspected successfully.
 
 Never edit `.env` from a release step, never point a deploy at a data folder you did not mean,
 and never publish a version that did not pass the workflows above.
 
 ## Rollback
 
-- **Web**: `deploy/rollback.sh` (or `deploy/update.sh <previous tag>`) — the previous tag is
-  recorded in `.previous` before every update.
+- **Web**: `deploy/rollback.sh` uses `.previous` for an image-only rollback. If a failed image
+  migrated SQLite (or schema inspection was inconclusive), `update.sh` intentionally leaves
+  the new container in place and prints a recovery command. Restore explicitly, after checking
+  the diagnosis, with:
+
+  ```sh
+  ./rollback.sh --restore .snapshots/snapshot-<timestamp>-<tag>-<pid>
+  ```
+
+  This stops the container, validates the archive in a staging directory, replaces `data/`,
+  and starts the snapshot's previous tag. `MOON_BOT_SNAPSHOT_DIR` and
+  `MOON_BOT_SNAPSHOT_RETENTION` configure the private snapshot directory and its bound
+  (defaults `.snapshots` and 5). Snapshot archives contain application data only; secrets in
+  `.env` are never copied or printed.
 - **Desktop**: users install the previous release from GitHub Releases; the updater follows
   the feed, so a bad release is fixed by publishing the next version, not by deleting one.

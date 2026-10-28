@@ -23,6 +23,7 @@ export interface SettingsEngineOption {
   selectable?: boolean
   reason?: string
   online?: boolean
+  onDemand?: boolean
 }
 export interface SettingsBotEngine {
   kind: 'builtin' | 'acp' | 'acp-remote'

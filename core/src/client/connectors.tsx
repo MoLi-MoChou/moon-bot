@@ -59,11 +59,12 @@ function ConnectorRow({ connector, actions }: {
 export function ConnectorsPage({ roster, actions, market }: {
     roster?: {
         connectors?: Connector[];
+        capabilities?: readonly { name: string }[];
     } | undefined;
     actions: ConnectorActions;
     market?: MarketActions | undefined;
 }) {
     const list = roster?.connectors ?? [];
     return <section className='bt-set-section'><div className='bt-set-card bt-connectors-card'>{list.length === 0
-        ? <div className='bt-set-row'><span className='bt-set-hint'>{t('No connectors')}</span></div> : list.map(connector => h(ConnectorRow, { key: connector.id, connector, actions }))}</div>{market !== undefined ? h(ConnectorCatalog, { key: 'catalog', market }) : null}</section>;
+        ? <div className='bt-set-row'><span className='bt-set-hint'>{t('No connectors')}</span></div> : list.map(connector => h(ConnectorRow, { key: connector.id, connector, actions }))}</div>{market !== undefined ? h(ConnectorCatalog, { key: 'catalog', market, capabilities: roster?.capabilities }) : null}</section>;
 }

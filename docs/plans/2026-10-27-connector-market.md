@@ -10,14 +10,23 @@
 取舍：
 
 - 目录是**数据**不是代码：每个条目说明怎么挂载（stdio 命令或 streamable-http URL）和需要哪些密钥；安装动作写密钥（`$MOON_BOT_SECRET_*` 引用，密钥值永不进能力配置）+ 保存能力条目。此后一切照旧：本地命令首次启动要用户批准，挂载的工具过同一套策略门禁。
-- 条目只收**核实过的官方端点**（MCP 官方 registry 或厂商自己的 npm 包）；没有核实的不进目录。Slack/Notion/Linear 的官方端点待核实后追加。
+- 条目只收**核实过的官方端点**（MCP 官方 registry 或厂商自己的 npm 包）；没有核实的不进目录。
+- 每个连接器在界面呈现专属矢量 Logo 图标，与内置连接器及业界主流设计对齐。
 - 不做远程市场拉取（Smithery 式）——二期再议。
 
 ## 已定的行为
 
-- 目录定义在 `shared/connector-catalog.ts`，随版本发布；Connectors 页在已连接的内置连接器下方展示「连接器市场」网格（分类徽标：开发/网页/文档/记忆；本机运行/云端服务标注）。
-- 点卡片进入安装表单：列出密钥槽位（掩码输入 + 获取链接；可选槽位标注「可选」），点安装 → 逐个写密钥 → 保存能力条目。
-- 首批条目（2026-10-27 核实）：Sentry（云端，`mcp.sentry.dev/mcp`）、Playwright（本机 `@playwright/mcp`）、Context7（本机，API key 可选）、Fetch、Knowledge graph memory、Sequential thinking（官方参考服务器）。
+- 目录定义在 `shared/connector-catalog.ts`，随版本发布；Connectors 页在已连接的内置连接器下方展示「连接器市场」网格。
+- 连接器卡片配备清晰的官方/专属矢量 Logo 图标，直观标识所属服务。
+- 分类标签与搜索：提供全部/开发/网页搜索/文档办公/数据存储/记忆思考 5 大分类切换，并支持按名称与描述即时过滤。
+- 安装状态联动：若某能力已在团队中安装，对应卡片直接呈现「已添加 (Installed)」绿色标记与「已配置」状态，点击仍可更新配置。
+- 点卡片进入安装表单：包含 Logo、服务名称、描述及官网外链，列出密钥槽位（掩码输入 + 获取链接；可选槽位标注「可选」），点安装 → 逐个写密钥 → 保存能力条目。
+- 目录条目（官方/厂商核实）：
+  - 开发（Dev）：Sentry、GitLab、Docker、Playwright
+  - 网页与搜索（Web & Search）：Brave Search、Tavily、Puppeteer、Fetch
+  - 文档与办公（Docs & Productivity）：Slack、Notion、Linear、Google Drive、Context7
+  - 数据与存储（Data & Storage）：PostgreSQL、SQLite、本地文件系统（Filesystem）
+  - 记忆与思考（Memory & Thinking）：Knowledge graph memory、Sequential thinking
 - 安装后的条目与手动在 Capabilities 页添加的完全等价：可改可删，走同样的批准与挂载规则。
 
 ## 不做什么
@@ -34,3 +43,4 @@
 ## 变更
 
 - 2026-10-27：定下，首批 6 条目。
+- 2026-10-28：扩充连接器目录至 18 个官方/主流端点；新增全部连接器的专属矢量 Logo（`connector-logos.tsx`）；引入分类过滤 Tab 与实时搜索；增加已添加能力状态（Installed）联动。

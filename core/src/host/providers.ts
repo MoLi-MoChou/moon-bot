@@ -41,7 +41,8 @@ export function checkKey(value: unknown): string {
 }
 
 function checkEndpoint(value: unknown): string {
-  const text = typeof value === 'string' ? value.trim() : ''
+  const raw = typeof value === 'string' ? value.trim() : ''
+  const text = raw.replace(/\/chat\/completions\/?$/i, '').replace(/\/+$/, '')
   let url
   try { url = new URL(text) } catch { throw invalid('Enter the endpoint as an http or https address') }
   if (url.protocol !== 'http:' && url.protocol !== 'https:') throw invalid('Enter the endpoint as an http or https address')
@@ -226,7 +227,9 @@ export function install(rt: HostRuntime): void {
           ...(typeof body.api === 'string' && PROTOCOLS.includes(body.api) ? { api: body.api } : {}),
           ...(typeof body.key === 'string' && body.key.trim() !== '' ? { apiKey: checkKey(body.key) } : {}),
         }
-    const models = await ctx.llm.discoverModels(PI_AI, request)
+    const models = await ctx.llm.discoverModels(PI_AI, request).catch((error: unknown) => {
+      throw invalid(error instanceof Error ? error.message : String(error))
+    })
     return models.slice(0, MAX_MODELS).map(model => {
       const spec = resolveModelSpec(model.id)
       return {

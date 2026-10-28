@@ -7,9 +7,10 @@
 // gating of calls the agent makes on its own. The wire itself is a transport (2026-10-27
 // remote-agents): a spawned child's stdio, or a relay connection to another machine.
 import { randomUUID } from 'node:crypto'
-import type { EngineEvent } from '../events.ts'
+import type { EngineContentBlock, EngineEvent } from '../events.ts'
 import type { AgentRuntime, CancelReason, TurnInput, TurnMessage } from '../runtime.ts'
-import { LineProtocol, UPDATE_OF, type Inbound, type JsonRpcNotification } from './protocol.ts'
+import { matchPermissionOutcome, type PermissionRequestParams } from './permission.ts'
+import { LineProtocol, UPDATE_OF, type Inbound, type JsonRpcNotification, type JsonRpcRequest } from './protocol.ts'
 import type { AcpTransport } from './transport.ts'
 
 export interface AcpAgentOptions {
@@ -20,6 +21,8 @@ export interface AcpAgentOptions {
   readonly clientVersion?: string | undefined
   /** Where the emit fanout goes, the same as the built-in engine's. */
   readonly emit: (sessionId: string, event: EngineEvent) => void
+  /** Permission handler when agent asks for tool authorization (session/request_permission). */
+  readonly requestPermission?: ((sessionId: string, params: PermissionRequestParams) => Promise<string>) | undefined
 }
 
 interface Waiter {
@@ -38,6 +41,7 @@ interface AgentSession {
 export class AcpRuntime implements AgentRuntime {
   private nextId = 1
   private readonly pending = new Map<number, Waiter>()
+  private readonly pendingPermissions = new Map<number | string, (decision: string) => void>()
   private readonly sessions = new Map<string, AgentSession>()
   private started: Promise<void> | undefined
 
@@ -57,6 +61,11 @@ export class AcpRuntime implements AgentRuntime {
 
   private wire: LineProtocol | undefined
 
+  get isRunning(): boolean {
+    const t = this.options.transport as { running?: boolean }
+    return t.running ?? (this.started !== undefined)
+  }
+
   async start(): Promise<void> {
     if (this.started === undefined) {
       this.started = (async () => {
@@ -67,6 +76,8 @@ export class AcpRuntime implements AgentRuntime {
           const error = new Error('the agent connection closed')
           for (const waiter of [...this.pending.values()]) waiter.reject(error)
           this.pending.clear()
+          for (const settle of this.pendingPermissions.values()) settle('cancelled')
+          this.pendingPermissions.clear()
           // The agent on the other end is gone; its session ids died with it. A
           // reconnected agent gets fresh sessions on the next turn.
           this.sessions.clear()
@@ -94,6 +105,8 @@ export class AcpRuntime implements AgentRuntime {
   async stop(): Promise<void> {
     for (const session of this.sessions.values()) session.stop?.()
     this.sessions.clear()
+    for (const settle of this.pendingPermissions.values()) settle('cancelled')
+    this.pendingPermissions.clear()
     this.options.transport.dispose()
   }
 
@@ -171,6 +184,8 @@ export class AcpRuntime implements AgentRuntime {
     void reason
     const session = this.sessions.get(sessionId)
     if (session === undefined) return
+    for (const settle of this.pendingPermissions.values()) settle('cancelled')
+    this.pendingPermissions.clear()
     await this.notify('session/cancel', { sessionId: session.acpId }).catch(() => undefined)
     session.stop?.()
   }
@@ -180,7 +195,9 @@ export class AcpRuntime implements AgentRuntime {
   private async openSession(input: TurnInput): Promise<string> {
     const existing = this.sessions.get(input.sessionId)
     if (existing !== undefined) return existing.acpId
+    const cwd = input.config?.cwd
     const result = await this.request('session/new', {
+      ...(cwd !== undefined && cwd !== '' ? { cwd } : {}),
       ...(input.config?.model !== undefined ? { model: { id: input.config.model } } : {}),
       ...(input.config?.systemPrompt !== undefined ? { mcpServers: [] } : {}),
     }) as { sessionId?: unknown } | null
@@ -208,10 +225,15 @@ export class AcpRuntime implements AgentRuntime {
   }
 
   private receive(message: Inbound): void {
-    if ('id' in message && typeof message.id === 'number') {
-      const waiter = this.pending.get(message.id)
+    if ('method' in message && 'id' in message && message.id !== undefined) {
+      void this.handleAgentRequest(message as JsonRpcRequest)
+      return
+    }
+    if ('id' in message && !('method' in message)) {
+      const id = typeof message.id === 'number' ? message.id : Number(message.id)
+      const waiter = this.pending.get(id)
       if (waiter === undefined) return
-      this.pending.delete(message.id)
+      this.pending.delete(id)
       if (message.error !== undefined) waiter.reject(new Error(message.error.message ?? `the agent refused (${String(message.error.code ?? '')})`))
       else waiter.resolve(message.result)
       return
@@ -224,6 +246,39 @@ export class AcpRuntime implements AgentRuntime {
       return
     }
   }
+
+  private async handleAgentRequest(request: JsonRpcRequest): Promise<void> {
+    if (request.method === 'session/request_permission' || request.method === 'request_permission') {
+      const params = (request.params ?? {}) as PermissionRequestParams
+      let targetSessionId = ''
+      for (const [moonId, session] of this.sessions.entries()) {
+        if (session.acpId === params.sessionId) {
+          targetSessionId = moonId
+          break
+        }
+      }
+      if (targetSessionId === '' && this.sessions.size > 0) {
+        targetSessionId = this.sessions.keys().next().value ?? ''
+      }
+      const decisionPromise = new Promise<string>(resolve => {
+        this.pendingPermissions.set(request.id, resolve)
+      })
+      void Promise.resolve(this.options.requestPermission?.(targetSessionId, params))
+        .then(res => this.pendingPermissions.get(request.id)?.(res ?? 'cancelled'))
+        .catch(() => this.pendingPermissions.get(request.id)?.('cancelled'))
+
+      const decision = await decisionPromise
+      this.pendingPermissions.delete(request.id)
+      const result = matchPermissionOutcome(params.options, decision)
+      this.protocol.send({ jsonrpc: '2.0', id: request.id, result })
+      return
+    }
+    this.protocol.send({
+      jsonrpc: '2.0',
+      id: request.id,
+      error: { code: -32601, message: `Method '${request.method}' not supported` },
+    })
+  }
 }
 
 /** One session/update as engine events, in the router's vocabulary. */
@@ -235,15 +290,17 @@ export function eventsOfUpdate(update: Readonly<Record<string, unknown>>): reado
     const view = block as { text?: unknown } | undefined
     return typeof view?.text === 'string' ? view.text : ''
   }
-  if (kind === 'agent_message_chunk') {
+  if (kind === 'agent_message_chunk' || kind === 'agent_thought_chunk') {
     const text = blocks.map(textOf).join('')
     return text === '' ? [] : [{ type: 'assistant/stream', text }]
   }
   if (kind === 'agent_message') {
-    return [{ type: 'assistant/message', message: { content: blocks.flatMap(block => {
+    return [{ type: 'assistant/message', message: { content: blocks.flatMap((block): readonly EngineContentBlock[] => {
       const view = block as { type?: unknown } | undefined
       const text = textOf(block)
-      return view?.type === 'text' && text !== '' ? [{ type: 'text', text }] : []
+      if (text === '') return []
+      if (view?.type === 'thinking' || view?.type === 'thought') return [{ type: 'thinking', text }]
+      return [{ type: 'text', text }]
     }) } }]
   }
   if (kind === 'tool_call') {
@@ -253,8 +310,17 @@ export function eventsOfUpdate(update: Readonly<Record<string, unknown>>): reado
   }
   if (kind === 'tool_call_update') {
     const id = typeof update.toolCallId === 'string' ? update.toolCallId : ''
-    return id === '' ? [] : [{ type: 'tool/result', callId: id }]
+    if (id === '') return []
+    const isError = update.status === 'failed' || update.isError === true
+    return [{ type: 'tool/result', callId: id, ...(isError ? { isError: true } : {}) }]
   }
-  if (kind === 'plan') return []
+  if (kind === 'plan') {
+    const entries = Array.isArray(update.entries) ? update.entries : []
+    if (entries.length > 0) {
+      const planText = entries.map((e: { title?: string; status?: string }) => '[' + (e.status ?? 'pending') + '] ' + (e.title ?? '')).join('\n')
+      return [{ type: 'assistant/stream', text: '\n\n📋 **Plan:**\n' + planText + '\n\n' }]
+    }
+    return []
+  }
   return []
 }

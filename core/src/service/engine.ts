@@ -27,6 +27,7 @@ import { TaskScheduler } from './scheduler.ts'
 import { PolicyEngine } from '../engine/policy.ts'
 import { LocalRunner } from '../engine/runner.ts'
 import { localEngineCatalog } from '../engine/acp/discovery.ts'
+import { detailOfPermission } from '../engine/acp/permission.ts'
 import { RelayRegistry } from './relay.ts'
 import { collectDeliverables } from '../host/deliverables.ts'
 import type { StandaloneLlm } from './llm.ts'
@@ -99,9 +100,7 @@ export function wireService(options: WireOptions): WiredService {
   const context = new ServiceContext({
     services: {
       ...(options.services === undefined ? {} : options.services),
-      attachments,
-      approval,
-      engineCatalog: localEngineCatalog,
+      attachments, approval, engineCatalog: localEngineCatalog,
     },
     // The providers and models modules read the LLM service through the context; the
     // standalone one (settings + credentials + discovery) is the same instance the
@@ -171,9 +170,7 @@ export function wireService(options: WireOptions): WiredService {
         const input = matched?.input ?? (spec.inputModalities ? [...spec.inputModalities] : undefined)
         const reasoning = matched?.reasoning ?? spec.reasoning ?? (effort !== undefined)
         return {
-          id: split.model,
-          baseUrl: route.baseUrl,
-          api: route.api,
+          id: split.model, baseUrl: route.baseUrl, api: route.api,
           ...(route.apiKey !== undefined ? { apiKey: route.apiKey } : {}),
           ...(effort !== undefined ? { effort } : {}),
           ...(contextWindow !== undefined ? { contextWindow } : {}),
@@ -239,7 +236,9 @@ export function wireService(options: WireOptions): WiredService {
     const turn = typeof (event as { turn?: unknown }).turn === 'number' ? (event as { turn: number }).turn : null
     const until = Date.now()
     void collectDeliverables(root, { since, until }).then(({ files }) => {
-      if (files.length > 0) store.deliverables.add(sessionId, turn, files)
+      if (files.length === 0) return
+      store.deliverables.add(sessionId, turn, files)
+      if (roomId !== undefined && roomId !== sessionId) store.deliverables.add(roomId, turn, files)
     }).catch(() => undefined)
   }
   const emitEvent = (sessionId: string, event: EngineEvent): void => {
@@ -253,7 +252,25 @@ export function wireService(options: WireOptions): WiredService {
   const agents = new Map<string, ReturnType<typeof engineAgentOf>>()
   // The host only knows the runner boundary. LocalRunner is today's in-process
   // implementation; a headless daemon can replace it without changing delivery.
-  const runner = new LocalRunner({ builtin: engine, emit: emitEvent, relay })
+  const runner = new LocalRunner({
+    builtin: engine,
+    emit: emitEvent,
+    relay,
+    requestPermission: async (sessionId, params) => {
+      const tool = params.toolCall?.kind ?? params.toolCall?.title ?? 'command'
+      const detail = detailOfPermission(params.toolCall)
+      return new Promise<string>(resolve => {
+        const emitted = context.emit('approval/request', {
+          agent: { id: sessionId, session: { id: sessionId } },
+          toolName: tool,
+          callId: params.toolCall?.toolCallId,
+          reason: detail.text ?? tool,
+          detail,
+        }, () => approval.card())
+        void Promise.resolve(emitted).then((outcome: unknown) => resolve(typeof outcome === 'string' ? outcome : 'cancelled'), () => resolve('cancelled'))
+      })
+    },
+  })
   const runtimeOf = (sessionId: string) => runner.runtimeFor(sessionId, runtime.botOf(runtime.selfOf(sessionId)))
 
   const agentOf = (sessionId: string): unknown => {
@@ -265,6 +282,12 @@ export function wireService(options: WireOptions): WiredService {
         runtime: () => runtimeOf(sessionId),
         emitEvent,
         seqOf: () => store.sessions.countMessages(sessionId) + 1,
+        configOf: id => {
+          const botId = runtime.selfOf(id), roomId = runtime.groupOwners?.get(id)?.roomId
+          const cwd = runtime.workDirOf?.({ ...(botId ? { botId } : {}), ...(roomId ? { roomId } : {}) })
+          const bot = runtime.botOf(botId)
+          return { ...(cwd ? { cwd } : {}), ...(bot?.appliedModel ?? bot?.model ? { model: bot.appliedModel ?? bot.model } : {}) }
+        },
       }))
     }
     return agent

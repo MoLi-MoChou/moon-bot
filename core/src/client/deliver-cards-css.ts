@@ -35,6 +35,14 @@ export const DELIVER_CSS = `
 .bt-fpreview-download:hover{filter:brightness(1.08)}
 .bt-fpreview-download[data-busy]{cursor:progress;opacity:.7}
 .bt-fpreview-download:focus-visible{outline:2px solid var(--bt-accent);outline-offset:2px}
+.bt-diff-view{align-self:stretch;flex:1;display:flex;flex-direction:column;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:12px;line-height:18px;overflow:auto;background:var(--bt-card);border-radius:10px;box-shadow:inset 0 0 0 1px var(--bt-line);padding:6px 0}
+.bt-diff-line{display:flex;align-items:baseline;padding:1px 10px;white-space:pre-wrap;word-break:break-all}
+.bt-diff-num{width:34px;flex:none;color:var(--bt-ink-3);user-select:none;font-size:11px;text-align:right;margin-right:12px;opacity:.6}
+.bt-diff-code{flex:1;min-width:0}
+.bt-diff-add{background:color-mix(in srgb,var(--bt-green) 12%,transparent);color:var(--bt-green)}
+.bt-diff-del{background:color-mix(in srgb,var(--bt-red) 12%,transparent);color:var(--bt-red)}
+.bt-diff-hunk{background:color-mix(in srgb,var(--bt-accent) 10%,transparent);color:var(--bt-accent);font-weight:600}
+.bt-diff-meta{color:var(--bt-ink-3);font-weight:600}
 .bt-lib-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
 .bt-lib-filters select{width:auto;min-width:120px;flex:none}
 .bt-lib-row{display:flex;align-items:center;gap:2px;width:100%;padding:0 8px;border-radius:8px}
@@ -53,4 +61,4 @@ export const DELIVER_CSS = `
 .bt-fpreview{width:calc(100vw - 16px);height:calc(100vh - 24px);border-radius:12px}
 }
 @media (prefers-reduced-motion:reduce){.bt-dcard,.bt-fpreview-layer{animation:none;transition:none}}
-`
+`;

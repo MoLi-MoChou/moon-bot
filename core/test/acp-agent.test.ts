@@ -12,6 +12,7 @@ import { AcpRuntime, eventsOfUpdate } from '../src/engine/acp/runtime.ts'
 import { RelayTransport, StdioTransport } from '../src/engine/acp/transport.ts'
 import { engineAgentOf } from '../src/engine/builtin/bridge.ts'
 import { LineProtocol } from '../src/engine/acp/protocol.ts'
+import { detailOfPermission, matchPermissionOutcome } from '../src/engine/acp/permission.ts'
 import type { EngineEvent } from '../src/engine/events.ts'
 
 // A scripted ACP agent: answers initialize/session-new/session-prompt and streams the
@@ -90,6 +91,14 @@ test('the update mapping covers the wire vocabulary', () => {
   const toolDone = eventsOfUpdate({ sessionUpdate: 'tool_call_update', toolCallId: 'k2', content: [] })
   assert.deepEqual(toolDone, [{ type: 'tool/result', callId: 'k2' }])
   // What the protocol adds that we do not map yet stays silent, not broken.
+  const thought = eventsOfUpdate({ sessionUpdate: 'agent_thought_chunk', content: { type: 'text', text: 'pondering' } })
+  assert.deepEqual(thought, [{ type: 'assistant/stream', text: 'pondering' }])
+  const thinkMsg = eventsOfUpdate({ sessionUpdate: 'agent_message', content: [{ type: 'thinking', text: 'thought' }] })
+  assert.deepEqual(thinkMsg, [{ type: 'assistant/message', message: { content: [{ type: 'thinking', text: 'thought' }] } }])
+  const toolFail = eventsOfUpdate({ sessionUpdate: 'tool_call_update', toolCallId: 'k2', status: 'failed' })
+  assert.deepEqual(toolFail, [{ type: 'tool/result', callId: 'k2', isError: true }])
+  const plan = eventsOfUpdate({ sessionUpdate: 'plan', entries: [{ title: 'Build UI', status: 'completed' }] })
+  assert.match((plan[0] as { text: string }).text, /Build UI/)
   assert.deepEqual(eventsOfUpdate({ sessionUpdate: 'plan', entries: [] }), [])
   assert.deepEqual(eventsOfUpdate({}), [])
 })
@@ -138,8 +147,8 @@ test('an agent that exits between turns is started and initialized again on the 
   assert.deepEqual(first.at(-1), { type: 'turn/end', turn: 1, reason: { kind: 'completed' } })
   // The child exits after its answer; give the parent its exit event before turn two.
   const until = Date.now() + 5000
-  while (!readFileSync(starts, 'utf8').includes('down') && Date.now() < until) await new Promise(resolve => setTimeout(resolve, 10))
-  await new Promise(resolve => setTimeout(resolve, 100))
+  while ((!readFileSync(starts, 'utf8').includes('down') || runtime.isRunning) && Date.now() < until) await new Promise(resolve => setTimeout(resolve, 10))
+  await new Promise(resolve => setTimeout(resolve, 50))
   const second = await Promise.race([
     run(runtime, 'b1', 'again').then(events => events.at(-1)),
     new Promise<string>(resolve => { setTimeout(() => resolve('still waiting'), 3000) }),
@@ -184,3 +193,96 @@ test('spawnAgent wiring: a torn line never corrupts the stream', () => {
   assert.equal((seen[1] as { method?: string }).method, 'x')
 })
 
+test('matchPermissionOutcome and detailOfPermission map options and tool calls', () => {
+  const options = [
+    { optionId: 'opt-allow', kind: 'allow_once', name: 'Allow once' },
+    { optionId: 'opt-always', kind: 'allow_always', name: 'Always allow' },
+    { optionId: 'opt-reject', kind: 'reject', name: 'Reject' },
+  ]
+  assert.deepEqual(matchPermissionOutcome(options, 'allowed-once'), { outcome: { outcome: 'selected', optionId: 'opt-allow' } })
+  assert.deepEqual(matchPermissionOutcome(options, 'allowed'), { outcome: { outcome: 'selected', optionId: 'opt-allow' } })
+  assert.deepEqual(matchPermissionOutcome(options, 'rejected'), { outcome: { outcome: 'selected', optionId: 'opt-reject' } })
+  assert.deepEqual(matchPermissionOutcome(options, 'cancelled'), { outcome: { outcome: 'cancelled' } })
+  assert.deepEqual(matchPermissionOutcome([], 'allowed-once'), { outcome: { outcome: 'cancelled' } })
+
+  const detail = detailOfPermission({ title: 'Run git', kind: 'bash', arguments: { command: 'git status' } })
+  assert.equal(detail.text, 'Run git')
+  assert.equal(detail.code, 'git status')
+})
+
+test('session/request_permission delegates to requestPermission and responds with matched outcome', async () => {
+  const outbound: unknown[] = []
+  let askedTool: string | undefined
+  let runtimeRef: AcpRuntime | undefined
+  const protocol = new LineProtocol(line => outbound.push(JSON.parse(line)), message => {
+    (runtimeRef as unknown as { receive(m: unknown): void }).receive(message)
+  })
+  const runtime = new AcpRuntime({
+    transport: {
+      open: async () => {},
+      dispose: () => {},
+      onLine: () => {},
+      onClosed: () => {},
+      write: line => outbound.push(JSON.parse(line)),
+    },
+    emit: () => {},
+    requestPermission: async (_sessionId, params) => {
+      askedTool = params.toolCall?.kind
+      return 'allowed-once'
+    },
+  })
+  runtimeRef = runtime
+  ;(runtime as unknown as { sessions: Map<string, unknown> }).sessions.set('moon-s1', { acpId: 'acp-1', turns: 1, updates: undefined, stop: undefined })
+
+  protocol.feed(JSON.stringify({
+    jsonrpc: '2.0',
+    id: 101,
+    method: 'session/request_permission',
+    params: {
+      sessionId: 'acp-1',
+      toolCall: { kind: 'bash', title: 'run test', arguments: { command: 'npm test' } },
+      options: [
+        { optionId: 'opt-allow', kind: 'allow_once', name: 'Allow once' },
+        { optionId: 'opt-reject', kind: 'reject', name: 'Reject' },
+      ],
+    },
+  }) + '\n')
+
+  await new Promise(resolve => setTimeout(resolve, 50))
+  assert.equal(askedTool, 'bash')
+  const response = outbound.find(m => (m as { id?: number }).id === 101) as { result?: { outcome?: { outcome: string; optionId?: string } } }
+  assert.deepEqual(response?.result?.outcome, { outcome: 'selected', optionId: 'opt-allow' })
+})
+
+test('openSession passes cwd from config to session/new', async () => {
+  let receivedParams: Record<string, unknown> | undefined
+  let runtimeRef: AcpRuntime | undefined
+  const runtime = new AcpRuntime({
+    transport: {
+      open: async () => {},
+      dispose: () => {},
+      onLine: () => {},
+      onClosed: () => {},
+      write: line => {
+        const msg = JSON.parse(line) as { method?: string; id?: number; params?: Record<string, unknown> }
+        if (msg.method === 'session/new') {
+          receivedParams = msg.params
+          setTimeout(() => {
+            (runtimeRef as unknown as { protocol: LineProtocol }).protocol.feed(
+              JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: { sessionId: 'acp-cwd-1' } }) + '\n',
+            )
+          }, 0)
+        }
+      },
+    },
+    emit: () => {},
+  })
+  runtimeRef = runtime
+  const id = await (runtime as unknown as { openSession(input: unknown): Promise<string> }).openSession({
+    sessionId: 's1',
+    message: { content: [] },
+    config: { cwd: '/workspace/my-app' },
+  })
+  assert.equal(id, 'acp-cwd-1')
+  assert.equal(receivedParams?.cwd, '/workspace/my-app')
+})

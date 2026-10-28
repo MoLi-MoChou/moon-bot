@@ -138,6 +138,29 @@ export interface FilePreviewProps {
     readonly onClose: () => void;
 }
 /** The modal a file card opens: a preview where the browser has one, a card where not. */
+
+function isDiffContent(name: string, content: string): boolean {
+    if (/\.(diff|patch)$/i.test(name)) return true;
+    return content.startsWith('diff --git') || content.startsWith('--- a/') || (content.includes('\n@@ -') && content.includes('\n+++ '));
+}
+
+function DiffViewer({ text }: { text: string }) {
+    const lines = text.split('\n');
+    return <div className='bt-diff-view' role='region' aria-label={t('File changes')}>
+        {lines.map((line, idx) => {
+            const isAdd = line.startsWith('+') && !line.startsWith('+++');
+            const isDel = line.startsWith('-') && !line.startsWith('---');
+            const isHunk = line.startsWith('@@');
+            const isMeta = line.startsWith('diff ') || line.startsWith('index ') || line.startsWith('--- ') || line.startsWith('+++ ');
+            const type = isAdd ? 'add' : isDel ? 'del' : isHunk ? 'hunk' : isMeta ? 'meta' : 'ctx';
+            return <div key={idx} className={`bt-diff-line bt-diff-${type}`}>
+                <span className='bt-diff-num'>{idx + 1}</span>
+                <span className='bt-diff-code'>{line}</span>
+            </div>;
+        })}
+    </div>;
+}
+
 export function FilePreview({ file, sessionId, onClose }: FilePreviewProps) {
     useEscape(onClose);
     const kind = previewKind(file.name);
@@ -196,11 +219,13 @@ export function FilePreview({ file, sessionId, onClose }: FilePreviewProps) {
     let body: ReactNode = null;
     if (problem !== '')
         body = <p className='bt-fpreview-note' role='alert'>{problem}</p>;
-    else if (kind === 'text' || kind === 'markdown')
+    else if (kind === 'text' || kind === 'markdown') {
+        const isDiff = text !== null && isDiffContent(file.name, text.body);
         body = text === null ? <div className='bt-fpreview-loading'>{t('Loading…')}</div> : <div className='bt-fpreview-text'>
-            {kind === 'markdown' ? h(MarkdownText, { text: text.body }) : <pre>{text.body}</pre>}
+            {isDiff ? h(DiffViewer, { text: text.body }) : kind === 'markdown' ? h(MarkdownText, { text: text.body }) : <pre>{text.body}</pre>}
             {text.cut ? <p className='bt-fpreview-note'>{t('Preview shows the first {size}.', { size: formatBytes(TEXT_LIMIT) })}</p> : null}
         </div>;
+    }
     else if (kind === 'image')
         body = url === '' ? <div className='bt-fpreview-loading'>{t('Loading…')}</div> : <img className='bt-fpreview-image' src={url} alt={file.name}/>;
     else if (kind === 'pdf')

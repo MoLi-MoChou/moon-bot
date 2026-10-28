@@ -3,6 +3,7 @@
 // seam a headless daemon/remote runner can implement without changing Bot delivery.
 import type { AgentRuntime } from './runtime.ts'
 import { AcpRuntime } from './acp/runtime.ts'
+import type { PermissionRequestParams } from './acp/permission.ts'
 import { localEngineCatalog, type EngineCatalog, type LocalAgent } from './acp/discovery.ts'
 import { StdioTransport, RelayTransport, type RelayPort } from './acp/transport.ts'
 
@@ -17,6 +18,7 @@ export interface RunnerOptions {
   readonly catalog?: EngineCatalog
   /** The relay's live connections; an `acp-remote` Bot turns to one of these. */
   readonly relay?: RelayPort | undefined
+  readonly requestPermission?: ((sessionId: string, params: PermissionRequestParams) => Promise<string>) | undefined
 }
 
 export interface ExecutionRunner {
@@ -46,7 +48,11 @@ export class LocalRunner implements ExecutionRunner {
         let remote = this.acp.get(key)
         if (remote === undefined) {
           if (this.options.relay === undefined) return this.options.builtin
-          remote = new AcpRuntime({ transport: new RelayTransport(this.options.relay, agentId), emit: this.options.emit })
+          remote = new AcpRuntime({
+            transport: new RelayTransport(this.options.relay, agentId),
+            emit: this.options.emit,
+            ...(this.options.requestPermission !== undefined ? { requestPermission: this.options.requestPermission } : {}),
+          })
           this.acp.set(key, remote)
         }
         return remote
@@ -67,6 +73,7 @@ export class LocalRunner implements ExecutionRunner {
       runtime = new AcpRuntime({
         transport: new StdioTransport(command, Array.isArray(spec?.args) ? spec.args : []),
         emit: this.options.emit,
+        ...(this.options.requestPermission !== undefined ? { requestPermission: this.options.requestPermission } : {}),
       })
       this.acp.set(key, runtime)
     }

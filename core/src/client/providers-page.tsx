@@ -173,7 +173,7 @@ function CustomForm({ view, apply, actions, onDone }: {
     }[] | null>(null);
     const [picked, setPicked] = useState<string[]>([]);
     const [asking, setAsking] = useState(false);
-    const set = (field: keyof typeof draft, value: string) => setDraft(current => ({ ...current, [field]: value }));
+    const set = (field: keyof typeof draft, value: string) => setDraft(current => ({ ...current, [field]: field === 'baseURL' ? value.trim().replace(/\/chat\/completions\/?$/i, '') : value }));
     const typed = draft.typed.split(/[\s,]+/).map(id => id.trim()).filter(Boolean);
     const models = [...(found ?? []).filter(model => picked.includes(model.id)), ...typed.filter(id => !picked.includes(id)).map(id => ({ id }))];
     const ready = draft.provider.trim() !== '' && draft.baseURL.trim() !== '' && models.length > 0;

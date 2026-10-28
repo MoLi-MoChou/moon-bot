@@ -12,6 +12,7 @@ interface ApprovalRequestPayload {
   readonly toolName?: string
   readonly callId?: string
   readonly reason?: string
+  readonly detail?: ApprovalDetail
   readonly signal?: AbortSignal
 }
 
@@ -35,7 +36,7 @@ export function install(rt: HostRuntime): void {
   ctx.on<ApprovalRequestPayload, () => Promise<string>>('approval/request', (request, next) => {
     const sessionId = request.agent?.session?.id ?? request.agent?.id
     const owner = sessionId === undefined ? undefined : rt.groupOwners.get(sessionId)
-    const botId = owner?.botId ?? (sessionId === undefined ? undefined : rt.chatOwners.get(sessionId))
+    const botId = owner?.botId ?? (sessionId === undefined ? undefined : (rt.chatOwners.get(sessionId) ?? rt.selfOf?.(sessionId)))
     if (botId === undefined) return next()
     const id = randomUUID()
     const entry: PendingApproval = {
@@ -45,7 +46,7 @@ export function install(rt: HostRuntime): void {
       ...(owner ? { roomId: owner.roomId } : {}),
       tool: String(request.toolName ?? ''),
       reason: String(request.reason ?? '').slice(0, 500),
-      detail: rt.callDetail?.(sessionId, request.callId) ?? {},
+      detail: request.detail ?? rt.callDetail?.(sessionId, request.callId) ?? {},
       at: Date.now(),
     }
     pending.set(id, entry)

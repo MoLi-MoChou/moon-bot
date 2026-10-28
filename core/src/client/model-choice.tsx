@@ -68,10 +68,10 @@ export function ModelChoiceDock({ sessionId, useRoster, actions }: ModelChoiceDo
         ? setupChoices(actions).map(([label, run]) => <button key={label} type='button' className='bt-model-chip' onClick={run}>{label}</button>)
         : [
             ...groupModels(usable).map(([provider, list]) => <div key={list[0]?.provider ?? provider} className='bt-model-choice-group' role='group' aria-label={provider}><div className='bt-model-choice-provider' aria-hidden>{provider}</div><div className='bt-model-choice-chips'>{list.map(model => <button key={model.ref} type='button' className='bt-model-chip' disabled={busy !== ''} aria-busy={busy === model.ref || undefined} aria-label={`${model.name} · ${provider}`} title={model.ref === roster.defaultModel ? `${model.ref} · ${t('Default')}` : model.ref} onClick={() => pick(model.ref)}>{model.name}{busy === model.ref ? <span className='bt-model-spin' aria-label={t('Saving…')}/> : null}</button>)}</div></div>),
-            manage ? <button key='manage' type='button' className='bt-model-chip bt-model-chip-quiet' onClick={manage}>{h(SlidersIcon)}{t('Manage models')}</button> : null,
+            manage ? <button key='manage' type='button' className='bt-model-chip bt-model-chip-quiet' onClick={manage}><SlidersIcon />{t('Manage models')}</button> : null,
         ];
-    return <div className='bt-model-dock'><div className='bt-astack' data-lead=''><div className='bt-msg'><div className='bt-msg-line'>{h(BotMark, { bot, size: 22 })}<div className='bt-bubble'>{text}</div></div></div></div>{keyFor
-        ? h(ModelKeyCard, { key: keyFor.provider, model: keyFor, actions })
+    return <div className='bt-model-dock'><div className='bt-astack' data-lead=''><div className='bt-msg'><div className='bt-msg-line'><BotMark bot={bot} size={22} /><div className='bt-bubble'>{text}</div></div></div></div>{keyFor
+        ? <ModelKeyCard key={keyFor.provider} model={keyFor} actions={actions} />
         : <div className='bt-model-chips' role='group' aria-label={t('Choose a model')}>{choices}</div>}{error ? <div className='bt-secret-error bt-model-error' role='alert'>{error}</div> : null}</div>;
 }
 // The provider's API key, saved through the host; once it is set, the provider's
@@ -94,7 +94,7 @@ export function ModelKeyCard({ model, actions }: {
             .then(() => setValue(''), (failure: unknown) => setError(hostText(failureMessage(failure))))
             .finally(() => setBusy(false));
     };
-    return <div className='bt-q bt-model-key' role='group' aria-label={label}><div className='bt-model-key-title'>{h(KeyIcon)}{label}</div><label className='bt-q-field bt-secret-field'>{h(MaskedInput, { value, onChange: setValue, onEnter: save, label, autoFocus: true })}</label>{error ? <div className='bt-secret-error' role='alert'>{error}</div> : null}<div className='bt-q-foot'>{actions.openModels ? <button type='button' className='bt-q-btn bt-model-key-other' onClick={actions.openModels}>{t('Another provider')}</button> : null}<button type='button' className='bt-q-submit' disabled={!ready} onClick={save}>{busy ? t('Saving…') : t('Save')}</button></div></div>;
+    return <div className='bt-q bt-model-key' role='group' aria-label={label}><div className='bt-model-key-title'><KeyIcon />{label}</div><label className='bt-q-field bt-secret-field'><MaskedInput value={value} onChange={setValue} onEnter={save} label={label} autoFocus /></label>{error ? <div className='bt-secret-error' role='alert'>{error}</div> : null}<div className='bt-q-foot'>{actions.openModels ? <button type='button' className='bt-q-btn bt-model-key-other' onClick={actions.openModels}>{t('Another provider')}</button> : null}<button type='button' className='bt-q-submit' disabled={!ready} onClick={save}>{busy ? t('Saving…') : t('Save')}</button></div></div>;
 }
 // Ways to get a first model when the catalog is empty.
 // Standalone Moon Bot opens its own Models page (openModels). The DeepSeek sign-in
@@ -137,7 +137,7 @@ export function DeepSeekSignIn({ useUi, actions }: {
     const entry = open ? actions.signInEntry?.() ?? null : null;
     if (!entry)
         return null;
-    return h(SignInHost, { key: String(open), entry, actions });
+    return <SignInHost key={String(open)} entry={entry} actions={actions} />;
 }
 export function SignInHost({ entry, actions }: {
     entry: SignInEntry;

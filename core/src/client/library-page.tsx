@@ -91,23 +91,18 @@ export function LibraryPage({ roster, actions }: {
         </div> : null}
         {problem !== '' ? <div className='bt-error' role='alert'>{problem}</div> : null}
         {items === null ? <div className='bt-set-hint'>{t('Loading…')}</div>
-            : items.length === 0 ? h(EmptyState, {
-                icon: h(LibraryIcon), title: t('No delivered files yet.'), hint: t('Files Bots deliver in their chats are kept here.'),
-            })
-                : shown.length === 0 ? h(EmptyState, {
-                    icon: h(LibraryIcon), title: t('No files match these filters.'),
-                    action: { label: t('Clear filters'), onClick: clearFilters },
-                })
+            : items.length === 0 ? <EmptyState icon={<LibraryIcon />} title={t('No delivered files yet.')} hint={t('Files Bots deliver in their chats are kept here.')} />
+                : shown.length === 0 ? <EmptyState icon={<LibraryIcon />} title={t('No files match these filters.')} action={{ label: t('Clear filters'), onClick: clearFilters }} />
                     : shown.map(item => <div key={`${item.sessionId}:${item.turn ?? ''}:${item.path}`} className='bt-lib-row'>
                         <button type='button' className='bt-lib-open' title={item.path} onClick={() => setPreview(item)}>
-                            <span className='bt-dcard-icon' aria-hidden>{h(FileKindIcon, { kind: fileKind(item.name) })}</span>
+                            <span className='bt-dcard-icon' aria-hidden><FileKindIcon kind={fileKind(item.name)} /></span>
                             <span className='bt-lib-copy'>
                                 <span className='bt-lib-name'>{item.name}</span>
                                 <span className='bt-lib-meta'>{[roster.byId[item.ownerId ?? '']?.name ?? roster.roomsById[item.sessionId]?.name ?? t('a Bot'), formatBytes(item.size), typeLabel(item.name), item.path, whenLabel(item.createdAt)].filter(Boolean).join(' · ')}</span>
                             </span>
                         </button>
-                        <button type='button' className='bt-soft bt-soft-sm bt-with-icon bt-lib-back' title={t('Back to chat')} aria-label={t('Back to chat')} onClick={() => actions.openSession(item.sessionId)}>{h(ReplyIcon)}<span className='bt-lib-back-label'>{t('Back to chat')}</span></button>
+                        <button type='button' className='bt-soft bt-soft-sm bt-with-icon bt-lib-back' title={t('Back to chat')} aria-label={t('Back to chat')} onClick={() => actions.openSession(item.sessionId)}><ReplyIcon /><span className='bt-lib-back-label'>{t('Back to chat')}</span></button>
                     </div>)}
-        {preview ? createPortal(h(FilePreview, { file: preview, sessionId: preview.sessionId, onClose: () => setPreview(null) }), document.body) : null}
+        {preview ? createPortal(<FilePreview file={preview} sessionId={preview.sessionId} onClose={() => setPreview(null)} />, document.body) : null}
     </div>;
 }

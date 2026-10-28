@@ -123,13 +123,13 @@ export interface FileCardsProps {
 export function FileCards({ files, sessionId, onOpen }: FileCardsProps) {
     const [preview, setPreview] = useState<FileCard | null>(null);
     return <div className='bt-dcards' role='group' aria-label={t('Delivered files')}>{files.map(file => <button key={file.path} type='button' className='bt-dcard' title={file.path} onClick={() => (onOpen ? onOpen(file) : setPreview(file))}>
-        <span className='bt-dcard-icon' aria-hidden>{h(FileKindIcon, { kind: fileKind(file.name) })}</span>
+        <span className='bt-dcard-icon' aria-hidden><FileKindIcon kind={fileKind(file.name)} /></span>
         <span className='bt-dcard-copy'>
             <span className='bt-dcard-name'>{file.name}</span>
             <span className='bt-dcard-meta'>{[formatBytes(file.size), typeLabel(file.name)].filter(Boolean).join(' · ')}</span>
             {file.size > BIG_FILE ? <span className='bt-dcard-big'>{t('Large file. The download may take a while.')}</span> : null}
         </span>
-    </button>)}{preview ? createPortal(h(FilePreview, { file: preview, sessionId, onClose: () => setPreview(null) }), document.body) : null}</div>;
+    </button>)}{preview ? createPortal(<FilePreview file={preview} sessionId={sessionId} onClose={() => setPreview(null)} />, document.body) : null}</div>;
 }
 
 export interface FilePreviewProps {
@@ -222,7 +222,7 @@ export function FilePreview({ file, sessionId, onClose }: FilePreviewProps) {
     else if (kind === 'text' || kind === 'markdown') {
         const isDiff = text !== null && isDiffContent(file.name, text.body);
         body = text === null ? <div className='bt-fpreview-loading'>{t('Loading…')}</div> : <div className='bt-fpreview-text'>
-            {isDiff ? h(DiffViewer, { text: text.body }) : kind === 'markdown' ? h(MarkdownText, { text: text.body }) : <pre>{text.body}</pre>}
+            {isDiff ? <DiffViewer text={text.body} /> : kind === 'markdown' ? <MarkdownText text={text.body} /> : <pre>{text.body}</pre>}
             {text.cut ? <p className='bt-fpreview-note'>{t('Preview shows the first {size}.', { size: formatBytes(TEXT_LIMIT) })}</p> : null}
         </div>;
     }
@@ -236,20 +236,20 @@ export function FilePreview({ file, sessionId, onClose }: FilePreviewProps) {
         body = url === '' ? <div className='bt-fpreview-loading'>{t('Loading…')}</div> : <video className='bt-fpreview-video' controls src={url}/>;
     else
         body = <div className='bt-fpreview-none'>
-            <span className='bt-dcard-icon' aria-hidden>{h(FileKindIcon, { kind: fileKind(file.name), size: 26 })}</span>
+            <span className='bt-dcard-icon' aria-hidden><FileKindIcon kind={fileKind(file.name)} size={26} /></span>
             <p className='bt-fpreview-note'>{t('This file type has no preview. Download it to open it on your computer.')}</p>
         </div>;
     return <div className='bt-fpreview-layer'>
         <div className='bt-scrim' onMouseDown={onClose}/>
         <div className='bt-fpreview' role='dialog' aria-modal aria-label={t('File preview')}>
             <div className='bt-fpreview-head'>
-                <span className='bt-dcard-icon' aria-hidden>{h(FileKindIcon, { kind: fileKind(file.name) })}</span>
+                <span className='bt-dcard-icon' aria-hidden><FileKindIcon kind={fileKind(file.name)} /></span>
                 <span className='bt-fpreview-copy'>
                     <span className='bt-fpreview-name'>{file.name}</span>
                     <span className='bt-fpreview-meta'>{file.path}{meta !== '' ? ` · ${meta}` : ''}</span>
                     {file.size > BIG_FILE ? <span className='bt-dcard-big'>{t('Large file. The download may take a while.')}</span> : null}
                 </span>
-                <button type='button' className='bt-icon-btn' aria-label={t('Close')} onClick={onClose}>{h(CloseIcon)}</button>
+                <button type='button' className='bt-icon-btn' aria-label={t('Close')} onClick={onClose}><CloseIcon /></button>
             </div>
             <div className='bt-fpreview-body'>{body}</div>
             <div className='bt-fpreview-foot'>

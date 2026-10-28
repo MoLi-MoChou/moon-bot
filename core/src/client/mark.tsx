@@ -130,7 +130,7 @@ function StarIcon({ size = 8 }: {
 }
 // The small star in a disc that marks a group admin, beside a name.
 export function AdminStar() {
-    return <span className='bt-admin-star' role='img' aria-label={t('Admin')}>{h(StarIcon, { size: 7 })}</span>;
+    return <span className='bt-admin-star' role='img' aria-label={t('Admin')}><StarIcon size={7} /></span>;
 }
 // A Main Bot wears a large solid star; a group admin wears the small star in a disc.
 function MainStar() {
@@ -158,9 +158,9 @@ function useSettled(state: string): boolean {
 export function BotAvatar({ bot, size, state = 'idle', main, admin, badge = true, live = true, gaze = false, pokeable = false }: BotAvatarProps) {
     const settled = useSettled(state);
     if (bot === undefined)
-        return h(BotMark, { size });
+        return <BotMark size={size} />;
     const badgeKind = !badge ? null : state === 'alert' ? 'alert' : state !== 'idle' && state !== 'waiting' ? 'working' : admin ? 'admin' : main ? 'main' : null;
-    return <span className='bt-mark' style={{ width: size, height: size, '--bt-size': `${size}px` }}>{h(BotMark, { bot, size, state: settled ? 'done' : state, live, gaze, pokeable })}{badgeKind === 'working' ? <span className='bt-badge bt-badge-working' aria-label={t('Working')} role='img'/> : null}{badgeKind === 'alert' ? <span className='bt-badge bt-badge-alert' aria-label={t('Waiting for your answer')} role='img'>?</span> : null}{badgeKind === 'admin' ? <span className='bt-badge bt-badge-admin' aria-label={t('Admin')} role='img'>{h(StarIcon)}</span> : null}{badgeKind === 'main' ? <span className='bt-badge bt-badge-main' aria-label={t('Main Bot')} role='img'>{h(MainStar)}</span> : null}</span>;
+    return <span className='bt-mark' style={{ width: size, height: size, '--bt-size': `${size}px` }}><BotMark bot={bot} size={size} state={settled ? 'done' : state} live={live} gaze={gaze} pokeable={pokeable} />{badgeKind === 'working' ? <span className='bt-badge bt-badge-working' aria-label={t('Working')} role='img'/> : null}{badgeKind === 'alert' ? <span className='bt-badge bt-badge-alert' aria-label={t('Waiting for your answer')} role='img'>?</span> : null}{badgeKind === 'admin' ? <span className='bt-badge bt-badge-admin' aria-label={t('Admin')} role='img'><StarIcon /></span> : null}{badgeKind === 'main' ? <span className='bt-badge bt-badge-main' aria-label={t('Main Bot')} role='img'><MainStar /></span> : null}</span>;
 }
 // A group avatar seats its members' characters in the frame: two on a
 // diagonal, three in a triangle, four in a grid, and past four three plus a "+N" seat.
@@ -186,10 +186,10 @@ export function RoomAvatar({ room, roster, size = 36 }: RoomAvatarProps) {
     // A group with one Bot left shows the user beside it.
     const people: (MarkBot | null)[] = members.length === 1 ? [members[0] ?? null, null] : members;
     const seat = (bot: MarkBot | null | undefined, seatSize: number, key?: string) => (bot
-        ? h(BotMark, { key, bot, size: seatSize })
+        ? <BotMark key={key} bot={bot} size={seatSize} />
         : <span key={key} className='bt-cluster-you' style={{ width: seatSize * 0.92, height: seatSize * 0.92, margin: seatSize * 0.04 }}/>);
     if (people.length === 0)
-        return h(BotMark, { size });
+        return <BotMark size={size} />;
     // Inline sizes have no room for a cluster, so the members line up instead.
     if (size <= 20 && people.length > 1) {
         return <span className='bt-stack' style={{ '--bt-stack-size': `${size}px` }}>{people.slice(0, 3).map((bot, index) => seat(bot, size, bot?.id ?? `you-${index}`))}{people.length > 3 ? <span className='bt-stack-more'>{`+${people.length - 3}`}</span> : null}</span>;

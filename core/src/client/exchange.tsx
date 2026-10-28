@@ -78,10 +78,10 @@ export function ExchangeDialog({ pair, roster, actions }: {
     const right = roster.byId[pair[1]];
     let lastDay = 0;
     const paneLeft = usePaneLeft();
-    return <div className='bt-pane bt-exchange' style={{ left: paneLeft }} data-leaving={leaving || undefined}><div className='bt-dialog' role='dialog' aria-label={t('Bot exchange')}><div className='bt-head'><span className='bt-pill' style={{ cursor: 'default' }}>{left ? h(BotMark, { bot: left, size: 22 }) : null}{left?.name ?? '?'}<span className='bt-swap'>⇄</span>{right ? h(BotMark, { bot: right, size: 22 }) : null}{right?.name ?? '?'}</span></div><div ref={log} className='bt-dialog-log' role='log' aria-label={t('Bot exchange transcript')} onScroll={(event: React.UIEvent<HTMLDivElement>) => {
+    return <div className='bt-pane bt-exchange' style={{ left: paneLeft }} data-leaving={leaving || undefined}><div className='bt-dialog' role='dialog' aria-label={t('Bot exchange')}><div className='bt-head'><span className='bt-pill' style={{ cursor: 'default' }}>{left ? <BotMark bot={left} size={22} /> : null}{left?.name ?? '?'}<span className='bt-swap'>⇄</span>{right ? <BotMark bot={right} size={22} /> : null}{right?.name ?? '?'}</span></div><div ref={log} className='bt-dialog-log' role='log' aria-label={t('Bot exchange transcript')} onScroll={(event: React.UIEvent<HTMLDivElement>) => {
         const node = event.currentTarget;
         atEnd.current = node.scrollHeight - node.scrollTop - node.clientHeight < 2;
-    }}>{entries === null ? <div className='bt-hint'>{t('Loading…')}</div> : entries.length === 0 ? h(EmptyState, { icon: h(ChatsIcon), title: t('No messages yet'), hint: t('Messages these Bots send each other show up here.') })
+    }}>{entries === null ? <div className='bt-hint'>{t('Loading…')}</div> : entries.length === 0 ? <EmptyState icon={<ChatsIcon />} title={t('No messages yet')} hint={t('Messages these Bots send each other show up here.')} />
         : entries.map((entry) => {
             const bot: ExchangeBot = roster.byId[entry.from] ?? { id: entry.from, name: String(t('You')), color: 'gray' };
             const showDay = entry.time - lastDay > 30 * 60 * 1000;
@@ -90,7 +90,7 @@ export function ExchangeDialog({ pair, roster, actions }: {
             const whole = entry.length === undefined ? undefined : { length: entry.length, load: () => actions.exchangeText(entry.id) };
             // The dialog reads only its own fields of the roster and actions it is handed;
             // Bubbles takes the same full ones the rest of the client passes.
-            const bubbles = { texts: [stripLongNote(entry.text)], roster, selfId: bot.id, actions, whole, lead: <span className='bt-lead'>{h(BotMark, { bot: bot, size: 22 })}</span> } as unknown as Parameters<typeof Bubbles>[0];
-            return <>{showDay ? <time className='bt-time'>{dayLabel(entry.time)}</time> : null}<div className='bt-group-msg'><span className='bt-group-name' style={{ color: inkText(colorOf(bot)) }}>{bot.name}</span>{h(Bubbles, bubbles)}</div></>;
+            const bubbles = { texts: [stripLongNote(entry.text)], roster, selfId: bot.id, actions, whole, lead: <span className='bt-lead'><BotMark bot={bot} size={22} /></span> } as unknown as Parameters<typeof Bubbles>[0];
+            return <>{showDay ? <time className='bt-time'>{dayLabel(entry.time)}</time> : null}<div className='bt-group-msg'><span className='bt-group-name' style={{ color: inkText(colorOf(bot)) }}>{bot.name}</span><Bubbles {...bubbles} /></div></>;
         })}</div><div className='bt-dialog-foot'><button type='button' className='bt-soft' onClick={close}>{t('Close Chat')}</button></div></div></div>;
 }

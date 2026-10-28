@@ -135,7 +135,7 @@ function QuestionView({ question, onAnswer, onDismiss, onInteract, busy = false,
     }}/> : null;
     const rows: ReturnType<typeof h>[] = options.map((option, optionIndex) => {
         const selected = multi && picked.includes(option.label);
-        return <button key={option.label} type='button' className='bt-q-opt' disabled={busy} aria-pressed={multi ? selected : undefined} aria-keyshortcuts={keyLetter(optionIndex).toLowerCase()} onClick={() => choose(option.label)}><span className='bt-key' aria-hidden>{keyLetter(optionIndex)}</span><span className='bt-q-body'><span className='bt-q-label'>{option.label}</span>{option.description ? <span className='bt-q-desc'>{option.description}</span> : null}</span>{selected && !raised ? <span className='bt-q-check' title={t('Selected')}>{h(CheckIcon)}</span> : null}</button>;
+        return <button key={option.label} type='button' className='bt-q-opt' disabled={busy} aria-pressed={multi ? selected : undefined} aria-keyshortcuts={keyLetter(optionIndex).toLowerCase()} onClick={() => choose(option.label)}><span className='bt-key' aria-hidden>{keyLetter(optionIndex)}</span><span className='bt-q-body'><span className='bt-q-label'>{option.label}</span>{option.description ? <span className='bt-q-desc'>{option.description}</span> : null}</span>{selected && !raised ? <span className='bt-q-check' title={t('Selected')}><CheckIcon /></span> : null}</button>;
     });
     // Raised cards keep the custom answer as one more keyed row; bubbles put it below the list.
     if (raised && field) {
@@ -152,7 +152,7 @@ function QuestionView({ question, onAnswer, onDismiss, onInteract, busy = false,
         event.preventDefault();
         event.stopPropagation();
         onDismiss();
-    } }} onSubmit={(event: React.FormEvent) => { event.preventDefault(); submit(); }}><div className='bt-q-head'><div className='bt-q-text'><p className='bt-q-title' id={titleId}>{question.header ? `${question.header} · ` : ''}{question.question}</p>{question.detail ? <div className='bt-q-detail'>{question.detail}</div> : null}{raised && multi ? <div className='bt-q-detail'>{t('Choose all that apply')}</div> : null}</div><button type='button' className='bt-q-x' aria-label={t('Dismiss question')} title={t('Dismiss')} onClick={onDismiss} disabled={busy}>{h(CloseIcon)}</button></div>{rows.length > 0 ? <div className='bt-q-list' role='group'>{rows}</div> : null}{field && !raised ? <div className='bt-q-custom'><label className='bt-q-field'>{field}</label>{!multi && canSubmit ? <button type='submit' className='bt-q-submit' disabled={busy}>{t('Submit')}</button> : null}</div> : null}{foot}</form>;
+    } }} onSubmit={(event: React.FormEvent) => { event.preventDefault(); submit(); }}><div className='bt-q-head'><div className='bt-q-text'><p className='bt-q-title' id={titleId}>{question.header ? `${question.header} · ` : ''}{question.question}</p>{question.detail ? <div className='bt-q-detail'>{question.detail}</div> : null}{raised && multi ? <div className='bt-q-detail'>{t('Choose all that apply')}</div> : null}</div><button type='button' className='bt-q-x' aria-label={t('Dismiss question')} title={t('Dismiss')} onClick={onDismiss} disabled={busy}><CloseIcon /></button></div>{rows.length > 0 ? <div className='bt-q-list' role='group'>{rows}</div> : null}{field && !raised ? <div className='bt-q-custom'><label className='bt-q-field'>{field}</label>{!multi && canSubmit ? <button type='submit' className='bt-q-submit' disabled={busy}>{t('Submit')}</button> : null}</div> : null}{foot}</form>;
 }
 // The answered card left in the transcript: the chosen rows, muted, with a check.
 export function SettledQuestion({ question, answer }: {
@@ -167,7 +167,7 @@ export function SettledQuestion({ question, answer }: {
     }
     return <div className='bt-q bt-q-settled' role='group' aria-label={prompt}>{prompt ? <div className='bt-q-head'><div className='bt-q-text'><p className='bt-q-title'>{prompt}</p></div></div> : null}<div className='bt-q-list' role='group' aria-label={t('Your answer')}>{chosen.map((label, index) => {
         const optionIndex = options.findIndex(option => option.label === label);
-        return <div key={`${label}-${index}`} className='bt-q-opt'>{optionIndex >= 0 ? <span className='bt-key' aria-hidden>{keyLetter(optionIndex)}</span> : null}<span className='bt-q-body'><span className='bt-q-label'>{label}</span></span><span className='bt-q-check' title={t('Selected')}>{h(CheckIcon)}</span></div>;
+        return <div key={`${label}-${index}`} className='bt-q-opt'>{optionIndex >= 0 ? <span className='bt-key' aria-hidden>{keyLetter(optionIndex)}</span> : null}<span className='bt-q-body'><span className='bt-q-label'>{label}</span></span><span className='bt-q-check' title={t('Selected')}><CheckIcon /></span></div>;
     })}</div></div>;
 }
 export function QuestionCard({ matched }: {
@@ -191,7 +191,7 @@ export function QuestionCard({ matched }: {
         }
         pending.answer({ answers: next });
     };
-    return h(QuestionView, { key: index, question, onAnswer, onDismiss: () => pending.dismiss(), ownAnswer: true, raised: true });
+    return <QuestionView key={index} question={question} onAnswer={onAnswer} onDismiss={() => pending.dismiss()} ownAnswer raised />;
 }
 export function PendingQuestion({ sessionId, question, actions, inline }: {
     sessionId: string;
@@ -220,7 +220,7 @@ export function PendingQuestion({ sessionId, question, actions, inline }: {
     };
     const onAnswer = (answer: QuestionAnswer) => run(() => actions.answerQuestion(sessionId, question.id, { selected: answer.selected ?? [], custom: answer.custom ?? '' }));
     const onDismiss = () => run(() => actions.dismissQuestion(sessionId));
-    return <div className={inline ? 'bt-q-inline' : 'bt-q-dock'}>{h(QuestionView, { key: question.id, question, onAnswer, onDismiss, onInteract: hold, busy, ownAnswer: question.allowCustom === true, raised: !inline })}</div>;
+    return <div className={inline ? 'bt-q-inline' : 'bt-q-dock'}><QuestionView key={question.id} question={question} onAnswer={onAnswer} onDismiss={onDismiss} onInteract={hold} busy={busy} ownAnswer={question.allowCustom === true} raised={!inline} /></div>;
 }
 // Questions asked by a tool call render inline at that call (see ToolCell); the dock
 // carries the ones whose call the transcript does not draw, including while history
@@ -241,7 +241,7 @@ export function QuestionDock({ sessionId, useRoster, useCards, useHeldCards, act
     const held = useHeldCards?.(state => (state[sessionId]?.[heldKey] ?? 0) > 0) === true;
     if (question === undefined || (question.callId && drawn && !held))
         return null;
-    return h(PendingQuestion, { key: JSON.stringify([sessionId, question.id]), sessionId, question, actions, inline: false });
+    return <PendingQuestion key={JSON.stringify([sessionId, question.id])} sessionId={sessionId} question={question} actions={actions} inline={false} />;
 }
 // An answered card in the transcript: the question stays where it was asked, with the
 // answer marked.
@@ -254,9 +254,5 @@ export function AnsweredCell({ node }: {
         return data.text ? <div className='bt-urow'><div className='bt-ububble'>{data.text}</div></div> : null;
     }
     const answers = Array.isArray(data.answers) ? data.answers : [];
-    return <div className='bt-q-inline'>{questions.map(question => h(SettledQuestion, {
-        key: question.id,
-        question,
-        answer: answers.find(answer => answer.id === question.id) ?? { selected: [] },
-    }))}</div>;
+    return <div className='bt-q-inline'>{questions.map(question => <SettledQuestion key={question.id} question={question} answer={answers.find(answer => answer.id === question.id) ?? { selected: [] }} />)}</div>;
 }

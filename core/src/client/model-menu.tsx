@@ -119,7 +119,7 @@ interface EffortRowsProps {
     onPick: (effort: string | undefined) => void;
 }
 export function EffortRows({ reasoning, current, onPick }: EffortRowsProps) {
-    return <><div className='bt-menu-sep' role='separator'/><div className='bt-model-group' role='presentation'>{t('Thinking level')}</div>{effortRows(reasoning).map(row => <button key={row.effort ?? 'default'} type='button' role='menuitemradio' aria-checked={row.effort === current} onClick={() => onPick(row.effort)}><span className='bt-menu-label'>{row.label}</span><span className='bt-model-tick' aria-hidden>{row.effort === current ? h(CheckIcon) : null}</span></button>)}</>;
+    return <><div className='bt-menu-sep' role='separator'/><div className='bt-model-group' role='presentation'>{t('Thinking level')}</div>{effortRows(reasoning).map(row => <button key={row.effort ?? 'default'} type='button' role='menuitemradio' aria-checked={row.effort === current} onClick={() => onPick(row.effort)}><span className='bt-menu-label'>{row.label}</span><span className='bt-model-tick' aria-hidden>{row.effort === current ? <CheckIcon /> : null}</span></button>)}</>;
 }
 interface ModelRowsProps {
     roster: ModelMenuRoster;
@@ -127,7 +127,7 @@ interface ModelRowsProps {
     onPick: (ref: string) => void;
 }
 export function ModelRows({ roster, current, onPick }: ModelRowsProps) {
-    return groupModels(roster.models).map(([provider, list]) => <><div className='bt-model-group' role='presentation'>{provider}</div>{list.map(model => <button key={model.ref} type='button' role='menuitemradio' aria-checked={model.ref === current} title={model.ref} onClick={() => onPick(model.ref)}><span className='bt-menu-label'>{model.name}</span>{model.ref === roster.defaultModel ? <span className='bt-menu-hint'>{t('Default')}</span> : null}<span className='bt-model-tick' aria-hidden>{model.ref === current ? h(CheckIcon) : null}</span></button>)}</>);
+    return groupModels(roster.models).map(([provider, list]) => <><div className='bt-model-group' role='presentation'>{provider}</div>{list.map(model => <button key={model.ref} type='button' role='menuitemradio' aria-checked={model.ref === current} title={model.ref} onClick={() => onPick(model.ref)}><span className='bt-menu-label'>{model.name}</span>{model.ref === roster.defaultModel ? <span className='bt-menu-hint'>{t('Default')}</span> : null}<span className='bt-model-tick' aria-hidden>{model.ref === current ? <CheckIcon /> : null}</span></button>)}</>);
 }
 export const Caret = () => <svg className='bt-model-caret' width={12} height={12} viewBox='0 0 20 20' fill='none' stroke='currentColor' strokeWidth={1.8} strokeLinecap='round' strokeLinejoin='round' aria-hidden><path d='M5.5 8l4.5 4.5L14.5 8'/></svg>;
 // Where a menu sits under its trigger: below when there is room, else above.
@@ -314,8 +314,8 @@ export function ModelMenu(props: ModelMenuProps) {
         toggle();
     } }}><span className='bt-model-copy'><span className='bt-model-name'>{shown?.name ?? t('Choose a model')}</span>{shown ? <span className='bt-model-provider'>{shown.served || models.length === 0
         ? (effortLabel === undefined ? shown.provider : `${shown.provider} · ${effortLabel}`)
-        : t('{provider} · not available', { provider: shown.provider })}</span> : null}</span>{h(Caret)}</button>{shownPlace ? createPortal(<div ref={menu} className={`bt-menu bt-model-menu${shownPlace.bottom !== undefined ? ' bt-menu-up' : ''}`} role='menu' aria-label={t('Model for {name}', { name: bot.name })} style={shownPlace} data-leaving={leaving || undefined}>{context ? h(ContextGauge, { context }) : null}{context ? <div className='bt-menu-sep' role='separator'/> : null}{models.length > 0 ? h(ModelRows, { roster, current, onPick: pick })
-        : <div className='bt-model-none'>{t('No models are set up yet.')}</div>}{effortRows(reasoning).length > 0 ? h(EffortRows, { reasoning, current: picked, onPick: pickEffort }) : null}{manage ? <div className='bt-menu-sep' role='separator'/> : null}{manage ? <button type='button' role='menuitem' onClick={() => { close(); manage(); }}>{h(SlidersIcon)}<span className='bt-menu-label'>{t('Models and providers…')}</span></button> : null}</div>, document.body) : null}</>;
+        : t('{provider} · not available', { provider: shown.provider })}</span> : null}</span><Caret /></button>{shownPlace ? createPortal(<div ref={menu} className={`bt-menu bt-model-menu${shownPlace.bottom !== undefined ? ' bt-menu-up' : ''}`} role='menu' aria-label={t('Model for {name}', { name: bot.name })} style={shownPlace} data-leaving={leaving || undefined}>{context ? <ContextGauge context={context} /> : null}{context ? <div className='bt-menu-sep' role='separator'/> : null}{models.length > 0 ? h(ModelRows, { roster, current, onPick: pick })
+        : <div className='bt-model-none'>{t('No models are set up yet.')}</div>}{effortRows(reasoning).length > 0 ? <EffortRows reasoning={reasoning} current={picked} onPick={pickEffort} /> : null}{manage ? <div className='bt-menu-sep' role='separator'/> : null}{manage ? <button type='button' role='menuitem' onClick={() => { close(); manage(); }}><SlidersIcon /><span className='bt-menu-label'>{t('Models and providers…')}</span></button> : null}</div>, document.body) : null}</>;
 }
 
 export { ModelChoiceDock } from './model-choice.tsx';

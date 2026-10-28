@@ -178,7 +178,7 @@ function Face({ bot, ask, state }: {
     ask: boolean;
     state: string;
 }) {
-    return <span className='bt-mw-face' data-ask={ask || undefined}>{h(BotMark, { bot, size: 20, state: ask ? 'alert' : state })}</span>;
+    return <span className='bt-mw-face' data-ask={ask || undefined}><BotMark bot={bot} size={20} state={ask ? 'alert' : state} /></span>;
 }
 // The capsule springs to the width of what it says; it is measured, so the spring runs
 // between two real widths. A capsule that comes back starts from its own width.
@@ -215,10 +215,10 @@ export function MemberDock({ sessionId, useRoster, useWork, actions }: {
         actions.showDetails(model.open.details);
     else if (model.open.session !== undefined)
         actions.openSession(model.open.session); };
-    return <div className='bt-mw-dock' data-leaving={leaving || undefined}><button type='button' className='bt-mw-pill' aria-label={label} onClick={open} disabled={leaving} style={width ? { width } : undefined}><span ref={inner} className='bt-mw-pill-in'><span className='bt-mw-faces' aria-hidden>{faces.map(face => h(Face, { key: face.id, ...face }))}</span><span key={label} className='bt-mw-label' aria-hidden>{model.waiting ? <span className='bt-mw-ask'>{model.waiting}</span> : null}{model.waiting && model.doing ? <span className='bt-mw-dot'>·</span> : null}{model.doing ? <span className='bt-mw-doing'>{h(Shimmer, null, model.doing)}</span> : null}</span></span></button></div>;
+    return <div className='bt-mw-dock' data-leaving={leaving || undefined}><button type='button' className='bt-mw-pill' aria-label={label} onClick={open} disabled={leaving} style={width ? { width } : undefined}><span ref={inner} className='bt-mw-pill-in'><span className='bt-mw-faces' aria-hidden>{faces.map(face => <Face key={face.id} {...face} />)}</span><span key={label} className='bt-mw-label' aria-hidden>{model.waiting ? <span className='bt-mw-ask'>{model.waiting}</span> : null}{model.waiting && model.doing ? <span className='bt-mw-dot'>·</span> : null}{model.doing ? <span className='bt-mw-doing'><Shimmer>{model.doing}</Shimmer></span> : null}</span></span></button></div>;
 }
 // The clock stays whole at the end; only what comes before it is cut.
-const stateLine = (className: string, at: number | undefined, ...what: readonly ReactNode[]): ReactNode => <span className={className}><span className='bt-member-what'>{...what}</span>{typeof at === 'number' ? h(Elapsed, { at, className: 'bt-member-time' }) : null}</span>;
+const stateLine = (className: string, at: number | undefined, ...what: readonly ReactNode[]): ReactNode => <span className={className}><span className='bt-member-what'>{...what}</span>{typeof at === 'number' ? <Elapsed at={at} className='bt-member-time' /> : null}</span>;
 function ApprovalCard({ approval, bot, actions }: {
     approval: Approval;
     bot: MemberBot;
@@ -256,7 +256,7 @@ export function MemberState({ entry, bot, room, roster }: {
     const where = doing.roomId === room.id ? ''
         : doing.roomId ? t('in {name}', { name: roster.roomsById?.[doing.roomId]?.name ?? t('a group chat') })
             : t('in its own chat');
-    return stateLine('bt-member-state', doing.since, h(Shimmer, null, `${workPhrase(doing)}…`), where ? ` ${where}` : '');
+    return stateLine('bt-member-state', doing.since, <Shimmer>{`${workPhrase(doing)}…`}</Shimmer>, where ? ` ${where}` : '');
 }
 // Work in this group can be stopped from its details, since the user cannot reach the
 // member's group Session otherwise; a turn waiting for an approval still holds its work.
@@ -284,7 +284,7 @@ export function MemberApprovals({ entry, bot, actions }: {
 }) {
     if (entry?.state !== 'ask')
         return null;
-    return <div className='bt-member-cards'>{entry.approvals.map(approval => h(ApprovalCard, { key: approval.id, approval, bot, actions }))}</div>;
+    return <div className='bt-member-cards'>{entry.approvals.map(approval => <ApprovalCard key={approval.id} approval={approval} bot={bot} actions={actions} />)}</div>;
 }
 export function useMemberWork(room: Room | undefined, useWork?: StoreHook<WorkTable> | undefined): {
     entries: MemberEntry[];

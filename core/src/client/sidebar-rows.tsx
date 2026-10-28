@@ -30,6 +30,12 @@ export const useApproval = (useWork: TSidebarHook<TSidebarWork> | undefined, mat
 export const useGroupWork = (useWork: TSidebarHook<TSidebarWork> | undefined, pick: (rooms: Record<string, readonly TSidebarDoing[]>) => unknown): string => (useWork ? useWork(work => JSON.stringify(pick(work.rooms ?? {}))) : '[]');
 export const workKeys = <T,>(text: string): T => JSON.parse(text) as T;
 export const doingOf = ({ tool, said, note, target, switching }: TSidebarDoing): TSidebarDoingRow => ({ tool, said, note, target, switching });
+/** The Bot a room row leads with, and its working line; an idle room has neither. */
+export const roomLead = (members: readonly TSidebarDoingRow[], roster: TSidebarRoster): { readonly lead?: TSidebarDoingRow, readonly first?: { readonly name: string }, readonly line: ReactNode | null } => {
+    const lead = members[0];
+    const first = lead?.id === undefined ? undefined : roster.byId[lead.id];
+    return { ...(lead === undefined ? {} : { lead }), ...(first === undefined ? {} : { first }), line: lead === undefined || first === undefined ? null : workLine(first.name, lead, members.length - 1) };
+};
 export const workLine = (lead: string, doing: TSidebarDoingRow, more: number): ReactNode => h(Shimmer, null, `${lead} · ${workPhrase(doing)}…${more > 0 ? ` +${more}` : ''}`);
 // The Bots and groups a Bot waits for (handoffs.ts), by the names they have now.
 export const waitingFor = (roster: TSidebarRoster, waits: TSidebarWaits | null): string => {
@@ -86,9 +92,9 @@ export function RoomRow({ room, roster, actions, useSessions, useSessionStatus, 
     useMarkedUnread(id, active, marked, actions);
     const approval = useApproval(useWork, entry => entry.roomId === id);
     const members = workKeys<TSidebarDoingRow[]>(useGroupWork(useWork, rooms => (rooms[id] ?? []).map(entry => ({ id: entry.botId, ...doingOf(entry) }))));
-    const leadMember = members[0] as TSidebarDoingRow;
-    const first = leadMember.id === undefined ? undefined : roster.byId[leadMember.id];
-    const workingLine = first ? workLine(first.name, leadMember, members.length - 1) : null;
+    // A room with nobody working has no members: the row still draws, just without a line.
+    const working = roomLead(members, roster);
+    const workingLine = working.line;
     if (room.hidden && !active)
         return null;
     const pinned = room.pinned === true;

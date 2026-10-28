@@ -6,7 +6,7 @@
 // vocabulary the turn router consumes; the bridge only drains the turn, so it must not
 // send them a second time. This is the seam phase 3's service wires for real.
 import type { EngineEvent } from '../events.ts'
-import type { AgentRuntime } from '../runtime.ts'
+import type { AgentRuntime, EngineSessionConfig } from '../runtime.ts'
 
 /** A delivered message as the host builds it: content blocks plus its delivery source. */
 export interface DeliveredMessage {
@@ -36,6 +36,8 @@ export interface BridgeOptions {
   onSettled?(sessionId: string): void
   /** The session's next sequence number, for the pagers that read agent.session.seq. */
   seqOf?(): number
+  /** The session config (cwd, model, effort) as resolved by host services. */
+  configOf?(sessionId: string): EngineSessionConfig | undefined
 }
 
 export function engineAgentOf(sessionId: string, options: BridgeOptions): BridgeAgent {
@@ -48,10 +50,15 @@ export function engineAgentOf(sessionId: string, options: BridgeOptions): Bridge
     running = true
     const runtime = runtimeOf()
     activeRuntime = runtime
+    const config = options.configOf?.(sessionId)
     void (async () => {
       try {
         // Drained, not re-emitted: the runtime sent each event to the fanout already.
-        const turn = runtime.runTurn({ sessionId, message: { content: message.content as never, source: message.source } })[Symbol.asyncIterator]()
+        const turn = runtime.runTurn({
+          sessionId,
+          message: { content: message.content as never, source: message.source },
+          ...(config !== undefined ? { config } : {}),
+        })[Symbol.asyncIterator]()
         while ((await turn.next()).done !== true) continue
       } catch {
         // A runTurn that throws (a broken service) still ends the turn: the router

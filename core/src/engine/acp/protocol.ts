@@ -4,7 +4,7 @@
 // shapes here are the protocol's own vocabulary.
 export interface JsonRpcRequest {
   readonly jsonrpc: '2.0'
-  readonly id: number
+  readonly id: number | string
   readonly method: string
   readonly params?: Readonly<Record<string, unknown>> | undefined
 }
@@ -17,12 +17,12 @@ export interface JsonRpcNotification {
 
 export interface JsonRpcResponse {
   readonly jsonrpc: '2.0'
-  readonly id: number
+  readonly id: number | string
   readonly result?: unknown
   readonly error?: { readonly code?: number | undefined, readonly message?: string | undefined } | undefined
 }
 
-export type Inbound = JsonRpcResponse | JsonRpcNotification
+export type Inbound = JsonRpcResponse | JsonRpcNotification | JsonRpcRequest
 
 /** One ACP session/update, as the agent streams it. */
 export interface SessionUpdate {
@@ -51,7 +51,7 @@ export class LineProtocol {
     this.receive = receive
   }
 
-  send(message: JsonRpcRequest | JsonRpcNotification): void {
+  send(message: JsonRpcRequest | JsonRpcNotification | JsonRpcResponse): void {
     this.write(JSON.stringify(message))
   }
 
@@ -66,5 +66,3 @@ export class LineProtocol {
     }
   }
 }
-
-

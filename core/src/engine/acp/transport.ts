@@ -33,7 +33,7 @@ export class StdioTransport implements AcpTransport {
 
   async open(): Promise<void> {
     if (this.child !== undefined) return
-    const child = spawn(this.command, this.args, { stdio: ['pipe', 'pipe', 'pipe'] })
+    const child = spawn(this.command, this.args, { stdio: ['pipe', 'pipe', 'pipe'], ...(process.platform === 'win32' ? { shell: true } : {}) })
     this.child = child
     child.stdout.setEncoding('utf8')
     child.stdout.on('data', (chunk: string) => this.feed(chunk))
@@ -56,6 +56,10 @@ export class StdioTransport implements AcpTransport {
 
   onClosed(receive: () => void): void {
     this.closed = receive
+  }
+
+  get running(): boolean {
+    return this.child !== undefined
   }
 
   dispose(): void {

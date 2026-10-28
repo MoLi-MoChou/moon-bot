@@ -23,6 +23,8 @@ export interface EngineSessionConfig {
   readonly systemPrompt?: string | undefined
   /** The tools this session may call, by name; the registry decides what they are. */
   readonly tools?: readonly string[] | undefined
+  /** The working directory for this session / Bot / Room. */
+  readonly cwd?: string | undefined
 }
 
 /** One turn to run: the session it runs on, its trigger, and the session's config. */

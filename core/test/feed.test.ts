@@ -112,6 +112,16 @@ test('the live feed tells a window about saves, new chat entries and the reply b
   assert.deepEqual(await next(), { event: 'stream', data: { ...target, text: 'there' } })
   assert.deepEqual(await next(), { event: 'stream', data: { ...target, phase: 'end' } })
 
+  // Engine assistant/stream events feed text deltas live over the same feed
+  onEvent({ id: 'm1c' }, { type: 'assistant/stream', text: 'Hello ' })
+  onEvent({ id: 'm1c' }, { type: 'assistant/stream', text: 'world!' })
+  onEvent({ id: 'm1c' }, { type: 'turn/end', turn: 9, reason: { kind: 'completed' } })
+  const streamTarget = { botId: 'm1', sessionId: 'm1c', attemptId: 'm1c' }
+  assert.deepEqual(await next(), { event: 'stream', data: { ...streamTarget, phase: 'start' } })
+  assert.deepEqual(await next(), { event: 'stream', data: { ...streamTarget, text: 'Hello ' } })
+  assert.deepEqual(await next(), { event: 'stream', data: { ...streamTarget, text: 'world!' } })
+  assert.deepEqual(await next(), { event: 'stream', data: { ...streamTarget, phase: 'end' } })
+
   // Status changes in a burst come as one notice.
   const onStatus = ctx.listeners.get('agent/status').at(-1)
   for (const id of ['b2', 'm1c', 'b2']) onStatus({ agent: { id }, status: 'running' })

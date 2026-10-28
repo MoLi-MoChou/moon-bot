@@ -15,6 +15,7 @@ import { RELAY_PAGE_CSS } from '../../../core/src/client/relay-page.tsx'
 import { TASKS_CSS } from '../../../core/src/client/tasks-page.tsx'
 import { GROUP_SETTINGS_CSS } from '../../../core/src/client/group-settings.tsx'
 import { MEMBER_CSS } from '../../../core/src/client/member-status.tsx'
+import { MENTION_CHIPS_CSS } from '../../../core/src/client/mention-chips.tsx'
 import { MODEL_CSS } from '../../../core/src/client/model-menu-css.ts'
 import { PROVIDERS_CSS } from '../../../core/src/client/providers-page.tsx'
 import { RETRY_CSS } from '../../../core/src/client/retry-cell.tsx'
@@ -50,6 +51,7 @@ export const SHEET_GROUPS: readonly SheetGroup[] = [
   { tag: 'about', css: ABOUT_CSS, parts: ['ABOUT_CSS'] },
   { tag: 'members', css: MEMBER_CSS, parts: ['MEMBER_CSS'] },
   { tag: 'user-messages', css: USER_MESSAGE_CSS, parts: ['USER_MESSAGE_CSS'] },
+  { tag: 'mention-chips', css: MENTION_CHIPS_CSS, parts: ['MENTION_CHIPS_CSS'] },
   { tag: 'widgets', css: WIDGET_CSS, parts: ['WIDGET_CSS'] },
   { tag: 'browser', css: BROWSER_CSS, parts: ['BROWSER_CSS'] },
   { tag: 'work-process', css: EMPTY_STATE_CSS + WELCOME_CSS + PROCESS_CSS + RETRY_CSS + STARTERS_CSS + FILES_PANEL_CSS + DELIVER_CSS, parts: ['EMPTY_STATE_CSS', 'WELCOME_CSS', 'PROCESS_CSS', 'RETRY_CSS', 'STARTERS_CSS', 'FILES_PANEL_CSS', 'DELIVER_CSS'] },

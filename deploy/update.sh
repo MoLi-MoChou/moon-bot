@@ -12,6 +12,8 @@ cd "$(dirname "$0")"
 COMPOSE="docker compose -f docker-compose.yml"
 HEALTH_TRIES=${HEALTH_TRIES:-30}
 HEALTH_WAIT=${HEALTH_WAIT:-2}
+CONTAINER=$(sed -n 's/^MOON_BOT_CONTAINER=//p' .env 2>/dev/null | tail -1)
+CONTAINER=${CONTAINER:-moon-bot}
 
 [ -f .env ] || { echo "update: put .env beside this script first (MOON_BOT_PASSWORD, provider keys)" >&2; exit 1; }
 
@@ -31,8 +33,8 @@ current=${current:-latest}
 target=${1:-$current}
 
 # Remember what is running now, for rollback: the tag, and the exact image id behind it.
-if docker ps --format '{{.Names}}' | grep -qx moon-bot; then
-  running=$(docker inspect moon-bot --format '{{.Config.Image}}' 2>/dev/null || echo "")
+if docker ps --format '{{.Names}}' | grep -qx "$CONTAINER"; then
+  running=$(docker inspect "$CONTAINER" --format '{{.Config.Image}}' 2>/dev/null || echo "")
   printf 'MOON_BOT_PREVIOUS_TAG=%s\nMOON_BOT_PREVIOUS_IMAGE=%s\n' "$current" "$running" > .previous
   echo "update: running $running (tag $current)"
 else
@@ -44,7 +46,7 @@ health() {
   # The compose health check already curls /healthz; ask docker for its verdict.
   i=0
   while [ "$i" -lt "$HEALTH_TRIES" ]; do
-    state=$(docker inspect moon-bot --format '{{.State.Health.Status}}' 2>/dev/null || echo "missing")
+    state=$(docker inspect "$CONTAINER" --format '{{.State.Health.Status}}' 2>/dev/null || echo "missing")
     [ "$state" = "healthy" ] && return 0
     [ "$state" = "unhealthy" ] && return 1
     sleep "$HEALTH_WAIT"; i=$((i + 1))
@@ -63,12 +65,14 @@ rollback_previous() {
   echo "update: rolled back to $current"
 }
 
-write_tag "$target"
+# Pull by image reference before touching .env: a tag that does not exist must leave the
+# install exactly as it was, not with a target nothing runs.
 echo "update: pulling ${MOON_BOT_REGISTRY:-ghcr.io/moli-mochou/moon-bot}:$target"
-$COMPOSE pull
+docker pull "${MOON_BOT_REGISTRY:-ghcr.io/moli-mochou/moon-bot}:$target"
+write_tag "$target"
 $COMPOSE up -d
 if health; then
-  revision=$(docker exec moon-bot cat /opt/moon-bot/REVISION 2>/dev/null || echo unknown)
+  revision=$(docker exec "$CONTAINER" cat /opt/moon-bot/REVISION 2>/dev/null || echo unknown)
   echo "update: healthy — $target (REVISION $revision)"
   exit 0
 fi

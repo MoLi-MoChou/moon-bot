@@ -8,7 +8,8 @@
 services:
   moon-bot:
     image: ${MOON_BOT_REGISTRY:-ghcr.io/moli-mochou/moon-bot}:${MOON_BOT_TAG:-latest}
-    container_name: moon-bot
+    # A second instance on the same host (a test, a tenant) sets MOON_BOT_CONTAINER.
+    container_name: ${MOON_BOT_CONTAINER:-moon-bot}
     restart: unless-stopped
     env_file: .env
     ports:

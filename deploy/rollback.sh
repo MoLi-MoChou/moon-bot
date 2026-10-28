@@ -7,6 +7,8 @@ cd "$(dirname "$0")"
 COMPOSE="docker compose -f docker-compose.yml"
 HEALTH_TRIES=${HEALTH_TRIES:-30}
 HEALTH_WAIT=${HEALTH_WAIT:-2}
+CONTAINER=$(sed -n 's/^MOON_BOT_CONTAINER=//p' .env 2>/dev/null | tail -1)
+CONTAINER=${CONTAINER:-moon-bot}
 
 [ -f .env ] || { echo "rollback: .env is missing beside this script" >&2; exit 1; }
 
@@ -17,7 +19,7 @@ previous_image=$(sed -n 's/^MOON_BOT_PREVIOUS_IMAGE=//p' .previous 2>/dev/null |
 health() {
   i=0
   while [ "$i" -lt "$HEALTH_TRIES" ]; do
-    state=$(docker inspect moon-bot --format '{{.State.Health.Status}}' 2>/dev/null || echo "missing")
+    state=$(docker inspect "$CONTAINER" --format '{{.State.Health.Status}}' 2>/dev/null || echo "missing")
     [ "$state" = "healthy" ] && return 0
     [ "$state" = "unhealthy" ] && return 1
     sleep "$HEALTH_WAIT"; i=$((i + 1))

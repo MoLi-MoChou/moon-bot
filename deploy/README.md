@@ -15,10 +15,16 @@ Docker, from the repository root (a one-off build, for trying it out):
 curl -fsSL https://raw.githubusercontent.com/MoLi-MoChou/moon-bot/main/deploy/install.sh | sh
 ```
 
-`deploy/install.sh` writes `.env` once (a generated password is printed once), starts the
-container on 8290 and waits for `/healthz`. Re-run it with `--tag vX.Y.Z` to upgrade; the data
-folder is created empty and never reset. Options: `--tag`, `--dir`, `--port`, `--registry`,
-`--password`, `--yes` (`sh deploy/install.sh --help`).
+`deploy/install.sh` writes `.env` once (a generated password is printed once), creates `./data`
+and hands it to the container user, starts the container on 8290 and waits for `/healthz`.
+Re-run it with `--tag vX.Y.Z` to upgrade; the data folder is created empty and never reset.
+Options: `--tag`, `--dir`, `--port`, `--registry`, `--password`, `--name`, `--yes`
+(`sh deploy/install.sh --help`). `--name` (or `MOON_BOT_CONTAINER` in `.env`) runs a second
+instance on the same host — its own container, port and data folder.
+
+`update.sh` pulls the target image **before** it rewrites `MOON_BOT_TAG`, so a tag that does
+not exist leaves the install exactly as it was; a container that starts but never becomes
+healthy rolls itself back to the image recorded in `.previous`.
 
 The full release procedure — versions, the tag, what the workflows publish, rollback — is in
 [docs/RELEASING.md](../docs/RELEASING.md).

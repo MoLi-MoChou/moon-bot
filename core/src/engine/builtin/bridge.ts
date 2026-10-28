@@ -1,10 +1,11 @@
 // The host bridge: one engine-backed agent per session, shaped as the agent the host's
 // delivery already knows (followup/steer/cancel, an inbox for resume checks, a running
 // status). What DSH's session runtime did for an inbox push, the engine does here: a
-// followup opens a turn (queued behind a running one), a steer cuts into it. The
-// runtime itself sends every engine event to the session/event fanout, which is the
-// vocabulary the turn router consumes; the bridge only drains the turn, so it must not
-// send them a second time. This is the seam phase 3's service wires for real.
+// followup opens a turn (queued behind a running one, and counted for the task panel's
+// queue figure), a steer cuts into it. The runtime itself sends every engine event to
+// the session/event fanout, which is the vocabulary the turn router consumes; the
+// bridge only drains the turn, so it must not send them a second time. This is the
+// seam phase 3's service wires for real.
 import type { EngineEvent } from '../events.ts'
 import type { AgentRuntime, EngineSessionConfig } from '../runtime.ts'
 
@@ -18,10 +19,16 @@ export interface BridgeAgent {
   readonly session: { readonly id: string, readonly seq?: number }
   /** Every message that was pushed to this session, in order (the audit surface). */
   readonly calls: DeliveredMessage[]
+  /** DSH's inbox shape. Ours stays empty for now: this runtime queues turn slots itself,
+   *  and the three host branches that read the inbox (duplicate requests, resume, groups)
+   *  therefore never see queued input. Giving it a real inbox is its own design task. */
   readonly inbox: { nextStep: unknown[], nextTurn: unknown[], remove(message: unknown): boolean }
+  /** Followups accepted while a turn runs, waiting for their own: the task panel's queue. */
+  pendingTurns(): number
   followup(message: DeliveredMessage): void
   steer(message: DeliveredMessage): void
-  cancel(): void
+  /** `hook` says a Main Bot's stop_bot ended the turn; the user's own stop is `user`. */
+  cancel(cause?: { readonly kind?: string }): void
   readonly status: 'running' | 'idle'
 }
 
@@ -44,6 +51,11 @@ export function engineAgentOf(sessionId: string, options: BridgeOptions): Bridge
   const calls: DeliveredMessage[] = []
   let running = false
   let activeRuntime: AgentRuntime | undefined
+  // A followup that lands while a turn runs waits for its own turn. The runtime would
+  // queue the call itself, but then nothing could say how many wait; keeping them here
+  // is the honest count the task panel shows, and a cancel drops them with the turn
+  // (what DSH's inbox did, and what stop_bot's own description promises).
+  const waiting: DeliveredMessage[] = []
   const runtimeOf = (): AgentRuntime => typeof options.runtime === 'function' ? options.runtime() : options.runtime
   const start = (message: DeliveredMessage): void => {
     calls.push(message)
@@ -68,22 +80,36 @@ export function engineAgentOf(sessionId: string, options: BridgeOptions): Bridge
         running = false
         if (activeRuntime === runtime) activeRuntime = undefined
         options.onSettled?.(sessionId)
+        const next = waiting.shift()
+        if (next !== undefined) start(next)
       }
     })()
+  }
+  // A turn already runs: this message waits for its own. A steer that finds no turn
+  // joins the queue too, so it does not jump the messages already waiting.
+  const open = (message: DeliveredMessage): void => {
+    if (running) { waiting.push(message); return }
+    start(message)
   }
   return {
     session: { id: sessionId, get seq() { return options.seqOf?.() ?? 0 } },
     calls,
     inbox: { nextStep: [], nextTurn: [], remove: () => false },
-    followup: start,
+    pendingTurns: () => waiting.length,
+    followup: open,
     steer: (message) => {
       // A steer on an idle session starts the turn now (DSH's inbox would run it as
       // the next step); on a running one it cuts into that turn.
       void (activeRuntime ?? runtimeOf()).steer(sessionId, { content: message.content as never, source: message.source }).then(joined => {
-        if (!joined) start(message)
+        if (!joined) open(message)
       })
     },
-    cancel: () => { void (activeRuntime ?? runtimeOf()).cancelTurn(sessionId, 'user') },
+    cancel: (cause) => {
+      // The turn's end drops what waited behind it, and its abort reason says who ended
+      // it: a Main Bot's `hook`, or the user's own stop.
+      waiting.length = 0
+      void (activeRuntime ?? runtimeOf()).cancelTurn(sessionId, cause?.kind === 'hook' ? 'hook' : 'user')
+    },
     get status() { return running ? 'running' : 'idle' },
   }
 }

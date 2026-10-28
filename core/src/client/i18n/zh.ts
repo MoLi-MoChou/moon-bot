@@ -1187,6 +1187,24 @@ const HOST_ZH: Record<string, string> = {
   'Write the entry to save.': '请写下要保存的内容。',
   'This window cannot open a folder chooser': '这个窗口不能打开文件夹选择窗口',
   'This window cannot list folders': '这个窗口不能列出文件夹',
+
+  // The window's composer menu (the shared client and the window ask the same dictionary).
+  Group: '群聊',
+  'Call all Bots in this group chat': '让群里所有 Bot 都回答',
+  'Bot · {role}': 'Bot · {role}',
+  'Start a fresh conversation part, keeping past messages saved': '新起一段对话，之前的消息仍会保存',
+  'Adjust preferences, theme appearance, and language': '调整偏好、主题外观和语言',
+  'Configure AI models, API keys, and providers': '配置 AI 模型、API 密钥和服务商',
+  Market: '市场',
+  'Manage ACP agent connectors, MCP tools, and plugins': '管理 ACP Agent 连接器、MCP 工具和插件',
+  Schedules: '定时任务',
+  'View and manage periodic tasks, reminders, and schedules': '查看和管理周期性任务、提醒与定时',
+  'Search and review what this Bot has remembered': '搜索并查看这个 Bot 记住的内容',
+  Voice: '语音',
+  'Start voice chat or audio dictation': '开始语音对话或语音输入',
+  Mentions: '提及',
+  'Mention Bot': '提及 Bot',
+  'Quick Commands': '快捷指令',
 }
 
 // The host's own messages join the table the locale service receives.

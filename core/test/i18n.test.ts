@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { readdirSync, readFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { test } from 'node:test'
 import { DICTIONARY, errorCopy, hostText, installLocale, language, t } from '../src/client/i18n.ts'
@@ -19,17 +19,46 @@ function fakeLocale(active) {
   }
 }
 
+// The interface is built from two trees: core's shared client and the desktop window's own
+// views. Both ask the same dictionary for a Chinese entry, so the check walks both —
+// subdirectories included, which the top-level-only version missed.
+const walkSources = (roots: readonly string[]): string[] => {
+  const walk = (directory: string): string[] => readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
+    const full = join(directory, entry.name)
+    if (entry.isDirectory()) return /node_modules|dist|\.git/.test(full) ? [] : walk(full)
+    return /\.(ts|tsx)$/.test(entry.name) && !entry.name.endsWith('.d.ts') ? [full] : []
+  })
+  return roots.flatMap(walk)
+}
+
+// The dictionary and the translator define the keys rather than ask for them.
+const skipSource = (file: string): boolean => /(^|\/)(i18n\.ts|i18n\/zh\.ts)$/.test(file)
+
+const interfaceSources = (): { readonly name: string, readonly text: string }[] =>
+  walkSources([join(PLUGIN, 'src'), join(PLUGIN, '..', 'app', 'ui', 'src')])
+    .filter(file => !skipSource(file))
+    .map(file => ({ name: relative(PLUGIN, file), text: readFileSync(file, 'utf8') }))
+
+/** Every literal passed to `t()` in one source text, unescaped. */
+const literalsOf = (text: string): string[] =>
+  [...text.matchAll(/\bt\(\s*(['"])((?:\\.|(?!\1).)*)\1/g)].map(match => (match[2] as string).replace(/\\'/g, "'"))
+
+const missingLiterals = (sources: readonly { readonly name: string, readonly text: string }[], dictionary: object): string[] => {
+  const missing: string[] = []
+  for (const { name, text } of sources) for (const key of literalsOf(text)) if (!Object.hasOwn(dictionary, key)) missing.push(`${name}: ${key}`)
+  return missing
+}
+
 test('every literal the client translates has a Chinese entry', () => {
-  const dir = new URL('../src/client/', import.meta.url)
-  const missing = []
-  for (const name of readdirSync(dir).filter(file => /\.(tsx?|jsx?)$/.test(file) && file !== 'i18n.ts')) {
-    const text = readFileSync(new URL(name, dir), 'utf8')
-    for (const match of text.matchAll(/\bt\(\s*(['"])((?:\\.|(?!\1).)*)\1/g)) {
-      const key = match[2].replace(/\\'/g, "'")
-      if (!Object.hasOwn(DICTIONARY.zh, key)) missing.push(`${name}: ${key}`)
-    }
-  }
-  assert.deepEqual(missing, [])
+  assert.deepEqual(missingLiterals(interfaceSources(), DICTIONARY.zh), [])
+})
+
+test('the scan is recursive, and the fixture tree proves it', () => {
+  // A nested file with a key the fixture dictionary lacks must be reported: a top-level-only
+  // scan cannot see it, which is how 16 window strings shipped untranslated.
+  const root = join(PLUGIN, 'test', 'fixtures', 'i18n', 'tree')
+  const sources = walkSources([root]).filter(file => !skipSource(file)).map(file => ({ name: relative(root, file), text: readFileSync(file, 'utf8') }))
+  assert.deepEqual(missingLiterals(sources, { Known: '已知' }), ['nested/inner.tsx: Missing from a nested file'])
 })
 
 test('copy follows the interface language and stays English without a locale service', () => {
@@ -102,8 +131,10 @@ test('every Chinese entry still has a literal the interface shows', () => {
     .join('\n')
   // The dictionary's own values are not evidence: only the code that asks for a key is.
   const dictionary = readFileSync(join(PLUGIN, 'src/client/i18n/zh.ts'), 'utf8')
-  const keys = [...dictionary.matchAll(/^ {2}(?:'((?:[^'\\]|\\.)*)'|"([^"]*)"):/gm)]
-    .map(match => (match[1] ?? match[2] ?? '').replace(/\\(.)/g, '$1'))
+  // A key is quoted when it contains spaces or punctuation and bare when it is one word;
+  // the bare form was invisible to this check, so a rename could leave either kind behind.
+  const keys = [...dictionary.matchAll(/^ {2}(?:'((?:[^'\\]|\\.)*)'|"([^"]*)"|([A-Za-z_$][\w$]*)):/gm)]
+    .map(match => (match[1] ?? match[2] ?? match[3] ?? '').replace(/\\(.)/g, '$1'))
     .filter(key => key !== '')
   // A literal written with an escaped apostrophe counts as the same key.
   const live = (key: string): boolean => sources.includes(key) || sources.includes(key.replace(/'/g, "\\'"))

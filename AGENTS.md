@@ -94,10 +94,11 @@ npm run web -w moon-bot                # 网页版：密码页 + 服务，默认
 
 界面在 `core/src/client/`，被两种宿主加载：服务托管的网页和桌面窗口（见 [app/AGENTS.md](app/AGENTS.md)）。细节见 [`core/src/client/AGENTS.md`](core/src/client/AGENTS.md)。
 
-- **内建标签一律 JSX。** `div`、`span`、`button` 这类原生标签写成 JSX；`h('tag')` 只留在写不了 JSX 的地方（纯 `.ts` 文件、或 props 要整体展开的动态对象），并就地注明原因。
+- **内建标签一律 JSX。** `div`、`span`、`button` 这类原生标签写成 JSX，`h('tag')` 在两棵客户端树（`core/src/client`、`app/ui/src`）里由 `core/scripts/check-gates.mjs` 的 `intrinsic-h` 门禁禁止，`.ts` 文件同样在内；需要在纯 `.ts` 里写内建标签时，把该文件改成 `.tsx`（`dsh-primitives.ts` 就是这样来的），不要为了留在 `.ts` 而开例外。
 - **组件：静态的写 JSX，动态的才留 `h()`。** 元素类型和 props 在源码里固定的，写成 `<Tick on={...}/>`；元素类型来自变量（`h(entry.component, …)`）、props 来自外部对象、或上下文写不了 JSX 的，才保留 `h(Comp, …)`。静态组件的 JSX 迁移正在进行，新代码不再写静态 `h(Comp)`。
 - **JSX 仍然编译成 `h()`。** `core/tsconfig.json` 是 classic transform（`jsx: react` + `jsxFactory: h`），[`core/scripts/build-client.ts`](core/scripts/build-client.ts) 用同一套；不要引入 `react/jsx-runtime`（宿主只提供 `react`/`react-dom`，[`core/test/client-bundle.test.ts`](core/test/client-bundle.test.ts) 会失败）。
 - **设计 token 不写字面量。** 颜色、圆角、弹簧只用 `--bt-*` 变量和 [`core/src/client/motion.tsx`](core/src/client/motion.tsx) 的预设；门禁是 [`core/test/style-debt.test.ts`](core/test/style-debt.test.ts) + `core/test/style-debt.json`（这份债只减不增）。
+- **内建标签门禁**：`intrinsic-h` 只认 JSX，`h(Comp, …)` 仍允许（动态组件），fixture 在 `core/test/fixtures/gates/intrinsic-h/`。
 - **每个逻辑文件 ≤ 350 行**（[`core/scripts/check-gates.mjs`](core/scripts/check-gates.mjs)），按职责拆分，不要为过线塞注释。
 - **文案进 `zh.ts`。** 所有用户可见文案走 `t('English key')`，中文在 [`core/src/client/i18n/zh.ts`](core/src/client/i18n/zh.ts)；[`core/test/i18n.test.ts`](core/test/i18n.test.ts) 会扫出没有中文的 key。动效要尊重 `reducedMotion()` / `prefers-reduced-motion`。
 

@@ -18,13 +18,74 @@ export const piModelOf = (resolved: ResolvedModel): Model<'openai-completions' |
   cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
 })
 
-/** A host tool definition as a pi AgentTool: the registry's Zod schema is its wire schema. */
+/** Normalizes any schema node recursively to standard JSON Schema (no boolean required, root is object). */
+function normalizeSchemaNode(node: unknown): Record<string, unknown> {
+  if (!node || typeof node !== 'object' || Array.isArray(node)) {
+    return { type: 'object', properties: {} }
+  }
+  const obj = node as Record<string, unknown>
+
+  if (typeof obj.type === 'string' || obj.properties !== undefined) {
+    const { required: rawReq, ...rest } = obj
+    const result: Record<string, unknown> = { ...rest }
+    const requiredList = Array.isArray(rawReq) ? rawReq.filter((x): x is string => typeof x === 'string') : []
+
+    if (obj.properties && typeof obj.properties === 'object' && !Array.isArray(obj.properties)) {
+      result.type = obj.type ?? 'object'
+      const properties: Record<string, unknown> = {}
+      for (const [key, prop] of Object.entries(obj.properties as Record<string, unknown>)) {
+        if (prop && typeof prop === 'object') {
+          const propObj = prop as Record<string, unknown>
+          if (propObj.required === true && !requiredList.includes(key)) {
+            requiredList.push(key)
+          }
+          properties[key] = normalizeSchemaNode(propObj)
+        }
+      }
+      result.properties = properties
+    }
+
+    if (obj.items && typeof obj.items === 'object') {
+      result.items = normalizeSchemaNode(obj.items)
+    }
+
+    if (requiredList.length > 0) {
+      result.required = requiredList
+    }
+
+    return result
+  }
+
+  const properties: Record<string, unknown> = {}
+  const required: string[] = []
+  for (const [key, value] of Object.entries(obj)) {
+    if (value && typeof value === 'object') {
+      const valObj = value as Record<string, unknown>
+      if (valObj.required === true) {
+        required.push(key)
+      }
+      properties[key] = normalizeSchemaNode(valObj)
+    }
+  }
+
+  return {
+    type: 'object',
+    properties,
+    ...(required.length > 0 ? { required } : {}),
+  }
+}
+
+/** Normalizes a tool's parameter map into a standard JSON Schema object for pi and providers. */
+export function toolSchemaOf(parameters: unknown): typebox.TSchema {
+  return normalizeSchemaNode(parameters) as unknown as typebox.TSchema
+}
+
+/** A host tool definition as a pi AgentTool: the registry's parameter map normalized to JSON Schema. */
 export const piToolOf = (definition: ToolDefinition, sessionId: string): AgentTool => ({
   name: definition.name,
   label: definition.label ?? definition.name,
   description: definition.description,
-  // typebox schemas are JSON Schema; the host's Zod-built parameters already are one.
-  parameters: definition.parameters as unknown as typebox.TSchema,
+  parameters: toolSchemaOf(definition.parameters),
   execute: async (callId, input, signal) => {
     const outcome = await definition.execute(input as Readonly<Record<string, unknown>>, { sessionId, callId, ...(signal !== undefined ? { signal } : {}) })
     return {

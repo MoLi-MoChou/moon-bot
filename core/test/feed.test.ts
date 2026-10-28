@@ -112,9 +112,19 @@ test('the live feed tells a window about saves, new chat entries and the reply b
   assert.deepEqual(await next(), { event: 'stream', data: { ...target, text: 'there' } })
   assert.deepEqual(await next(), { event: 'stream', data: { ...target, phase: 'end' } })
 
+  // Engine assistant/stream events feed text deltas live over the same feed
+  onEvent({ id: 'm1c' }, { type: 'assistant/stream', text: 'Hello ' })
+  onEvent({ id: 'm1c' }, { type: 'assistant/stream', text: 'world!' })
+  onEvent({ id: 'm1c' }, { type: 'turn/end', turn: 9, reason: { kind: 'completed' } })
+  const streamTarget = { botId: 'm1', sessionId: 'm1c', attemptId: 'm1c' }
+  assert.deepEqual(await next(), { event: 'stream', data: { ...streamTarget, phase: 'start' } })
+  assert.deepEqual(await next(), { event: 'stream', data: { ...streamTarget, text: 'Hello ' } })
+  assert.deepEqual(await next(), { event: 'stream', data: { ...streamTarget, text: 'world!' } })
+  assert.deepEqual(await next(), { event: 'stream', data: { ...streamTarget, phase: 'end' } })
+
   // A turn starting or ending moves what the Bot is doing and whether it works at all,
   // so the window is told to read the live figures again — a finished turn must not keep
-  // drawing as running.
+  // drawing as running (the turn/end above is the one notice in flight).
   onEvent({ id: 'm1c' }, { type: 'turn/start', time: 62, data: { turn: 8 } })
   onEvent({ id: 'm1c' }, { type: 'turn/end', time: 63, data: { turn: 8, reason: { kind: 'completed' } } })
   assert.deepEqual(await next(), { event: 'live', data: {} })

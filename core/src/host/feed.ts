@@ -54,18 +54,35 @@ export function install(rt: HostRuntime): void {
     if (rt.selfOf(agent.id) !== undefined) live()
   })
 
+  // Attempts being streamed, by id. A turn that answers another Bot is hidden from the
+  // chat (turns.js marks it before the model is called), so its text is not streamed.
+  const writing = new Map<string, { readonly botId: string; readonly sessionId: string }>()
+
   ctx.on<{ readonly id: string }, SessionEvent>('session/event', (session, event) => {
     if (clients.size === 0) return
     const botId = rt.chatOwners.get(session.id)
     if (botId === undefined) return
+    if (event.type === 'assistant/stream') {
+      const data = event as unknown as { text?: unknown }
+      const text = typeof data.text === 'string' ? data.text : ''
+      if (!writing.has(session.id)) {
+        writing.set(session.id, { botId, sessionId: session.id })
+        publish('stream', { botId, sessionId: session.id, attemptId: session.id, phase: 'start' })
+      }
+      publish('stream', { botId, sessionId: session.id, attemptId: session.id, text })
+      return
+    }
+    if (event.type === 'assistant/message' || event.type === 'turn/end') {
+      if (writing.has(session.id)) {
+        writing.delete(session.id)
+        publish('stream', { botId, sessionId: session.id, attemptId: session.id, phase: 'end' })
+      }
+    }
     for (const item of rt.displayItems(session.id, [event])) publish('message', { botId, sessionId: session.id, item })
     // What the Bot is doing, and whether it is working at all, moves with these.
     if (event.type === 'tool/call' || event.type === 'turn/start' || event.type === 'turn/end') live()
   })
 
-  // Attempts being streamed, by id. A turn that answers another Bot is hidden from the
-  // chat (turns.js marks it before the model is called), so its text is not streamed.
-  const writing = new Map<string, { readonly botId: string; readonly sessionId: string }>()
   ctx.on<AssistantStreamEvent>('agent/assistant-stream', ({ agent, frame }) => {
     if (frame.type === 'start') {
       const botId = rt.chatOwners.get(agent.id)

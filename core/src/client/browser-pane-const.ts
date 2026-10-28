@@ -9,8 +9,8 @@ export const WIDTH_KEY = STORAGE.browserWidth
 // DETAILS_WIDTH..DETAILS_MAX, so a wider browser comes back to DETAILS_MAX and a
 // narrower one keeps its width; the browser takes any width from MIN_WIDTH.
 export const DEFAULT_WIDTH = 520
-export const DETAILS_WIDTH = 320
-export const DETAILS_MAX = 520
+export const DETAILS_WIDTH = 380
+export const DETAILS_MAX = 560
 export const MIN_WIDTH = 360
 // The conversation keeps at least this much room beside the panel.
 export const MIN_CHAT = 420

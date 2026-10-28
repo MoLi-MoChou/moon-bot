@@ -10,7 +10,13 @@ import { ModelChoiceDock } from '../../../core/src/client/model-menu.tsx'
 import { PendingQuestion } from '../../../core/src/client/questions.tsx'
 import type { ChatItem } from '../../../core/src/client/cells-chat.tsx'
 import type { ModelChoiceActions, ModelChoiceDockProps } from '../../../core/src/client/model-choice.tsx'
+import type { ClientBot } from '../../../core/src/client/client-types.ts'
+import { lookOf } from '../../../core/src/client/characters.ts'
+import { inkText } from '../../../core/src/client/inks.ts'
+import { MentionMirror, deleteMentionBefore, mentionChips } from '../../../core/src/client/mention-chips.tsx'
 import { asActions, type Team } from './team.ts'
+import { ActivityIndicator } from '../../../core/src/client/activity-row.tsx'
+import { ComposerMenu, detectTrigger, type TriggerContext, type TriggerItem } from './composer-menu.tsx'
 
 // The chat follows its end while the user is this close to it.
 const FOLLOW_PX = 80
@@ -166,8 +172,52 @@ interface ComposerProps {
 function Composer({ sessionId, placeholder, disabled, onSend, actions, useUi, useRoster }: ComposerProps): ReactElement {
   const [text, setText] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [trigger, setTrigger] = useState<TriggerContext | null>(null)
+  const [dismissed, setDismissed] = useState(false)
+  const [activeIndex, setActiveIndex] = useState(0)
+  const [menuItems, setMenuItems] = useState<readonly TriggerItem[]>([])
+  const [composing, setComposing] = useState(false)
   const field = useRef<HTMLTextAreaElement>(null)
   const inputActions = useInput(field, setText)
+  const roster = useRoster(value => value)
+  // A group reads only its members as mentions and a Bot's chat every Bot, as the host
+  // does (user-message.tsx); the chips follow the same list, so what looks called is called.
+  const room = roster.roomsById[sessionId]
+  const mentionedBots = (room === undefined
+    ? roster.bots
+    : room.members.map(id => roster.byId[id]).filter((bot): bot is ClientBot => bot !== undefined))
+    .map(bot => ({ id: bot.id, name: bot.name, ink: inkText(lookOf(bot).color) }))
+  const chips = mentionChips(text, mentionedBots, { everyone: room !== undefined })
+
+  const updateTrigger = (newText: string, caret: number): void => {
+    const next = detectTrigger(newText, caret)
+    setTrigger(next)
+    setDismissed(false)
+    setActiveIndex(0)
+  }
+
+  const handlePick = (item: TriggerItem): void => {
+    if (trigger === null) return
+    if (item.onSelect) {
+      item.onSelect()
+      setText(current => current.slice(0, trigger.range.start) + current.slice(trigger.range.end))
+    } else if (item.textToInsert) {
+      const before = text.slice(0, trigger.range.start)
+      const after = text.slice(trigger.range.end)
+      const inserted = item.textToInsert
+      const newText = before + inserted + after
+      setText(newText)
+      requestAnimationFrame(() => {
+        const input = field.current
+        if (input) {
+          input.focus()
+          const newPos = before.length + inserted.length
+          input.setSelectionRange(newPos, newPos)
+        }
+      })
+    }
+    setTrigger(null)
+  }
   useLayoutEffect(() => {
     const node = field.current
     if (node === null) return
@@ -188,26 +238,98 @@ function Composer({ sessionId, placeholder, disabled, onSend, actions, useUi, us
     }
   }
   return h('div', { className: 'dsb-composer-wrap' },
+    trigger !== null && !dismissed ? h(ComposerMenu, {
+      trigger,
+      sessionId,
+      useRoster,
+      actions,
+      activeIndex,
+      onActiveIndexChange: setActiveIndex,
+      onItemsChange: setMenuItems,
+      onPick: handlePick,
+      onDismiss: () => setDismissed(true),
+    }) : null,
     error !== null ? h('p', { className: 'dsb-composer-error', role: 'alert' }, error) : null,
     h('div', { className: 'dsb-composer', 'data-composer-card': '', 'data-multiline': text.includes('\n') || undefined },
       h('div', { className: 'dsb-composer-tools' }, h(ComposerPlus, { sessionId, inputActions, useRoster, actions })),
       h('div', { className: 'dsb-composer-input', 'data-input-scroll': '' },
-        h('textarea', {
-          ref: field,
-          rows: 1,
-          value: text,
-          disabled,
-          placeholder,
-          'aria-label': placeholder,
-          'data-composer-input': '',
-          onChange: (event: React.ChangeEvent<HTMLTextAreaElement>) => { setText(event.target.value) },
-          onKeyDown: (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-            if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
-              event.preventDefault()
-              void submit()
-            }
-          },
-        })),
+        h('div', { className: 'bt-mention-field' },
+          h(MentionMirror, { field, text, chips, composing }),
+          h('textarea', {
+            ref: field,
+            className: 'bt-mention-input',
+            'data-composing': composing ? 'true' : undefined,
+            rows: 1,
+            value: text,
+            disabled,
+            placeholder,
+            'aria-label': placeholder,
+            'data-composer-input': '',
+            onChange: (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+              const val = event.target.value
+              setText(val)
+              updateTrigger(val, event.target.selectionStart ?? val.length)
+            },
+            onSelect: (event: React.SyntheticEvent<HTMLTextAreaElement>) => {
+              const target = event.target as HTMLTextAreaElement
+              updateTrigger(target.value, target.selectionStart ?? target.value.length)
+            },
+            // While an IME composes, the textarea shows its own text and the mirror steps
+            // aside: a controlled value can trail the composition, and a mirror painted from
+            // that stale text would show blank or shifted characters. On commit the input
+            // reads the textarea's value, so nothing the IME typed is lost.
+            onCompositionStart: () => setComposing(true),
+            onCompositionEnd: (event: React.CompositionEvent<HTMLTextAreaElement>) => {
+              const target = event.currentTarget
+              setComposing(false)
+              setText(target.value)
+              updateTrigger(target.value, target.selectionStart ?? target.value.length)
+            },
+            onKeyDown: (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+              // A chip is one token: Backspace removes its whole "@Name", plus the single
+              // space the menu inserted, while leaving every other key to the textarea.
+              if (event.key === 'Backspace' && !composing && !event.nativeEvent.isComposing && (trigger === null || dismissed)) {
+                const input = field.current
+                if (input !== null && input.selectionStart === input.selectionEnd) {
+                  const cut = deleteMentionBefore(text, input.selectionStart, chips)
+                  if (cut !== null) {
+                    event.preventDefault()
+                    setText(cut.text)
+                    updateTrigger(cut.text, cut.caret)
+                    requestAnimationFrame(() => { input.setSelectionRange(cut.caret, cut.caret) })
+                    return
+                  }
+                }
+              }
+              if (trigger !== null && !dismissed && menuItems.length > 0) {
+                if (event.key === 'ArrowDown') {
+                  event.preventDefault()
+                  setActiveIndex(i => (i + 1) % menuItems.length)
+                  return
+                }
+                if (event.key === 'ArrowUp') {
+                  event.preventDefault()
+                  setActiveIndex(i => (i - 1 + menuItems.length) % menuItems.length)
+                  return
+                }
+                if (event.key === 'Enter' || event.key === 'Tab') {
+                  event.preventDefault()
+                  const selected = menuItems[activeIndex]
+                  if (selected) handlePick(selected)
+                  return
+                }
+                if (event.key === 'Escape') {
+                  event.preventDefault()
+                  setDismissed(true)
+                  return
+                }
+              }
+              if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+                event.preventDefault()
+                void submit()
+              }
+            },
+          }))),
       h('div', { className: 'dsb-composer-trailing' },
         h(ComposerVoice, { sessionId, inputActions, actions, useUi }),
         h('button', { type: 'button', className: 'dsb-send', disabled: disabled || text.trim() === '', 'aria-label': t('Send message'), title: t('Send message'), onClick: () => { void submit() } }, h(ArrowUpIcon)))))
@@ -254,6 +376,16 @@ export function Chat({ sessionId, team }: { readonly sessionId: string, readonly
           stream !== null && stream.text !== '' ? h(Bubbles, { texts: [stream.text], roster, selfId: bot?.id, actions: cellActions, streaming: true, sessionId, useUi: cellUi }) : null,
           // The Bot views' activity row (from the header pill) draws itself in here.
           h('div', { 'data-chat-running': '' }),
+          h(ActivityIndicator, {
+            key: `activity:${sessionId}`,
+            sessionId,
+            useRoster: hooks.useRoster,
+            useSessionStatus: hooks.useSessionStatus,
+            useLive: hooks.useLive,
+            useSession: ((<R,>(select: (state: unknown) => R): R => select(null)) as never),
+            useWork: hooks.useWork as never,
+            actions: { clearLive: actions.clearLive },
+          }),
           question !== undefined ? h(PendingQuestion, { key: JSON.stringify([sessionId, question.id]), sessionId, question, actions, inline: true }) : null))),
     h('div', { className: 'dsb-composer-root' },
       h(ModelChoiceDock, { sessionId, useRoster: hooks.useRoster as unknown as ModelChoiceDockProps['useRoster'], actions: asActions<ModelChoiceActions>(actions) }),

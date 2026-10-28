@@ -240,16 +240,17 @@ export class StandaloneLlm {
   }
 
   /** Asks an endpoint for its models: OpenAI's /models, or Anthropic's. */
-  async discoverModels(_adapter: string, request: { baseURL?: unknown, api?: unknown, key?: unknown, provider?: unknown }): Promise<readonly DiscoveredModel[]> {
+  async discoverModels(_adapter: string, request: { baseURL?: unknown, api?: unknown, key?: unknown, apiKey?: unknown, provider?: unknown }): Promise<readonly DiscoveredModel[]> {
     if (typeof request.provider === 'string' && request.provider !== '') {
       const route = this.resolveRoute(request.provider)
       if (route === undefined) throw new Error(`${request.provider} is not set up`)
       return this.discover(request.provider, route.baseUrl, route.api, request.key !== undefined ? String(request.key) : route.apiKey)
     }
-    const baseUrl = typeof request.baseURL === 'string' ? request.baseURL.replace(/\/+$/, '') : ''
+    const baseUrl = typeof request.baseURL === 'string' ? request.baseURL.trim().replace(/\/chat\/completions\/?$/i, '').replace(/\/+$/, '') : ''
     if (baseUrl === '') throw new Error('an endpoint address is required')
     const api = request.api === 'anthropic-messages' ? 'anthropic-messages' : 'openai-completions'
-    return this.discover(`${baseUrl}|${api}`, baseUrl, api, typeof request.key === 'string' ? request.key : undefined)
+    const key = typeof request.key === 'string' && request.key !== '' ? request.key : typeof request.apiKey === 'string' && request.apiKey !== '' ? request.apiKey : undefined
+    return this.discover(`${baseUrl}|${api}`, baseUrl, api, key)
   }
 
   private async discover(_cacheId: string, baseUrl: string, api: 'openai-completions' | 'anthropic-messages', key?: string): Promise<readonly DiscoveredModel[]> {

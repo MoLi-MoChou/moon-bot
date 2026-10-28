@@ -32,13 +32,14 @@ export function engineHandlers(rt: ChannelRuntime): ChannelHandlers {
   const handlers: Partial<Record<string, ChannelHandler>> = {
     engines: async () => {
       await rt.load()
-      const catalog = rt.ctx.get<{ list(): readonly { id: string; label: string; command: string; args: readonly string[]; key: string; kind: string; path?: string; version?: string; reason?: string }[] }>('engineCatalog')
+      const catalog = rt.ctx.get<{ list(): readonly { id: string; label: string; command: string; args: readonly string[]; key: string; kind: string; path?: string; version?: string; reason?: string; onDemand?: boolean }[] }>('engineCatalog')
       const entries = new Map<string, Record<string, unknown>>([['builtin', { id: 'builtin', label: 'Moon Bot built-in', kind: 'builtin', selectable: true }]])
       for (const agent of catalog?.list() ?? []) {
         entries.set(agent.id, {
           id: agent.id, label: agent.label, kind: agent.kind, command: agent.command, args: agent.args, key: agent.key,
           selectable: agent.kind === 'acp', ...(agent.path === undefined ? {} : { path: agent.path }),
           ...(agent.version === undefined ? {} : { version: agent.version }), ...(agent.reason === undefined ? {} : { reason: agent.reason }),
+          ...(agent.onDemand ? { onDemand: true } : {}),
         })
       }
       const registry = rt.ctx.get<RelayAdmin>('relayRegistry')

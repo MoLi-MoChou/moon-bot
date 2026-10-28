@@ -156,6 +156,8 @@ export class ServiceContext {
 
   readonly sessionController = {
     create: async (): Promise<{ sessionId: string }> => ({ sessionId: `s${Math.random().toString(36).slice(2, 10)}` }),
+    list: async (): Promise<{ items: readonly unknown[] }> => ({ items: [] }),
+    projections: async (): Promise<null> => null,
     resolveAgent: async (sessionId: string): Promise<{ agent: unknown }> => {
       if (this.agentOf === undefined) throw Object.assign(new Error('Session unavailable'), { code: 'bot/unavailable' })
       const agent = await this.agentOf(sessionId)

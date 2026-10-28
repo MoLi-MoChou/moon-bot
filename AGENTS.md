@@ -1,76 +1,136 @@
 # AGENTS.md
 
-Instructions for AI coding agents that work on this repository. Human contributors: see [CONTRIBUTING.md](CONTRIBUTING.md), which has the same rules with more detail.
+给在本仓库工作的 AI coding agent 的说明。人类贡献者看 [CONTRIBUTING.md](CONTRIBUTING.md)（同样的规则，更详细的流程）。各区域的边界和坑写在分区文档里，动手前先读对应那份（见文末「分区文档」）。
 
-## What this project is
+## 这个项目是什么
 
-Moon Bot is a team of long-lived Bots with its own runtime — no DeepSeek Harness install. It has three parts:
+Moon Bot 是一支长期存在的 Bot 小队，跑在自己的运行时上，不安装 DeepSeek Harness。仓库是三个 npm workspace：
 
-- `core/`: the product, in TypeScript. `src/host/` is the host services (roster and store, tools, turns and delivery, groups, parts, memory, schedules, capabilities, the `api/bot` channel); `src/engine/` the `AgentRuntime` seam with two implementations (the built-in pi kernel and ACP); `src/store/` the SQLite store; `src/service/` the Fastify service, its stores and the scheduler; `src/client/` the React surface; `src/web-search/` the `auto` search provider.
-- `app/`: the desktop app for Windows and Linux, in TypeScript. Its window loads the service Moon Bot runs itself; the main process bundles through esbuild.
-- The runtime: the service (auth, static UI, SSE feed), the host services, the built-in engine over SQLite, the policy engine, the scheduler and the connector layer. `@earendil-works/pi-agent-core` + `pi-ai` are the only agent-loop dependencies; everything else is ours.
+- `core/`（`moon-bot-core`）：产品本体，TypeScript。`src/host/` 是 host 服务（roster 与 store、工具、回合与投递、群聊、对话分段、记忆、定时、能力、`api/bot` 通道）；`src/engine/` 是 `AgentRuntime` 接缝和两个实现（内置 pi kernel、ACP 适配器）；`src/store/` 是 SQLite 存储；`src/service/` 是 Fastify 服务和它的装配；`src/client/` 是 React 界面；`src/web-search/` 是 `auto` 搜索提供方。
+- `app/`（`moon-bot`）：Windows、Linux、macOS 的桌面应用，TypeScript。窗口加载 Moon Bot 自己起的服务地址；主进程经 esbuild 打包。
+- `connect/`（`moon-bot-connect`）：把本机 ACP agent 接到远程中转的一条命令，见 [远程 Agent 设计](docs/plans/2026-10-27-remote-agents.md)。
 
-The Bot team:
+运行时：服务（鉴权、静态界面、SSE feed）、host 服务、SQLite 上的内置引擎、策略引擎、调度器和连接器层。`@earendil-works/pi-agent-core` + `pi-ai` 是仅有的 agent loop 依赖，其余都是我们自己的。
 
-- Every Bot is a long-lived identity whose work runs in engine sessions: one for its own chat, one for each group it is in, and a fresh one when the context fills up (earlier ones stay readable). A turn runs on the engine the Bot names — the built-in one, or an ACP agent — behind one `AgentRuntime` interface.
-- The team works together: Bots message each other, share group chats and can see what the other Bots are doing. Each Bot still runs on its own and does not disturb the others.
-- Bots have clear, different roles. A Main Bot has the highest rights: it creates, changes and removes other Bots. Other Bots do not get these rights. There can be more than one Main Bot.
-- Users customize each Bot (name, role label, instructions, model, character).
-- Behavior must be reliable: a Bot acts on evidence, stays inside its goal, and its results can be checked.
+这个 Bot 小队：
 
-## Hard rules
+- 每个 Bot 都是长期身份，它的工作在引擎会话里跑：自己的聊天一个、每个所在的群一个、上下文满了换一个新段（旧段仍可读）。一个回合跑在 Bot 指定的引擎上（内置引擎或 ACP agent），都在同一个 `AgentRuntime` 接口后面。
+- 团队协作：Bot 之间可以发消息、共享群聊、看得到彼此在做什么；每个 Bot 仍独立工作，互不打扰。
+- Bot 角色分明：Main Bot 权限最高，能创建、修改、删除其他 Bot；其他 Bot 没有这些权限。Main Bot 可以有多个。
+- 用户可以定制每个 Bot（名字、角色标签、指令、模型、形象）。
+- 行为必须可靠：Bot 依据证据行动、守在自己的目标里，结果可以被检查。
 
-1. **Keep the runtime our own.** Bot features go through the host services and the `AgentRuntime` seam; a kernel stays behind it (the built-in engine, or an ACP adapter), never called from host code. `@deepseek-ai` is gone from `core/`; do not add it back. The desktop app still carries the profile-boot path used by its import-from-DSH feature, and that is the only place the name may appear.
-2. **No secrets.** Never write, print or commit API keys, tokens, cookies or the data folder’s secrets. Use the mock model (`core/dev/mock-llm.ts`) for tests; it needs no key.
-3. **Only original material.** Do not copy code, text, icons, logos or graphics from other products or websites. Code under a license compatible with Apache 2.0 is the only exception: say where it comes from and add its notice to the `NOTICE` file.
-4. **`client.js` and `dist/` are generated, not committed.** The root postinstall builds them on install; change `core/src/`, then run `npm run build` (`cd core && npm run build`). Never edit the artifacts by hand, and never commit them.
-5. **Do not touch the user's own data.** The app keeps the team in its own data folder (`~/.moon-bot`); tests keep theirs in a temp folder and delete it. Never point a test at a real install's data.
+## 硬规则
 
-## Commands
+1. **运行时必须是我们自己的。** Bot 功能走 host 服务和 `AgentRuntime` 接缝；kernel 留在接缝后面（内置引擎或 ACP 适配器），host 代码永远不直接调用它。`@deepseek-ai` 已从 `core/`、`app/` 的依赖里移除，不要加回来；`core/src/host/dsh-types.d.ts` 只是历史接缝留下的**类型**声明（只能 `import type`），`app/src/move-data.ts` 只把 `DSH_HOME`/`~/.dsh` 当作「别的应用的数据目录」来避开，都不是运行时依赖。
+2. **不要密钥。** 永远不要写、打印或提交 API key、token、cookie 或数据目录里的密钥。测试用 mock 模型（[`core/dev/mock-llm.ts`](core/dev/mock-llm.ts)），不需要 key。
+3. **只用原创材料。** 不要从别的产品或网站复制代码、文字、图标、logo 或图形。只有与 Apache-2.0 兼容的许可证是例外：写明出处，并把它的 notice 加进 `NOTICE`。
+4. **`client.js` 和 `dist/` 是生成物，不提交。** 根 `postinstall` 在安装时构建它们；改 `core/src/` 后运行 `npm run build`（或 `cd core && npm run build`）。永不手改产物，永不提交产物（`core/client.js`、`core/dist/`、`app/ui/dist/`、`app/dist-main/` 都在 `.gitignore` 里）。
+5. **不要碰用户自己的数据。** 应用把团队放在它自己的数据目录（`~/.moon-bot`）；测试把数据放在临时目录并删掉。永远不要把测试指向真实安装的数据。
 
-The repository is two npm workspaces (`core/` = `moon-bot-core`, `app/` = `moon-bot`) under one root lockfile: install once at the root (`npm ci`), then run a package's scripts in its folder or from the root with `-w` (`npm test -w moon-bot-core`). Node 22.18+ runs the .ts sources directly (native type stripping); the generated artifacts (`core/client.js`, `core/dist/`) are built by the postinstall of the install and by `npm run build`, never committed.
-The root `allowScripts` names the packages whose install scripts may run (the SQLite prebuilt, esbuild's binary); npm 11.5+ gates every other one.
+## 命令
+
+三个 workspace 共用根 `package-lock.json`：在根装一次（`npm ci`），然后按包运行脚本（在包目录里，或用 `-w`，例如 `npm test -w moon-bot-core`）。Node 22.18+ 直接跑 `.ts` 源码（原生类型剥离）；生成物（`core/client.js`、`core/dist/`）由安装时的 postinstall 和 `npm run build` 构建，不提交。根 `allowScripts` 列出了允许运行安装脚本的包（SQLite 预编译、esbuild 的二进制），npm 11.5+ 默认拦下其他包。
 
 ```sh
-npm ci                                 # installs both workspaces, then builds client.js and dist/
-npm run build                          # rebuilds the artifacts after a source change
-npm test                               # unit tests (one asserts client.js is fresh)
-npm run typecheck                      # tsc --noEmit, strict
-npm run lint                           # oxlint + the architecture/size/floating-promise gates
-npm run eval                           # the five-capability evaluation set
-npm run web                            # the standalone service (MOON_BOT_UI serves the built UI)
+npm ci                                 # 安装三个 workspace，然后构建 client.js 和 dist/
+npm run build                          # 源码改动后重建产物
+npm test                               # 单元测试（含一个断言 client.js 与源码一致）
+npm run typecheck                      # tsc --noEmit，strict
+npm run lint                           # oxlint + 架构/行数/floating-promise 门禁
+npm run eval                           # 五项能力的评测集
+npm run web -w moon-bot                # 网页版：密码页 + 服务，默认 http://127.0.0.1:8290
 ```
 
-A change is done when `npm test`, `npm run typecheck` and `npm run lint` pass; CI runs them on every pull request. The bench in `dev/bench.sh` still runs a DSH-hosted profile for comparison; it is not part of the product's start path. Use a free port for each bench, and stop every bench and process that you started.
+改动完成的定义是 `npm test`、`npm run typecheck`、`npm run lint` 全绿；CI 在 `.github/workflows/test.yml` 上对每个 PR 跑这三件，另跑 `npm run eval` 和泄漏扫描。`core/dev/bench.sh` 起 mock 模型 + 构建后的服务，是开发用的实例，不是用户安装后的启动方式；每个 bench 用空闲端口，用完停掉自己起的所有 bench 和进程。
 
-## Branches, pull requests and issues
+## 分支、PR 与 issue
 
-The full workflow is in [CONTRIBUTING.md](CONTRIBUTING.md#how-we-work). The parts that an agent must follow:
+完整流程在 [CONTRIBUTING.md](CONTRIBUTING.md#how-we-work)。agent 必须遵守的部分：
 
-- Start work from the latest `dev` on a branch named `fix/<issue>-<name>`, `feat/<issue>-<name>`, `docs/<name>` or `chore/<name>`. Never start a branch name with `dev/`. Open the pull request into `dev`, not `main`; only releases and hotfixes go into `main`.
-- Bring a branch up to date with `git merge dev`. Never rebase a pushed branch and never force-push.
-- Fill in the pull request template. Link the issue with `Fixes #<number>`; a bug fix names the bug it fixes. Write the user-visible change in the Changelog field, and do not edit `CHANGELOG.md`.
-- Do not start work on an issue or pull request with the `maintainer` label; it waits for the maintainer. Do not take an issue that someone else is assigned to.
-- Before you change behavior, read the design for it in `docs/plans/` (and `docs/vision.md`). A change to a decided design needs the maintainer; a new large feature adds its design note to the same pull request.
-- Do not close an issue without evidence: the pull request or commit that fixed it, the issue it duplicates, or the reason it will not be fixed.
-- To triage issues, follow [.agents/skills/issue-triage/SKILL.md](.agents/skills/issue-triage/SKILL.md).
+- 从最新的 `dev` 开出 `fix/<issue>-<name>`、`feat/<issue>-<name>`、`docs/<name>` 或 `chore/<name>`。分支名永远不要以 `dev/` 开头。PR 进 `dev`，不进 `main`；只有发布和 hotfix 进 `main`。
+- 用 `git merge dev` 更新分支。永不 rebase 已推送的分支，永不 force-push。
+- 填 PR 模板。用 `Fixes #<number>` 关联 issue；bug 修复要写明修的是哪个 bug。用户可见的变化写进 Changelog 字段，不要改 `CHANGELOG.md`。
+- 不要开始带 `maintainer` 标签的 issue 或 PR，它们等维护者。不要接已经指派给别人的 issue。
+- 改行为之前，先读 `docs/plans/` 里对应的设计（以及 [docs/vision.md](docs/vision.md)）。改已定的设计需要维护者；新的大功能在同一个 PR 里附设计文档。
+- 没有证据不要关 issue：修它的 PR 或 commit、它重复的 issue、或者不修的原因。
+- 整理 issue 的步骤见 [CONTRIBUTING.md](CONTRIBUTING.md#issues)。
 
-## Layout
+## 目录
 
-- `core/src/index.ts`: the plugin entry (module order and the runtime object). `core/index.js`, `core/client.js` and `core/dist/` are generated (never committed).
-- `core/src/host/`: the host services (roster and store, tools and the capability registry, turns and delivery, groups, parts, memory, schedules, secrets, images, the browser bridge, the `api/bot` channel, the live feed).
-- `core/src/engine/`: the `AgentRuntime` interface and events, the built-in engine (`builtin/`: pi adapter, runtime, bridge, services), the ACP adapter (`acp/`), the tool registry and the policy engine, the MCP connector.
-- `core/src/store/`: the SQLite store — migrations, sessions and messages, tasks, the memory index, the policy counters.
-- `core/src/service/`: the Fastify service, its host context, credentials, settings, the provider catalog, the scheduler, attachments, the approval bridge, memory sync and the engine wiring.
-- `core/src/client/`: the browser side (sidebar, chat, panels, themes, characters, the Bot browser panel).
-- `core/src/shared/`: the contracts both ends import (schema, rpc, views, the OpenUI lowering, mentions, lean).
-- `core/test/`: unit tests (`.test.ts`) and fixtures; `core/test/eval/` the five-capability set. `core/dev/`: mock model, bench, smoke test, scripts.
-- `app/`: the desktop app in TypeScript (main process and window, the service host child, first-run setup, installer and updates).
+- `core/src/index.ts`：模块入口（模块顺序和 runtime 对象）。`core/index.js`、`core/client.js`、`core/dist/` 都是生成物（永不提交）。
+- `core/src/host/`：host 服务（[分区文档](core/src/host/AGENTS.md)）。
+- `core/src/engine/`：`AgentRuntime` 接口与事件、内置引擎（`builtin/`：pi 适配器、runtime、bridge、services）、ACP 适配器（`acp/`）、工具注册表、策略引擎、MCP 连接器。
+- `core/src/store/`：SQLite 存储——迁移、会话与消息、任务、记忆索引、策略计数、远程邀请（[迁移不变量](core/src/host/AGENTS.md)）。
+- `core/src/service/`：Fastify 服务、host context、凭证与设置、服务商目录、调度器、附件、审批桥、记忆同步、引擎装配（[分区文档](core/src/service/AGENTS.md)）。
+- `core/src/client/`：浏览器侧界面——侧栏、聊天、面板、主题、形象、Bot 浏览器面板（[分区文档](core/src/client/AGENTS.md)）。
+- `core/src/shared/`：两端共用的契约（schema、rpc、views、OpenUI 转换、mentions、lean）。
+- `core/test/`：单元测试（`.test.ts`）和 fixtures；`core/test/eval/` 是五项能力评测集。`core/dev/`：mock 模型、测试台、冒烟检查、脚本。
+- `app/`：桌面应用（主进程与窗口、服务子进程、首次启动、搬移数据、安装包与更新）；`app/ui/` 是窗口自己的界面，从 `core/src/client/` 取 Bot 视图（[分区文档](app/AGENTS.md)）。
+- `connect/`：`moon-bot-connect` CLI，把 ACP agent 经 WebSocket 中转接入。
+- `docs/`：愿景（`docs/vision.md`）、已定设计（`docs/plans/`，中文）和发版 runbook（`docs/RELEASING.md`）。`docs/dev/` 是旧的手动检查单（早于独立运行时，内容待更新）。
+- `deploy/`：在服务器上运行网页版的入口（一次安装脚本、compose、更新与回滚脚本）。
 
-## Style
+## 代码风格
 
-- Follow the code around your change. Keep functions small and names plain.
-- Write a comment only when the reason is not clear from the code: a hidden constraint, an invariant, a workaround. Do not describe what the code does.
-- Commit messages in English, imperative subject, the reason in the body. Keep commits small.
-- The person who asked for the change is the commit author. Do not set an AI agent or bot as author or committer, and do not add `Co-authored-by` lines for one.
-- User-facing text in the plugin is English. README.md is Chinese first with an English section; keep both parts in step.
+- 跟着改动周围的代码。函数小、名字直白。
+- 只在原因不能从代码看出时才写注释：隐藏的约束、不变量、workaround。不要描述代码做了什么。
+- commit 信息用英文，祈使句标题，原因写在正文。commit 保持小。
+- 提需求的人是 commit 作者。不要把 AI agent 或 bot 设为作者/提交者，也不要给它加 `Co-authored-by` 行。
+- 用户可见文案（产品界面）以英文为准，中文进 `core/src/client/i18n/zh.ts`。README 中文优先、带英文一节，两边保持同步。
+- 设计文档和 AGENTS 文档用中文写。
+
+## 验证
+
+一条改动算完成，只有 `npm test`、`npm run typecheck`、`npm run lint` 三件套全绿。CI 另跑 `npm run eval`（五项能力，用脚本化端点，离线）和 `scripts/scan.mjs`（泄漏扫描）；本地默认不跑这两项，但泄漏扫描的规则要记在心里。
+
+- **默认离线。** [`core/dev/mock-llm.ts`](core/dev/mock-llm.ts) 是脚本化的 mock 模型，不需要 key；测试和测试台的数据都在临时目录里，跑完删掉。
+- **界面一律在 dev 实例上验证。** 用 [`core/dev/bench.sh`](core/dev/bench.sh) 起 mock 模型 + 本机服务（`core/dev/bench.sh <name> <web-port> <mock-port> reset|start|stop`；它不是安装包），在浏览器/窗口里真实操作；改完源码先按需构建再刷新页面。
+- **不要拿生成物或安装包当界面验证。** `client.js`、`dist/`、`app/dist-pack/` 只能证明产物是最新的，证明不了交互；[`core/test/client-bundle.test.ts`](core/test/client-bundle.test.ts) 也只检查 `client.js` 与源码一致。浏览器级检查用 [`core/dev/e2e-web.mjs`](core/dev/e2e-web.mjs)（密码页、团队、一次问答，CI 用它），窗口截图用 [`app/scripts/shot.mjs`](app/scripts/shot.mjs)。
+- **测试里等状态用真实屏障。** 用有超时、失败时报出观察值的 `waitFor`（如 [`core/test/capabilities.test.ts`](core/test/capabilities.test.ts)），或事件/`setImmediate` 的 tick（如 [`core/test/styles.test.ts`](core/test/styles.test.ts)）。禁止「先 sleep N 毫秒再断言」；没有真实屏障的测试会在慢机器上随机红。
+- **费钱或在线的检查不算默认清单。** 真实模型上的 [`core/dev/steward-eval.mjs`](core/dev/steward-eval.mjs)、[`core/dev/llm-tap.mjs`](core/dev/llm-tap.mjs)，真机安装/更新检查，以及发版前的实机检查，都要先说明要花什么再跑。
+
+## UI 写法
+
+界面在 `core/src/client/`，被两种宿主加载：服务托管的网页和桌面窗口（见 [app/AGENTS.md](app/AGENTS.md)）。细节见 [`core/src/client/AGENTS.md`](core/src/client/AGENTS.md)。
+
+- **内建标签一律 JSX。** `div`、`span`、`button` 这类原生标签写成 JSX；`h('tag')` 只留在写不了 JSX 的地方（纯 `.ts` 文件、或 props 要整体展开的动态对象），并就地注明原因。
+- **组件：静态的写 JSX，动态的才留 `h()`。** 元素类型和 props 在源码里固定的，写成 `<Tick on={...}/>`；元素类型来自变量（`h(entry.component, …)`）、props 来自外部对象、或上下文写不了 JSX 的，才保留 `h(Comp, …)`。静态组件的 JSX 迁移正在进行，新代码不再写静态 `h(Comp)`。
+- **JSX 仍然编译成 `h()`。** `core/tsconfig.json` 是 classic transform（`jsx: react` + `jsxFactory: h`），[`core/scripts/build-client.ts`](core/scripts/build-client.ts) 用同一套；不要引入 `react/jsx-runtime`（宿主只提供 `react`/`react-dom`，[`core/test/client-bundle.test.ts`](core/test/client-bundle.test.ts) 会失败）。
+- **设计 token 不写字面量。** 颜色、圆角、弹簧只用 `--bt-*` 变量和 [`core/src/client/motion.tsx`](core/src/client/motion.tsx) 的预设；门禁是 [`core/test/style-debt.test.ts`](core/test/style-debt.test.ts) + `core/test/style-debt.json`（这份债只减不增）。
+- **每个逻辑文件 ≤ 350 行**（[`core/scripts/check-gates.mjs`](core/scripts/check-gates.mjs)），按职责拆分，不要为过线塞注释。
+- **文案进 `zh.ts`。** 所有用户可见文案走 `t('English key')`，中文在 [`core/src/client/i18n/zh.ts`](core/src/client/i18n/zh.ts)；[`core/test/i18n.test.ts`](core/test/i18n.test.ts) 会扫出没有中文的 key。动效要尊重 `reducedMotion()` / `prefers-reduced-motion`。
+
+## 安全与审批
+
+- **运行时是自己的**（硬规则 1）：Bot 功能经 host 服务和 `AgentRuntime` 接缝，kernel 在接缝后面。
+- **审批默认开启。** [`core/src/engine/policy.ts`](core/src/engine/policy.ts) 按 L0–L4 风险分级：L0–L2 直接执行；L3/L4 在每个会话的每日预算内执行，超出后逐次审批（默认 L3 20 次/日、L4 5 次/日）。审批由 [`core/src/host/approvals.ts`](core/src/host/approvals.ts) 接到界面卡片和群聊，用户答一次或拒绝；「Always allow for this Bot」是用户给单个 Bot 调高权限预设（[`core/src/client/approval-always.ts`](core/src/client/approval-always.ts)），不是产品默认。
+- **红线：不要让产品滑向默认放行。** 不做 `approvalPolicy: never` 式的全局开关，也不做等价物：默认无限预算、默认自动允许、静默放行、或不经用户就替 Bot 提权。该问的必须问，问到的请求要由用户答（允许一次/拒绝）才算数，不能由服务端或模型代答；拒绝文案不给出申诉口（[`core/test/policy.test.ts`](core/test/policy.test.ts) 锁住了这一点）。
+- **改审批行为必须走设计文档。** 改风险等级表、每日预算、审批默认值、拒绝文案，都算改已定设计：先在 `docs/plans/` 写或改设计、和维护者确认，再动代码和测试。哪些动作必须每次问以设计文档为准（例如 [浏览器与电脑的边界](docs/plans/2026-10-28-browser-and-computer-boundaries.md) 规定表单提交、登录、支付、删除账号逐次审批，不受自动放行影响）。
+- **密钥只进密钥文件。** 凭证在 `credentials.json`、用户密钥在 `secrets.json`（都 0600）；不写进 `state.json`、SQLite、日志或诊断。诊断文本经 [`core/src/host/diagnostics.ts`](core/src/host/diagnostics.ts) 的 `cleanText` 抹掉密钥和 home 路径。
+
+## 手机端
+
+- **先做响应式网页（阶段 D），不引入原生 App。** 手机浏览器打开同一个服务地址，不写第二套移动端界面；也不做 App Store/Play 上架。
+- 界面改动要能在窄屏用：侧栏可收起、主要操作不被遮挡、弹层不溢出视口；`app/ui/index.html` 已有 viewport meta。
+- 外网访问走服务的密码页和 HTTPS（阶段 D 的证书与远程接入同源，见 [`docs/plans/2026-10-27-remote-agents.md`](docs/plans/2026-10-27-remote-agents.md)）；非 loopback 监听必须设 `MOON_BOT_PASSWORD`，`startService` 会拒绝裸奔。
+- 手机端没有桌面壳的能力（窗口控制、自动更新、搬移数据、内置浏览器）；共享组件不得依赖这些能力（见 [app/AGENTS.md](app/AGENTS.md)）。
+
+## 发布
+
+- **`main` 永远可发布。** 只有发布和 hotfix 进 `main`；合进去的代码必须三件套全绿、可以直接打 tag。
+- **发布走 tag。** 在 `main` 上打 `vX.Y.Z` 并建 GitHub Release，流程写在 [`docs/RELEASING.md`](docs/RELEASING.md)：`.github/workflows/desktop.yml` 在 `v*` tag 上构建 Windows 安装包、Linux AppImage、macOS zip 和更新元数据（`latest.yml`、`.blockmap`），发布预发布；`.github/workflows/web-image.yml` 先跑浏览器端到端（mock 模型），绿了才把镜像推去 GHCR（每次 `main` 推送带短 sha tag，`main`/`latest` 跟随 `main`，`v*` tag 再带版本号 tag）。镜像只由工作流发布，不手 publish。
+- **版本号用脚本改，不要手改一个。** `node scripts/version.mjs` 打印两个 manifest 的版本和它对应的 tag，`node scripts/version.mjs X.Y.Z` 同时写 `core/package.json` 与 `app/package.json`（[`app/test/package.test.mjs`](app/test/package.test.mjs) 会断言它们一致）；tag 就是这个版本，`desktop.yml` 会核对 tag 与 `app/package.json`。`CHANGELOG.md` 由维护者在发版 PR 里写（PR 不改）。
+- **版本号与 `REVISION` 是两样东西。** 版本号是用户看到的发布版本（manifest = tag）；`REVISION` 是这次构建来自哪个 commit（短 sha），镜像构建把它写进 `org.opencontainers.image.revision` 和 `/opt/moon-bot/REVISION`（[`Dockerfile`](Dockerfile)），`/healthz` 在有构建信息时把它带出来，[`deploy/update.sh`](deploy/update.sh) 部署后打印它。不要拿 `REVISION` 当版本号，也不要为每个 commit 升版本号。
+- **服务器入口是 [`deploy/`](deploy/)。** 首次安装用 [`deploy/install.sh`](deploy/install.sh)（一条命令：写一次 `.env`、起容器、等 `/healthz`）；升级用 `deploy/update.sh`（记录当前 tag、拉取、重启、不健康自动回滚）或 `deploy/rollback.sh` 手工回滚。服务器拉已发布镜像，不在这里构建；数据落在部署目录的 `data/`（首次安装时创建为空，之后部署只换容器、不碰数据）。环境变量（`MOON_BOT_PASSWORD`、`MOON_BOT_DATA`、`MOON_BOT_WEB_HOST/PORT`、`MOON_BOT_WORKSPACE`）见 `deploy/.env.example`。
+
+## 分区文档
+
+根这份只放所有区域通用的规则；具体区域的边界、文件放哪、自己的硬规则写在区域文件里，动手前先读对应那份：
+
+- [`core/src/client/AGENTS.md`](core/src/client/AGENTS.md)：界面层。只依赖 `shared/` 契约，不直接读 store/service；状态与渲染、`--bt-*` 与 reduced-motion、i18n、组件测试范式（esbuild + vm）。
+- [`core/src/host/AGENTS.md`](core/src/host/AGENTS.md)：host 服务层。模块职责、`appendMessage` 唯一写路径、`state.json` 与 SQLite 的分工、迁移不变量，只走 `AgentRuntime` 接缝。
+- [`core/src/service/AGENTS.md`](core/src/service/AGENTS.md)：服务层。`wireService` 唯一装配入口、relay/healthz/鉴权边界、数据与密钥不进日志、server 只做壳不做业务。
+- [`app/AGENTS.md`](app/AGENTS.md)：桌面壳。窗口与 Host 子进程的边界、窗口不直连数据目录、打包与自动更新、独立窗口与网页端共享同一套界面代码的规则。
+
+新增一个区域时，新建它的 `AGENTS.md` 并在上面登记。能用 lint/门禁/测试机械检查的约定就加进 `core/scripts/check-gates.mjs`、oxlint 或测试，不要只写在文档里。两份说法冲突时按更严的做，并改掉另一份。

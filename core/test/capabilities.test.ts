@@ -459,3 +459,81 @@ test('disposing the runtime stops reconciliation and clears capability statuses'
   // stopped runtime; a later reconcile has no agents left to mount for.
   assert.deepEqual(mcpNames(env.rt), [])
 })
+
+test('capability-test reaches an HTTP MCP server and lists its tools without saving anything', async t => {
+  const server = await startMcpHttpServer()
+  const env = await setup()
+  t.after(async () => {
+    await env.dispose()
+    await server.close()
+  })
+  const result = await env.rt.capabilityEndpoint('capability-test', {
+    name: 'probe', kind: 'mcp', transport: 'streamable-http', url: server.url, headers: {},
+  })
+  assert.deepEqual(result.tools, ['mcp__probe__echo'])
+  assert.ok(result.ms >= 0, 'the test reports how long the server took')
+  await env.rt.load()
+  assert.deepEqual(env.rt.state.capabilities.items, {}, 'testing before saving adds no capability')
+  assert.deepEqual(env.rt.toolRegistry.names().filter(name => name.startsWith('mcp__')), [], 'the test tools never join the team registry')
+})
+
+test('capability-test refuses an unknown transport and a URL that is not HTTP', async t => {
+  const env = await setup()
+  t.after(() => env.dispose())
+  await assert.rejects(env.rt.capabilityEndpoint('capability-test', {
+    name: 'probe', transport: 'carrier-pigeon', url: 'https://mcp.test/sse',
+  }), /local command, an HTTP URL, or an SSE endpoint/)
+  await assert.rejects(env.rt.capabilityEndpoint('capability-test', {
+    name: 'probe', transport: 'streamable-http', url: 'not a url',
+  }), /valid HTTP or HTTPS URL/)
+  await assert.rejects(env.rt.capabilityEndpoint('capability-test', {
+    name: 'probe', transport: 'stdio', command: '',
+  }), /Enter a command/)
+})
+
+test('capability-save keeps an SSE transport', async t => {
+  const env = await setup()
+  t.after(() => env.dispose())
+  const saved = await env.rt.capabilityEndpoint('capability-save', {
+    name: 'remote-sse', kind: 'mcp', transport: 'sse', url: 'https://mcp.test/sse',
+    headers: { Authorization: 'Bearer $MOON_BOT_SECRET_SSE' },
+  })
+  assert.equal(saved.transport, 'sse')
+  assert.equal(saved.url, 'https://mcp.test/sse')
+  assert.deepEqual(env.rt.state.capabilities.items['remote-sse'].headers, { Authorization: 'Bearer $MOON_BOT_SECRET_SSE' })
+})
+
+test('capability-retry mounts again once the missing key is saved', async t => {
+  const state = team()
+  state.capabilities = { items: { echo: mcp('echo', { env: { TOKEN: '$MOON_BOT_SECRET_TOKEN' } }) } }
+  state.bots.chief.capabilities = ['echo']
+  const env = await setup({ state })
+  t.after(() => env.dispose())
+  env.ctx.emit('agent/created', { agent: env.agentFor('chief') })
+  await env.rt.scheduleCapabilitiesReconcile()
+  await waitForState(env.rt, 'chief', 'echo', 'error')
+  assert.match(statusOf(env.rt, 'chief', 'echo').error, /TOKEN/)
+
+  await env.rt.secretEndpoint('secret-set', { name: 'TOKEN', value: 'secret-value' })
+  assert.deepEqual(await env.rt.capabilityEndpoint('capability-retry', { name: 'echo' }), { retried: true })
+  await waitForState(env.rt, 'chief', 'echo', 'ready')
+  assert.deepEqual(mcpNames(env.rt), ['mcp__echo__echo'])
+})
+
+test('a pack reports the tools its children serve', async t => {
+  const state = team()
+  state.capabilities = {
+    items: {
+      echo: mcp('echo'),
+      guide: { name: 'guide', kind: 'skill', description: 'Guide', content: 'Do the work.', createdBy: 'chief', createdAt: 1, updatedAt: 1 },
+      team: { name: 'team', kind: 'pack', description: 'Team', items: ['echo', 'guide'], createdBy: 'chief', createdAt: 1, updatedAt: 1 },
+    },
+  }
+  state.bots.chief.capabilities = ['team']
+  const env = await setup({ state })
+  t.after(() => env.dispose())
+  env.ctx.emit('agent/created', { agent: env.agentFor('chief') })
+  await env.rt.scheduleCapabilitiesReconcile()
+  await waitForState(env.rt, 'chief', 'team', 'ready')
+  assert.deepEqual(env.rt.capabilityToolsView().team, ['mcp__echo__echo'])
+})

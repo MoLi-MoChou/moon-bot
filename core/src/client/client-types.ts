@@ -74,6 +74,7 @@ export interface ClientRosterSnapshot {
   secrets: readonly ClientSecret[]
   capabilities: unknown[]
   capabilityStatuses: Record<string, unknown>
+  capabilityTools: Record<string, readonly string[]>
   secretRequests: Record<string, readonly ClientSecretRequest[] | undefined>
   models: unknown[]
   defaultModel: unknown
@@ -170,6 +171,7 @@ export interface StateAnswer {
   memoryNews?: Record<string, MemoryNews> | undefined
   connectors?: unknown
   capabilityStatuses?: Record<string, unknown> | undefined
+  capabilityTools?: Record<string, readonly string[]> | undefined
   unchanged?: boolean | undefined
   [key: string]: unknown
 }
@@ -222,6 +224,7 @@ export const EMPTY_SNAPSHOT: ClientRosterSnapshot = {
   secrets: [],
   capabilities: [],
   capabilityStatuses: {},
+  capabilityTools: {},
   secretRequests: {},
   models: [],
   defaultModel: null,

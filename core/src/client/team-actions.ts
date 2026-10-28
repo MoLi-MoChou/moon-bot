@@ -137,6 +137,8 @@ export function teamActions({ call, after, partFor, roster, ui, live, cards, hel
     saveCapability: (capability: Record<string, unknown>) => after(call('capability-save', capability)),
     deleteCapability: (name: string) => after(call('capability-delete', { name })),
     approveCapability: (name: string) => after(call('capability-approve', { name })),
+    testCapability: (capability: Record<string, unknown>) => call('capability-test', capability).then(value => value as { tools: readonly string[]; ms: number }),
+    retryCapability: (name: string) => after(call('capability-retry', { name })),
     setBotCapability: (botId: string, name: string, attached: boolean) => after(call('bot-capability', { botId, name, attached })),
     schedules: () => call('schedules'),
     scheduleCreate: (task: Record<string, unknown>) => call('schedule-create', task),

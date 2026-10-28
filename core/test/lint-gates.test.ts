@@ -96,6 +96,19 @@ test('a value import of the type contract and a value export in a declaration fi
   assert.match(text, /1 value-export-in-declaration/)
 })
 
+test('a built-in tag written as h(...) fails in both client trees', () => {
+  const result = runGates('intrinsic-h')
+  assert.notEqual(result.status, 0, output(result))
+  const text = output(result)
+  assert.match(text, /src\/client\/bad\.tsx:5 - built-in tag h\('div'\): write it as JSX/)
+  assert.match(text, /src\/client\/bad\.tsx:6 - built-in tag h\('span'\): write it as JSX/)
+  assert.match(text, /app\/ui\/src\/bad\.tsx:3 - built-in tag h\('section'\): write it as JSX/)
+  assert.match(text, /3 intrinsic-h/)
+  // A component whose element type comes from a variable is the one shape that stays
+  // h(...): it produces no finding.
+  assert.ok(!text.includes('h(Icon)'), text)
+})
+
 test('a clean fixture passes with the one-line success message', () => {
   const result = runGates('clean')
   assert.equal(result.status, 0, output(result))

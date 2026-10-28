@@ -19,6 +19,9 @@
 //  5. `dsh-types.js` is a type-only contract: a value import of it would load a file that
 //     does not exist, so every reference must be `import type`.
 //  6. A declaration file carries no runtime: no top-level value export in a `.d.ts`.
+//  7. Built-in tags are JSX: `h('div')` under core/src/client or app/ui/src fails. The
+//     factory stays for element types that cannot be written in source (a component from
+//     props, a lookup, a conditional); a literal tag is exactly what JSX replaces.
 //
 // Usage: node scripts/check-gates.mjs [--root <core-like directory>]
 // `--root` exists so the gates can be pointed at the fixtures in test/fixtures/gates.
@@ -78,7 +81,7 @@ for (let index = 0; index < argv.length; index += 1) {
 const sourceRoot = join(root, 'src')
 if (!existsSync(sourceRoot)) usage(`no src directory under ${root}`)
 
-const findings = { boundaries: [], lines: [], floating: [], tsx: [], typeOnly: [], declarationValues: [], staleExemptions: [] }
+const findings = { boundaries: [], lines: [], floating: [], tsx: [], typeOnly: [], declarationValues: [], intrinsicH: [], staleExemptions: [] }
 
 // ---------------------------------------------------------------------------
 // Source discovery and path helpers.
@@ -364,6 +367,46 @@ function checkDeclarationValues() {
 }
 
 // ---------------------------------------------------------------------------
+// 7. Built-in tags are JSX.
+
+// A literal built-in tag is the one shape JSX always expresses; `h` stays only for an
+// element type that comes from a variable. Both client trees are checked: the plugin's
+// surface and the window's own views.
+const INTRINSIC_H = /(?<![\w$.])h\(\s*(['"])([a-z][a-z0-9-]*)\1/g
+
+function clientRoots() {
+  const roots = [join(root, 'src', 'client'), join(root, 'app', 'ui', 'src')]
+  // The default root is core/, so the window lives beside it rather than under it. A
+  // fixture root has no sibling checkout to read.
+  if (!customRoot) roots.push(join(dirname(root), 'app', 'ui', 'src'))
+  return roots.filter(dir => existsSync(dir))
+}
+
+function clientPath(file) {
+  const rel = relPath(file)
+  if (!rel.startsWith('../')) return rel
+  const repoRel = relative(dirname(root), file).split(sep).join('/')
+  return repoRel.startsWith('../') ? rel : repoRel
+}
+
+function checkIntrinsicH() {
+  for (const dir of clientRoots()) {
+    for (const file of walk(dir)) {
+      if (!SOURCE_EXTENSIONS.has(file.slice(file.lastIndexOf('.')))) continue
+      const text = stripComments(readFileSync(file, 'utf8'))
+      INTRINSIC_H.lastIndex = 0
+      let match
+      while ((match = INTRINSIC_H.exec(text)) !== null) {
+        const position = match.index + match[0].indexOf('h(')
+        findings.intrinsicH.push(
+          `${clientPath(file)}:${lineOf(text, position)} - built-in tag h('${match[2]}'): write it as JSX`,
+        )
+      }
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // 2. Line counts.
 
 function checkLineCounts() {
@@ -550,11 +593,13 @@ function main() {
   checkTestTsxImports()
   checkTypeOnlyImports()
   checkDeclarationValues()
+  checkIntrinsicH()
   checkStaleExemptions()
 
   const all = [
     ...findings.boundaries, ...findings.lines, ...findings.floating, ...findings.tsx,
-    ...findings.typeOnly, ...findings.declarationValues, ...findings.staleExemptions,
+    ...findings.typeOnly, ...findings.declarationValues, ...findings.intrinsicH,
+    ...findings.staleExemptions,
   ]
   if (all.length === 0) {
     console.log('gates: ok')
@@ -568,6 +613,7 @@ function main() {
     `${findings.tsx.length} tsx-in-test`,
     `${findings.typeOnly.length} value-import-of-type-contract`,
     `${findings.declarationValues.length} value-export-in-declaration`,
+    `${findings.intrinsicH.length} intrinsic-h`,
     `${findings.staleExemptions.length} stale-exemption`,
   ].join(', ')
   console.error(`gates: ${all.length} failure(s) (${summary})`)

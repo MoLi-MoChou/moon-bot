@@ -1,8 +1,8 @@
 // Lint with the oxlint in this package's devDependencies.
 //
 // Then run the gates oxlint cannot express — layer boundaries, the 350-line limit for a
-// migrated logic file, floating promises, and `.tsx` imports in tests — from
-// `check-gates.mjs`. `npm run lint` is therefore one command for both, and the fixtures
+// migrated logic file, floating promises, `.tsx` imports in tests, and built-in tags
+// written as `h('tag')` in the client — from `check-gates.mjs`. `npm run lint` is therefore one command for both, and the fixtures
 // under test/fixtures/gates exercise the same script.
 //
 // Usage: npm run lint [-- <oxlint options>]

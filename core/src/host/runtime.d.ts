@@ -337,7 +337,8 @@ export interface HostRuntime {
   indexAgents?(): void
   dshSpawn?(command: string, argv: readonly string[], options: { readonly windowsHide?: boolean }): ChildProcess
   // --- provided by tasks-panel.ts
-  tasksView?(): { readonly running: readonly Readonly<Record<string, unknown>>[]; readonly completed: readonly Readonly<Record<string, unknown>>[]; readonly waiting: readonly { readonly botId: string; readonly botName: string; readonly for: readonly string[] }[] }
+  /** Async because each running Session's Agent is resolved for its queued messages. */
+  tasksView?(): Promise<{ readonly running: readonly Readonly<Record<string, unknown>>[]; readonly completed: readonly Readonly<Record<string, unknown>>[]; readonly waiting: readonly { readonly botId: string; readonly botName: string; readonly for: readonly string[] }[] }>
   noteTurn?(sessionId: string, event: { readonly type?: string; readonly reason?: unknown }): void
   stopTask?(sessionId: string): Promise<boolean>
 

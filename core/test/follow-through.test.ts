@@ -43,7 +43,7 @@ async function start(home) {
   Object.assign(ctx, {
     llm: { listProviders: () => [], listModels: async () => [], resolveModelInfo: async () => ({}) },
     workspaceRegistry: { get: () => undefined, resolveByPath: async () => undefined, create: async path => ({ id: 'w1', path }), archiveSession: async () => {} },
-    sessionController: { create: async () => ({ sessionId: 's1' }), resolveAgent: async sessionId => ({ agent: agentOf(sessionId) }), selectModel: async () => {} },
+    sessionController: { create: async () => ({ sessionId: 's1' }), resolveAgent: async sessionId => ({ agent: agentOf(sessionId) }), selectModel: async () => {}, prompt: async () => ({ accepted: true }) },
     sessionTitle: { rename: async () => {} },
     sessions: { flush: async () => {} },
   })
@@ -290,4 +290,18 @@ test('a written tool call is told apart from text about one', () => {
   assert.equal(writesToolCall('Models such as Step write `<tool_call>` tags in their template.'), false)
   assert.equal(writesToolCall(undefined), false)
   assert.equal(stripWrittenCalls(WRITTEN), 'Checking now.')
+})
+
+test('a turn stopped while messages wait leaves no phantom working mark', async (t) => {
+  // The engine drops what waited behind a stopped turn; the optimistic "working" mark
+  // of those sends must go too, or the Bot looks busy for the marker's whole lifetime.
+  const home = freshHome(t)
+  const host = await start(home)
+  assert.equal((await host.call('send', { sessionId: 'a', text: 'one' })).ok, true)
+  assert.equal((await host.call('tasks', {})).value.running.length, 1, 'the send shows as work at once')
+  host.emit('a', 'turn/start', { turn: 1 })
+  assert.equal((await host.call('send', { sessionId: 'a', text: 'two' })).ok, true, 'a message queued behind the turn')
+  assert.equal((await host.call('tasks', {})).value.running.length, 1)
+  host.emit('a', 'turn/end', { turn: 1, reason: { kind: 'aborted' } })
+  assert.equal((await host.call('tasks', {})).value.running.length, 0, 'the stopped turn and its queue are gone')
 })

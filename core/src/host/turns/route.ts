@@ -4,7 +4,7 @@
 //
 // `delivery.ts` keeps the live records and their bookkeeping; this module reads the
 // Session events and decides where each message goes.
-import type { AgentSession, AttachmentRef, MessageContentBlock, TurnEndReason } from '../dsh-types.js'
+import type { AgentSession, MessageContentBlock, TurnEndReason } from '../dsh-types.js'
 import type { TurnInfo } from '../runtime.ts'
 import { HANDOFF_ACK, MESSAGE_INLINE_MAX, REFERENCE_KIND, REPLY_KIND, SOURCE_KIND } from '../constants.ts'
 import { absoluteLinks } from '../links.ts'
@@ -13,6 +13,7 @@ import { textOf } from '../text.ts'
 import type { SourceInfo, TurnsCore, TurnsRuntime } from './delivery.ts'
 import { answersUser, attachReference, expectsReply, retryWrittenCall, stripWrittenCalls, writesToolCall } from './delivery.ts'
 import { failureLine, turnFailure } from './failure.ts'
+import { contentOf, fileAttachments, imageAttachments } from './blocks.ts'
 
 interface TurnEventData {
   readonly turn?: number | undefined
@@ -33,16 +34,6 @@ interface TurnSessionEvent {
   readonly time?: number | undefined
   readonly data?: TurnEventData | undefined
 }
-
-const contentOf = (value: unknown): readonly MessageContentBlock[] => (Array.isArray(value) ? value as readonly MessageContentBlock[] : [])
-
-const fileAttachments = (content: readonly MessageContentBlock[]): AttachmentRef[] => content.flatMap(block => (
-  block?.type === 'file' && block.attachment !== undefined ? [block.attachment as AttachmentRef] : []
-))
-
-const imageAttachments = (content: readonly MessageContentBlock[]): AttachmentRef[] => content.flatMap(block => (
-  block?.type === 'image' && !block?.offloaded && block.attachment !== undefined ? [block.attachment as AttachmentRef] : []
-))
 
 export function installRoute(rt: TurnsRuntime, core: TurnsCore): void {
   const { ctx, state } = rt
@@ -256,6 +247,10 @@ export function installRoute(rt: TurnsRuntime, core: TurnsCore): void {
           }).catch(error => rt.warn('ds-bot: handing back a result failed: %s', error))
         }
         const reason = data?.reason
+        // A turn cut off drops what waited behind it (the engine's queue goes with the
+        // cancel), so the optimistic "working" mark of sends that never got their turn
+        // goes too, instead of keeping the Bot looking busy past the stop.
+        if (reason?.kind === 'aborted' || reason?.kind === 'disposed') entry.sentAt = undefined
         const failure = reason?.kind === 'error' && !switched ? turnFailure(reason.error) : undefined
         if (failure !== undefined) core.noteTurnFailure(id, failure)
         const held = rt.groupOwners.has(id) ? rt.takeRoomSteps?.(id) ?? '' : ''

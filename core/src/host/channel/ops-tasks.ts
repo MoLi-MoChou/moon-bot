@@ -20,10 +20,11 @@ interface TaskEntry {
   readonly said?: string
   readonly switching?: boolean
   readonly fromName?: string
+  readonly queued?: number
 }
 
 interface TasksReader {
-  tasksView?(): { readonly running: readonly TaskEntry[], readonly completed: readonly TaskEntry[], readonly waiting: readonly { readonly botId: string, readonly botName: string, readonly for: readonly string[] }[] }
+  tasksView?(): Promise<{ readonly running: readonly TaskEntry[], readonly completed: readonly TaskEntry[], readonly waiting: readonly { readonly botId: string, readonly botName: string, readonly for: readonly string[] }[] }>
   stopTask?(sessionId: string): Promise<boolean>
 }
 
@@ -32,7 +33,9 @@ export function taskHandlers(rt: ChannelRuntime): ChannelHandlers {
   const handlers: Partial<Record<string, ChannelHandler>> = {
     tasks: async () => {
       await rt.load()
-      const view = reader.tasksView?.()
+      // The view resolves each running Session's Agent to count its queued messages, so
+      // it answers asynchronously; the rest of the panel's data stays on the same call.
+      const view = await reader.tasksView?.()
       return ok({
         running: view?.running ?? [],
         completed: view?.completed ?? [],

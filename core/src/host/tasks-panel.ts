@@ -15,6 +15,23 @@ interface PanelRuntime extends HostRuntime {
   waitingView?(): Readonly<Record<string, { readonly bots: readonly string[]; readonly rooms: readonly string[]; readonly for: readonly string[] }>>
 }
 
+/** A live Session as the stop reads it: its running turn, or the send it has not started
+ *  yet (`sentAt`, which the host's shared LiveEntry does not name). */
+interface PanelLive {
+  readonly turn?: unknown
+  readonly sentAt?: number
+}
+
+/** The slice of an Agent this module reads: the queue behind its running turn, and the
+ *  cancel both the panel and a Main Bot's stop_bot go through. The built-in engine's
+ *  agent counts its own waiting followups; an agent from a DSH host keeps them in its
+ *  durable inbox instead, so both shapes are read. */
+interface PanelAgent {
+  pendingTurns?(): number
+  readonly inbox?: { readonly nextTurn: readonly unknown[] } | undefined
+  cancel?(cause: { readonly kind: string }): void
+}
+
 export interface TaskRunningView {
   readonly sessionId: string
   readonly botId: string
@@ -27,6 +44,8 @@ export interface TaskRunningView {
   readonly said?: string
   readonly switching?: boolean
   readonly fromName?: string
+  /** Messages waiting behind the running turn (the engine's queue); absent when none. */
+  readonly queued?: number
 }
 
 export interface TaskDoneView {
@@ -86,13 +105,34 @@ export function install(rt: PanelRuntime): void {
     return from === undefined ? undefined : nameOf(from)
   }
 
-  const tasksView = (): TasksView => {
+  // What waits behind the running turn: the engine's own count of accepted followups
+  // that have not begun their own turn (the built-in bridge), or DSH's durable inbox
+  // when one hosts the agent. Either way it is the real queue, not one the panel keeps.
+  // A Session whose turn has not started (the message being admitted is still the next
+  // turn's trigger) counts nothing: it is working, not queued behind itself.
+  //
+  // Known gap, left for its own design: the built-in bridge's `inbox` is still an empty
+  // stub, so the host branches that read it (duplicate-request checks in tools/shared,
+  // the shutdown cancel in resume, the group relay in groups) never see queued input.
+  // This panel reads `pendingTurns()` instead and does not depend on that inbox.
+  const queuedOf = async (sessionId: string): Promise<number> => {
+    if (rt.live.get(sessionId)?.turn === undefined) return 0
+    try {
+      const agent = await rt.resolveAgent(sessionId) as PanelAgent | undefined
+      if (agent?.pendingTurns !== undefined) return agent.pendingTurns()
+      return agent?.inbox?.nextTurn.length ?? 0
+    } catch {
+      return 0
+    }
+  }
+
+  const tasksView = async (): Promise<TasksView> => {
     const work = rt.workView?.() ?? {}
-    const running: TaskRunningView[] = Object.entries(work).map(([botId, entry]) => {
+    const rows = Object.entries(work).map(([botId, entry]) => {
       const room = roomOf(entry.roomId)
       const sessionId = sessionOf(botId, entry.roomId)
       const fromName = askerOf(sessionId)
-      return {
+      const row: TaskRunningView = {
         sessionId, botId, botName: nameOf(botId),
         since: entry.since ?? started.get(sessionId) ?? Date.now(),
         ...(room === undefined ? {} : { roomId: room.id, roomName: room.name }),
@@ -102,7 +142,13 @@ export function install(rt: PanelRuntime): void {
         ...(entry.switching === true ? { switching: true } : {}),
         ...(fromName === undefined || fromName === '' ? {} : { fromName }),
       }
-    }).sort((a, b) => b.since - a.since)
+      return row
+    })
+    const running = await Promise.all(rows.map(async row => {
+      const queued = await queuedOf(row.sessionId)
+      return queued > 0 ? { ...row, queued } : row
+    }))
+    running.sort((a, b) => b.since - a.since)
     const waiting: TaskWaitingView[] = Object.entries(rt.waitingView?.() ?? {}).map(([botId, entry]) => ({
       botId, botName: nameOf(botId), for: [...entry.bots, ...entry.rooms, ...entry.for].slice(0, 6),
     }))
@@ -131,10 +177,21 @@ export function install(rt: PanelRuntime): void {
     if (done.length > DONE_KEPT) done.length = DONE_KEPT
   }
 
-  /** The panel's stop: the same cancel a Main Bot's stop_bot uses, without the message. */
+  /** The panel's stop: the same cancel a Main Bot's stop_bot uses, without the message.
+   *  `{kind:'user'}` is what tells the stopped Bot's own turn record that the user ended
+   *  it (a Main Bot's stop_bot records `hook` instead), so the two show up differently. */
   async function stopTask(sessionId: string): Promise<boolean> {
-    const agent = await (rt as unknown as { resolveAgent(sessionId: string): Promise<{ cancel(cause: { kind: string, reason?: string }): void }> }).resolveAgent(sessionId)
-    if (agent === undefined) return false
+    const entry = rt.live.get(sessionId) as PanelLive | undefined
+    // A turn that already ended (or never started) has nothing to cancel; the panel says
+    // so instead of cancelling an idle Session and claiming it stopped something.
+    if (entry?.turn === undefined && entry?.sentAt === undefined) return false
+    let agent: PanelAgent | undefined
+    try {
+      agent = await rt.resolveAgent(sessionId) as PanelAgent | undefined
+    } catch {
+      return false
+    }
+    if (agent?.cancel === undefined) return false
     agent.cancel({ kind: 'user' })
     return true
   }
@@ -144,6 +201,9 @@ export function install(rt: PanelRuntime): void {
 
 const kindOf = (reason: unknown): string => {
   if (reason === null || typeof reason !== 'object') return 'completed'
-  const kind = (reason as { kind?: unknown }).kind
+  const { kind, reason: by } = reason as { kind?: unknown; reason?: unknown }
+  // A cancelled turn records who cancelled it — the user's own Stop (`user`) or a Main
+  // Bot's stop_bot (`hook`) — so the finished row can say which one.
+  if (kind === 'aborted' && (by === 'user' || by === 'hook')) return by
   return typeof kind === 'string' ? kind : 'completed'
 }

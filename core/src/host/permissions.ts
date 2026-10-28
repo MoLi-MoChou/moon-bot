@@ -48,7 +48,7 @@ export function install(rt: HostRuntime): void {
 
   function checkPreset(name: unknown, whose: string): string {
     const service = presets()
-    if (service === undefined) throw new Error('Permissions are not available here')
+    if (service === undefined) throw new Error('Permission presets are not available here')
     const wanted = String(name ?? '').trim()
     if (wanted === SESSION_ONLY) throw new Error(`Auto review applies to one Session only and cannot be ${whose} permission`)
     service.resolve(wanted)

@@ -10,18 +10,24 @@ export interface StandaloneMounts {
   dispose(): void
 }
 
-/** The spec a capability's config names: stdio by command, else by url. */
+/** The spec a capability's config names: stdio by command, else by url and its transport. */
 const specOf = (name: string, config: Readonly<Record<string, unknown>>): { id: string } & Record<string, unknown> => {
   const id = config.serverName !== undefined ? String(config.serverName) : name
   if (config.transport === 'stdio' || config.transport === undefined) {
     return {
       id,
+      transport: 'stdio',
       command: String(config.command ?? ''),
       args: Array.isArray(config.args) ? config.args.map(String) : [],
       env: (config.env ?? {}) as Record<string, string>,
     }
   }
-  return { id, url: String(config.url ?? ''), headers: (config.headers ?? {}) as Record<string, string> }
+  return {
+    id,
+    transport: config.transport === 'sse' ? 'sse' : 'streamable-http',
+    url: String(config.url ?? ''),
+    headers: (config.headers ?? {}) as Record<string, string>,
+  }
 }
 
 export function createStandaloneMounts(registry: ToolRegistry | undefined): StandaloneMounts {

@@ -55,8 +55,9 @@ test('a standalone Bot mounts an MCP capability into the registry, L3 by policy'
   assert.deepEqual(mounted, ['mcp__echo__echo'], `registry: ${names().join(', ')}`)
   // The policy sees a connector tool as L3, so calls run inside the budget flow.
   assert.equal(ruleOf(mounted[0] as string).level, 3)
-  // The status view says the capability is ready.
+  // The status view says the capability is ready, and the library can say which tools it serves.
   assert.equal(rt.capabilityStatusesView().a?.echo?.state, 'ready')
+  assert.deepEqual(rt.capabilityToolsView(), { echo: ['mcp__echo__echo'] })
   const definition = rt.toolRegistry.definitions([mounted[0] as string])[0]
   const outcome = await definition.execute({ text: 'mounted standalone' }, { sessionId: 'a', callId: 'c1' })
   assert.equal(outcome.content[0]?.type === 'text' ? outcome.content[0].text : '', 'mounted standalone')

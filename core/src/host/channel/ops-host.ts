@@ -65,7 +65,7 @@ export function hostHandlers(rt: ChannelRuntime): ChannelHandlers {
       (endpoint, body) => rt.secretEndpoint(endpoint, body)),
     ...grouped(rt, ['connector-connect', 'connector-disconnect', 'connector-retry'] as const,
       (endpoint, body) => rt.connectorEndpoint(endpoint, body)),
-    ...grouped(rt, ['capability-save', 'capability-delete', 'capability-approve', 'bot-capability'] as const,
+    ...grouped(rt, ['capability-save', 'capability-delete', 'capability-approve', 'capability-test', 'capability-retry', 'bot-capability'] as const,
       (endpoint, body) => rt.capabilityEndpoint(endpoint, body)),
     ...grouped(rt, ['schedules', 'schedule-create', 'schedule-delete'] as const,
       (endpoint, body) => rt.scheduleEndpoint(endpoint, body)),

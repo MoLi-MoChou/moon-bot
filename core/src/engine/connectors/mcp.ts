@@ -22,7 +22,8 @@ const RESULT_CHARS = 20_000
 
 export interface McpServerSpec {
   readonly id: string
-  /** stdio servers name a command; http servers name a url instead. */
+  /** stdio servers name a command; URL servers name a url and how to reach it. */
+  readonly transport?: 'stdio' | 'streamable-http' | 'sse' | undefined
   readonly command?: string | undefined
   readonly args?: readonly string[] | undefined
   readonly env?: Readonly<Record<string, string>> | undefined
@@ -58,8 +59,14 @@ export class McpConnector {
     this.client ??= new Client({ name: 'moon-bot', version: '0.1.0' }, { capabilities: {} })
     const url = this.spec.url
     if (url !== undefined && url !== '') {
+      const options = this.spec.headers !== undefined ? { requestInit: { headers: { ...this.spec.headers } } } : {}
+      if (this.spec.transport === 'sse') {
+        const { SSEClientTransport } = await import('@modelcontextprotocol/sdk/client/sse.js')
+        await this.client.connect(new SSEClientTransport(new URL(url), options))
+        return this.client
+      }
       const { StreamableHTTPClientTransport } = await import('@modelcontextprotocol/sdk/client/streamableHttp.js')
-      await this.client.connect(new StreamableHTTPClientTransport(new URL(url), (this.spec.headers !== undefined ? { requestInit: { headers: { ...this.spec.headers } } } : {})))
+      await this.client.connect(new StreamableHTTPClientTransport(new URL(url), options))
       return this.client
     }
     await this.client.connect(new StdioClientTransport({

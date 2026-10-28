@@ -114,6 +114,7 @@ export interface ChannelRuntime extends HostRuntime {
   secretsView(): readonly SecretView[]
   capabilityLibraryView(): readonly Readonly<Record<string, unknown>>[]
   capabilityStatusesView(): Readonly<Record<string, Readonly<Record<string, unknown>>>>
+  capabilityToolsView(): Readonly<Record<string, readonly string[]>>
   permissionCatalog?(): PermissionCatalog | undefined
   memoryNews(): Readonly<Record<string, unknown>>
   memoryReviews(): number

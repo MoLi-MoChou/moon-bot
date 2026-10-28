@@ -35,7 +35,7 @@ async function start(team = TEAM) {
   const folder = join(root, 'project')
   for (const dir of [home, folder]) mkdirSync(dir)
   writeFileSync(join(home, 'state.json'), JSON.stringify(team))
-  const ctx = fakeContext()
+  const ctx = fakeContext({ services: { sandboxPolicy: { resolve: () => ({ mode: 'read-only' }) } } })
   const archived = []
   let sessions = 0
   // While `hold` is set, the next Session waits until it is let go.

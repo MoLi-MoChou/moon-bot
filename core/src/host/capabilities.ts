@@ -2,10 +2,14 @@
 // The library and its editing rules live here; mounting them into a Session's Agent is
 // capabilities-mount.ts.
 import { createCapabilityMounts } from './capabilities-mount.ts'
+import { configForTest } from './capabilities-config.ts'
+import { createStandaloneMounts } from './capabilities-standalone.ts'
+import { ToolRegistry } from '../engine/registry.ts'
 import { own } from './store.ts'
 import type { CapabilityItem, HostRuntime, StoredBot } from './runtime.js'
 
 const NAME = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/
+const TEST_TIMEOUT_MS = 15_000
 
 export function validateCapabilityName(value: unknown): string {
   const name = String(value ?? '').trim()
@@ -96,7 +100,8 @@ export function install(rt: HostRuntime): void {
       updatedAt: now,
     }
     if (kind === 'mcp') {
-      const transport = body.transport === 'streamable-http' ? 'streamable-http' : 'stdio'
+      const transport = body.transport === undefined ? 'stdio' : body.transport
+      if (transport !== 'stdio' && transport !== 'streamable-http' && transport !== 'sse') throw new Error('Choose a local command, an HTTP URL, or an SSE endpoint.')
       if (transport === 'stdio') {
         const command = String(body.command ?? '').trim()
         if (command === '') throw new Error('Enter a command for the MCP server.')
@@ -133,6 +138,52 @@ export function install(rt: HostRuntime): void {
     await rt.save()
     return item
   }
+  // The same fields as a save, built in memory: `capability-test` must not add the item.
+  const itemForTest = (body: Readonly<Record<string, unknown>>): CapabilityItem => {
+    const name = String(body.name ?? '').trim()
+    const item: CapabilityItem = {
+      name: name === '' ? 'test-connection' : validateCapabilityName(name),
+      kind: 'mcp',
+      description: '',
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    }
+    const transport = body.transport === undefined ? 'stdio' : body.transport
+    if (transport !== 'stdio' && transport !== 'streamable-http' && transport !== 'sse') throw new Error('Choose a local command, an HTTP URL, or an SSE endpoint.')
+    if (transport === 'stdio') {
+      const command = String(body.command ?? '').trim()
+      if (command === '') throw new Error('Enter a command for the MCP server.')
+      Object.assign(item, { transport, command, args: strings(body.args), env: stringMap(body.env, 'Environment variables') })
+      return item
+    }
+    const url = String(body.url ?? '').trim()
+    try {
+      const parsed = new URL(url)
+      if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') throw new Error()
+    } catch { throw new Error('Enter a valid HTTP or HTTPS URL.') }
+    Object.assign(item, { transport, url, headers: stringMap(body.headers, 'Headers') })
+    return item
+  }
+  const capabilityTest = async (body: Readonly<Record<string, unknown>>): Promise<{ readonly tools: readonly string[], readonly ms: number }> => {
+    await rt.load()
+    await rt.loadSecrets()
+    const item = itemForTest(body)
+    const config = configForTest(rt, item)
+    // A throwaway registry: the test never adds tools to the running team.
+    const registry = new ToolRegistry()
+    const mounts = createStandaloneMounts(registry)
+    const started = Date.now()
+    try {
+      await withTimeout(mounts.mount(item.name, config))
+      return { tools: registry.names(), ms: Date.now() - started }
+    } finally {
+      mounts.dispose()
+    }
+  }
+  const withTimeout = <T>(work: Promise<T>, ms = TEST_TIMEOUT_MS): Promise<T> => new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('The MCP server did not answer in time.')), ms)
+    void work.then(value => { clearTimeout(timer); resolve(value) }, (error: unknown) => { clearTimeout(timer); reject(error) })
+  })
   const capabilityDelete = async (name: unknown, { botId, ui }: EditOptions = { botId: undefined, ui: false }): Promise<boolean> => {
     await rt.load()
     writeCheck()
@@ -191,6 +242,14 @@ export function install(rt: HostRuntime): void {
   async function capabilityEndpoint(endpoint: string, body: Readonly<Record<string, unknown>> = {}): Promise<unknown> {
     if (endpoint === 'capability-save') return capabilitySave(body, { botId: undefined, ui: true })
     if (endpoint === 'capability-delete') return capabilityDelete(body.name, { botId: undefined, ui: true })
+    if (endpoint === 'capability-test') return capabilityTest(body)
+    if (endpoint === 'capability-retry') {
+      await rt.load()
+      const name = String(body.name ?? '')
+      if (!own(library(), name)) throw new Error(`No capability named ${name}.`)
+      await mounts.reconcile()
+      return { retried: true }
+    }
     if (endpoint === 'capability-approve') {
       await rt.load()
       writeCheck()
@@ -245,6 +304,7 @@ export function install(rt: HostRuntime): void {
     capabilityEndpoint,
     capabilityLibraryView: libraryView,
     capabilityStatusesView: mounts.statusesView,
+    capabilityToolsView: mounts.toolsView,
     reconcileCapabilities: mounts.reconcile,
     scheduleCapabilitiesReconcile: mounts.scheduleReconcile,
     ensureCapabilities: mounts.ensureCapabilities,

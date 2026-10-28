@@ -5,31 +5,60 @@ import type { CapabilityItem, HostRuntime } from './runtime.js'
 
 const SECRET_REFERENCE = /\$(?:MOON_BOT|DSH)_SECRET_([A-Z][A-Z0-9_]*)/g
 
-export function secretFor(rt: HostRuntime, name: string, botId: string): string {
+type ResolveSecret = (name: string) => string
+
+/** For one Bot: only the keys that Bot may use resolve. */
+const forBot = (rt: HostRuntime, botId: string): ResolveSecret => (name) => {
   const value = rt.canUseSecret?.(name, botId) ? rt.secretValue(name) : undefined
   if (value === undefined) throw new Error(`Secret ${name} is missing or unavailable for this Bot.`)
   return value
 }
 
-export function resolveValues(rt: HostRuntime, values: Readonly<Record<string, unknown>> | undefined, botId: string): Record<string, string> {
+/** For a connection test the user asked for: any saved key may be used, and values never leave. */
+const forTest = (rt: HostRuntime): ResolveSecret => (name) => {
+  const value = rt.secretValue(name)
+  if (value === undefined) throw new Error(`Secret ${name} is not saved.`)
+  return value
+}
+
+export function secretFor(rt: HostRuntime, name: string, botId: string): string {
+  return forBot(rt, botId)(name)
+}
+
+export function resolveValues(resolve: ResolveSecret, values: Readonly<Record<string, unknown>> | undefined): Record<string, string> {
   const resolved: Record<string, string> = {}
   for (const [key, raw] of Object.entries(values ?? {})) {
-    resolved[key] = String(raw).replace(SECRET_REFERENCE, (_match, name: string) => secretFor(rt, name, botId))
+    resolved[key] = String(raw).replace(SECRET_REFERENCE, (_match, name: string) => resolve(name))
   }
   return resolved
 }
 
-export function resolveUrl(rt: HostRuntime, url: string | undefined, botId: string): string {
-  return String(url).replace(SECRET_REFERENCE, (_match, name: string) => encodeUrlComponent(secretFor(rt, name, botId)))
+export function resolveUrl(resolve: ResolveSecret, url: string | undefined): string {
+  return String(url).replace(SECRET_REFERENCE, (_match, name: string) => encodeUrlComponent(resolve(name)))
 }
 
-export function resolveList(rt: HostRuntime, list: readonly string[] | undefined, botId: string): string[] {
-  return (list ?? []).map(raw => String(raw).replace(SECRET_REFERENCE, (_match, name: string) => secretFor(rt, name, botId)))
+export function resolveList(resolve: ResolveSecret, list: readonly string[] | undefined): string[] {
+  return (list ?? []).map(raw => String(raw).replace(SECRET_REFERENCE, (_match, name: string) => resolve(name)))
+}
+
+function configWith(resolve: ResolveSecret, item: CapabilityItem): Record<string, unknown> {
+  if (item.kind === 'skill') return { name: item.name, description: item.description, content: item.content }
+  if (item.transport === 'stdio') return { transport: 'stdio', serverName: item.name, command: item.command, args: resolveList(resolve, item.args), env: resolveValues(resolve, item.env), failOnStartupError: true }
+  return {
+    transport: item.transport === 'sse' ? 'sse' : 'streamable-http',
+    serverName: item.name,
+    url: resolveUrl(resolve, item.url),
+    headers: resolveValues(resolve, item.headers),
+    failOnStartupError: true,
+  }
 }
 
 /** The plugin config one capability mounts with. */
 export function configFor(rt: HostRuntime, item: CapabilityItem, botId: string): Record<string, unknown> {
-  if (item.kind === 'skill') return { name: item.name, description: item.description, content: item.content }
-  if (item.transport === 'stdio') return { transport: 'stdio', serverName: item.name, command: item.command, args: resolveList(rt, item.args, botId), env: resolveValues(rt, item.env, botId), failOnStartupError: true }
-  return { transport: 'streamable-http', serverName: item.name, url: resolveUrl(rt, item.url, botId), headers: resolveValues(rt, item.headers, botId), failOnStartupError: true }
+  return configWith(forBot(rt, botId), item)
+}
+
+/** The same config for `capability-test`, before anything is saved. */
+export function configForTest(rt: HostRuntime, item: CapabilityItem): Record<string, unknown> {
+  return configWith(forTest(rt), item)
 }

@@ -13,7 +13,7 @@ import { fakeAttachments, fakeContext } from './fake-ctx.ts'
 // or steered into the next step.
 // `home`: start on the data of an earlier run, as after a restart.
 function start({ home = mkdtempSync(join(tmpdir(), 'ds-bot-rounds-')) } = {}) {
-  const ctx = fakeContext()
+  const ctx = fakeContext({ services: { sandboxPolicy: { resolve: () => ({ mode: 'read-only' }) } } })
   const workspaces = new Map()
   const sent = []
   const inboxes = new Map()

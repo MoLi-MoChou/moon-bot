@@ -54,6 +54,14 @@ test('an unknown preset is refused and the Bot keeps its own', async () => {
   assert.deepEqual(writes, [])
 })
 
+test('a missing preset service refuses changes without writing state', async () => {
+  const { rt, writes } = runtime({ presets: false })
+  const bot = { id: 'b1', permission: 'workspace-write' }
+  await assert.rejects(rt.setPermission(bot, 'danger-full-access'), /Permission presets are not available here/)
+  assert.equal(bot.permission, 'workspace-write')
+  assert.deepEqual(writes, [])
+})
+
 test('the catalog lists the presets DSH offers, or nothing without the presets service', () => {
   assert.deepEqual(runtime().rt.permissionCatalog(), { options: [{ value: 'workspace-write', name: 'workspace-write' }, { value: 'danger-full-access', name: 'danger-full-access' }], defaultPreset: 'workspace-write' })
   assert.equal(runtime({ presets: false }).rt.permissionCatalog(), undefined)

@@ -229,6 +229,8 @@ export interface BotChannelRpcMap {
   'capability-save': { request: Record<string, unknown>; response: Record<string, unknown> }
   'capability-delete': { request: Record<string, unknown>; response: Record<string, unknown> }
   'capability-approve': { request: Record<string, unknown>; response: Record<string, unknown> }
+  'capability-test': { request: Record<string, unknown>; response: { readonly tools: readonly string[]; readonly ms: number } }
+  'capability-retry': { request: { name: string }; response: Record<string, unknown> }
   'bot-capability': { request: Record<string, unknown>; response: Record<string, unknown> }
 
   // Schedules and memory

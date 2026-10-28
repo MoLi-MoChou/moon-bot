@@ -9,7 +9,7 @@ import type { ApprovalDetail } from './runtime.ts'
 import type { SourceInfo, TurnEntry, TurnsRuntime } from './turns/delivery.ts'
 import { answersUser, expectsReply, installCore, sourceOf } from './turns/delivery.ts'
 import { installRoute } from './turns/route.ts'
-import { SOURCE_KIND } from './constants.ts'
+import { SOURCE_KIND, TURN_SENT_STALE_MS } from './constants.ts'
 
 export { failureLine, failureSay, turnFailure } from './turns/failure.ts'
 export type { FailureText, TurnFailure } from './turns/failure.ts'
@@ -94,16 +94,36 @@ export function install(rt: TurnsRuntime): void {
     return merged
   }
 
+  // A message the chat accepted but whose turn has not started counts as work too, so the
+  // window shows the Bot working from the send on, not from the engine's first event.
+  const sinceOf = (entry: TurnEntry): number | undefined => {
+    if (entry.turn !== undefined) return entry.since
+    if (entry.sentAt !== undefined && Date.now() - entry.sentAt < TURN_SENT_STALE_MS) return entry.sentAt
+    return undefined
+  }
+
+  // A message the chat accepted: the Bot is working from now on, before its engine has
+  // said anything. The turn's own turn/start replaces the mark; a send the engine never
+  // took takes it back.
+  const noteSent = (id: string, sent: boolean): void => {
+    if (!rt.isBotSession(id) && !rt.roomOf(id)) return
+    const entry = core.liveOf(id)
+    if (sent) entry.sentAt = Date.now()
+    else delete entry.sentAt
+    rt.liveChanged?.()
+  }
+
   // Per Bot, the turn it is running and what it is doing; its own chat wins over a
   // group. A Bot writing its handoff note shows that.
   const workView = (): Record<string, WorkBotView> => {
     const bots: Record<string, WorkBotView> = {}
     for (const [id, entry] of core.live) {
-      if (entry.turn === undefined) continue
+      const since = sinceOf(entry)
+      if (since === undefined) continue
       const owner = rt.groupOwners.get(id)
       const botId = owner?.botId ?? rt.chatOwners.get(id)
       if (botId === undefined || (owner !== undefined && bots[botId] !== undefined)) continue
-      bots[botId] = { since: entry.since, ...doingOf(entry), ...(owner ? { roomId: owner.roomId } : {}) }
+      bots[botId] = { since, ...doingOf(entry), ...(owner ? { roomId: owner.roomId } : {}) }
     }
     for (const job of rt.switchJobs?.() ?? []) {
       const work: WorkBotView = { since: job.since, switching: true, ...(job.roomId ? { roomId: job.roomId } : {}) }
@@ -113,10 +133,13 @@ export function install(rt: TurnsRuntime): void {
     return bots
   }
 
-  // Per Session, when its running turn began.
+  // Per Session, when its running turn began, or when the message it will run on was sent.
   const turnsView = (): Record<string, number> => {
     const view: Record<string, number> = {}
-    for (const [id, entry] of core.live) if (entry.turn !== undefined && entry.since !== undefined) view[id] = entry.since
+    for (const [id, entry] of core.live) {
+      const since = sinceOf(entry)
+      if (since !== undefined) view[id] = since
+    }
     return view
   }
 
@@ -199,5 +222,6 @@ export function install(rt: TurnsRuntime): void {
   Object.assign(rt, {
     live: core.live, liveOf: core.liveOf, roomWaiters: core.roomWaiters, roomProgress: core.roomProgress,
     roomInbox: core.roomInbox, activityView, workView, roomWorkView, turnsView, callDetail, doingOf, stopRoomTurn, releaseBot,
+    noteSent,
   })
 }

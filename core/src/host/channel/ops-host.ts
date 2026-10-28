@@ -130,12 +130,21 @@ export function hostHandlers(rt: ChannelRuntime): ChannelHandlers {
       const past = rt.pastOwners.get(body.sessionId)
       const sessionId = rt.botOf(body.sessionId) ? rt.chatOf(body.sessionId) : past && past.roomId === undefined ? rt.chatOf(past.botId) : body.sessionId
       await rt.ensureCapabilities(sessionId)
-      await ctx.sessionController.prompt({
-        requestId: randomUUID(),
-        sessionId,
-        mode: 'queue',
-        content: [{ type: 'text', text }],
-      }, AbortSignal.timeout(30_000))
+      // The window shows the Bot working from the send on: the engine's first event may be
+      // a moment away (a turn queued behind another, an agent being spawned), and a turn
+      // that fails says so in the chat. A send the engine never took takes the mark back.
+      rt.noteSent?.(sessionId, true)
+      try {
+        await ctx.sessionController.prompt({
+          requestId: randomUUID(),
+          sessionId,
+          mode: 'queue',
+          content: [{ type: 'text', text }],
+        }, AbortSignal.timeout(30_000))
+      } catch (error) {
+        rt.noteSent?.(sessionId, false)
+        throw error
+      }
       return ok(true)
     },
     'approval-answer': async (body) => {

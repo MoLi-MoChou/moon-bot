@@ -352,6 +352,10 @@ export interface HostRuntime {
   secretsChanged?(): void
 
   // --- provided by turns.ts, groups.ts and resume.ts
+  /** A message the chat accepted (`true`) or a send it turned away (`false`). */
+  noteSent?(sessionId: string, sent: boolean): void
+  /** The live figures moved without a save: the feed tells its windows to read again. */
+  liveChanged?(): void
   callDetail?(sessionId: string | undefined, callId?: string): ApprovalDetail
   yieldRoomTurn?(sessionId: string | undefined): void
   noteApproval?(sessionId: string | undefined, note: ApprovalNote | undefined): void

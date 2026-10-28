@@ -971,6 +971,8 @@ export const ZH = {
   'The model service failed': '模型服务出错',
   'The model took too long to answer': '模型响应超时',
   'Could not reach the model service': '连不上模型服务',
+  'No model is set for this Bot': '这个 Bot 还没有可用模型',
+  'Model request failed': '模型请求失败',
   'Its group conversation could not open': '它的群聊会话打不开',
   'Its group conversation could not open, so it starts a new one next time': '它的群聊会话打不开，下次会换一个新的',
   // The composer's +

@@ -162,6 +162,12 @@ export const CONVERSATION_CELLS_CSS = `
 .bt-event-whole>span:first-child{margin-right:2px}
 /* One button cannot wrap like separate parts, so a long name is cut to fit the chat. */
 .bt-event-whole>.bt-event-name{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* A turn that failed: a warning line where the reply would have been. */
+.bt-turn-error{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 6px;margin:8px 0 4px;padding:8px 12px;border-radius:16px;border:1px solid color-mix(in srgb,var(--bt-danger) 38%,transparent);background:color-mix(in srgb,var(--bt-danger) 8%,var(--bt-main));color:var(--bt-ink);font-size:13px;line-height:19px;max-width:min(560px,80%);box-sizing:border-box}
+.bt-turn-error-title{font-weight:600;flex:none}
+.bt-turn-error-title::after{content:":"}
+.bt-turn-error-why{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}
+.bt-turn-error-detail{flex:1 1 100%;min-width:0;font-size:12px;line-height:17px;color:var(--bt-ink-2);overflow-wrap:anywhere;white-space:pre-wrap}
 .bt-time-sep{display:flex;justify-content:center;align-items:center;height:28px;margin:14px 0 8px;font-size:12px;line-height:16px;color:var(--bt-ink-2);white-space:nowrap}
 [class*="_scroll"]>[class*="_column"]::before{content:var(--bt-first-sep,none);display:block;flex:none;height:28px;margin:17px 0 12px;font-size:12px;line-height:28px;text-align:center;color:var(--bt-ink-2);white-space:nowrap}
 .bt-activity{display:flex;align-items:center;gap:10px;margin:8px 0 4px 2px;font-size:14px;color:var(--bt-ink-2)}

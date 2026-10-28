@@ -306,6 +306,26 @@ ${task.prompt}` }],
         if (row.role === 'assistant') {
           return [{ seq: row.seq, event: { type: 'assistant/message', time: row.createdAt, data: { message: { content: row.content }, turn: row.turn ?? undefined } } }]
         }
+        // The engine's row for a failed turn: the chat draws it as the error line the
+        // live turn/end already showed. A turn hidden from the chat stays out of it.
+        if (row.role === 'system' && (row.source as { readonly kind?: unknown } | null)?.kind === 'turn-error') {
+          const source = row.source as { readonly code?: unknown; readonly status?: unknown }
+          const text = row.content.flatMap(block => (block.type === 'text' && typeof block.text === 'string' ? [block.text] : [])).join('\n')
+          return [{
+            seq: row.seq,
+            event: {
+              type: 'turn/error',
+              time: row.createdAt,
+              data: {
+                turn: row.turn ?? undefined,
+                error: {
+                  ...(typeof source.code === 'string' ? { code: source.code } : {}),
+                  ...(text !== '' ? { message: text } : {}),
+                },
+              },
+            },
+          }]
+        }
         return []
       }),
       hasMore,

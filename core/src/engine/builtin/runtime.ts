@@ -7,6 +7,7 @@
 // the store), so a restart or a part switch changes nothing the loop depends on.
 import type { Agent } from '@earendil-works/pi-agent-core'
 import type { EngineEvent } from '../events.ts'
+import { callFailureOf, type CallFailure } from '../failure.ts'
 import type { AgentRuntime, CancelReason, TurnInput, TurnMessage } from '../runtime.ts'
 import { buildAgent, contentOfPi, endEventOf } from './adapter.ts'
 import type { EngineServices } from './services.ts'
@@ -120,20 +121,24 @@ export class BuiltinRuntime implements AgentRuntime {
       // What the turn answers arrives first, as the router's user/message.
       collect({ type: 'turn/start', turn })
       collect({ type: 'user/message', content: input.message.content, source: input.message.source })
+      // The trigger is the transcript's from the moment the turn takes it: a turn that
+      // fails before the model answers still leaves the user's own line in the chat. The
+      // history is read first, or the trigger it already carries replays twice.
+      const history = await services.transcript.history(input.sessionId)
+      await services.transcript.append(input.sessionId, { role: 'user', content: input.message.content, turn, ...(input.message.source !== undefined ? { source: input.message.source } : {}), at: Date.now() })
       const resolved = await services.models.resolve(input.sessionId, input.config)
       if (resolved === undefined) {
-        collect({ type: 'turn/end', turn, reason: { kind: 'error', error: { code: 'NO-MODEL', message: `no model for session ${input.sessionId}` } } })
+        await this.endFailed(input.sessionId, turn, { code: 'NO-MODEL', message: 'no model is set for this Bot' }, collect)
         return
       }
       const triggerText = input.message.content
         .map(block => block.type === 'text' ? block.text : '')
         .filter(text => text !== '')
         .join(' ')
-      const [base, frozen, dynamic, history] = await Promise.all([
+      const [base, frozen, dynamic] = await Promise.all([
         services.prompt.base(input.sessionId),
         services.prompt.frozen(input.sessionId),
         services.prompt.dynamic?.(input.sessionId, triggerText) ?? Promise.resolve(undefined),
-        services.transcript.history(input.sessionId),
       ])
       const agent = await buildAgent({
         sessionId: input.sessionId, services, config: input.config,
@@ -141,7 +146,6 @@ export class BuiltinRuntime implements AgentRuntime {
         history, resolved, callbacks: { onEvent: collect },
       })
       state.agent = agent
-      await services.transcript.append(input.sessionId, { role: 'user', content: input.message.content, turn, ...(input.message.source !== undefined ? { source: input.message.source } : {}), at: Date.now() })
       const before = agent.state.messages.length
       try {
         // One user message carries the turn's trigger; text blocks stay text, other
@@ -165,13 +169,41 @@ export class BuiltinRuntime implements AgentRuntime {
         }
       }
       const last = [...agent.state.messages].reverse().find(message => message.role === 'assistant') as { stopReason?: string | undefined; errorMessage?: string | undefined } | undefined
-      collect(endEventOf(turn, last, state.cancelReason))
+      const end = endEventOf(turn, last, state.cancelReason)
+      if (end.type === 'turn/end' && end.reason.kind === 'error') {
+        await this.noteFailure(input.sessionId, turn, end.reason.error)
+        collect(end)
+        return
+      }
+      collect(end)
     } catch (error) {
-      collect({ type: 'turn/end', turn, reason: { kind: 'error', error: { message: error instanceof Error ? error.message : String(error) } } })
+      await this.endFailed(input.sessionId, turn, callFailureOf(error), collect)
     } finally {
       state.running = false
       state.agent = undefined
       state.cancelReason = undefined
     }
+  }
+
+  // A failed turn leaves one line in the transcript the chat draws: what the model call
+  // was refused for. It is a system row, so a later turn's history skips it, and the
+  // chat shows the reason the words cannot carry.
+  private async noteFailure(sessionId: string, turn: number, failure: CallFailure): Promise<void> {
+    try {
+      await this.options.services.transcript.append(sessionId, {
+        role: 'system',
+        content: failure.message === undefined || failure.message === '' ? [] : [{ type: 'text', text: failure.message }],
+        turn,
+        source: { kind: 'turn-error', ...(failure.code !== undefined ? { code: failure.code } : {}), ...(failure.status !== undefined ? { status: failure.status } : {}) },
+        at: Date.now(),
+      })
+    } catch {
+      // A transcript that cannot take the line does not keep the turn from ending.
+    }
+  }
+
+  private async endFailed(sessionId: string, turn: number, failure: CallFailure, collect: (event: EngineEvent) => void): Promise<void> {
+    await this.noteFailure(sessionId, turn, failure)
+    collect({ type: 'turn/end', turn, reason: { kind: 'error', error: failure } })
   }
 }

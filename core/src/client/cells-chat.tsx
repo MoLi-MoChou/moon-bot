@@ -1,7 +1,8 @@
 import { createElement as h, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { MarkdownText } from './dsh-primitives.ts';
-import { t } from './i18n.ts';
+import { language, t } from './i18n.ts';
+import { failureLabel } from './diagnostics.ts';
 import { clockLabel, dayLabel, elapsedLabel } from './text.ts';
 import { FOLD_HUGE, useFold } from './fold.tsx';
 import { AnsweredReply } from './widget-cell.tsx';
@@ -41,7 +42,18 @@ export interface ChatEventItem {
     name?: string | undefined;
     time?: number | undefined;
 }
-export type ChatItem = ChatBotItem | ChatUserItem | ChatDividerItem | ChatAnswerItem | ChatEventItem;
+/**
+ * A turn that failed: the code names the reason (`NO-MODEL`, `AUTH`, `TRANSPORT`…), and
+ * `text` is the model's own words when it left any. A person sees the reason, not the
+ * code; a quiet failure the user could not see was the bug this row exists for.
+ */
+export interface ChatErrorItem {
+    kind: 'error';
+    code?: string | undefined;
+    text?: string | undefined;
+    time?: number | undefined;
+}
+export type ChatItem = ChatBotItem | ChatUserItem | ChatDividerItem | ChatAnswerItem | ChatEventItem | ChatErrorItem;
 export interface ChatStackedBot {
     kind: 'bot';
     texts: string[];
@@ -103,6 +115,26 @@ function EarlierUser({ row }: EarlierUserProps) {
     const { shown, folded, control } = useFold(row.text ?? '');
     const body = row.text ? h(MarkdownText, { text: shown, labels: mdLabels(), variant: 'compact' }) : null;
     return <div className='bt-urow'><div className='bt-ububble' data-folded={folded || undefined}>{control ? <div className='bt-fold-body'>{body}</div> : body}{control}{row.images ? <span className='bt-uimages'>{row.images === 1 ? t('1 image') : t('{count} images', { count: row.images })}</span> : null}</div></div>;
+}
+// The chat line a failed turn leaves: what failed, in words a person reads, and the
+// model's own text under it when that says more. `failureLabel` keeps the words for a
+// code; the code itself never reaches the chat.
+export interface TurnErrorRowProps {
+    code?: string | undefined;
+    text?: string | undefined;
+}
+export function TurnErrorRow({ code, text }: TurnErrorRowProps) {
+    const words = text?.trim() ?? '';
+    const reason = code !== undefined ? failureLabel(code, words === '' ? undefined : words) : words !== '' ? words : t('Unknown error');
+    // The model's own words under the sentence, when they say more. In Chinese they are
+    // left out unless they are Chinese too: the sentence already says what happened.
+    const more = words !== '' && words.toLowerCase() !== reason.trim().toLowerCase();
+    const detail = more && (!language().startsWith('zh') || code === undefined || /[一-鿿]/.test(words)) ? words : undefined;
+    return <div className='bt-turn-error' role='alert' data-code={code}>
+        <span className='bt-turn-error-title'>{t('Model request failed')}</span>
+        <span className='bt-turn-error-why'>{reason}</span>
+        {detail !== undefined ? <span className='bt-turn-error-detail'>{detail}</span> : null}
+    </div>;
 }
 // The earlier parts of a Bot's own chat, above its current part as one conversation.
 // Pages load from the host as the user scrolls up; a thin line marks where each
@@ -207,6 +239,8 @@ function chatRow(row: ChatStackedRow, key: number, { sessionId, selfId, roster, 
         case 'user': return h(EarlierUser, { key, row });
         case 'answer': return h(AnsweredReply, { key, node: { data: row } });
         case 'bot': return h(Bubbles, { key, texts: row.texts, roster, selfId, actions, sessionId: useUi ? sessionId : undefined, msgKey: useUi ? `${sessionId}:${row.time}` : undefined, useUi, fold: FOLD_HUGE });
+        case 'error':
+            return h(TurnErrorRow, { key, code: row.code, text: row.text });
         case 'event': {
             if (row.role === 'report')
                 return h(GroupEvent, { key, prefix: t('Replies from'), room: row.roomId === undefined ? undefined : roster.roomsById[row.roomId], name: t('a group chat'), roster, actions });

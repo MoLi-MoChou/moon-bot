@@ -63,6 +63,8 @@ const FAILURES: Record<string, string> = {
   TRANSPORT: 'Could not reach the model service',
   SESSION: 'Its group conversation could not open',
   SESSION_RESET: 'Its group conversation could not open, so it starts a new one next time',
+  // The engine's own code: the Bot names no model, or its route is not set up.
+  'NO-MODEL': 'No model is set for this Bot',
 }
 
 export function failureLabel(code: string, message?: string): string {

@@ -47,6 +47,9 @@ export function install(rt: HostRuntime): void {
       publish('live', {})
     }, LIVE_DELAY_MS)
   }
+  // The host's own live figures (a message it accepted before its turn starts) move
+  // without a save: this is the one way it asks its windows to read them again.
+  rt.liveChanged = live
   ctx.on<AgentStatusEvent>('agent/status', ({ agent }) => {
     if (rt.selfOf(agent.id) !== undefined) live()
   })
@@ -56,7 +59,8 @@ export function install(rt: HostRuntime): void {
     const botId = rt.chatOwners.get(session.id)
     if (botId === undefined) return
     for (const item of rt.displayItems(session.id, [event])) publish('message', { botId, sessionId: session.id, item })
-    if (event.type === 'tool/call') live()
+    // What the Bot is doing, and whether it is working at all, moves with these.
+    if (event.type === 'tool/call' || event.type === 'turn/start' || event.type === 'turn/end') live()
   })
 
   // Attempts being streamed, by id. A turn that answers another Bot is hidden from the

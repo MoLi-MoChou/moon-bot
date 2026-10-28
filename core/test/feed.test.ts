@@ -112,6 +112,13 @@ test('the live feed tells a window about saves, new chat entries and the reply b
   assert.deepEqual(await next(), { event: 'stream', data: { ...target, text: 'there' } })
   assert.deepEqual(await next(), { event: 'stream', data: { ...target, phase: 'end' } })
 
+  // A turn starting or ending moves what the Bot is doing and whether it works at all,
+  // so the window is told to read the live figures again — a finished turn must not keep
+  // drawing as running.
+  onEvent({ id: 'm1c' }, { type: 'turn/start', time: 62, data: { turn: 8 } })
+  onEvent({ id: 'm1c' }, { type: 'turn/end', time: 63, data: { turn: 8, reason: { kind: 'completed' } } })
+  assert.deepEqual(await next(), { event: 'live', data: {} })
+
   // Status changes in a burst come as one notice.
   const onStatus = ctx.listeners.get('agent/status').at(-1)
   for (const id of ['b2', 'm1c', 'b2']) onStatus({ agent: { id }, status: 'running' })

@@ -5,6 +5,7 @@ import { Agent, type AgentEvent, type AgentMessage, type AgentTool } from '@eare
 import { createInitialSystemMessage, toToolDeclaration, type Model } from '@earendil-works/pi-ai'
 import type typebox from 'typebox'
 import type { EngineContentBlock, EngineEvent, EngineStopReason } from '../events.ts'
+import { failureOfMessage } from '../failure.ts'
 import type { EngineSessionConfig } from '../runtime.ts'
 import type { EngineServices, ResolvedModel, StoredMessage, ToolDefinition } from './services.ts'
 
@@ -172,6 +173,6 @@ export const endEventOf = (turn: number, last: { stopReason?: string | undefined
   if (last === undefined) return { type: 'turn/end', turn, reason: { kind: 'completed' } }
   const kind = stopReasonOf(last.stopReason)
   if (kind === 'aborted') return { type: 'turn/end', turn, reason: { kind: 'aborted', ...(abortReason !== undefined ? { reason: abortReason } : {}) } }
-  if (kind === 'error') return { type: 'turn/end', turn, reason: { kind: 'error', error: { message: last.errorMessage ?? 'the model call failed' } } }
+  if (kind === 'error') return { type: 'turn/end', turn, reason: { kind: 'error', error: failureOfMessage(last.errorMessage ?? 'the model call failed') } }
   return { type: 'turn/end', turn, reason: { kind: 'completed' } }
 }

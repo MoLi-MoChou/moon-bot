@@ -44,6 +44,25 @@ export function createPartPager(options: PartPagerOptions): PartPager {
         }
         continue
       }
+      // A failed turn: the live `turn/end` reason, or the row the engine stored for it
+      // (the page reads that back as `turn/error`). A turn hidden from the chat stays out.
+      if (event.type === 'turn/end' || event.type === 'turn/error') {
+        const turn = Number(data.turn)
+        if (hidden.has(turn)) continue
+        const error = (event.type === 'turn/end'
+          ? (data.reason as { readonly kind?: unknown; readonly error?: unknown } | undefined)?.kind === 'error'
+            ? (data.reason as { readonly error?: unknown }).error
+            : undefined
+          : data.error) as { readonly code?: unknown; readonly message?: unknown } | undefined
+        if (error === null || typeof error !== 'object') continue
+        items.push({
+          kind: 'error',
+          ...(typeof error.code === 'string' && error.code !== '' ? { code: error.code } : {}),
+          ...(typeof error.message === 'string' && error.message.trim() !== '' ? { text: error.message.trim() } : {}),
+          time,
+        })
+        continue
+      }
       if (event.type !== 'user/message') continue
       const source = data.source as {
         readonly kind?: unknown

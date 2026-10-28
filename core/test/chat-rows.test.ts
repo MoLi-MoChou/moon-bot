@@ -48,6 +48,25 @@ test('a Bot\'s messages in a row are one block', () => {
   assert.deepEqual(shape(ChatRows({ items, sessionId: 'b', roster, actions: {} })), ['EarlierUser', 'bot:one+two', 'EarlierUser', 'bot:three'])
 })
 
+test('a failed turn is one row of its own, with the reason and the model\'s words under it', () => {
+  const items = [
+    { kind: 'user', text: 'hi', time: MINUTE },
+    { kind: 'error', code: 'TRANSPORT', text: 'Connection error.', time: 2 * MINUTE },
+  ]
+  const rows = ChatRows({ items, sessionId: 'b', roster, actions: {} })
+  assert.deepEqual(shape(rows), ['EarlierUser', 'TurnErrorRow'])
+  const row = rows[1] as { type: (props: Record<string, unknown>) => Row, props: Record<string, unknown> }
+  assert.equal(row.props.code, 'TRANSPORT')
+  const text = (node: Row): string[] => node.children.filter(Boolean).map(child => (child as Row).children.join(''))
+  const rendered = row.type(row.props)
+  assert.equal(rendered.props.className, 'bt-turn-error')
+  assert.equal(rendered.props.role, 'alert')
+  // The sentence comes from the code; the model's own words ride under it.
+  assert.deepEqual(text(rendered), ['Model request failed', 'Could not reach the model service', 'Connection error.'])
+  // A code with no words of its own shows the sentence alone.
+  assert.deepEqual(text(row.type({ code: 'AUTH' })), ['Model request failed', 'The API key was rejected'])
+})
+
 test('with the clock, a time separator sits above the first entry and after each pause of half an hour', () => {
   const items = [
     { kind: 'divider', time: 0 },

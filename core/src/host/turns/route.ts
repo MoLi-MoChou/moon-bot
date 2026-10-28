@@ -86,6 +86,7 @@ export function installRoute(rt: TurnsRuntime, core: TurnsCore): void {
         core.setActivity(id, 'thinking')
         entry.turn = data?.turn
         entry.since = event.time ?? Date.now()
+        entry.sentAt = undefined
         entry.texts = []
         entry.shown = 0
         entry.step = undefined
@@ -317,8 +318,7 @@ export function installRoute(rt: TurnsRuntime, core: TurnsCore): void {
             else void rt.lateRoomReply?.(id, info, groupReply(), { shown })
           }
         } else if (!retry && core.speaksInGroup(id, info)) {
-          // A turn that failed before it took any input (DSH can turn it down before its
-          // first step) never names its call, so the call waiting on this Session fails.
+          // A turn that failed before it took any input (DSH can turn it down before its first step) never names its call, so the call waiting on this Session fails.
           const inRound = failure !== undefined && info === undefined && rt.failRoomTurn?.(id, failure) === true
           if (failure !== undefined) { if (!inRound) void rt.lateRoomFailure?.(id, info ?? {}, failure) }
           else if (reason?.kind !== 'aborted') void rt.lateRoomReply?.(id, info ?? {}, groupReply(), { shown })

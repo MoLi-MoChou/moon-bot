@@ -9,6 +9,7 @@
 import { randomUUID } from 'node:crypto'
 import type { EngineEvent } from '../events.ts'
 import type { AgentRuntime, CancelReason, TurnInput, TurnMessage } from '../runtime.ts'
+import { callFailureOf } from '../failure.ts'
 import { LineProtocol, UPDATE_OF, type Inbound, type JsonRpcNotification } from './protocol.ts'
 import type { AcpTransport } from './transport.ts'
 
@@ -101,7 +102,7 @@ export class AcpRuntime implements AgentRuntime {
     // A turn that cannot reach the agent still ends through the fanout: the router
     // listens there, not on this generator.
     const refused = (message: string): readonly EngineEvent[] => {
-      const events: readonly EngineEvent[] = [{ type: 'turn/start', turn: 1 }, { type: 'turn/end', turn: 1, reason: { kind: 'error', error: { message } } }]
+      const events: readonly EngineEvent[] = [{ type: 'turn/start', turn: 1 }, { type: 'turn/end', turn: 1, reason: { kind: 'error', error: callFailureOf(message) } }]
       for (const event of events) this.options.emit(input.sessionId, event)
       return events
     }
@@ -148,7 +149,7 @@ export class AcpRuntime implements AgentRuntime {
       // The end flows to the fanout like every other event — the feed and the
       // router both listen there, not only on this generator.
       const end: EngineEvent = failure !== undefined
-        ? { type: 'turn/end', turn, reason: { kind: 'error', error: { message: failure.message } } }
+        ? { type: 'turn/end', turn, reason: { kind: 'error', error: callFailureOf(failure) } }
         : { type: 'turn/end', turn, reason: { kind: 'completed' } }
       queue.push(end)
       this.options.emit(input.sessionId, end)

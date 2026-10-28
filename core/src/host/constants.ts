@@ -36,6 +36,10 @@ export const LONG_HEAD = 1000
 // DSH's read tool shows this much of one line (dsh-tool-fs `readMaxLineLength`, default).
 export const READ_LINE_MAX = 2000
 export const ROOM_REPLY_TIMEOUT_MS = 240_000
+// How long a message the chat accepted may show its Bot as working before its turn even
+// starts. A turn that starts replaces the mark; this only bounds a send that never reached
+// the engine, so a stuck wire stops reading as work instead of as a frozen window.
+export const TURN_SENT_STALE_MS = 90_000
 // Lines a member writes less than this apart while it works reach its group together.
 export const ROOM_STEP_GAP_MS = 30_000
 export const SOURCE_KIND = 'bot'

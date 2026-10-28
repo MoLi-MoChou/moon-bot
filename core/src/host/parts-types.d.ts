@@ -59,7 +59,19 @@ export interface DividerItem {
   readonly time: number
 }
 
-export type ChatItem = BotItem | UserItem | AnswerItem | EventItem | DividerItem
+/**
+ * A turn that failed, drawn as one line in the chat: the code names the reason (a key
+ * the model refused, an endpoint it could not reach), and `text` is the model's own
+ * words when there are any.
+ */
+export interface ErrorItem {
+  readonly kind: 'error'
+  readonly code?: string | undefined
+  readonly text?: string | undefined
+  readonly time: number
+}
+
+export type ChatItem = BotItem | UserItem | AnswerItem | EventItem | DividerItem | ErrorItem
 
 /** One page of an earlier part. */
 export interface PartPage {

@@ -44,6 +44,8 @@ export interface SourceInfo extends TurnInfo {
 export interface TurnEntry {
   turn?: number | undefined
   since?: number | undefined
+  /** When this Session's message was accepted, before its turn starts (the optimistic state). */
+  sentAt?: number | undefined
   texts: string[]
   shown: number
   info?: SourceInfo | undefined
@@ -151,11 +153,9 @@ export const sourceOf = (value: unknown): SourceInfo | undefined => (value !== n
  */
 type ExchangeTurnLists = Record<string, (number | undefined)[]>
 
-// A request whose audience is the user is answered in the recipient's own chat: that turn
-// stays visible there and its reply is not routed back to the sender.
+// A request whose audience is the user is answered visibly in the recipient's own chat.
 export const answersUser = (info: TurnInfo | undefined): boolean => info?.role === 'request' && info.audience === 'user'
-// Roles whose turn owes the sender a reply: a 'stopped' notice asks the Bot to
-// acknowledge, exactly like a request.
+// Roles whose turn owes the sender a reply: a 'stopped' notice asks like a request.
 export const expectsReply = (info: TurnInfo | undefined): boolean => info?.role === 'request' || info?.role === 'stopped'
 
 export function attachReference(queued: readonly RoomPost[] | undefined, source: SourceInfo | undefined, text: string): void {

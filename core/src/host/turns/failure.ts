@@ -49,6 +49,7 @@ const FAILURE_WORDS: Readonly<Record<string, { readonly en: string; readonly zh:
   TIMEOUT: { en: 'the model took too long', zh: '模型响应超时' },
   TRANSPORT: { en: 'the model service could not be reached', zh: '连不上模型服务' },
   SESSION: { en: 'its group conversation could not open', zh: '群会话打不开' },
+  'NO-MODEL': { en: 'no model is set for this Bot', zh: '这个 Bot 还没有可用模型' },
   SESSION_RESET: { en: 'its group conversation had to start again', zh: '群会话需要重新开始' },
 }
 

@@ -24,6 +24,7 @@ import { SECRET_CSS } from '../../../core/src/client/secret-card-css.ts'
 import { RETURN_CSS, SIDEBAR_CSS } from '../../../core/src/client/sidebar-css.ts'
 import { STARTERS_CSS } from '../../../core/src/client/starters.tsx'
 import { CONVERSATION_CSS, SHELL_CSS, installStyles } from '../../../core/src/client/design/index.ts'
+import { MOBILE_CSS } from '../../../core/src/client/design/mobile.ts'
 import { DELIVER_CSS } from '../../../core/src/client/deliver-cards-css.ts'
 import { USAGE_CSS } from '../../../core/src/client/usage-page-css.ts'
 import { USER_MESSAGE_CSS } from '../../../core/src/client/user-message.tsx'
@@ -56,6 +57,7 @@ export const SHEET_GROUPS: readonly SheetGroup[] = [
   { tag: 'browser', css: BROWSER_CSS, parts: ['BROWSER_CSS'] },
   { tag: 'work-process', css: EMPTY_STATE_CSS + WELCOME_CSS + PROCESS_CSS + RETRY_CSS + STARTERS_CSS + FILES_PANEL_CSS + DELIVER_CSS, parts: ['EMPTY_STATE_CSS', 'WELCOME_CSS', 'PROCESS_CSS', 'RETRY_CSS', 'STARTERS_CSS', 'FILES_PANEL_CSS', 'DELIVER_CSS'] },
   { tag: 'return', css: RETURN_CSS, parts: ['RETURN_CSS'] },
+  { tag: 'mobile', css: MOBILE_CSS, parts: ['MOBILE_CSS'] },
 ]
 
 /** The tags the window's own stylesheet (`app.css`) owns, so the two never collide. */

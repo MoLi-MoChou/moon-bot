@@ -134,6 +134,9 @@ export interface RelayInviteView {
   readonly online: boolean
 }
 
+/** A hold is emitted only when the host can point to the fact that caused it. */
+export type TaskHold = 'approval' | 'queued' | 'handoff' | 'engine-busy'
+
 // -----------------------------------------------------------------__________
 // The endpoint map
 
@@ -165,7 +168,7 @@ export interface BotChannelRpcMap {
   // The task panel (2026-10-28 tasks-panel): who is working now, what finished lately,
   // and the stop that ends one turn without messaging its Bot. A running row also says
   // how many messages wait behind its turn (`queued`, from the Session's own inbox).
-  tasks: { request: Record<string, never>; response: { readonly running: readonly Record<string, unknown>[]; readonly completed: readonly Record<string, unknown>[]; readonly waiting: readonly Record<string, unknown>[] } }
+  tasks: { request: Record<string, never>; response: { readonly running: readonly (Record<string, unknown> & { readonly hold?: TaskHold })[]; readonly completed: readonly Record<string, unknown>[]; readonly waiting: readonly (Record<string, unknown> & { readonly hold?: TaskHold })[] } }
   'task-stop': { request: { sessionId: string }; response: { readonly stopped: boolean } }
 
   // Conversations

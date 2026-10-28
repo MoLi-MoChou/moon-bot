@@ -21,10 +21,11 @@ interface TaskEntry {
   readonly switching?: boolean
   readonly fromName?: string
   readonly queued?: number
+  readonly hold?: 'approval' | 'queued' | 'handoff' | 'engine-busy'
 }
 
 interface TasksReader {
-  tasksView?(): Promise<{ readonly running: readonly TaskEntry[], readonly completed: readonly TaskEntry[], readonly waiting: readonly { readonly botId: string, readonly botName: string, readonly for: readonly string[] }[] }>
+  tasksView?(): Promise<{ readonly running: readonly TaskEntry[], readonly completed: readonly TaskEntry[], readonly waiting: readonly { readonly botId: string, readonly botName: string, readonly for: readonly string[], readonly hold?: TaskEntry['hold'] }[] }>
   stopTask?(sessionId: string): Promise<boolean>
 }
 

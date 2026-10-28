@@ -1,6 +1,6 @@
 # moon-bot-connect
 
-Attach a local ACP agent — Claude, Gemini, OpenCode — to a Moon Bot team with one command.
+Attach a local ACP agent — Claude, Claude Agent ACP, Codex ACP, OpenCode, Gemini — to a Moon Bot team with one command.
 
 On the Moon Bot side a Main Bot issues an invite (Settings → Remote agents); the invite shows
 the exact command to run here:
@@ -10,10 +10,12 @@ npx moon-bot-connect --url wss://your-server:8290/api/bot/relay --token <invite>
 ```
 
 Without a command after `--` the CLI probes for exactly one installed agent and refuses to
-guess between several — name the one to use explicitly:
+guess between several — name the one to use explicitly. An agent that is not installed
+can join on demand through npx:
 
 ```sh
 npx moon-bot-connect --url wss://host/api/bot/relay --token <invite> -- claude
+npx moon-bot-connect --url wss://host/api/bot/relay --token <invite> -- npx -y @agentclientprotocol/claude-agent-acp
 ```
 
 The agent speaks JSON-RPC on stdio; each of its output lines becomes one WebSocket frame and

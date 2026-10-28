@@ -82,7 +82,7 @@ export async function doctor(options: DoctorOptions, deps: DoctorDeps): Promise<
 
   const agents = deps.agents ?? findAgents()
   const pick = pickAgent(agents)
-  if (pick.ok) say(true, 'agent', `${pick.agent.label} at ${pick.agent.path}`)
+  if (pick.ok) say(true, 'agent', `${pick.agent.label} at ${pick.agent.path}${pick.agent.version === undefined ? '' : ` (${pick.agent.version})`}`)
   else {
     say(false, 'agent', pickFailureMessage(pick.found))
     failures += 1

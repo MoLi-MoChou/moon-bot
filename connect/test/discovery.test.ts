@@ -9,7 +9,13 @@ const agent = (id: string, path: string): FoundAgent => {
 }
 
 test('the candidates are the ACP agents core discovers', () => {
-  assert.deepEqual(ACP_CANDIDATES.map(candidate => candidate.command), ['claude', 'gemini', 'opencode'])
+  // Keep in step with the kind: 'acp' entries of CANDIDATES in core/src/engine/acp/discovery.ts.
+  assert.deepEqual(ACP_CANDIDATES.map(candidate => candidate.command), ['claude-agent-acp', 'claude', 'codex-acp', 'opencode', 'gemini'])
+})
+
+test('a found agent carries the version its --version prints', () => {
+  const found = findAgents([ACP_CANDIDATES[1] as (typeof ACP_CANDIDATES)[number]], () => ({ status: 0, stdout: '/usr/bin/claude\n' }), path => path === '/usr/bin/claude' ? '1.2.3 (Claude Code)' : undefined)
+  assert.deepEqual(found, [{ id: 'claude', label: 'Claude', command: 'claude', path: '/usr/bin/claude', version: '1.2.3 (Claude Code)' }])
 })
 
 test('the lookup tool follows the platform: which, except where.exe on windows', () => {
@@ -44,7 +50,9 @@ test('pickAgent takes exactly one agent and leaves none and several to the user'
 })
 
 test('the failure message names what it saw and how to choose', () => {
-  assert.match(pickFailureMessage([]), /looked for: claude, gemini, opencode/)
+  assert.match(pickFailureMessage([]), /looked for: claude-agent-acp, claude, codex-acp, opencode, gemini/)
+  // An agent that is not installed can still join through npx.
+  assert.match(pickFailureMessage([]), /npx -y @agentclientprotocol\/claude-agent-acp/)
   const several = pickFailureMessage([agent('claude', '/usr/bin/claude'), agent('gemini', '/usr/bin/gemini')])
   assert.match(several, /Claude \(\/usr\/bin\/claude\)/)
   assert.match(several, /after "--"/)

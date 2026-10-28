@@ -20,9 +20,11 @@ Options:
   --token <token>  Invite token issued by a Main Bot (shown once when created)
   -h, --help       Show this help
 
-Without a command after "--" the CLI probes for exactly one local agent
-(claude, gemini, opencode) and refuses to guess when none or several are
-installed — name the one to use after "--" then.
+Without a command after "--" the CLI probes for exactly one local ACP agent
+(claude, claude-agent-acp, codex-acp, opencode, gemini) and refuses to guess
+when none or several are installed — name the one to use after "--" then.
+An agent that is not installed can join on demand, for example:
+  -- npx -y @agentclientprotocol/claude-agent-acp
 
 The agent speaks JSON-RPC on stdio: each of its output lines becomes one
 WebSocket text frame, and each frame from the relay is written back as one

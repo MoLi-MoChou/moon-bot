@@ -1,9 +1,10 @@
 // The host bridge: one engine-backed agent per session, shaped as the agent the host's
 // delivery already knows (followup/steer/cancel, an inbox for resume checks, a running
 // status). What DSH's session runtime did for an inbox push, the engine does here: a
-// followup opens a turn (queued behind a running one), a steer cuts into it, and every
-// engine event goes out as a session/event, which is the vocabulary the turn router
-// consumes. This is the seam phase 3's service wires for real.
+// followup opens a turn (queued behind a running one), a steer cuts into it. The
+// runtime itself sends every engine event to the session/event fanout, which is the
+// vocabulary the turn router consumes; the bridge only drains the turn, so it must not
+// send them a second time. This is the seam phase 3's service wires for real.
 import type { EngineEvent } from '../events.ts'
 import type { AgentRuntime } from '../runtime.ts'
 
@@ -26,7 +27,10 @@ export interface BridgeAgent {
 
 export interface BridgeOptions {
   readonly runtime: AgentRuntime | (() => AgentRuntime)
-  /** Where engine events land as session/events: the host's session/event fanout. */
+  /**
+   * The host's session/event fanout, the same one the runtime emits to. The bridge uses
+   * it only for the turn/end of a runTurn that threw, which no runtime emitted.
+   */
   readonly emitEvent: (sessionId: string, event: EngineEvent) => void
   /** A hook the host can use to observe settle (unused by the bridge itself). */
   onSettled?(sessionId: string): void
@@ -46,9 +50,9 @@ export function engineAgentOf(sessionId: string, options: BridgeOptions): Bridge
     activeRuntime = runtime
     void (async () => {
       try {
-        for await (const event of runtime.runTurn({ sessionId, message: { content: message.content as never, source: message.source } })) {
-          options.emitEvent(sessionId, event)
-        }
+        // Drained, not re-emitted: the runtime sent each event to the fanout already.
+        const turn = runtime.runTurn({ sessionId, message: { content: message.content as never, source: message.source } })[Symbol.asyncIterator]()
+        while ((await turn.next()).done !== true) continue
       } catch {
         // A runTurn that throws (a broken service) still ends the turn: the router
         // must not be left waiting on a session that will never speak.

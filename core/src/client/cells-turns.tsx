@@ -131,12 +131,12 @@ export function TriggerCell({ node, sessionId, useRoster, useSessions, useTurnCl
     });
     const body = triggerBody();
     return unreadOpening
-        ? <><div className='bt-open-new'>{h(NewDivider)}<div className='bt-time-sep' role='separator'>{unreadOpening}</div></div>{body}</> : body;
+        ? <><div className='bt-open-new'><NewDivider /><div className='bt-time-sep' role='separator'>{unreadOpening}</div></div>{body}</> : body;
     function triggerBody() {
         if (source.kind === 'bot') {
             // A part opens with its handoff package, so the earlier parts go right above it.
             if (source.handoff === true)
-                return roster.roomsById[sessionId] ? null : h(EarlierParts, { sessionId, roster, actions });
+                return roster.roomsById[sessionId] ? null : <EarlierParts sessionId={sessionId} roster={roster} actions={actions} />;
             // Group turns belong to the group chat; the member's own chat stays one-to-one.
             if (source.role === 'kickoff' || source.role === 'room')
                 return null;
@@ -157,13 +157,10 @@ export function TriggerCell({ node, sessionId, useRoster, useSessions, useTurnCl
                 const file = source.length === undefined ? undefined : (data.content ?? []).find(block => block?.type === 'file')?.attachment;
                 const text = stripHeader(contentText(data.content));
                 // A trigger's data carries no turn; its event seq is the one durable name of this post.
-                return h(GroupMessage, {
-                    bot: poster, text: file ? stripLongNote(text) : text, room, roster, actions, msgKey: `${sessionId}:post:${data.seq ?? node.key}`, useUi, time: data.time,
-                    whole: file && source.length !== undefined ? { length: source.length, load: () => actions.fileText(file) } : undefined,
-                });
+                return <GroupMessage bot={poster} text={file ? stripLongNote(text) : text} room={room} roster={roster} actions={actions} msgKey={`${sessionId}:post:${data.seq ?? node.key}`} useUi={useUi} time={data.time} whole={file && source.length !== undefined ? { length: source.length, load: () => actions.fileText(file) } : undefined} />;
             }
             if (source.role === 'report') {
-                return h(GroupEvent, { prefix: t('Replies from'), room: source.roomId === undefined ? undefined : roster.roomsById[source.roomId], name: t('a group chat'), roster, actions });
+                return <GroupEvent prefix={t('Replies from')} room={source.roomId === undefined ? undefined : roster.roomsById[source.roomId]} name={t('a group chat')} roster={roster} actions={actions} />;
             }
             // A request carried on keeps its role, but its message line was shown already.
             if (source.role === 'resume' || source.resumed === true)
@@ -181,12 +178,7 @@ export function TriggerCell({ node, sessionId, useRoster, useSessions, useTurnCl
                 if (!bots.some(bot => bot.id === peer.id))
                     bots.push(peer);
             }
-            return h(EventLine, {
-                prefix: source.role === 'stopped' ? t('Stopped by') : count > 1 ? t('{count} messages with', { count }) : t('Message from'),
-                bots,
-                onOpen: bot => actions.openExchange(selfId, bot.id),
-                whole: true,
-            });
+            return <EventLine prefix={source.role === 'stopped' ? t('Stopped by') : count > 1 ? t('{count} messages with', { count }) : t('Message from')} bots={bots} onOpen={bot => actions.openExchange(selfId, bot.id)} whole />;
         }
         if (source.kind === 'schedule') {
             const prompts = reminderPrompts(contentText(data.content));
@@ -221,7 +213,7 @@ export function TurnProcessCell({ node, sessionId, turnProcess, useRoster, useUi
         return !hidden && typeof visit?.seen === 'number' && own?.first !== undefined && own.first <= visit.seen
             && own.end !== undefined && own.end > visit.seen && own.end <= visit.entered;
     });
-    return fresh ? h(NewDivider) : null;
+    return fresh ? <NewDivider /> : null;
 }
 export function Nothing() { return null; }
 function nextTurnStart(turns: TurnTable, turn: number): number | undefined {
@@ -274,10 +266,10 @@ export function TurnTailCell({ turn: location, sessionId, useTurnClock, useUi, a
     });
     // The cards of the files this turn delivered sit after its last message.
     const files = useTurnFiles(sessionId, turn);
-    const cards = files !== null && files.length > 0 ? h(FileCards, { files, sessionId }) : null;
+    const cards = files !== null && files.length > 0 ? <FileCards files={files} sessionId={sessionId} /> : null;
     if (!label && !fresh && !cards)
         return null;
-    return <>{cards}{label ? <div className='bt-time-sep' role='separator'>{label}</div> : null}{fresh ? h(NewDivider) : null}</>;
+    return <>{cards}{label ? <div className='bt-time-sep' role='separator'>{label}</div> : null}{fresh ? <NewDivider /> : null}</>;
 }
 // The calls ToolCell draws. A PTC program (`run_code`) dispatches the real tools as
 // its sub-calls, so a call draws by its own name wherever it sits in the tree.

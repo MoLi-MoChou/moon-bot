@@ -1,5 +1,5 @@
 // The window's own versions of the interface primitives the Bot views draw with (see
-// core/src/client/dsh-primitives.ts and app/vite.config.js): the markdown renderer the
+// core/src/client/dsh-primitives.tsx and app/vite.config.js): the markdown renderer the
 // plugin host would otherwise supply.
 import { createElement as h, useMemo, useRef, useState, type ReactElement } from 'react'
 import Markdown, { type Components } from 'react-markdown'
@@ -32,24 +32,23 @@ function CodeBlock({ children, labels }: { readonly children?: React.ReactNode; 
       setTimeout(() => { setCopied(false) }, 1000)
     })
   }
-  return h('div', { className: 'md-code' },
-    h('button', { type: 'button', className: 'md-copy', onClick: copy }, copied ? labels?.code?.copiedLabel : labels?.code?.copyLabel),
-    h('pre', { ref: block }, children))
+  return <div className='md-code'>
+    <button type='button' className='md-copy' onClick={copy}>{copied ? labels?.code?.copiedLabel : labels?.code?.copyLabel}</button>
+    <pre ref={block}>{children}</pre>
+  </div>
 }
 
 // Links open outside the window; mention links stay for the chat's own click handler.
 const elements = (labels: MarkdownLabels | undefined): Components => ({
-  a: ({ node: _node, ...props }) => h('a', {
-    ...props,
-    ...(typeof props.href === 'string' && props.href.startsWith(MENTION_ORIGIN) ? {} : { target: '_blank', rel: 'noreferrer' }),
-  }),
-  pre: ({ children }) => h(CodeBlock, { labels }, children),
+  a: ({ node: _node, ...props }) => <a {...props} {...(typeof props.href === 'string' && props.href.startsWith(MENTION_ORIGIN) ? {} : { target: '_blank', rel: 'noreferrer' })} />,
+  pre: ({ children }) => <CodeBlock labels={labels}>{children}</CodeBlock>,
 })
 
 // The class keeps the `_markdown` stem that the Bot views' styles give the markdown.
 export function MarkdownText({ text, labels, variant }: MarkdownTextProps): ReactElement {
   // New element types on every render would remount each code block as a reply streams in.
   const components = useMemo(() => elements(labels), [labels?.code?.copyLabel, labels?.code?.copiedLabel])
-  return h('div', { className: variant === 'compact' ? 'md_markdown md-compact' : 'md_markdown' },
-    h(Markdown, { remarkPlugins: PLUGINS, components }, text ?? ''))
+  return <div className={variant === 'compact' ? 'md_markdown md-compact' : 'md_markdown'}>
+    <Markdown remarkPlugins={PLUGINS} components={components}>{text ?? ''}</Markdown>
+  </div>
 }

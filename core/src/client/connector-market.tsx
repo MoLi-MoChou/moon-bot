@@ -34,7 +34,7 @@ function CatalogCard({ entry, isInstalled, onInstall }: { entry: ConnectorCatalo
     <button type='button' className='bt-market-card' onClick={onInstall}>
       <div className='bt-market-card-top'>
         <div className='bt-market-card-ident'>
-          <span className='bt-market-icon'>{h(Logo, { size: 22 })}</span>
+          <span className='bt-market-icon'><Logo size={22} /></span>
           <div className='bt-market-header'>
             <span className='bt-market-name'>{entry.name}</span>
             <span className='bt-market-kind'>{entry.transport === 'stdio' ? t('Local') : t('Cloud')}</span>
@@ -42,7 +42,7 @@ function CatalogCard({ entry, isInstalled, onInstall }: { entry: ConnectorCatalo
         </div>
         {isInstalled ? (
           <span className='bt-market-installed' title={t('Installed')}>
-            {h(CheckIcon)}
+            <CheckIcon />
             <span>{t('Installed')}</span>
           </span>
         ) : null}
@@ -88,7 +88,7 @@ function InstallForm({
     <div className='bt-market-form'>
       <div className='bt-market-form-head'>
         <div className='bt-market-form-title-row'>
-          <span className='bt-market-icon bt-market-form-icon'>{h(Logo, { size: 28 })}</span>
+          <span className='bt-market-icon bt-market-form-icon'><Logo size={28} /></span>
           <div className='bt-market-form-info'>
             <div className='bt-market-form-name-row'>
               <span className='bt-market-name'>{entry.name}</span>
@@ -104,13 +104,7 @@ function InstallForm({
       {(entry.secrets ?? []).length > 0 ? (
         (entry.secrets ?? []).map(secret => (
           <label key={secret.name} className='bt-q-field bt-secret-field'>
-            {h(MaskedInput, {
-              value: values[secret.name] ?? '',
-              onChange: next => setValues(last => ({ ...last, [secret.name]: next })),
-              onEnter: install,
-              label: t(secret.label) + (secret.optional === true ? t(' (optional)') : ''),
-              autoFocus: secret === required[0],
-            })}
+            <MaskedInput value={values[secret.name] ?? ''} onChange={next => setValues(last => ({ ...last, [secret.name]: next }))} onEnter={install} label={t(secret.label) + (secret.optional === true ? t(' (optional)') : '')} autoFocus={secret === required[0]} />
             {secret.url !== undefined ? <a className='bt-connector-link' href={secret.url} target='_blank' rel='noopener noreferrer'>{t('Get it here')} ↗</a> : null}
           </label>
         ))
@@ -162,7 +156,7 @@ function CustomConnectorForm({ market, onClose }: { market: MarketActions; onClo
     <form className='bt-market-form' onSubmit={submit}>
       <div className='bt-market-form-head'>
         <div className='bt-market-form-title-row'>
-          <span className='bt-market-icon bt-market-form-icon'>{h(DefaultConnectorLogo, { size: 28 })}</span>
+          <span className='bt-market-icon bt-market-form-icon'><DefaultConnectorLogo size={28} /></span>
           <div className='bt-market-form-info'>
             <span className='bt-market-name'>{t('Custom MCP server')}</span>
             <span className='bt-market-desc'>{t('Enter any command or HTTP endpoint to connect any community or custom MCP server.')}</span>
@@ -229,13 +223,13 @@ export function ConnectorCatalog({ market, capabilities }: { market: MarketActio
         </div>
         <div className='bt-market-actions'>
           <button type='button' className='bt-soft bt-soft-sm bt-market-custom-btn' onClick={() => setCustomOpen(true)}>
-            {h(PlusIcon)}
+            <PlusIcon />
             <span>{t('Custom MCP')}</span>
           </button>
           <div className='bt-market-search'>
-            <span className='bt-market-search-icon'>{h(SearchIcon)}</span>
+            <span className='bt-market-search-icon'><SearchIcon /></span>
             <input type='text' className='bt-market-search-input' placeholder={t('Search connectors…')} value={search} onChange={e => setSearch(e.target.value)} />
-            {search ? <button type='button' className='bt-market-search-clear' onClick={() => setSearch('')} aria-label={t('Clear search')}>{h(CloseIcon)}</button> : null}
+            {search ? <button type='button' className='bt-market-search-clear' onClick={() => setSearch('')} aria-label={t('Clear search')}><CloseIcon /></button> : null}
           </div>
         </div>
       </div>
@@ -255,9 +249,9 @@ export function ConnectorCatalog({ market, capabilities }: { market: MarketActio
       </div>
 
       {customOpen ? (
-        h(CustomConnectorForm, { market, onClose: () => setCustomOpen(false) })
+        <CustomConnectorForm market={market} onClose={() => setCustomOpen(false)} />
       ) : installing !== null ? (
-        h(InstallForm, { key: installing.id, entry: installing, isInstalled: installedSet.has(installing.id), market, onClose: () => setInstalling(null) })
+        <InstallForm key={installing.id} entry={installing} isInstalled={installedSet.has(installing.id)} market={market} onClose={() => setInstalling(null)} />
       ) : filtered.length === 0 ? (
         <div className='bt-market-empty'>
           <span className='bt-set-hint'>{t('No connectors match “{query}”', { query: search })}</span>
@@ -265,7 +259,7 @@ export function ConnectorCatalog({ market, capabilities }: { market: MarketActio
         </div>
       ) : (
         <div className='bt-market-grid'>
-          {filtered.map(entry => h(CatalogCard, { key: entry.id, entry, isInstalled: installedSet.has(entry.id), onInstall: () => setInstalling(entry) }))}
+          {filtered.map(entry => <CatalogCard key={entry.id} entry={entry} isInstalled={installedSet.has(entry.id)} onInstall={() => setInstalling(entry)} />)}
         </div>
       )}
     </div>

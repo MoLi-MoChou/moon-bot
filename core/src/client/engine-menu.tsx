@@ -20,7 +20,7 @@ export interface EngineChoice {
     readonly sub: string | undefined;
 }
 
-const Tick = ({ on }: { on: boolean }) => <span className='bt-model-tick' aria-hidden>{on ? h(CheckIcon) : null}</span>;
+const Tick = ({ on }: { on: boolean }) => <span className='bt-model-tick' aria-hidden>{on ? <CheckIcon /> : null}</span>;
 
 // What the trigger shows for the Bot's current engine.
 export function engineChoiceOf(bot: SettingsBot, available: readonly SettingsEngineOption[]): EngineChoice {
@@ -133,19 +133,19 @@ export function EngineMenu({ bot, save, refreshEngines, wide = false }: EngineMe
                 <span className='bt-menu-label'>{t('Built-in')}</span>
                 <span className='bt-engine-sub'>{t('Moon Bot runtime')}</span>
             </span>
-            {h(Tick, { on: engine?.kind !== 'acp' && engine?.kind !== 'acp-remote' })}
+            <Tick on={engine?.kind !== 'acp' && engine?.kind !== 'acp-remote'} />
         </button>
         {(local.length > 0 || customCurrent.length > 0) ? <div className='bt-model-group' role='presentation'>{t('Local agents')}</div> : null}
-        {customCurrent.map(entry => <span key={entry.id} className='bt-engine-off' role='menuitemradio' aria-checked='true' aria-disabled='true' title={entry.command}><span className='bt-engine-copy'><span className='bt-menu-label'>{entry.command}</span><span className='bt-engine-sub'>{t('Current configuration')}</span></span>{h(Tick, { on: true })}</span>)}
-        {local.map(entry => <button key={entry.id} type='button' role='menuitemradio' aria-checked={currentOf(entry.id)} title={entry.path} onClick={() => choose(entry.id)}><span className='bt-engine-copy'><span className='bt-menu-label'>{entry.label}</span><span className='bt-engine-sub'>{[entry.version, entry.path].filter(Boolean).join(' · ')}</span></span>{h(Tick, { on: currentOf(entry.id) })}</button>)}
+        {customCurrent.map(entry => <span key={entry.id} className='bt-engine-off' role='menuitemradio' aria-checked='true' aria-disabled='true' title={entry.command}><span className='bt-engine-copy'><span className='bt-menu-label'>{entry.command}</span><span className='bt-engine-sub'>{t('Current configuration')}</span></span><Tick on /></span>)}
+        {local.map(entry => <button key={entry.id} type='button' role='menuitemradio' aria-checked={currentOf(entry.id)} title={entry.path} onClick={() => choose(entry.id)}><span className='bt-engine-copy'><span className='bt-menu-label'>{entry.label}</span><span className='bt-engine-sub'>{[entry.version, entry.path].filter(Boolean).join(' · ')}</span></span><Tick on={currentOf(entry.id)} /></button>)}
         {ondemand.length > 0 ? <div className='bt-model-group' role='presentation'>{t('On-demand agents (npx)')}</div> : null}
-        {ondemand.map(entry => <button key={entry.id} type='button' role='menuitemradio' aria-checked={currentOf(entry.id)} title={`npx ${(entry.args ?? []).join(' ')}`} onClick={() => choose(entry.id)}><span className='bt-engine-copy'><span className='bt-menu-label'>{entry.label}</span><span className='bt-engine-sub'>{`npx ${(entry.args ?? []).join(' ')}`}</span></span>{h(Tick, { on: currentOf(entry.id) })}</button>)}
+        {ondemand.map(entry => <button key={entry.id} type='button' role='menuitemradio' aria-checked={currentOf(entry.id)} title={`npx ${(entry.args ?? []).join(' ')}`} onClick={() => choose(entry.id)}><span className='bt-engine-copy'><span className='bt-menu-label'>{entry.label}</span><span className='bt-engine-sub'>{`npx ${(entry.args ?? []).join(' ')}`}</span></span><Tick on={currentOf(entry.id)} /></button>)}
         {remote.length > 0 ? <div className='bt-model-group' role='presentation'>{t('Remote agents')}</div> : null}
-        {remote.map(entry => <button key={entry.id} type='button' role='menuitemradio' aria-checked={currentOf(entry.id)} onClick={() => choose(entry.id)}><span className='bt-engine-copy'><span className='bt-menu-label'>{h('span', { className: 'bt-engine-dot', 'data-online': entry.online === true ? '' : undefined, 'aria-hidden': true })}{entry.label}</span><span className='bt-engine-sub'>{entry.online === true ? t('Connected') : t('Not connected')}</span></span>{h(Tick, { on: currentOf(entry.id) })}</button>)}
+        {remote.map(entry => <button key={entry.id} type='button' role='menuitemradio' aria-checked={currentOf(entry.id)} onClick={() => choose(entry.id)}><span className='bt-engine-copy'><span className='bt-menu-label'><span className='bt-engine-dot' data-online={entry.online === true ? '' : undefined} aria-hidden />{entry.label}</span><span className='bt-engine-sub'>{entry.online === true ? t('Connected') : t('Not connected')}</span></span><Tick on={currentOf(entry.id)} /></button>)}
         {unsupported.length > 0 ? <div className='bt-model-group' role='presentation'>{t('Detected non-ACP tools')}</div> : null}
         {unsupported.map(entry => <span key={entry.id} className='bt-engine-off' role='menuitem' aria-disabled='true' title={entry.reason}><span className='bt-engine-copy'><span className='bt-menu-label'>{entry.label}</span><span className='bt-engine-sub'>{entry.version ?? ''}{entry.reason !== undefined && entry.version !== undefined ? ' · ' : ''}{entry.reason ?? ''}</span></span></span>)}
         <div className='bt-menu-sep' role='separator'/>
-        <button type='button' role='menuitem' onClick={() => { setDraft(engine?.kind === 'acp' ? engine.command ?? '' : ''); setView('custom'); }}>{h(PencilIcon)}<span className='bt-menu-label'>{t('Custom command…')}</span></button>
+        <button type='button' role='menuitem' onClick={() => { setDraft(engine?.kind === 'acp' ? engine.command ?? '' : ''); setView('custom'); }}><PencilIcon /><span className='bt-menu-label'>{t('Custom command…')}</span></button>
     </div>;
 
     const customView = <div key='custom' className='bt-engine-view'><input className='bt-folder-input' autoFocus value={draft} spellCheck={false} aria-label={t('ACP command')} placeholder='opencode' onChange={(event: React.ChangeEvent<HTMLInputElement>) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.nativeEvent.isComposing) typed(); }}/><button type='button' role='menuitem' className='bt-folder-use' disabled={draft.trim() === ''} onClick={typed}>{t('Use this command')}</button></div>;
@@ -154,7 +154,7 @@ export function EngineMenu({ bot, save, refreshEngines, wide = false }: EngineMe
     return <><button ref={button} type='button' className='bt-model-trigger' data-wide={wide || undefined} aria-haspopup='menu' aria-expanded={isOpen} aria-label={t('Engine: {engine}', { engine: shown.name })} onClick={toggle} onKeyDown={(event: React.KeyboardEvent<HTMLButtonElement>) => { if (!isOpen && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
         event.preventDefault();
         toggle();
-    } }}><span className='bt-model-copy'><span className='bt-model-name'>{shown.name}</span>{shown.sub !== undefined ? <span className='bt-model-provider'>{shown.sub}</span> : null}</span>{h(Caret)}</button>{shownPlace ? createPortal(<div ref={menu} className={`bt-menu bt-model-menu bt-engine-menu${shownPlace.bottom !== undefined ? ' bt-menu-up' : ''}`} role='menu' aria-label={t('Execution engine')} style={shownPlace} data-leaving={leaving || undefined}>{shownView}</div>, document.body) : null}</>;
+    } }}><span className='bt-model-copy'><span className='bt-model-name'>{shown.name}</span>{shown.sub !== undefined ? <span className='bt-model-provider'>{shown.sub}</span> : null}</span><Caret /></button>{shownPlace ? createPortal(<div ref={menu} className={`bt-menu bt-model-menu bt-engine-menu${shownPlace.bottom !== undefined ? ' bt-menu-up' : ''}`} role='menu' aria-label={t('Execution engine')} style={shownPlace} data-leaving={leaving || undefined}>{shownView}</div>, document.body) : null}</>;
 }
 
 export const ENGINE_CSS = `

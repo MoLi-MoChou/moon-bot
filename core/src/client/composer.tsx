@@ -141,7 +141,7 @@ export function ComposerVoice({ sessionId, inputActions, actions, useUi }: {
         return null;
     // With the Voice Input plugin on, its own microphone sits in this composer.
     const pluginMic = actions.speech() !== undefined;
-    return <>{pluginMic ? null : <button type='button' className='bt-mic' aria-label={dictation.listening ? t('Stop dictation') : t('Dictate')} aria-pressed={dictation.listening} title={dictation.listening ? t('Stop dictation') : t('Dictate')} onMouseDown={keepComposerFocus} onClick={() => (dictation.listening ? dictation.stop() : dictation.start())}>{h(MicIcon)}</button>}<button type='button' className='bt-voice' aria-label={t('Start voice chat')} title={t('Voice chat')} onMouseDown={keepComposerFocus} onClick={() => actions.openVoice(sessionId)}>{h(WaveIcon, { size: 18 })}</button>{dictation.note ? <span className='bt-mic-note' role='status'>{dictation.note}</span> : null}</>;
+    return <>{pluginMic ? null : <button type='button' className='bt-mic' aria-label={dictation.listening ? t('Stop dictation') : t('Dictate')} aria-pressed={dictation.listening} title={dictation.listening ? t('Stop dictation') : t('Dictate')} onMouseDown={keepComposerFocus} onClick={() => (dictation.listening ? dictation.stop() : dictation.start())}><MicIcon /></button>}<button type='button' className='bt-voice' aria-label={t('Start voice chat')} title={t('Voice chat')} onMouseDown={keepComposerFocus} onClick={() => actions.openVoice(sessionId)}><WaveIcon size={18} /></button>{dictation.note ? <span className='bt-mic-note' role='status'>{dictation.note}</span> : null}</>;
 }
 // Character marks for the "@" menu rows. Each Bot keeps one component, so the menu
 // does not remount its mark on every keystroke.
@@ -164,7 +164,7 @@ export function menuIcons(roster: {
             return PeopleIcon;
         const id = row.bot.id;
         if (!marks.has(id))
-            marks.set(id, ({ size = 14 }) => h(BotMark, { bot: roster.getSnapshot().byId[id] ?? row.bot, size }));
+            marks.set(id, ({ size = 14 }) => <BotMark bot={roster.getSnapshot().byId[id] ?? row.bot} size={size} />);
         return marks.get(id);
     };
 }
@@ -235,5 +235,5 @@ export function ComposerPlus({ sessionId, inputActions, useRoster, actions }: {
         actions.referenceChat(sessionId, inputActions?.captureInsertion?.());
     };
     const canReference = typeof inputActions?.captureInsertion === 'function' && actions.canReferenceChat();
-    return <><button ref={button} type='button' className='bt-plus' aria-label={t('Add')} title={t('Add')} aria-haspopup='menu' aria-expanded={Boolean(open)} onMouseDown={keepComposerFocus} onClick={toggle}>{h(PlusIcon)}</button>{shown ? createPortal(<div ref={menu} className='bt-menu bt-menu-up bt-plus-menu' role='menu' aria-label={t('Add')} style={{ left: shown.left, bottom: shown.bottom }} data-leaving={leaving || undefined}>{shown.files ? <button type='button' role='menuitem' onClick={attach}>{h(PaperclipIcon)}<span className='bt-menu-label'>{t('Add files')}</span></button> : null}{canReference ? <button type='button' role='menuitem' onMouseDown={keepComposerFocus} onClick={reference}>{h(ChatsIcon)}<span className='bt-menu-label'>{t('Reference a chat')}</span></button> : null}{LEAN.schedules ? <button type='button' role='menuitem' onClick={schedule}>{h(ClockIcon)}<span className='bt-menu-label'>{t('Scheduled task')}</span></button> : null}</div>, document.body) : null}</>;
+    return <><button ref={button} type='button' className='bt-plus' aria-label={t('Add')} title={t('Add')} aria-haspopup='menu' aria-expanded={Boolean(open)} onMouseDown={keepComposerFocus} onClick={toggle}><PlusIcon /></button>{shown ? createPortal(<div ref={menu} className='bt-menu bt-menu-up bt-plus-menu' role='menu' aria-label={t('Add')} style={{ left: shown.left, bottom: shown.bottom }} data-leaving={leaving || undefined}>{shown.files ? <button type='button' role='menuitem' onClick={attach}><PaperclipIcon /><span className='bt-menu-label'>{t('Add files')}</span></button> : null}{canReference ? <button type='button' role='menuitem' onMouseDown={keepComposerFocus} onClick={reference}><ChatsIcon /><span className='bt-menu-label'>{t('Reference a chat')}</span></button> : null}{LEAN.schedules ? <button type='button' role='menuitem' onClick={schedule}><ClockIcon /><span className='bt-menu-label'>{t('Scheduled task')}</span></button> : null}</div>, document.body) : null}</>;
 }

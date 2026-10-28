@@ -22,7 +22,7 @@ export const LockIcon = icon(['M6.5 9V7a3.5 3.5 0 0 1 7 0v2', 'M5.5 9h9v7h-9z'])
 export function Favicon({ src, className }: FaviconProps) {
     const [failed, setFailed] = useState<string | null>(null);
     if (!src || failed === src)
-        return <span className={`${className} bt-ptab-globe`}>{h(GlobeIcon)}</span>;
+        return <span className={`${className} bt-ptab-globe`}><GlobeIcon /></span>;
     return <img className={className} src={src} alt='' aria-hidden onError={() => setFailed(src)}/>;
 }
 // An animation from the strip's own keyframes. Plain Animation has no animationName.
@@ -163,14 +163,14 @@ export function PanelStrip({ bot, subject, view, ids, active, reading, onView, a
         observer.observe(box);
         return () => observer.disconnect();
     }, []);
-    return <div className='bt-ptabs' role='tablist' aria-label={t('Panel tabs')}><div className='bt-ptabs-in' ref={wrap}><button type='button' role='tab' aria-selected={view === 'details'} className='bt-ptab bt-ptab-bot' title={bot.name} onClick={() => onView('details')}>{h(BotMark, { bot, size: 20, state: reading ? 'searching' : 'idle' })}{view === 'details' ? <span className='bt-ptab-name'>{bot.name}</span> : null}</button>{ids.map((tabId) => {
+    return <div className='bt-ptabs' role='tablist' aria-label={t('Panel tabs')}><div className='bt-ptabs-in' ref={wrap}><button type='button' role='tab' aria-selected={view === 'details'} className='bt-ptab bt-ptab-bot' title={bot.name} onClick={() => onView('details')}><BotMark bot={bot} size={20} state={reading ? 'searching' : 'idle'} />{view === 'details' ? <span className='bt-ptab-name'>{bot.name}</span> : null}</button>{ids.map((tabId) => {
         const page = pages[tabId] ?? EMPTY_PAGE;
         const on = view === 'browser' && tabId === active;
         return <button key={tabId} type='button' role='tab' aria-selected={on} data-tab={tabId} className='bt-ptab' title={page.url || t('New tab')} onClick={() => { actions.browserActivate(bot.id, tabId); onView('browser'); }} onAuxClick={(event) => { if (event.button === 1) {
             event.preventDefault();
             void actions.browserCloseTab(bot.id, tabId);
-        } }}>{h(Favicon, { src: page.favicon, className: 'bt-ptab-fav' })}<span className='bt-ptab-title'>{tabLabel(page)}</span><span className='bt-ptab-x' role='button' aria-label={t('Close tab')} title={t('Close tab')} onClick={(event) => { event.stopPropagation(); void actions.browserCloseTab(bot.id, tabId); }}>×</span></button>;
-    })}<span ref={ind} className='bt-ptab-ind' aria-hidden/></div><button type='button' className='bt-ptab-new' aria-label={t('New tab')} title={t('New tab')} onClick={() => actions.browserNewTab(subject)}>{h(PlusTabIcon)}</button><button type='button' className='bt-icon-btn bt-ptab-close' aria-label={t('Close panel')} title={t('Close panel')} onClick={() => actions.closePanel()}>{h(CloseIcon)}</button></div>;
+        } }}><Favicon src={page.favicon} className='bt-ptab-fav' /><span className='bt-ptab-title'>{tabLabel(page)}</span><span className='bt-ptab-x' role='button' aria-label={t('Close tab')} title={t('Close tab')} onClick={(event) => { event.stopPropagation(); void actions.browserCloseTab(bot.id, tabId); }}>×</span></button>;
+    })}<span ref={ind} className='bt-ptab-ind' aria-hidden/></div><button type='button' className='bt-ptab-new' aria-label={t('New tab')} title={t('New tab')} onClick={() => actions.browserNewTab(subject)}><PlusTabIcon /></button><button type='button' className='bt-icon-btn bt-ptab-close' aria-label={t('Close panel')} title={t('Close panel')} onClick={() => actions.closePanel()}><CloseIcon /></button></div>;
 }
 // The browser view: toolbar (back, forward, reload/stop, address) over the frame
 // the guest webview covers.
@@ -228,21 +228,13 @@ export function BrowserView({ bot, tabId, leaving, landed, actions, useBrowserPa
     };
     const editing = draft !== null;
     const secure = /^https:/i.test(page.url);
-    return <div className='bt-panel-view bt-panel-browser' aria-label={t("{name}'s browser", { name: bot.name })}><div className='bt-browser-bar'><button type='button' className='bt-icon-btn' aria-label={t('Back')} title={t('Back')} disabled={!page.canGoBack} onClick={() => actions.browserCommand(tabId, 'back')}>{h(BackIcon)}</button><button type='button' className='bt-icon-btn' aria-label={t('Forward')} title={t('Forward')} disabled={!page.canGoForward} onClick={() => actions.browserCommand(tabId, 'forward')}>{h(ForwardIcon)}</button><button type='button' className='bt-icon-btn' disabled={!page.url} aria-label={page.loading ? t('Stop') : t('Reload')} title={page.loading ? t('Stop') : t('Reload')} onClick={() => actions.browserCommand(tabId, page.loading ? 'stop' : 'reload')}>{h(page.loading ? StopIcon : ReloadIcon)}</button><form className='bt-browser-address' onSubmit={go} data-editing={editing || undefined}><span className='bt-browser-scheme' aria-hidden>{h(secure && !editing ? LockIcon : GlobeIcon)}</span><input ref={input} type='text' spellCheck={false} autoComplete='off' aria-label={t('Address')} placeholder={t('Search or enter address')} value={editing ? draft : shortAddress(page.url)} onFocus={(event) => { setDraft(page.url); const target = event.target; requestAnimationFrame(() => target.select()); }} onBlur={() => setDraft(null)} onChange={event => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === 'Escape') {
+    return <div className='bt-panel-view bt-panel-browser' aria-label={t("{name}'s browser", { name: bot.name })}><div className='bt-browser-bar'><button type='button' className='bt-icon-btn' aria-label={t('Back')} title={t('Back')} disabled={!page.canGoBack} onClick={() => actions.browserCommand(tabId, 'back')}><BackIcon /></button><button type='button' className='bt-icon-btn' aria-label={t('Forward')} title={t('Forward')} disabled={!page.canGoForward} onClick={() => actions.browserCommand(tabId, 'forward')}><ForwardIcon /></button><button type='button' className='bt-icon-btn' disabled={!page.url} aria-label={page.loading ? t('Stop') : t('Reload')} title={page.loading ? t('Stop') : t('Reload')} onClick={() => actions.browserCommand(tabId, page.loading ? 'stop' : 'reload')}>{h(page.loading ? StopIcon : ReloadIcon)}</button><form className='bt-browser-address' onSubmit={go} data-editing={editing || undefined}><span className='bt-browser-scheme' aria-hidden>{h(secure && !editing ? LockIcon : GlobeIcon)}</span><input ref={input} type='text' spellCheck={false} autoComplete='off' aria-label={t('Address')} placeholder={t('Search or enter address')} value={editing ? draft : shortAddress(page.url)} onFocus={(event) => { setDraft(page.url); const target = event.target; requestAnimationFrame(() => target.select()); }} onBlur={() => setDraft(null)} onChange={event => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === 'Escape') {
         event.stopPropagation();
         setDraft(null);
         event.currentTarget.blur();
     } }}/></form>{page.loading ? <span className='bt-browser-progress' aria-hidden/> : null}</div><div ref={frame} className='bt-browser-frame' data-guest={showGuest || undefined}>{page.error
-        ? <div className='bt-browser-empty'>{h(EmptyState, {
-            icon: h(GlobeIcon), title: t('This page didn’t load'), hint: t(page.error),
-            ...(page.url ? { action: { label: t('Try again'), onClick: () => { void actions.browserNavigate(tabId, page.url); } } } : {}),
-        })}</div> : !page.url
-        ? <div className='bt-browser-empty'>{h(EmptyState, {
-            art: h(BotMark, { bot, size: 48, state: 'idle', live: true }),
-            title: t("{name}'s browser", { name: bot.name }),
-            hint: t('Open a page here and {name} can read it with you. Logins and cookies stay with {name}; other Bots never see them.', { name: bot.name }),
-            action: { label: t('Enter an address'), onClick: () => input.current?.focus() },
-        })}</div> : null}</div></div>;
+        ? <div className='bt-browser-empty'><EmptyState icon={<GlobeIcon />} title={t('This page didn’t load')} hint={t(page.error)} {...(page.url ? { action: { label: t('Try again'), onClick: () => { void actions.browserNavigate(tabId, page.url); } } } : {})} /></div> : !page.url
+        ? <div className='bt-browser-empty'><EmptyState art={<BotMark bot={bot} size={48} state='idle' live />} title={t("{name}'s browser", { name: bot.name })} hint={t('Open a page here and {name} can read it with you. Logins and cookies stay with {name}; other Bots never see them.', { name: bot.name })} action={{ label: t('Enter an address'), onClick: () => input.current?.focus() }} /></div> : null}</div></div>;
 }
 /**
  * One aside for the Bot's details and browser. `pane` is

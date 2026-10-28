@@ -163,7 +163,8 @@ export interface BotChannelRpcMap {
   'relay-invite-revoke': { request: { agentId: string }; response: { readonly invites: readonly RelayInviteView[] } }
 
   // The task panel (2026-10-28 tasks-panel): who is working now, what finished lately,
-  // and the stop that ends one turn without messaging its Bot.
+  // and the stop that ends one turn without messaging its Bot. A running row also says
+  // how many messages wait behind its turn (`queued`, from the Session's own inbox).
   tasks: { request: Record<string, never>; response: { readonly running: readonly Record<string, unknown>[]; readonly completed: readonly Record<string, unknown>[]; readonly waiting: readonly Record<string, unknown>[] } }
   'task-stop': { request: { sessionId: string }; response: { readonly stopped: boolean } }
 

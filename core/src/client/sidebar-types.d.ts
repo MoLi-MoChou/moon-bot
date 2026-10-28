@@ -5,6 +5,7 @@
 // They sit beside sidebar.ts, as runtime.d.ts does for the host, so the component file
 // stays about the list itself.
 import type { MarkBot } from './mark.tsx'
+import type { TaskActions } from './tasks-page.tsx'
 
 /** A Bot as the sidebar lists it. */
 export interface TSidebarBot extends MarkBot {
@@ -159,6 +160,9 @@ export interface TSidebarShellShortcuts {
 /** The actions the sidebar calls. */
 export interface TSidebarActions {
   openSession: (id: string) => void
+  /** The task popover's reads and stop; the same actions the Settings → Tasks page uses. */
+  tasks: TaskActions['tasks']
+  stopTask: TaskActions['stopTask']
   openAgent: (id: string) => void
   openAgentSession: (id: string) => void
   newAgentSession: (id: string) => Promise<unknown>

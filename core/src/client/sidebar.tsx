@@ -3,7 +3,7 @@ import { framerMotion } from './vendor/framer-motion.js';
 import { Fragment, type Ref, createElement as h, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { currentPart } from './text.ts';
-import { PlusIcon, SearchIcon, SidebarIcon, PlugIcon, CloudDownloadIcon, MoonBotMark } from './icons.tsx';
+import { PlusIcon, SearchIcon, SidebarIcon, PlugIcon, CloudDownloadIcon, MoonBotMark, TasksIcon } from './icons.tsx';
 import { PeopleIcon } from './icons.tsx';
 import { EmptyState } from './empty-state.tsx';
 import { hostText, t } from './i18n.ts';
@@ -11,6 +11,7 @@ import type { ReactNode } from 'react';
 import type { TSidebarActions, TSidebarEntry, TSidebarHook, TSidebarProps, TSidebarUpdate, } from './sidebar-types.js';
 import { AgentRow, BotRow, RoomRow, manualSort, readOrder, saveOrder, useListGlide } from './sidebar-rows.tsx';
 import { BrandMark, BrandName, useLandOnMainBot } from './sidebar-account.tsx';
+import { TasksPopover } from './tasks-popover.tsx';
 export function TeamSidebar(props: TSidebarProps) {
     const { wide, expandSidebar, useRoster, useUi, useSessions, actions } = props;
     const listRef = useRef<HTMLDivElement | null>(null);
@@ -19,6 +20,11 @@ export function TeamSidebar(props: TSidebarProps) {
     const roster = useRoster(value => value);
     const markedUnread = useUi(value => value.unread);
     props.useRegistry(value => value);
+    // The task panel is the sidebar's own popover. None of the views' `ui` state grew an
+    // overlay key for it: this state is the button's, so the sidebar owns it.
+    const [tasksOpen, setTasksOpen] = useState(false);
+    const tasksButton = useRef<HTMLButtonElement | null>(null);
+    const closeTasks = (): void => { setTasksOpen(false); tasksButton.current?.focus(); };
     const updated = useSessions(list => {
         const stamps: Record<string, number> = {};
         for (const id of list.ids)
@@ -73,11 +79,11 @@ export function TeamSidebar(props: TSidebarProps) {
         event.preventDefault();
         actions.openPalette(event.key);
     };
-    return <div className={wide ? 'bt-side' : 'bt-side bt-rail'} onKeyDown={typeToSearch}>{wide ? <div className='bt-side-top'><span className='bt-brand'><BrandMark size={22} /><BrandName /></span><UpdateButton useUpdate={props.useUpdate} actions={actions} /><button type='button' className='bt-round' aria-label={t('Search')} title={t('Search')} onClick={() => actions.openPalette()}><SearchIcon /></button><button type='button' className='bt-round' aria-label={t('New…')} title={t('New…')} onClick={() => actions.openNewChat('new')}><PlusIcon /></button><button type='button' className='bt-round bt-side-collapse' aria-label={t('Collapse sidebar')} title={t('Collapse sidebar')} onClick={() => actions.toggleSidebar()}><SidebarIcon /></button></div> : <><UpdateButton useUpdate={props.useUpdate} actions={actions} /><button type='button' className='bt-round' aria-label={t('New…')} title={t('New…')} onClick={() => actions.openNewChat('new')}><PlusIcon /></button></>}{wide && roster.readOnly ? <div className='bt-hint bt-read-only' role='status'>{hostText(roster.readOnly as string)}</div> : null}<div ref={listRef as Ref<HTMLDivElement>} className='bt-list' role='region' aria-label={t('Bot list')}>{main ? <BotRow {...rowProps} bot={main} marked={markedUnread[main.id] === true} /> : roster.ready ? null : <div className='bt-hint'>{t('Setting up your Main Bot…')}</div>}<ReorderList shown={shown} wide={wide} reorder={reorder} dropped={dropped} dragging={dragging} render={entry => entry.kind === 'bot'
+    return <div className={wide ? 'bt-side' : 'bt-side bt-rail'} onKeyDown={typeToSearch}>{wide ? <div className='bt-side-top'><span className='bt-brand'><BrandMark size={22} /><BrandName /></span><UpdateButton useUpdate={props.useUpdate} actions={actions} /><button type='button' className='bt-round' aria-label={t('Search')} title={t('Search')} onClick={() => actions.openPalette()}><SearchIcon /></button><button ref={tasksButton} type='button' className='bt-round' aria-label={t('Tasks')} title={t('Tasks')} aria-haspopup='dialog' aria-expanded={tasksOpen} onClick={() => setTasksOpen(true)}><TasksIcon /></button><button type='button' className='bt-round' aria-label={t('New…')} title={t('New…')} onClick={() => actions.openNewChat('new')}><PlusIcon /></button><button type='button' className='bt-round bt-side-collapse' aria-label={t('Collapse sidebar')} title={t('Collapse sidebar')} onClick={() => actions.toggleSidebar()}><SidebarIcon /></button></div> : <><UpdateButton useUpdate={props.useUpdate} actions={actions} /><button ref={tasksButton} type='button' className='bt-round' aria-label={t('Tasks')} title={t('Tasks')} aria-haspopup='dialog' aria-expanded={tasksOpen} onClick={() => setTasksOpen(true)}><TasksIcon /></button><button type='button' className='bt-round' aria-label={t('New…')} title={t('New…')} onClick={() => actions.openNewChat('new')}><PlusIcon /></button></>}{wide && roster.readOnly ? <div className='bt-hint bt-read-only' role='status'>{hostText(roster.readOnly as string)}</div> : null}<div ref={listRef as Ref<HTMLDivElement>} className='bt-list' role='region' aria-label={t('Bot list')}>{main ? <BotRow {...rowProps} bot={main} marked={markedUnread[main.id] === true} /> : roster.ready ? null : <div className='bt-hint'>{t('Setting up your Main Bot…')}</div>}<ReorderList shown={shown} wide={wide} reorder={reorder} dropped={dropped} dragging={dragging} render={entry => entry.kind === 'bot'
             ? <BotRow {...rowProps} bot={entry.item} marked={markedUnread[entry.item.id] === true} />
             : entry.kind === 'room'
                 ? <RoomRow {...rowProps} room={entry.item} marked={markedUnread[entry.item.id] === true} />
-                : <AgentRow {...rowProps} agent={entry.item} marked={markedUnread[entry.item.id] === true} />} />{wide && roster.ready && shown.length === 0 ? <div className='bt-side-empty'><EmptyState compact icon={<PeopleIcon />} title={t('Build your Bot team')} hint={t('Each Bot has its own chat, instructions and memory. Create one, or ask your Main Bot to set one up.')} action={{ icon: <PlusIcon />, label: t('Create Bot'), onClick: () => actions.openNewChat('create') }} /></div> : null}</div></div>;
+                : <AgentRow {...rowProps} agent={entry.item} marked={markedUnread[entry.item.id] === true} />} />{wide && roster.ready && shown.length === 0 ? <div className='bt-side-empty'><EmptyState compact icon={<PeopleIcon />} title={t('Build your Bot team')} hint={t('Each Bot has its own chat, instructions and memory. Create one, or ask your Main Bot to set one up.')} action={{ icon: <PlusIcon />, label: t('Create Bot'), onClick: () => actions.openNewChat('create') }} /></div> : null}</div>{tasksOpen ? createPortal(<TasksPopover taskActions={actions} onOpenSession={(id) => { setTasksOpen(false); navigate(actions.openSession, id); }} onClose={closeTasks} />, document.body) : null}</div>;
 }
 export function ReorderList({ shown, wide, reorder, dropped, dragging, render }: {
     readonly shown: readonly TSidebarEntry[];

@@ -4,7 +4,7 @@
 // proxy had (timing-safe compare, per-address throttling, loopback may skip it), and
 // the built UI assets from a directory when one is given.
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { isAbsolute, resolve } from 'node:path'
 import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify'
 import { wireService } from './engine.ts'
@@ -122,7 +122,18 @@ export async function startService(options: ServiceOptions): Promise<StandaloneS
     }
   })
 
-  app.get('/healthz', async () => ({ ok: true }))
+  // The commit this build came from, when the image or the caller names one: a deploy can
+  // prove what is running without opening a shell (plan 阶段 A).
+  const revision = (): string | undefined => {
+    const named = process.env.MOON_BOT_REVISION?.trim()
+    if (named !== undefined && named !== '') return named
+    try {
+      return readFileSync('/opt/moon-bot/REVISION', 'utf8').trim() || undefined
+    } catch {
+      return undefined
+    }
+  }
+  app.get('/healthz', async () => ({ ok: true, ...(revision() === undefined ? {} : { revision: revision() }) }))
 
   // The remote-agent relay (2026-10-27 remote-agents): one WebSocket per connected
   // agent, carrying the ACP wire as text frames. Token in the query string; an invalid

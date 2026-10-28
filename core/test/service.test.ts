@@ -31,6 +31,9 @@ const stop = async (t: { after: (run: () => Promise<void>) => void }, started: {
 }
 
 test('the channel answers over HTTP and the feed says hello', async (t) => {
+  // The image names its build through this variable; the health answer reports it.
+  process.env.MOON_BOT_REVISION = 'test-rev'
+  t.after(() => { delete process.env.MOON_BOT_REVISION })
   const started = await start(t)
   await stop(t, started)
   const base = started.service.url
@@ -53,8 +56,12 @@ test('the channel answers over HTTP and the feed says hello', async (t) => {
   assert.match(first, /^event: hello\ndata: \{"revision":\d+\}\n\n/)
   await reader.cancel()
 
-  // Health answers without auth.
-  assert.equal((await fetch(`${base}/healthz`)).status, 200)
+  // Health answers without auth, and names the build when it was told one.
+  const health = await fetch(`${base}/healthz`)
+  assert.equal(health.status, 200)
+  const body = await health.json() as { ok?: boolean, revision?: string }
+  assert.equal(body.ok, true)
+  assert.equal(body.revision, 'test-rev', 'the build names itself when MOON_BOT_REVISION is set')
 })
 
 test('with a password, the gate holds until the cookie arrives', async (t) => {

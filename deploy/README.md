@@ -9,6 +9,20 @@ Docker, from the repository root (a one-off build, for trying it out):
     docker build --build-arg REVISION=$(git rev-parse --short HEAD) -t moon-bot .
     docker run -d -p 8290:8290 -e MOON_BOT_PASSWORD=choose-one -v moon-bot-data:/data moon-bot
 
+## One command on a server
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/MoLi-MoChou/moon-bot/main/deploy/install.sh | sh
+```
+
+`deploy/install.sh` writes `.env` once (a generated password is printed once), starts the
+container on 8290 and waits for `/healthz`. Re-run it with `--tag vX.Y.Z` to upgrade; the data
+folder is created empty and never reset. Options: `--tag`, `--dir`, `--port`, `--registry`,
+`--password`, `--yes` (`sh deploy/install.sh --help`).
+
+The full release procedure — versions, the tag, what the workflows publish, rollback — is in
+[docs/RELEASING.md](../docs/RELEASING.md).
+
 ## On a server: pull a published image
 
 `.github/workflows/web-image.yml` builds the root Dockerfile and pushes it to GHCR once the

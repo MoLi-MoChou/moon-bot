@@ -1,6 +1,6 @@
 import { createElement as h, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { MarkdownText } from './dsh-primitives.ts';
+import { MarkdownText } from './dsh-primitives.tsx';
 import { language, t } from './i18n.ts';
 import { failureLabel } from './diagnostics.ts';
 import { clockLabel, dayLabel, elapsedLabel } from './text.ts';

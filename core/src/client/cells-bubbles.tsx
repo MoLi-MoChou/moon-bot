@@ -1,7 +1,7 @@
 import { createElement as h, useEffect, useRef, useState } from 'react';
 import type { CSSProperties, MouseEvent as ReactMouseEvent, ReactNode, RefObject } from 'react';
 import { createPortal } from 'react-dom';
-import { MarkdownText } from './dsh-primitives.ts';
+import { MarkdownText } from './dsh-primitives.tsx';
 import { inkText } from './inks.ts';
 import { BotMark, colorOf } from './mark.tsx';
 import { t } from './i18n.ts';

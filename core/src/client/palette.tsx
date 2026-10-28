@@ -1,5 +1,5 @@
 import { Fragment, type Ref, createElement as h, useEffect, useRef, useState } from 'react';
-import { FishLogo } from './dsh-primitives.ts';
+import { FishLogo } from './dsh-primitives.tsx';
 import { isMainOf } from './sources.ts';
 import { currentPart, stripHeader } from './text.ts';
 import { PlusIcon, SearchIcon, PeopleIcon, CloseIcon, GearIcon } from './icons.tsx';

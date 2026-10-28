@@ -1,7 +1,7 @@
 // Sidebar Bot / room / agent rows.
 import { STORAGE } from './storage.ts';
 import { createElement as h, useEffect, useLayoutEffect, useRef } from 'react';
-import { FishLogo } from './dsh-primitives.ts';
+import { FishLogo } from './dsh-primitives.tsx';
 import { isMainOf } from './sources.ts';
 import { currentPart, previewOf, relativeShort } from './text.ts';
 import { PlusIcon, PinMarkIcon } from './icons.tsx';

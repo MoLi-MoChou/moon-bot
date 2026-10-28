@@ -1,6 +1,6 @@
 import { type Ref, createElement as h, useRef, useState } from 'react';
 import { LEAN } from './lean.ts';
-import { FishLogo } from './dsh-primitives.ts';
+import { FishLogo } from './dsh-primitives.tsx';
 import { PlusIcon, PeopleIcon, ArrowUpIcon } from './icons.tsx';
 import { AdminStar, BotMark } from './mark.tsx';
 import { SearchIcon } from './icons.tsx';

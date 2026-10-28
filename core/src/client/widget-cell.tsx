@@ -1,6 +1,6 @@
 import { Fragment, createElement as h, useId, useRef, useState } from 'react';
 import type { ChangeEvent, KeyboardEvent, ReactElement } from 'react';
-import { MarkdownText } from './dsh-primitives.ts';
+import { MarkdownText } from './dsh-primitives.tsx';
 import { CheckIcon, CloseIcon } from './icons.tsx';
 import { t } from './i18n.ts';
 import { keyLetter, useOptionKeys } from './questions.tsx';

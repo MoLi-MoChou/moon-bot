@@ -16,5 +16,5 @@ export interface MarkdownTextProps {
 }
 
 export function MarkdownText({ text }: MarkdownTextProps): ReactElement {
-  return h('div', { className: 'md-plain' }, text)
+  return <div className='md-plain'>{text}</div>
 }

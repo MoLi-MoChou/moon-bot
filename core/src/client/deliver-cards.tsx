@@ -6,7 +6,7 @@ import { createElement as h, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { call } from './api.ts';
-import { MarkdownText } from './dsh-primitives.ts';
+import { MarkdownText } from './dsh-primitives.tsx';
 import { CloseIcon, FileKindIcon } from './icons.tsx';
 import type { DeliverKind } from './icons.tsx';
 import { formatBytes, mediaKind, saveBlob, toBlob, toBytes, typeLabel } from './files-panel.ts';

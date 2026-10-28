@@ -1,6 +1,6 @@
 {
   "name": "moon-bot-core",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Moon Bot: the Bot team, its own runtime (a slim fork of DS Bot by Fei2411, Apache-2.0)",
   "keywords": [
     "bot",

@@ -3,7 +3,8 @@
 // to a Moon Bot relay. The process is the unit of supervision — when either end
 // of the bridge goes down it exits non-zero, and whatever launched it restarts it.
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
-import { USAGE, parseArgs } from './args.ts'
+import { USAGE, parseArgs, parseDoctorArgs } from './args.ts'
+import { doctor } from './doctor.ts'
 import { LineSplitter, buildRelayUrl } from './bridge.ts'
 import { findAgents, pickAgent, pickFailureMessage } from './discovery.ts'
 
@@ -34,6 +35,19 @@ const resolveLaunch = (command: readonly string[]): Launch | { readonly error: s
     return { command: pick.agent.path, args: [], label: `${pick.agent.label} (${pick.agent.path})` }
   }
   return { error: pickFailureMessage(pick.found) }
+}
+
+const runDoctor = async (argv: readonly string[]): Promise<number> => {
+  const parsed = parseDoctorArgs(argv)
+  if (!parsed.ok) {
+    log(`moon-bot-connect: ${parsed.error}`)
+    process.stderr.write(USAGE)
+    return EXIT_USAGE
+  }
+  return await doctor(
+    { url: parsed.url, token: parsed.token, stdout: line => process.stdout.write(`${line}\n`), stderr: log },
+    { nodeVersion: process.versions.node },
+  )
 }
 
 const run = (): void => {
@@ -134,4 +148,9 @@ const run = (): void => {
   process.on('SIGTERM', () => { stop('SIGTERM', EXIT_SIGTERM) })
 }
 
-run()
+// `doctor` answers "why can this machine not join" without joining; everything else bridges.
+if (process.argv[2] === 'doctor') {
+  void runDoctor(process.argv.slice(3)).then(code => process.exit(code))
+} else {
+  run()
+}

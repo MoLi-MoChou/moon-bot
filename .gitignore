@@ -35,3 +35,6 @@ node_modules/
 
 # The mock bench (dev/bench.sh) keeps its team beside the checkout.
 /.moon-bot-test-*/
+
+# The published connect CLI is bundled by `npm run build` (connect/scripts/build.mjs).
+/connect/dist/

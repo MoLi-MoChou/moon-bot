@@ -3,20 +3,40 @@
   "version": "0.1.0",
   "description": "Moon Bot connect CLI: attach a local ACP agent to a Moon Bot relay with one command.",
   "license": "Apache-2.0",
-  "private": true,
   "type": "module",
   "bin": {
-    "moon-bot-connect": "src/main.ts"
+    "moon-bot-connect": "dist/main.js"
   },
   "engines": {
     "node": ">=22.18"
   },
   "scripts": {
     "test": "node --test \"test/*.test.ts\"",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "build": "node scripts/build.mjs",
+    "prepare": "node scripts/build.mjs",
+    "prepublishOnly": "node scripts/build.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",
-    "typescript": "^5.9.3"
-  }
+    "typescript": "^5.9.3",
+    "esbuild": "0.28.2"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MoLi-MoChou/moon-bot.git",
+    "directory": "connect"
+  },
+  "homepage": "https://github.com/MoLi-MoChou/moon-bot/tree/main/connect",
+  "keywords": [
+    "moon-bot",
+    "acp",
+    "agent",
+    "cli",
+    "relay"
+  ]
 }

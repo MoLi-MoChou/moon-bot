@@ -156,6 +156,7 @@ CREATE TABLE proactive_subscriptions (
   event_hook TEXT,                 -- 'no-progress' for the one hook v1 has
   event_minutes INTEGER,
   enabled INTEGER NOT NULL DEFAULT 1,
+  last_fired_at INTEGER,            -- when the poll last fired it, so the next tick moves on
   created_at INTEGER NOT NULL
 );
 CREATE INDEX proactive_subscriptions_bot ON proactive_subscriptions(bot_id);

@@ -22,6 +22,8 @@ export const SubscriptionRow = z.object({
   eventHook: z.string().nullable(),
   eventMinutes: z.number().int().nullable(),
   enabled: z.boolean(),
+  /** When the poll last fired it; null when it never has. */
+  lastFiredAt: z.number().int().nullable(),
   createdAt: z.number().int(),
 })
 export type SubscriptionRow = z.infer<typeof SubscriptionRow>
@@ -93,6 +95,7 @@ const subscriptionOf = (row: Record<string, unknown>): SubscriptionRow => Subscr
   eventHook: row.event_hook === null || row.event_hook === undefined ? null : String(row.event_hook),
   eventMinutes: row.event_minutes === null || row.event_minutes === undefined ? null : Number(row.event_minutes),
   enabled: bool(row.enabled),
+  lastFiredAt: row.last_fired_at === null || row.last_fired_at === undefined ? null : Number(row.last_fired_at),
   createdAt: Number(row.created_at),
 })
 
@@ -156,6 +159,11 @@ export class ProactiveStore {
   enabledSubscriptions(): SubscriptionRow[] {
     return this.db.prepare('SELECT * FROM proactive_subscriptions WHERE enabled = 1 ORDER BY created_at')
       .all().map(row => subscriptionOf(row as Record<string, unknown>))
+  }
+
+  /** Records that the poll fired a subscription, so the next tick computes from here. */
+  noteFired(id: string, at: number = Date.now()): boolean {
+    return this.db.prepare('UPDATE proactive_subscriptions SET last_fired_at = ? WHERE id = ?').run(at, id).changes > 0
   }
 
   setEnabled(id: string, enabled: boolean): boolean {

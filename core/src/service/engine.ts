@@ -23,7 +23,7 @@ import { openStore, type Store } from '../store/db.ts'
 import { ServiceContext } from './context.ts'
 import { historyPageOf } from './history-page.ts'
 import type { HostRuntime } from '../host/runtime.js'
-import { installProactiveFrom } from './proactive-wiring.ts'
+import { installProactive } from './proactive-wiring.ts'
 import { FileAttachments } from './attachments.ts'
 
 import { ServiceApproval } from './approval.ts'
@@ -334,8 +334,8 @@ ${task.prompt}` }],
   // A history page from the store, in its own module: the chat's pagers and the failed
   // turn's line share it.
   context.pageWith(historyPageOf(store))
-
-  installProactiveFrom(runtime as unknown as HostRuntime, store, agentOf)
+  // The surface, and the poll that lets a subscription fire on its own.
+  context.effect(() => installProactive(runtime as unknown as HostRuntime, store, agentOf), 'moon-bot: proactive poll')
 
   return {
     context, runtime, store, engine, relay, agentOf, emitEvent,

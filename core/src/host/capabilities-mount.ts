@@ -6,7 +6,6 @@ import type { Agent, DshContext, PluginFiber } from './dsh-types.js'
 import { configFor } from './capabilities-config.ts'
 import { createStandaloneMounts } from './capabilities-standalone.ts'
 import type { CapabilityItem, HostRuntime, StoredBot, StoredState } from './runtime.js'
-
 const ENSURE_TIMEOUT_MS = 15_000
 
 export type CapabilityState = 'error' | 'needs-approval' | 'connecting' | 'ready'
@@ -15,14 +14,12 @@ export interface CapabilityStatus {
   readonly state: CapabilityState
   readonly error?: string
 }
-
 interface MountRecord {
   readonly key: string
   readonly fiber: PluginFiber | undefined
   /** The standalone mount's own teardown (no DSH fiber involved). */
   readonly drop?: (() => void) | undefined
 }
-
 interface MountOptions {
   readonly ctx: DshContext
   readonly rt: HostRuntime
@@ -30,7 +27,6 @@ interface MountOptions {
   library(): Record<string, CapabilityItem>
   expand(names: readonly string[] | undefined): Set<string>
 }
-
 export interface CapabilityMounts {
   reconcile(): Promise<void>
   scheduleReconcile(): Promise<unknown>
@@ -46,7 +42,6 @@ export interface CapabilityMounts {
   wrapSecretsChanged(previous: (() => void) | undefined): () => void
   dispose(): Promise<void>
 }
-
 type StatusMap = Map<string, Map<string, Map<string, CapabilityStatus>>>
 
 export function createCapabilityMounts({ rt, state, library, expand }: MountOptions): CapabilityMounts {
@@ -59,29 +54,34 @@ export function createCapabilityMounts({ rt, state, library, expand }: MountOpti
   let scheduled: Promise<unknown> | null = null
   let loadingSecrets = 0
   let stopped = false
-
   const statusSet = (botId: string, itemName: string, sessionId: string, status: CapabilityStatus): void => {
     let byItem = sessionStatuses.get(botId)
     if (!byItem) sessionStatuses.set(botId, byItem = new Map())
     let bySession = byItem.get(itemName)
     if (!bySession) byItem.set(itemName, bySession = new Map())
+    const previous = bySession.get(sessionId)
+    if (previous?.state === status.state && previous?.error === status.error) return
     bySession.set(sessionId, status)
+    rt.liveChanged?.()
   }
   const clearStatus = (botId: string, itemName: string, sessionId: string): void => {
     const byItem = sessionStatuses.get(botId)
     const bySession = byItem?.get(itemName)
-    bySession?.delete(sessionId)
-    if (bySession?.size === 0) byItem?.delete(itemName)
+    if (!bySession?.delete(sessionId)) return
+    if (bySession.size === 0) byItem?.delete(itemName)
     if (byItem?.size === 0) sessionStatuses.delete(botId)
+    rt.liveChanged?.()
   }
   const clearSession = (sessionId: string): void => {
+    let changed = false
     for (const [botId, byItem] of sessionStatuses) {
       for (const [name, bySession] of byItem) {
-        bySession.delete(sessionId)
+        changed = bySession.delete(sessionId) || changed
         if (bySession.size === 0) byItem.delete(name)
       }
       if (byItem.size === 0) sessionStatuses.delete(botId)
     }
+    if (changed) rt.liveChanged?.()
   }
   const statusFor = (botId: string, name: string): CapabilityStatus | undefined => {
     const values = [...(sessionStatuses.get(botId)?.get(name)?.values() ?? [])]
@@ -138,8 +138,7 @@ export function createCapabilityMounts({ rt, state, library, expand }: MountOpti
   }
 
   const disposeMount = async (mount: MountRecord | undefined): Promise<void> => {
-    mount?.drop?.()
-    const fiber = mount?.fiber
+    mount?.drop?.(); const fiber = mount?.fiber
     if (fiber !== undefined) await Promise.resolve().then(() => fiber.dispose()).catch(() => {})
   }
   const mountOne = async (agent: Agent, bot: StoredBot | undefined, agentMounts: Map<string, MountRecord>, name: string): Promise<void> => {

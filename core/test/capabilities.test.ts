@@ -347,10 +347,19 @@ test('the status is connecting while a slow server starts, then ready', async t 
   state.bots.chief.capabilities = ['slow']
   const env = await setup({ state })
   t.after(() => env.dispose())
+  const liveChanged = env.rt.liveChanged
+  const observed: string[] = []
+  env.rt.liveChanged = () => {
+    const status = statusOf(env.rt, 'chief', 'slow')
+    if (status !== undefined) observed.push(status.state)
+    liveChanged?.()
+  }
   const running = env.rt.ensureCapabilities('chief')
   await waitForState(env.rt, 'chief', 'slow', 'connecting')
   await running
   await waitForState(env.rt, 'chief', 'slow', 'ready')
+  assert.ok(observed.includes('connecting'))
+  assert.ok(observed.includes('ready'))
   assert.equal(statusOf(env.rt, 'chief', 'slow')?.state, 'ready')
   assert.deepEqual(mcpNames(env.rt), ['mcp__slow__echo', 'mcp__slow__env', 'mcp__slow__argv'])
 })

@@ -69,6 +69,13 @@ export function install(rt: HostRuntime): void {
   // `token` is what the current mount was made with, so a changed secret mounts again.
   let mount: ConnectorMount | null = null
   let status: ConnectorStatus = { state: 'off' }
+  const setStatus = (next: ConnectorStatus): void => {
+    const sameError = status.state === 'error' && next.state === 'error' && status.error === next.error
+    const sameNonError = status.state !== 'error' && next.state === status.state
+    if (sameError || sameNonError) return
+    status = next
+    rt.liveChanged?.()
+  }
   let queue: Promise<unknown> = Promise.resolve()
   let stopped = false
 
@@ -90,19 +97,19 @@ export function install(rt: HostRuntime): void {
     if (!force && mount !== null && mount.token === token) return
     await unmount()
     if (token === undefined) {
-      status = { state: 'off' }
+      setStatus({ state: 'off' })
       return
     }
     if (options === null) {
-      status = { state: 'off' }
+      setStatus({ state: 'off' })
       return
     }
     if (insecure) {
       mount = { token }
-      status = { state: 'error', error: INSECURE }
+      setStatus({ state: 'error', error: INSECURE })
       return
     }
-    status = { state: 'connecting' }
+    setStatus({ state: 'connecting' })
     // GitHub's MCP server becomes one of our connectors: its tools join the tool
     // registry like every connector's, and the policy sees them L3. The token rides
     // the request headers only — never a file, never a Bot's shell.
@@ -115,13 +122,13 @@ export function install(rt: HostRuntime): void {
       })
       mount = { token }
       githubUnmount = unmountGithub
-      status = { state: 'ready' }
+      setStatus({ state: 'ready' })
     } catch (error) {
       githubUnmount?.()
       githubUnmount = undefined
       mount = { token }
       const message = reason(error)
-      status = { state: 'error', error: message }
+      setStatus({ state: 'error', error: message })
       rt.warn('ds-bot: GitHub connector failed: %s', message)
     }
   }

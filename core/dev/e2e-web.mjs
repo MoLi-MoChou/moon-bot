@@ -89,6 +89,12 @@ try {
   })
   page.on('pageerror', error => problems.push(String(error)))
 
+  // The health endpoint is public, so check the service itself before exercising its gate.
+  const healthResponse = await page.request.get(new URL('/healthz', url).toString())
+  if (!healthResponse.ok()) throw new Error(`healthz failed with HTTP ${healthResponse.status()}`)
+  const health = await healthResponse.json()
+  if (health?.ok !== true) throw new Error(`healthz was not healthy: ${JSON.stringify(health)}`)
+
   // 1. The password page asks, and a wrong password is refused with a note.
   await page.goto(url, { waitUntil: 'domcontentloaded' })
   await page.waitForSelector('input[name=password]')
@@ -105,7 +111,45 @@ try {
   await page.screenshot({ path: shot('02-signed-in.png') })
 
   if (readOnly) {
-    console.log(`e2e-web: ok (read-only) — the login gate and the team shell (screenshots in ${outDir})`)
+    // Read-only deployments are still checked for the state path that matters after a
+    // reconnect: a fresh state read, reload, stable selection, and an authenticated feed.
+    const snapshot = await page.evaluate(async () => {
+      const response = await fetch('/api/bot', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ endpoint: 'state', payload: {} }),
+      })
+      return await response.json()
+    })
+    if (snapshot?.ok !== true) throw new Error(`state read failed: ${JSON.stringify(snapshot)}`)
+    const bots = Array.isArray(snapshot.value?.bots) ? snapshot.value.bots : []
+    const stable = bots.find(bot => bot.id === snapshot.value?.mainBotId) ?? bots[0]
+    if (stable?.id === undefined) throw new Error('state read returned no stable Bot')
+    // Bot ids are generated URL-safe identifiers; keep the selector scoped to the data
+    // attribute so duplicate names cannot make the reload assertion pass accidentally.
+    const botId = String(stable.id).replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+    const botSelector = `[data-bot-id="${botId}"]`
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await page.waitForSelector('.bt-side', { timeout })
+    await page.locator(botSelector).waitFor({ state: 'visible', timeout })
+    await page.locator(botSelector).click()
+    await page.getByRole('button', { name: 'Collapse sidebar' }).click()
+    await page.getByRole('button', { name: 'Expand sidebar' }).click()
+    await page.locator(botSelector).waitFor({ state: 'visible', timeout })
+    await page.waitForSelector('[data-composer-input]', { timeout })
+    if (await page.locator(`${botSelector}[aria-current="page"]`).count() !== 1)
+      throw new Error(`reload lost the selected Bot ${String(stable.id)}`)
+    const feed = await page.evaluate(async () => {
+      const response = await fetch('/api/bot/feed', { cache: 'no-store' })
+      if (!response.ok || response.body === null) return { ok: false, status: response.status }
+      const reader = response.body.getReader()
+      const first = await reader.read()
+      await reader.cancel()
+      return { ok: true, hello: new TextDecoder().decode(first.value).startsWith('event: hello\n') }
+    })
+    if (feed.ok !== true || feed.hello !== true) throw new Error(`feed did not open with hello: ${JSON.stringify(feed)}`)
+    await page.screenshot({ path: shot('03-reloaded.png') })
+    console.log(`e2e-web: ok (read-only) — health, auth, state, reload, selection, and feed (screenshots in ${outDir})`)
   } else {
     // 3. One Bot, made through the same channel the UI uses, then a message it answers.
     const created = await page.evaluate(async () => {

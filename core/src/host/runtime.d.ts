@@ -393,6 +393,8 @@ export interface HostRuntime {
   proactiveSubscriptionsOf?(botId: string): readonly { readonly id: string, readonly topics: string, readonly dailyCap: number, readonly quietFrom: string | null, readonly quietTo: string | null, readonly enabled: boolean }[]
   proactiveReview?(botId: string): Promise<unknown>
   proactiveLocalTime?(): string
+  /** Recent proactive runs, for the task panel: a run that said nothing still happened. */
+  proactiveRounds?(): readonly { readonly subscriptionId: string, readonly botId: string, readonly botName: string, readonly at: number, readonly outcome: string }[]
   proactiveSend?(sessionId: string, message: Record<string, unknown>): boolean
   proactiveRules?(): {
     readonly rulesForBot: (botId: string) => readonly Record<string, unknown>[]

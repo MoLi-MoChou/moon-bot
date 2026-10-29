@@ -13,6 +13,8 @@ export const HOOK_POLL_MS = 60_000
 const DAY_MESSAGES = 120
 
 export interface TriggerDeps {
+  /** Every run is noted here, so the panel can show that it happened even when it was silent. */
+  readonly noteRound?: ((round: { readonly subscriptionId: string, readonly botId: string, readonly outcome: string }) => void) | undefined
   readonly pipeline: RunDeps
   readonly send: SendDeps
   /** Everything one run needs to read, resolved at fire time. */
@@ -67,6 +69,8 @@ export async function trigger(deps: TriggerDeps, subscriptionId: string, botId: 
     },
   }
   const outcome = await deliverOnce(request, deps.pipeline, deps.send)
+  const noted = outcome.kind === 'nothing' || outcome.kind === 'failed' ? outcome.kind : outcome.kind === 'sent' ? 'sent' : `withheld:${outcome.reason}`
+  deps.noteRound?.({ subscriptionId, botId, outcome: noted })
   // The quiet round: a run that produced nothing leaves no trace the user sees.
   if (outcome.kind === 'nothing' || outcome.kind === 'failed') return outcome.kind
   return outcome.kind === 'sent' ? 'sent' : `withheld:${outcome.reason}`

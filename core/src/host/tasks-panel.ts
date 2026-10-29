@@ -6,6 +6,7 @@
 // finished turns. Stopping goes through the same cancel a Main Bot's stop_bot uses.
 import type { TaskHold } from '../shared/rpc.ts'
 import { SOURCE_KIND } from './constants.ts'
+import { roundLine } from './proactive/rounds.ts'
 import type { HostRuntime } from './runtime.js'
 
 /** What this module reads off the runtime: the turn and handoff views install theirs at
@@ -198,7 +199,14 @@ export function install(rt: PanelRuntime): void {
         return [{ botId: note.botId, botName: nameOf(note.botId), sessionId: note.sessionId, for: room === undefined ? [] : [room.name], hold: 'interrupted' }]
       }),
     ]
-    return { running, completed: [...done], waiting }
+    // Proactive runs that never became a turn still happened; the panel says so in one line
+    // each, without counting as unread (plan §6, the quiet round).
+    const rounds = (rt.proactiveRounds?.() ?? []).map((round): TaskDoneView => ({
+      sessionId: sessionOf(round.botId, undefined), botId: round.botId, botName: round.botName,
+      startedAt: round.at, endedAt: round.at,
+      reason: roundLine(round.outcome),
+    }))
+    return { running, completed: [...done, ...rounds], waiting }
   }
 
   /** Fed by the emitter: a turn's clock, and its row once it ends. */

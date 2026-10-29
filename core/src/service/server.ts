@@ -124,14 +124,16 @@ export async function startService(options: ServiceOptions): Promise<StandaloneS
 
   // The commit this build came from, when the image or the caller names one: a deploy can
   // prove what is running without opening a shell (plan 阶段 A).
+  // The image's own file wins over the environment: a container recreated from another
+  // one inherits its env, and an inherited MOON_BOT_REVISION then reports the old commit
+  // for the new code. The file is written by the build that produced this image.
   const revision = (): string | undefined => {
-    const named = process.env.MOON_BOT_REVISION?.trim()
-    if (named !== undefined && named !== '') return named
     try {
-      return readFileSync('/opt/moon-bot/REVISION', 'utf8').trim() || undefined
-    } catch {
-      return undefined
-    }
+      const built = readFileSync('/opt/moon-bot/REVISION', 'utf8').trim()
+      if (built !== '') return built
+    } catch { /* not an image build: fall through to the environment */ }
+    const named = process.env.MOON_BOT_REVISION?.trim()
+    return named === undefined || named === '' ? undefined : named
   }
   app.get('/healthz', async () => ({ ok: true, ...(revision() === undefined ? {} : { revision: revision() }) }))
 

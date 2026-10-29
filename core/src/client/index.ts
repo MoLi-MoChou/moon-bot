@@ -78,11 +78,11 @@ interface ShadowOptions {
 export function apply(ctx: ClientContext): void {
   installImeGuard()
   ctx.effect(() => installFilesPanel({ call, onPickFolder: () => { const id = mainView(); if (id) actions.showDetails(id) } }), 'moon-bot: workspace file downloads')
-  ctx.effect(() => installLocale(ctx.get('locale')), 'ds-bot: interface copy')
+  ctx.effect(() => installLocale(ctx.get('locale')), 'moon-bot: interface copy')
 
   const client = createClientState(ctx)
-  ctx.effect(() => installRegistry(ctx), 'ds-bot: registry')
-  ctx.inject(['shortcuts'], scope => { scope.effect(() => holdShellShortcuts(scope.shortcuts), 'ds-bot: settings shortcut') })
+  ctx.effect(() => installRegistry(ctx), 'moon-bot: registry')
+  ctx.inject(['shortcuts'], scope => { scope.effect(() => holdShellShortcuts(scope.shortcuts), 'moon-bot: settings shortcut') })
   const after = <T>(promise: Promise<T>): Promise<T> => promise.then(async (value) => { await client.pull().catch(() => {}); return value })
   // A Bot id, or any part of its chat, opens the Bot's current part.
   const partFor = (id: string): string => {
@@ -110,20 +110,20 @@ export function apply(ctx: ClientContext): void {
     roster: client.roster,
     shownSession: () => mainView(),
     openSession: id => actions.openSession(id),
-  }), 'ds-bot: approval notifications')
+  }), 'moon-bot: approval notifications')
   ctx.effect(() => addAlwaysAllow({
     work: client.work,
     shownSession: () => mainView(),
     raise: (botId, permission) => actions.updateBot(botId, { permission }),
-  }), 'ds-bot: always-allow approvals')
+  }), 'moon-bot: always-allow approvals')
 
   const assistantFace = (sessionId: string): Face => {
     const binding = ctx.sessions.binding(sessionId)
-    if (binding === undefined) throw new Error(`ds-bot: unknown session "${sessionId}"`)
+    if (binding === undefined) throw new Error(`moon-bot: unknown session "${sessionId}"`)
     const chat = ctx.uiConversation.binding(binding).target('chat')
     const nodes = (): ChatSnapshot => {
       const snapshot = chat.getSnapshot()
-      if (snapshot === undefined) throw new Error('ds-bot: Chat target is unavailable')
+      if (snapshot === undefined) throw new Error('moon-bot: Chat target is unavailable')
       return snapshot
     }
     return { ...face(), keyedHooks: {
@@ -161,7 +161,7 @@ export function apply(ctx: ClientContext): void {
           atMenu.current = null
           for (const off of offs) off()
         }
-      }, 'ds-bot: @ menu')
+      }, 'moon-bot: @ menu')
     })
     return () => { fiber.dispose() }
   }
@@ -209,7 +209,7 @@ export function apply(ctx: ClientContext): void {
     () => shadow('conversation.chat.node', { key: 'tool-call', priority: BOT_PRIORITY, locale: 'chat', inject: face }, ToolCell),
     () => shadow('conversation.chat.node', { key: 'model-retry', priority: BOT_PRIORITY, locale: 'chat' }, RetryCell),
     () => shadow('conversation.chat.node', { key: 'turn-process', priority: BOT_PRIORITY, locale: 'chat', inject: face }, TurnProcessCell),
-    // DSH's own turn tail stays, so what other plugins add there shows, such as the
+    // the host's own turn tail stays, so what other plugins add there shows, such as the
     // cards of the files a turn delivered; its copy and branch row is hidden.
     () => shadow('conversation.chat.turnTail', { id: 'bot-turn-separators', order: 1000, inject: face }, TurnTailCell),
     // A Bot condenses its conversation without telling anyone; the chat keeps showing
@@ -239,13 +239,13 @@ export function apply(ctx: ClientContext): void {
     () => shadow('conversation.input.dock', { id: 'bot-starters', order: -80, inject: face }, StarterChips),
   ]
   // The return button belongs to neither group: it renders only in Agent mode.
-  ctx.effect(() => installCompiledStyles(RETURN_CSS, 'return'), 'ds-bot: return styles')
+  ctx.effect(() => installCompiledStyles(RETURN_CSS, 'return'), 'moon-bot: return styles')
   shadow('sidebar.footer.action', { id: 'bot-return', order: -300, inject: face }, BotReturn)
 
-  // The main view decides `plain`: a DSH Agent Session keeps the Bot shell but
-  // withdraws the conversation replacements, so the native dsh page shows. A jump
+  // The main view decides `plain`: an Agent Session keeps the Bot shell but
+  // withdraws the conversation replacements, so the native the host page shows. A jump
   // this plugin did not start — the hero's workspace picker or a fork — opens an
-  // unowned Session; coming from a DSH Agent Session it is adopted into that Agent.
+  // unowned Session; coming from an Agent Session it is adopted into that Agent.
   ctx.effect(() => {
     let previous: string | undefined
     const sync = (): void => {
@@ -280,7 +280,7 @@ export function apply(ctx: ClientContext): void {
       client.setPlain(true)
       void call('agent-adopt', { agentId, sessionId: main }).then(() => client.pull()).catch((error: unknown) => {
         client.pendingAdopt.delete(main)
-        console.warn('[ds-bot] agent-adopt', error)
+        console.warn('[moon-bot] agent-adopt', error)
         // The Session never joined the Agent: the sync puts the team surface
         // back (a Map delete fires no subscription), and the user hears why.
         sync()
@@ -297,7 +297,7 @@ export function apply(ctx: ClientContext): void {
     const offRoster = client.roster.subscribe(sync)
     sync()
     return () => { offList(); offRoster() }
-  }, 'ds-bot: agent surface')
+  }, 'moon-bot: agent surface')
 
   ctx.effect(() => {
     const groups = surfaceGroups({ shell: installShell, conversation: installConversation }, {
@@ -310,5 +310,5 @@ export function apply(ctx: ClientContext): void {
       unsub()
       groups.dispose()
     }
-  }, 'ds-bot: surface')
+  }, 'moon-bot: surface')
 }

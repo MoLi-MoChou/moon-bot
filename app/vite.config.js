@@ -6,10 +6,10 @@ const primitives = fileURLToPath(new URL('./ui/src/primitives.tsx', import.meta.
 // The Bot views take their interface primitives from one module; the window loads no host
 // interface, so its own module (ui/src/primitives.tsx) stands in for that one.
 const ownPrimitives = {
-  name: 'ds-bot-primitives',
+  name: 'moon-bot-primitives',
   enforce: 'pre',
   resolveId(source, importer) {
-    return source === './dsh-primitives.tsx' && importer?.replaceAll('\\', '/').includes('/core/src/client/') ? primitives : null
+    return source === './primitives.tsx' && importer?.replaceAll('\\', '/').includes('/core/src/client/') ? primitives : null
   },
 }
 

@@ -1,38 +1,38 @@
 // Gives the page that the app's Host serves the app's own bridge. On Windows it also marks the
-// page for the frameless window the way DSH Desktop's preload does
+// page for the frameless window the way the desktop app's preload does
 // (apps/desktop/src/preload-windows.ts, preload-platform.ts and preload-theme.ts; see NOTICE),
-// but without data-platform: that puts DSH's shortcuts on native menu input, which this
+// but without data-platform: that puts the host's shortcuts on native menu input, which this
 // window does not have.
 const { contextBridge, ipcRenderer } = require('electron')
 
-const host = process.argv.find(value => value.startsWith('--ds-bot-origin='))?.slice('--ds-bot-origin='.length)
+const host = process.argv.find(value => value.startsWith('--moon-bot-origin='))?.slice('--moon-bot-origin='.length)
 if (host !== undefined && location.origin === host) {
   // DS Bot's settings show and move the app's data location through this.
   contextBridge.exposeInMainWorld('dsBotApp', {
-    dataLocation: () => ipcRenderer.invoke('ds-bot:data-location'),
-    moveData: (workspace) => ipcRenderer.invoke('ds-bot:move-data', typeof workspace === 'string' ? workspace : undefined),
-    teamWorkspaceChanged: (path) => { ipcRenderer.send('ds-bot:team-workspace', String(path)) },
+    dataLocation: () => ipcRenderer.invoke('moon-bot:data-location'),
+    moveData: (workspace) => ipcRenderer.invoke('moon-bot:move-data', typeof workspace === 'string' ? workspace : undefined),
+    teamWorkspaceChanged: (path) => { ipcRenderer.send('moon-bot:team-workspace', String(path)) },
     // Moon Bot patch: the app's own updater, for Settings > About.
     updates: {
-      state: () => ipcRenderer.invoke('ds-bot:update-state'),
-      check: () => ipcRenderer.invoke('ds-bot:update-check'),
-      install: () => ipcRenderer.invoke('ds-bot:update-install'),
+      state: () => ipcRenderer.invoke('moon-bot:update-state'),
+      check: () => ipcRenderer.invoke('moon-bot:update-check'),
+      install: () => ipcRenderer.invoke('moon-bot:update-install'),
       onChange: (listener) => {
         const handler = (_event, state) => { listener(state) }
-        ipcRenderer.on('ds-bot:update-changed', handler)
-        return () => { ipcRenderer.removeListener('ds-bot:update-changed', handler) }
+        ipcRenderer.on('moon-bot:update-changed', handler)
+        return () => { ipcRenderer.removeListener('moon-bot:update-changed', handler) }
       },
     },
   })
-  const caption = process.argv.find(value => value.startsWith('--ds-bot-caption='))
+  const caption = process.argv.find(value => value.startsWith('--moon-bot-caption='))
   if (caption !== undefined) {
-    ipcRenderer.on('ds-bot:fullscreen', (_event, fullscreen) => {
+    ipcRenderer.on('moon-bot:fullscreen', (_event, fullscreen) => {
       const root = document.documentElement
       if (root === null) return
       if (fullscreen) root.dataset.fullscreen = 'true'
       else delete root.dataset.fullscreen
     })
-    const start = () => { frameless(caption.slice('--ds-bot-caption='.length), process.argv.includes('--ds-bot-mica')) }
+    const start = () => { frameless(caption.slice('--moon-bot-caption='.length), process.argv.includes('--moon-bot-mica')) }
     // A preload runs before the document root exists.
     if (document.readyState === 'loading') window.addEventListener('DOMContentLoaded', start, { once: true })
     else start()
@@ -42,19 +42,9 @@ if (host !== undefined && location.origin === host) {
 function frameless(height, mica) {
   const root = document.documentElement
   root.dataset.windowsTitlebar = ''
-  root.style.setProperty('--dsh-windows-titlebar-height', `${height}px`)
-  // DSH keeps the dialog mask off the caption band, which then stays bright above a dimmed
-  // page; here the band is part of the page, so the mask covers it too.
-  root.style.setProperty('--dsh-frame-chrome-top', '0px')
-  let theme
-  const sendTheme = () => {
-    const value = root.getAttribute('data-ds-theme-source')
-    if (value === null || value === theme) return
-    theme = value
-    ipcRenderer.send('ds-bot:native-theme', value)
-  }
-  new MutationObserver(sendTheme).observe(root, { attributeFilter: ['data-ds-theme-source'] })
-  sendTheme()
+  root.style.setProperty('--bt-windows-titlebar-height', `${height}px`)
+  // The dialog mask covers the caption band too: the band is part of the page.
+  root.style.setProperty('--bt-frame-chrome-top', '0px')
   captionColors(mica)
 }
 
@@ -91,7 +81,7 @@ function captionColors(mica) {
     const [red, green, blue] = context.getImageData(0, 0, 1, 1).data
     return `rgb(${red}, ${green}, ${blue})`
   }
-  const column = () => document.querySelector('.dsb-main') ?? document.querySelector('.dsb-side')
+  const column = () => document.querySelector('.mb-main') ?? document.querySelector('.mb-side')
   let frame
   const surface = () => {
     const start = column()
@@ -110,7 +100,7 @@ function captionColors(mica) {
   let tries = 0
   const send = () => {
     const colors = surface()
-    // The frame appears once DSH has booted; until then the main process's colors hold.
+    // The frame appears once the host has booted; until then the main process's colors hold.
     if (colors === undefined || colors[1] === undefined) {
       if (tries++ < 120) setTimeout(send, 250)
       return
@@ -118,7 +108,7 @@ function captionColors(mica) {
     const current = colors.join()
     if (current === sent) return
     sent = current
-    ipcRenderer.send('ds-bot:caption-colors', ...colors)
+    ipcRenderer.send('moon-bot:caption-colors', ...colors)
   }
   // A dialog mounts anywhere in the page, which changes all the time; one look per frame.
   let queued = false
@@ -128,9 +118,9 @@ function captionColors(mica) {
     requestAnimationFrame(() => { queued = false; send() })
   }
   const observer = new MutationObserver(queue)
-  observer.observe(document.body, { attributes: true, attributeFilter: ['data-ds-dark-theme', 'style'], childList: true, subtree: true })
+  observer.observe(document.body, { attributes: true, attributeFilter: ['data-bt-dark', 'style'], childList: true, subtree: true })
   observer.observe(document.head, { childList: true, subtree: true, characterData: true })
-  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-ds-theme-source', 'style'] })
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] })
   // A stylesheet link is added before it loads; its rules apply without another mutation.
   document.head.addEventListener('load', send, true)
   send()

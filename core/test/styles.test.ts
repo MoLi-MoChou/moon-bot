@@ -27,9 +27,9 @@ const react = {
 }
 
 const tick = () => new Promise(resolve => setImmediate(resolve))
-// DS Bot's style tags in a document, all of them or those of one group.
+// The app's style tags in a document, all of them or those of one group.
 const tagged = (document, tag?) => [...document.head.querySelectorAll('style')]
-  .filter(style => style.dataset.dshBot !== undefined && (tag === undefined || style.dataset.dshBot === tag))
+  .filter(style => style.dataset.moonBot !== undefined && (tag === undefined || style.dataset.moonBot === tag))
 
 // A fresh jsdom document with the bundled style helpers bound to it.
 const bench = () => {
@@ -48,7 +48,7 @@ const bench = () => {
 
 // Every style tag this client installs names its owner, so nothing else in the page
 // can take it for its own, and a tag this client did not install is left alone.
-test('every style this client installs names the ds-bot owner', () => {
+test('every style this client installs names the Moon Bot owner', () => {
   const { window, module } = bench()
   const { installStyles, installCompiledStyles } = module.exports
   const { document } = window
@@ -59,10 +59,10 @@ test('every style this client installs names the ds-bot owner', () => {
   const plain = installStyles('a{color:red}', 'mentions')
   installCompiledStyles('.b{position:fixed}', 'shell')
   for (const style of tagged(document)) {
-    assert.equal(style.dataset.plugin, 'ds-bot')
+    assert.equal(style.dataset.plugin, 'moon-bot')
     assert.equal(style.matches('style:not([data-plugin])'), false)
   }
-  assert.equal(plain.dataset.dshBot, 'mentions')
+  assert.equal(plain.dataset.moonBot, 'mentions')
   assert.equal(stray.dataset.plugin, undefined, 'a foreign tag keeps no owner of ours')
 })
 
@@ -104,5 +104,5 @@ test('mounting and unmounting compiled styles twice leaves no extra nodes', asyn
 test('the chat-room rule is installed through installStyles, so it is owned too', () => {
   const pane = readFileSync(new URL('../src/client/browser-pane-chrome.tsx', import.meta.url), 'utf8')
   assert.match(pane, /installStyles\(.*'chat-room'/)
-  assert.equal(pane.includes("dataset.dshBot = 'chat-room'"), false)
+  assert.equal(pane.includes("dataset.moonBot = 'chat-room'"), false)
 })

@@ -1,4 +1,4 @@
-// Search provider `auto` for dsh's web seam (`ctx.web`). Each query first tries native search
+// Search provider `auto` for the host's web seam (`ctx.web`). Each query first tries native search
 // behind the asking Session's own model route, with that route's own key, on that route's own
 // origin. Native search is found by protocol, not by vendor: the route's wire protocol defines a
 // standard search tool (Anthropic Messages, OpenAI Responses, Gemini), and a host may also serve
@@ -12,7 +12,7 @@
 // One import surface over focused modules: source (shared text and Source building), readers
 // (native response readers), native (what to try for one route), engines (the keyless
 // fallback's results pages), config (plugin config), provider (the provider itself), host
-// (the dsh wiring).
+// (the host wiring).
 export const name = 'web-search-auto'
 export const inject = ['web']
 

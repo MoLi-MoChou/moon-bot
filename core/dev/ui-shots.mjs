@@ -45,9 +45,9 @@ if (mode === 'desktop') {
   browser = await chromium.launch({ executablePath: findChrome(), headless: true })
   page = await browser.newPage({ viewport: { width: 1400, height: 860 } })
   const root = dirname(dirname(dirname(fileURLToPath(import.meta.url))))
-  const log = readFileSync(join(root, `.dsh-test-${target}`, 'web.log'), 'utf8')
+  const log = readFileSync(join(root, `.moon-bot-test-${target}`, 'web.log'), 'utf8')
   const login = log.match(new RegExp(`http://127\\.0\\.0\\.1:${webPort}/\\?token=[^\\s]+`))?.[0]
-  if (!login) throw new Error(`no login URL in .dsh-test-${target}/web.log`)
+  if (!login) throw new Error(`no login URL in .moon-bot-test-${target}/web.log`)
   await page.goto(login)
 }
 // dsh shows a preview notice until it is dismissed once per profile, and it can open a

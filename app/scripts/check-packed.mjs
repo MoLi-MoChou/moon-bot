@@ -187,8 +187,8 @@ async function chat(cdp) {
   // Fill the native textarea and click the current send control. This works for both the
   // contenteditable composer used by the plugin surface and Moon Bot's standalone textarea.
   await evaluate("(() => { const input = document.querySelector('[data-composer-input]'); if (!input) return false; const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set; setter?.call(input, 'packaged app check'); input.dispatchEvent(new Event('input', { bubbles: true })); input.dispatchEvent(new Event('change', { bubbles: true })); return true })()")
-  await until("document.querySelector('.dsb-send:not(:disabled), button[type=submit]:not(:disabled)')", 'the send button', 10_000)
-  await evaluate("document.querySelector('.dsb-send:not(:disabled), button[type=submit]:not(:disabled)')?.click()")
+  await until("document.querySelector('.mb-send:not(:disabled), button[type=submit]:not(:disabled)')", 'the send button', 10_000)
+  await evaluate("document.querySelector('.mb-send:not(:disabled), button[type=submit]:not(:disabled)')?.click()")
   // The mock model starts its reply with 收到： and the message.
   await until(text('收到：packaged app check'), 'the reply').catch(async (error) => {
     // What the window showed, and what the mock model was asked, so a timeout says why.

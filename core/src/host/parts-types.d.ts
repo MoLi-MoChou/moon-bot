@@ -3,9 +3,9 @@
 //
 // Types only: nothing here runs. They sit beside parts.ts, as runtime.d.ts does for the
 // host, so the module itself stays a logic file under the size gate.
-import type { SessionEvent } from './dsh-types.js'
+import type { SessionEvent } from './host-types.js'
 
-/** A compaction engine, as DSH hands it over: an object DS Bot marks and wraps. */
+/** A compaction engine, as the host hands it over: an object DS Bot marks and wraps. */
 export type CompactionEngine = Record<PropertyKey, unknown>
 
 /** One part of a Bot's conversation, oldest first; the last one is current. */

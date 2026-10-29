@@ -16,16 +16,10 @@ function Field({ label, value, onChange, onBlur, multiline = false, disabled = f
     error?: string | undefined;
     hint?: string | undefined;
 }) {
-    return <label className='bt-set-row bt-bs-row bt-bs-stack'><span className='bt-set-copy'><span className='bt-bs-label'>{label}</span>{hint ? <span className='bt-set-hint'>{hint}</span> : null}</span>{h(multiline ? 'textarea' : 'input', {
-        className: error ? 'bt-input bt-input-error' : 'bt-input',
-        value,
-        disabled,
-        placeholder,
-        spellCheck: false,
-        'aria-invalid': error !== undefined,
-        onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onChange(event.target.value),
-        onBlur,
-    })}{error ? <span className='bt-field-error' role='alert'>{error}</span> : null}</label>;
+    const field = multiline
+        ? <textarea className={error ? 'bt-input bt-input-error' : 'bt-input'} value={value} disabled={disabled} placeholder={placeholder} spellCheck={false} aria-invalid={error !== undefined} onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => onChange(event.target.value)} onBlur={onBlur} />
+        : <input className={error ? 'bt-input bt-input-error' : 'bt-input'} value={value} disabled={disabled} placeholder={placeholder} spellCheck={false} aria-invalid={error !== undefined} onChange={(event: React.ChangeEvent<HTMLInputElement>) => onChange(event.target.value)} onBlur={onBlur} />;
+    return <label className='bt-set-row bt-bs-row bt-bs-stack'><span className='bt-set-copy'><span className='bt-bs-label'>{label}</span>{hint ? <span className='bt-set-hint'>{hint}</span> : null}</span>{field}{error ? <span className='bt-field-error' role='alert'>{error}</span> : null}</label>;
 }
 
 function Select({ label, value, options, onChange }: {

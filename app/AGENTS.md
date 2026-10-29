@@ -20,7 +20,7 @@ Electron 应用：主进程、窗口、服务子进程、首次启动、搬移�
 ## 共享界面代码
 
 - 窗口的 Bot 视图从 `../core/src/client/` 取（[`ui/src/app.tsx`](ui/src/app.tsx)），不在 `app/ui` 复制一份；`app/ui` 只放窗口自己的壳：frame、聊天容器、主题、locale、primitives。历史上窗口和 DSH 插件面共用这套视图；DSH 插件宿主已移除，现在共用的是这个窗口和网页端。
-- [`vite.config.js`](vite.config.js) 的 `ownPrimitives` 插件把 `dsh-primitives.ts` 换成本地 [`ui/src/primitives.tsx`](ui/src/primitives.tsx)（窗口不加载宿主原语）。共享组件不得 import 只存在于某个宿主的模块。
+- [`vite.config.js`](vite.config.js) 的 `ownPrimitives` 插件把 `core/src/client/primitives.tsx` 换成本地 [`ui/src/primitives.tsx`](ui/src/primitives.tsx)（窗口不加载宿主原语）。共享组件不得 import 只存在于某个宿主的模块。
 - 样式表清单在 [`ui/src/sheets.ts`](ui/src/sheets.ts)，必须覆盖 [`../core/src/client/index.ts`](../core/src/client/index.ts) 安装的每个组；[`test/ui-sheets.test.mjs`](test/ui-sheets.test.mjs) 会对比两边，漏一组会红。
 - 共用 `--bt-*` token 与 `motion.tsx` 的预设；共享组件不得依赖桌面专有能力（窗口控制、自动更新、搬移数据、内置浏览器）——这些经注入面传入，缺省时降级（网页端和手机端就走缺省那条路）。
 - 网页版和窗口共用同一个 `app/ui` 构建；[`src/web.ts`](src/web.ts)（`npm run web -w moon-bot`）只是不经过 Electron 的启动入口：起同一个 `startService` 并加密码页。网页版有的能力限制，桌面组件也要能接受。

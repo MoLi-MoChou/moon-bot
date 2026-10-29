@@ -183,7 +183,7 @@ export function install(rt: TurnsRuntime): void {
     if (agent === undefined) return
     const entry = core.live.get(sessionId)
     if (entry?.turn !== undefined && entry.info?.exchangeId === exchangeId) {
-      agent.cancel({ kind: 'hook', reason: 'ds-bot/stopped' })
+      agent.cancel({ kind: 'hook', reason: 'moon-bot/stopped' })
       return
     }
     for (const message of [...(agent.inbox?.nextStep ?? []), ...(agent.inbox?.nextTurn ?? [])]) {

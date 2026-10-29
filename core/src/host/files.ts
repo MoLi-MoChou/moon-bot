@@ -1,6 +1,6 @@
 import { rename } from 'node:fs/promises'
 
-// On Windows a file cannot be replaced while another program has it open: another DSH
+// On Windows a file cannot be replaced while another program has it open: another the host
 // reading the team's state, the search indexer, a virus scanner, a sync client. Those
 // readers let go within moments.
 const BUSY = new Set(['EPERM', 'EACCES', 'EBUSY'])

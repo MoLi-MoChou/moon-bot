@@ -1,6 +1,6 @@
-// The lock that keeps a second dsh host on the same data from writing it, and the read
-// of state.json that goes with it. One writer per plugin home: dsh Web and dsh Desktop
-// share ~/.dsh, and each host keeps the team in memory and writes state.json whole.
+// The lock that keeps a second the host host on the same data from writing it, and the read
+// of state.json that goes with it. One writer per plugin home: the host Web and the desktop app
+// share ~/.the host, and each host keeps the team in memory and writes state.json whole.
 import { copyFile, readFile } from 'node:fs/promises'
 import { mkdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
@@ -59,7 +59,7 @@ export function createStoreLock({ home, statePath, warn }: StoreLockOptions): St
       // save that then cannot write still rejects.
       lockBroken = true
       holder = undefined
-      warn('ds-bot: cannot lock %s, so another instance on the same data could undo changes: %s', home, error)
+      warn('moon-bot: cannot lock %s, so another instance on the same data could undo changes: %s', home, error)
     }
   }
   const readOnly = (): string | undefined => {
@@ -81,7 +81,7 @@ export function createStoreLock({ home, statePath, warn }: StoreLockOptions): St
         return undefined
       }
       stuck = code ?? (error instanceof Error ? error.message : String(error))
-      warn('ds-bot: unreadable state %s: %s', statePath, error)
+      warn('moon-bot: unreadable state %s: %s', statePath, error)
       return undefined
     }
     seen = stamp()
@@ -93,11 +93,11 @@ export function createStoreLock({ home, statePath, warn }: StoreLockOptions): St
       try {
         await copyFile(statePath, backup)
         stuck = undefined
-        warn('ds-bot: unreadable state %s: %s; backed up as %s', statePath, error, backup)
+        warn('moon-bot: unreadable state %s: %s; backed up as %s', statePath, error, backup)
       } catch (copyError) {
         stuck = (copyError as { readonly code?: string } | undefined)?.code
           ?? (copyError instanceof Error ? copyError.message : String(copyError))
-        warn('ds-bot: unreadable state %s: %s; backup failed: %s', statePath, error, copyError)
+        warn('moon-bot: unreadable state %s: %s; backup failed: %s', statePath, error, copyError)
       }
       return undefined
     }

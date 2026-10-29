@@ -17,7 +17,7 @@ const GROUPS: readonly SurfaceGroup[] = ['shell', 'conversation']
 // lean on earlier ones (the theme's styles and tokens), never the other way round.
 function disposeAll(disposers: readonly (() => void)[], label: string): void {
   for (const dispose of [...disposers].reverse()) {
-    try { dispose() } catch (error) { console.warn(`[ds-bot] ${label}`, error) }
+    try { dispose() } catch (error) { console.warn(`[moon-bot] ${label}`, error) }
   }
 }
 
@@ -50,7 +50,7 @@ export function surfaceGroups(
           mounted[group] = disposers
         } catch (error) {
           disposeAll(disposers, `roll back ${group}`)
-          console.warn(`[ds-bot] install ${group}`, error)
+          console.warn(`[moon-bot] install ${group}`, error)
           onError?.(group, error)
           break
         }

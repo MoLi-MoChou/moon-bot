@@ -1,4 +1,4 @@
-// Mounting a capability where no DSH plugin host runs (plan §阶段 6): the MCP server
+// Mounting a capability where no the host plugin host runs (plan §阶段 6): the MCP server
 // becomes one of our connectors, its tools namespaced into the registry the engine
 // serves — so the policy classifies every one of them L3 — and the whole thing
 // unmounts with the Bot's capability.

@@ -12,7 +12,7 @@ const memoryStorage = (entries = {}) => {
   } as Storage & { map: Map<string, string> }
 }
 
-test('values saved under the dsh-bot keys move to the ds-bot keys', () => {
+test('values saved under the dsh-bot keys move to the moon-bot keys', () => {
   const storage = memoryStorage({
     'dsh-bot:unread': '{"a":true}',
     'dsh-bot:reactions': '{"t1":"👍"}',
@@ -24,12 +24,12 @@ test('values saved under the dsh-bot keys move to the ds-bot keys', () => {
   })
   migrateStorage(storage)
   assert.deepEqual(Object.fromEntries(storage.map), {
-    'ds-bot:unread': '{"a":true}',
-    'ds-bot:reactions': '{"t1":"👍"}',
-    'ds-bot:seen': '{"a":1}',
-    'ds-bot:prefs': '{"theme":"claude"}',
-    'ds-bot:browser-width': '600',
-    'ds-bot.browser.v2': '{"a":{"tabs":[{"id":"v1-a","url":"https://example.com/","title":""}],"active":"v1-a"}}',
+    'moon-bot:unread': '{"a":true}',
+    'moon-bot:reactions': '{"t1":"👍"}',
+    'moon-bot:seen': '{"a":1}',
+    'moon-bot:prefs': '{"theme":"claude"}',
+    'moon-bot:browser-width': '600',
+    'moon-bot.browser.v2': '{"a":{"tabs":[{"id":"v1-a","url":"https://example.com/","title":""}],"active":"v1-a"}}',
     'other:key': 'kept',
   })
 })
@@ -43,12 +43,19 @@ test('the dsh-bot-team keys move too, and the newer name wins', () => {
 })
 
 test('a value already under the current key is never overwritten', () => {
-  const storage = memoryStorage({ 'ds-bot:seen': 'current', 'dsh-bot:seen': 'old' })
+  const storage = memoryStorage({ 'moon-bot:seen': 'current', 'ds-bot:seen': 'older', 'dsh-bot:seen': 'oldest' })
   migrateStorage(storage)
   assert.equal(storage.getItem(STORAGE.seen), 'current')
+  assert.equal(storage.getItem('ds-bot:seen'), null)
   assert.equal(storage.getItem('dsh-bot:seen'), null)
   migrateStorage(storage)
   assert.equal(storage.getItem(STORAGE.seen), 'current')
+})
+
+test('the newest legacy name wins when the current key is empty', () => {
+  const storage = memoryStorage({ 'dsh-bot-team:unread': 'oldest', 'dsh-bot:unread': 'older', 'ds-bot:unread': 'newest' })
+  migrateStorage(storage)
+  assert.equal(storage.getItem(STORAGE.unread), 'newest')
 })
 
 test('every current key has its legacy keys, and unusable storage is no error', () => {

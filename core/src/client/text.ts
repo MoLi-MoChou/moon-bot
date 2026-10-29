@@ -89,7 +89,7 @@ export const contentText = (content?: readonly ContentBlock[]): string => (conte
 // newline, a legacy inline header still stops at its first closing bracket.
 export const HEADER = /^\[(Message from|Reply from|Group chat|Group post from|Bot team setup|Handoff · part|Secret card)(?:[^\r\n]*\]\r?\n|[^\]\r\n]*\])/
 export const currentPart = (bot: { sessionId?: string; id?: string }): string => bot.sessionId ?? bot.id ?? ''
-// The prompts in a due scheduled task's message. DSH frames it for the model: one
+// The prompts in a due scheduled task's message. the host frames it for the model: one
 // task as `reminder_prompt_json: "…"`, several as `reminders_json: [{reminder_prompt}]`.
 export function reminderPrompts(text: string): string[] {
   const one = /^reminder_prompt_json: (.*)$/m.exec(text)
@@ -175,7 +175,7 @@ export function toolArgs(root: ToolCallRoot): ToolArguments {
 }
 
 // A relay context is a Bot-to-Bot request, reply or stop notice injected into the
-// model's history. ds-bot's own package sources (kickoff, room, secret, handoff
+// model's history. Moon Bot's own package sources (kickoff, room, secret, handoff
 // parts) are not events in the chat, nor is a request handed back after its line was
 // already shown: deferred, resumed after a restart, or retried after a tool call
 // written as text.
@@ -199,7 +199,7 @@ export const isRelayContext = (data: { source?: RelaySource | null } | undefined
 export interface ChatBlock { kind?: string; text?: string }
 export interface ChatStep { step?: number; time?: number; blocks?: ChatBlock[] }
 
-// 'context' chat nodes never reach the flow on DSH 0.2, so a relay spliced into
+// 'context' chat nodes never reach the flow on the host, so a relay spliced into
 // a running turn would be invisible; the step that answers it renders the line.
 // A relay attaches to the next step that renders a cell: tool-only steps mount
 // nothing (ui-chat gives them no visible node), so `prev` is the previous step
@@ -324,7 +324,7 @@ export interface RunStatsValues {
 }
 export interface RunStat { key: string; text: string; title?: string }
 
-// One Session's figures from DSH's sessionStats, tokenUsage and contextPressure views, as
+// One Session's figures from the host's sessionStats, tokenUsage and contextPressure views, as
 // its status bar counts them: turns, output tokens over decode time, cache reads over
 // every prompt-side token, and the context in use. Figures with nothing to count yet are left out.
 export function runStatsOf(values: RunStatsValues | undefined): RunStat[] {

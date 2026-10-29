@@ -120,7 +120,8 @@ export function EngineMenu({ bot, save, refreshEngines, wide = false }: EngineMe
     const local = available.filter(entry => entry.kind === 'acp' && entry.selectable !== false && !entry.onDemand);
     const ondemand = available.filter(entry => entry.kind === 'acp' && entry.selectable !== false && Boolean(entry.onDemand));
     const remote = available.filter(entry => entry.kind === 'acp-remote');
-    const unsupported = available.filter(entry => entry.kind !== 'acp' && entry.kind !== 'acp-remote' && entry.kind !== 'builtin');
+    const unsupported = available.filter(entry => entry.health !== 'missing' && entry.kind !== 'acp' && entry.kind !== 'acp-remote' && entry.kind !== 'builtin');
+    const missing = available.filter(entry => entry.health === 'missing');
     const engineKey = bot.runtimeId ?? engine?.key ?? engine?.command ?? '';
     const customCurrent = engine?.kind === 'acp' && !available.some(entry => entry.id === engineKey || (entry.command === engine?.command && (entry.args?.join(' ') ?? '') === (engine?.args?.join(' ') ?? '')))
         ? [{ id: `custom:${engine.command ?? ''}`, label: engine.command ?? '', command: engine.command ?? '', args: engine.args ?? [], kind: 'acp' } satisfies SettingsEngineOption]
@@ -142,6 +143,8 @@ export function EngineMenu({ bot, save, refreshEngines, wide = false }: EngineMe
         {ondemand.map(entry => <button key={entry.id} type='button' role='menuitemradio' aria-checked={currentOf(entry.id)} title={`npx ${(entry.args ?? []).join(' ')}`} onClick={() => choose(entry.id)}><span className='bt-engine-copy'><span className='bt-menu-label'>{entry.label}</span><span className='bt-engine-sub'>{`npx ${(entry.args ?? []).join(' ')}`}</span></span><Tick on={currentOf(entry.id)} /></button>)}
         {remote.length > 0 ? <div className='bt-model-group' role='presentation'>{t('Remote agents')}</div> : null}
         {remote.map(entry => <button key={entry.id} type='button' role='menuitemradio' aria-checked={currentOf(entry.id)} onClick={() => choose(entry.id)}><span className='bt-engine-copy'><span className='bt-menu-label'><span className='bt-engine-dot' data-online={entry.online === true ? '' : undefined} aria-hidden />{entry.label}</span><span className='bt-engine-sub'>{entry.online === true ? t('Connected') : t('Not connected')}</span></span><Tick on={currentOf(entry.id)} /></button>)}
+        {missing.length > 0 ? <div className='bt-model-group' role='presentation'>{t('Not installed')}</div> : null}
+        {missing.map(entry => <span key={entry.id} className='bt-engine-off' role='menuitem' aria-disabled='true'><span className='bt-engine-copy'><span className='bt-menu-label'>{entry.label}</span><span className='bt-engine-sub'>{t('Not on this computer')}</span></span></span>)}
         {unsupported.length > 0 ? <div className='bt-model-group' role='presentation'>{t('Detected non-ACP tools')}</div> : null}
         {unsupported.map(entry => <span key={entry.id} className='bt-engine-off' role='menuitem' aria-disabled='true' title={entry.reason}><span className='bt-engine-copy'><span className='bt-menu-label'>{entry.label}</span><span className='bt-engine-sub'>{entry.version ?? ''}{entry.reason !== undefined && entry.version !== undefined ? ' · ' : ''}{entry.reason ?? ''}</span></span></span>)}
         <div className='bt-menu-sep' role='separator'/>

@@ -1,7 +1,7 @@
 // The interface primitives the Bot views draw with, standalone edition: a plain-text
-// renderer where DSH's MarkdownText was, and no DSH Agent mark. The desktop app's own
-// build puts its richer module (react-markdown) in place of this one — see
-// app/vite.config.js — so this file serves every other loader.
+// renderer in place of a Markdown one, and no Agent mark. The desktop app's own build
+// puts its richer module (react-markdown) in place of this one — see app/vite.config.js —
+// so this file serves every other loader.
 import { createElement as h, type ReactElement } from 'react'
 
 const MENTION_ORIGIN = 'https://bots.local/'

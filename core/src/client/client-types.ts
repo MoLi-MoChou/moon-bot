@@ -114,7 +114,7 @@ export interface ClientWork {
   [key: string]: unknown
 }
 
-// The surface mode, and whether the Bot-mode view holds a plain DSH Session.
+// The surface mode, and whether the Bot-mode view holds a plain the host Session.
 export interface ClientSurface {
   mode: SurfaceMode
   plain: boolean

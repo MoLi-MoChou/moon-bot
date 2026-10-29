@@ -1,6 +1,6 @@
 // The standalone Host: the shell runs this file in Electron's Node mode. It boots Moon
 // Bot's own service (core/src/service) on a loopback port and reports the URL over IPC,
-// speaking the same ready/fatal/shutdown protocol the DSH host did, so the shell's
+// speaking the same ready/fatal/shutdown protocol the host host did, so the shell's
 // lifetime handling carries over unchanged.
 import { inspect } from 'node:util'
 import { fileURLToPath } from 'node:url'

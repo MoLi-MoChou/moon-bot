@@ -32,7 +32,7 @@ import type { RunWork, SettingsActions, SettingsBot, SettingsPrefs, SettingsRost
 const capitalize = (word: string): string => word.charAt(0).toUpperCase() + word.slice(1);
 // Settings dialog: a 198px page list beside the page. Bots and group chats each list
 // their members, and one opens on its own settings form. Usage widens the dialog.
-// Models is there only in a window without DSH's own settings, which carry the providers.
+// Models is there only in a window without the host's own settings, which carry the providers.
 const ALL_SETTINGS_PAGES: [
     string,
     string
@@ -106,7 +106,7 @@ interface LocationsSectionProps {
     run: RunWork;
 }
 // The desktop app's preload hands its window `dsBotApp`; only there does the data location
-// show, since DSH keeps the plugin's data where it runs.
+// show, since the host keeps the plugin's data where it runs.
 function LocationsSection({ actions, run }: LocationsSectionProps) {
     const app = window.dsBotApp;
     const [team, setTeam] = useState<string | null>(null);

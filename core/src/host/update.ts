@@ -1,4 +1,4 @@
-import type { PluginManagerService } from './dsh-types.js'
+import type { PluginManagerService } from './host-types.js'
 import type { HostConfig, HostRuntime } from './runtime.js'
 
 /** Where this package was installed from. */
@@ -37,8 +37,8 @@ interface UpdateStatus {
 
 // Updates: compare this package's version with the newest release where it was
 // installed from (the npm registry, or a GitHub tag for a versioned git install)
-// and, when the user asks, reinstall it through DSH's plugin manager. A new version
-// runs from the next DSH start. A linked or local checkout is never offered one.
+// and, when the user asks, reinstall it through the host's plugin manager. A new version
+// runs from the next the host start. A linked or local checkout is never offered one.
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { clearTimeout, setTimeout } from 'node:timers'
@@ -119,7 +119,7 @@ export async function registryPlan(config: HostConfig, manager: PluginManagerSer
   return isPublic ? [...new Set([first, ...fallbacks])] : [first]
 }
 
-// The plugin manager's `source` for this package; DSH releases before it reported
+// The plugin manager's `source` for this package; the host releases before it reported
 // one leave the profile's own dependency entry to say the same.
 export async function installSpecOf(ctx: { get<T>(name: string): T | undefined }): Promise<string | undefined> {
   const manager = ctx.get<PluginManagerService>('pluginManager')
@@ -179,7 +179,7 @@ export function install(rt: HostRuntime): void {
     if (Date.now() - stars.at < STARS_TTL_MS) return stars.count
     starring ??= fetchJson(`https://api.github.com/repos/${repo}`, { 'user-agent': `${PKG.name}/${PKG.version}` })
       .then((info) => { if (Number.isInteger(info.stargazers_count)) stars = { count: Number(info.stargazers_count), at: Date.now() } })
-      .catch((error: unknown) => rt.warn('ds-bot: star count failed: %s', error instanceof Error ? error.message : error))
+      .catch((error: unknown) => rt.warn('moon-bot: star count failed: %s', error instanceof Error ? error.message : error))
       .finally(() => { starring = null })
     await starring
     return stars.count
@@ -218,7 +218,7 @@ export function install(rt: HostRuntime): void {
       if (source.kind === 'registry') found = await newestFromRegistry()
       else if (source.kind === 'git') found = await newestFromGitHub(source)
     } catch (error) {
-      rt.warn('ds-bot: update check failed: %s', error instanceof Error ? error.message : error)
+      rt.warn('moon-bot: update check failed: %s', error instanceof Error ? error.message : error)
     }
     status.checkedAt = Date.now()
     // Nothing found now (a linked checkout, a moved tag, an unreachable registry)
@@ -260,7 +260,7 @@ export function install(rt: HostRuntime): void {
         Object.assign(status, { phase: 'installed', installed: cleanVersion(answer?.version) ?? chosen.version })
       })
       .catch((error) => {
-        rt.warn('ds-bot: update to %s failed: %s', chosen.spec, error instanceof Error ? error.message : error)
+        rt.warn('moon-bot: update to %s failed: %s', chosen.spec, error instanceof Error ? error.message : error)
         Object.assign(status, { phase: 'failed', error: String(error instanceof Error ? error.message : error).slice(0, 600) })
       })
     return view()
@@ -272,7 +272,7 @@ export function install(rt: HostRuntime): void {
       // A pending first check never keeps the process alive.
       timer.unref()
       return () => clearTimeout(timer)
-    }, 'ds-bot: update check')
+    }, 'moon-bot: update check')
   }
 
   Object.assign(rt, { updateCheck: check, updateStart: start, updateView: view, repoStars })

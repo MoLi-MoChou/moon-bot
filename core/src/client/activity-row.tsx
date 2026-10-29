@@ -50,8 +50,8 @@ export interface ActivityIndicatorProps {
         clearLive(sessionId: string): void;
     };
 }
-// DSH puts the shell's running status in the transcript column, either directly or
-// inside a slot wrapper (DSH 0.2.1 wraps it in a [data-slot] div). The row must find it
+// the host puts the shell's running status in the transcript column, either directly or
+// inside a slot wrapper (the host wraps it in a [data-slot] div). The row must find it
 // either way; a direct-child-only selector left the row unmounted, so nothing showed
 // between sending and the first streamed text.
 export function runningSlot(root: ParentNode): Element | null {

@@ -284,7 +284,7 @@ export function install(rt: HostRuntime): void {
       const sessionBot = rt.isBotSession(agent.session.id) ? bot : undefined
       if ((sessionBot?.capabilities ?? []).length > 0) await mounts.prepare(agent, agent.session.id)
     } catch (error) {
-      rt.warn('ds-bot: capability load failed: %s', error)
+      rt.warn('moon-bot: capability load failed: %s', error)
     }
   })
   ctx.effect(() => {
@@ -293,11 +293,11 @@ export function install(rt: HostRuntime): void {
         if ((bot.capabilities ?? []).length > 0) await mounts.trackBotAgents(bot)
       }
       await mounts.scheduleReconcile()
-    }).catch(error => rt.warn('ds-bot: capability startup failed: %s', error))
+    }).catch(error => rt.warn('moon-bot: capability startup failed: %s', error))
     return async () => {
       await mounts.dispose()
     }
-  }, 'ds-bot: capabilities')
+  }, 'moon-bot: capabilities')
   Object.assign(rt, {
     capabilitySave,
     capabilityDelete,

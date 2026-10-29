@@ -78,5 +78,5 @@ export function install(rt: HostRuntime): void {
     order: 640,
     interpolate: false,
     text: context => promptFor(context?.agent?.id),
-  }), 'ds-bot: identity section')
+  }), 'moon-bot: identity section')
 }

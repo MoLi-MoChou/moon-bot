@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { z } from 'zod'
-import type { ToolRunContext } from '../dsh-types.js'
+import type { ToolRunContext } from '../host-types.js'
 import type { ToolContext } from '../../engine/registry.ts'
 import type { StoredBot } from '../runtime.ts'
 import type { MemoryActor, MemoryFile, MemoryScope, ScopedEntry } from './records.ts'
@@ -248,7 +248,7 @@ export function createRecall({ rt, storage, botShot }: RecallDeps): RecallServic
       if (rt.readOnly() === undefined) await storage.writeText(summaryPath(panel.id), JSON.stringify(value, null, 2))
     })().catch((error: unknown) => {
       summaryFailures.set(panel.id, { hash, model, message: errorMessage(error) })
-      rt.warn('ds-bot: memory summary for %s failed: %s', panel.name, error)
+      rt.warn('moon-bot: memory summary for %s failed: %s', panel.name, error)
     }).finally(() => summarizing.delete(panel.id))
     summarizing.set(panel.id, job)
   }

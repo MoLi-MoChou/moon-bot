@@ -37,7 +37,7 @@ export function openShellSettingsPanel(section?: string): void {
     });
 }
 // Moon Bot patch: the shell's opener takes no section, so its nav row is clicked once the
-// dialog is up (DSH names the models page "Models" / "模型").
+// dialog is up (the host names the models page "Models" / "模型").
 export const SECTION_NAMES: Record<string, RegExp> = { models: /^(Models|模型)$/u };
 export function showShellSection(section: string, tries = 40): void {
     const name = SECTION_NAMES[section];
@@ -196,7 +196,7 @@ export function useLandOnMainBot(roster: TSidebarRoster, useSessions: TSidebarHo
                 actions.landOn(bot.id);
             return undefined;
         }
-        // A DSH Agent Session, blank or not, is a real destination: it stays.
+        // An Agent Session, blank or not, is a real destination: it stays.
         if (id !== '' && (roster.roomsById[id] !== undefined || (actions.isAgentSession?.(id) ?? roster.agentOf[id] !== undefined) || blank !== '1')) {
             lastBot.current = null;
             return undefined;

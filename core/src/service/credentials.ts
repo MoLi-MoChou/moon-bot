@@ -1,9 +1,9 @@
 // The standalone credentials store (plan §阶段 3): API keys in their own file under the
-// team home, mode 0600, never in state.json or the store. The DSH-shaped
+// team home, mode 0600, never in state.json or the store. The host-shaped
 // CredentialsService surface is what the providers and secrets modules already speak.
 import { chmodSync, existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import type { CredentialsService } from '../host/dsh-types.js'
+import type { CredentialsService } from '../host/host-types.js'
 
 const parse = (text: string): Record<string, string> => {
   if (text === '') return {}

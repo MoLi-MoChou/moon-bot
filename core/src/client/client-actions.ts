@@ -99,7 +99,7 @@ export function createActions({ ctx, client, after, partFor, show, atMenu }: Cli
     // or the click appears to do nothing.
     isAgentSession: id => client.isAgentSessionId(id),
     openSession: (id) => {
-      // A DSH Agent Session id lands on the plain surface, not the Bot skin.
+      // An Agent Session id lands on the plain surface, not the Bot skin.
       if (client.isAgentSessionId(id)) { actions.openAgentSession(id); return }
       ui.set(state => (state.newChat || state.exchange || state.menu || state.palette ? { ...state, newChat: null, exchange: null, menu: null, palette: null } : state))
       client.setPlain(false)
@@ -233,7 +233,7 @@ export function createActions({ ctx, client, after, partFor, show, atMenu }: Cli
       ui.set(state => ({ ...state, reactions }))
     },
     clearUnread: id => client.writeUnread(id, false),
-    // DSH's right sidebar (files, terminals), which a plugin may load after this one.
+    // the host's right sidebar (files, terminals), which a plugin may load after this one.
     hasRightSidebar: () => ctx.get('sidebarRight') !== undefined,
     toggleRightSidebar: () => {
       try {
@@ -250,7 +250,7 @@ export function createActions({ ctx, client, after, partFor, show, atMenu }: Cli
     accountT: () => ctx.get('locale').bind('settings.account'),
     // The Voice Input plugin's speech Remote; absent while that plugin is off.
     speech: () => ctx.get('remote.speech') ?? undefined,
-    // DSH's own settings: models, providers, keys and its plugins.
+    // the host's own settings: models, providers, keys and its plugins.
     openShellSettingsPanel,
     openShellOnboardingPanel,
     voiceSetup: () => {

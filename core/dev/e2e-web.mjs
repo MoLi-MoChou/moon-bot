@@ -187,7 +187,7 @@ try {
     await page.locator('.bt-row').first().click()
     await page.waitForSelector('[data-composer-input]')
     await page.fill('[data-composer-input]', '你好')
-    await page.click('.dsb-send')
+    await page.click('.mb-send')
     await page.waitForSelector('text=收到：', { timeout: Math.max(timeout, 60_000) })
     await page.screenshot({ path: shot('03-replied.png') })
     console.log(`e2e-web: ok — the login gate, the team, and a mock-model reply (screenshots in ${outDir})`)

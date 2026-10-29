@@ -59,7 +59,7 @@ function PermissionRow({ bot, roster, actions, run }: PermissionRowProps) {
     if (!catalog?.options?.length)
         return null;
     return <div className='bt-drawer-permission'><div className='bt-section-title'>{t('Permissions')}</div>{
-    // A Bot without its own preset may run on another one set in DSH, so its first pick always applies.
+    // A Bot without its own preset may run on another one set in the host, so its first pick always applies.
     <PermissionPicker catalog={catalog} saved={bot.permission ?? catalog.defaultPreset} repick={bot.permission === undefined} onPick={permission => run(actions.updateBot(bot.id, { permission }))} />}</div>;
 }
 interface RunStatsProps {
@@ -68,7 +68,7 @@ interface RunStatsProps {
     running: boolean;
     actions: DetailsDrawerActions;
 }
-// The current part's turns, speed, cache hits and context, for a window without DSH's
+// The current part's turns, speed, cache hits and context, for a window without the host's
 // status bar (actions.runStats). It reads them again when a turn starts or ends.
 function RunStats({ bot, part, running, actions }: RunStatsProps) {
     const [values, setValues] = useState<RunStatsValues | null>(null);

@@ -1,6 +1,6 @@
 // The pure part of the usage ledger: Session events, oldest first, folded into one row
 // per billed attempt. Nothing here touches the disk, the runtime or a Session.
-import type { SessionEvent } from '../dsh-types.js'
+import type { SessionEvent } from '../host-types.js'
 
 /** The attempt a step is on: `llm/retry-started` moves it forward. */
 export interface RetryState {
@@ -73,7 +73,7 @@ export function tokensOf(usage: unknown): TokenTotals {
   }
 }
 
-// Folds Session events, oldest first, into one row per billed attempt, as DSH's own
+// Folds Session events, oldest first, into one row per billed attempt, as the host's own
 // tokenUsage projection counts them: a later sample of one attempt replaces the earlier
 // one, and `llm/retry-started` begins a new attempt. The model is the one the latest
 // request header named. A fork's events up to its inherited cut are the parents', so

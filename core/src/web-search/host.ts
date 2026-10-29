@@ -1,9 +1,9 @@
-// Host wiring: read the asking Session's route through public dsh services only.
+// Host wiring: read the asking Session's route through public the host services only.
 import type { Route } from './native.ts'
 import { createAutoSearchProvider, type AutoSearchProvider, type WebPage } from './provider.ts'
 import { isRecord, str } from './source.ts'
 
-/** The DSH plugin context, structurally: the services and seams this wiring reads. */
+/** The host plugin context, structurally: the services and seams this wiring reads. */
 export interface HostContext {
   get(name: string): unknown
   readonly web: {
@@ -17,7 +17,7 @@ const isFunction = (value: unknown): value is (...args: unknown[]) => unknown =>
 
 const fieldOf = (record: unknown, key: string): unknown => (isRecord(record) ? record[key] : undefined)
 
-// Routes whose profile leaves protocol, endpoint, or key name to the adapter: dsh's DeepSeek
+// Routes whose profile leaves protocol, endpoint, or key name to the adapter: the host's DeepSeek
 // adapters, and the pi-ai 0.87.1 catalog routes that sign in with an API key
 // (models.generated.js, env-api-keys.js). The protocol is undefined where it differs per model.
 type CatalogEntry = readonly [protocol: string | undefined, base: string, keyName: string | undefined]
@@ -57,12 +57,12 @@ const CATALOG: Readonly<Record<string, CatalogEntry>> = {
   zai: ['openai-completions', 'https://api.z.ai/api/coding/paas/v4', 'ZAI_API_KEY'],
   'zai-coding-cn': ['openai-completions', 'https://open.bigmodel.cn/api/coding/paas/v4', 'ZAI_CODING_CN_API_KEY'],
 }
-const DSH_DEEPSEEK_ROUTES = new Set(['deepseek-official', 'deepseek-account'])
+const DEEPSEEK_ROUTES = new Set(['deepseek-official', 'deepseek-account'])
 
 const stringRecord = (value: unknown): Readonly<Record<string, string>> =>
   (isRecord(value) ? Object.fromEntries(Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === 'string')) : {})
 
-// OpenCode's gateways turn away a request that does not name its conversation. DSH's
+// OpenCode's gateways turn away a request that does not name its conversation. the host's
 // adapter names it by the Session id, so a search for that Session does the same,
 // unless the provider settings name one.
 const OPENCODE_SESSION = 'x-opencode-session'
@@ -103,7 +103,7 @@ export function routeOf(ctx: HostContext): Route | undefined {
     provider,
     model: str(fieldOf(request, 'model')),
     api: str(fieldOf(section, 'api')) ?? catalogApi,
-    baseURL: str(fieldOf(section, 'baseURL')) ?? (DSH_DEEPSEEK_ROUTES.has(provider) ? str(envOf(ctx)('DEEPSEEK_BASE_URL')) : undefined) ?? catalogBase,
+    baseURL: str(fieldOf(section, 'baseURL')) ?? (DEEPSEEK_ROUTES.has(provider) ? str(envOf(ctx)('DEEPSEEK_BASE_URL')) : undefined) ?? catalogBase,
     apiKeyEnv: account ? undefined : str(fieldOf(section, 'apiKeyEnv')) ?? catalogKey,
     account,
     headers: withConversation(provider, stringRecord(fieldOf(section, 'headers')), str(fieldOf(session, 'id'))),
@@ -126,7 +126,7 @@ export function apply(ctx: HostContext, config: unknown = {}): void {
     route: () => routeOf(ctx),
     resolveKey: async (ref) => {
       const credentials = ctx.get('credentials')
-      // Without the seam the environment is the whole credential plane, as in dsh's own adapters.
+      // Without the seam the environment is the whole credential plane, as in the host's own adapters.
       if (credentials === undefined) return env(ref)
       const resolved = isRecord(credentials) && isFunction(credentials.resolve) ? await credentials.resolve(ref) : undefined
       return isRecord(resolved) && typeof resolved.value === 'string' ? resolved.value : undefined

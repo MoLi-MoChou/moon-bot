@@ -93,7 +93,7 @@ test('two relays before one step both return, in order', () => {
   assert.deepEqual(relaysBefore(contexts, steps, steps[1]), [contexts[0], contexts[1]])
 })
 
-test('non-relay context and ds-bot package sources are ignored', () => {
+test('non-relay context and Moon Bot package sources are ignored', () => {
   const steps = [stepAt(1, 10), stepAt(2, 30)]
   const contexts = [
     relay(12, 'request', { handoff: true }),

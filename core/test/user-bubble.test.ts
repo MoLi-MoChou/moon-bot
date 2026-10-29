@@ -4,7 +4,7 @@ import { test } from 'node:test'
 import { ACCENT_INKS, INKS, luminance } from '../src/client/inks.ts'
 import { allThemes, shellTokens, themeCss } from '../src/client/themes.ts'
 
-// The browser bundle holds every style sheet ds-bot installs; the bundle test
+// The browser bundle holds every style sheet the app installs; the bundle test
 // keeps it in step with src/client.
 const bundle = readFileSync(new URL('../client.js', import.meta.url), 'utf8')
 
@@ -36,13 +36,13 @@ test('every rule that writes in the user ink paints the user surface under it', 
   }
 })
 
-test('no ds-bot text color sits on a surface that a skin owns', () => {
+test('no app text color sits on a surface that a skin owns', () => {
   for (const { selector, body } of rulesWith(/(?<=[{;])color:var\(--bt-/g)) {
     assert.doesNotMatch(surface(body) ?? '', /--dsw-/, selector)
   }
 })
 
-test('ds-bot leaves the host bubble variables to the host and its skins', () => {
+test('the app leaves the host bubble variables to the host and its skins', () => {
   assert.doesNotMatch(bundle, /--dsw-specific-bubble/)
   assert.doesNotMatch(bundle, /conversationTokens|installBubbleTokens/)
   for (const [id, theme] of Object.entries(allThemes())) {
@@ -51,7 +51,7 @@ test('ds-bot leaves the host bubble variables to the host and its skins', () => 
 })
 
 const themeVars = (theme, dark) => {
-  const block = themeCss(theme).split('\n').find(line => line.startsWith(dark ? 'html body[data-ds-dark-theme]{' : 'html body{'))
+  const block = themeCss(theme).split('\n').find(line => line.startsWith(dark ? 'html body[data-bt-dark]{' : 'html body{'))
   return Object.fromEntries(block.slice(block.indexOf('{') + 1, -1).split(';').map(item => item.split(':')))
 }
 const parse = color => {
@@ -84,7 +84,7 @@ test('the user ink reads on the user surface in every built-in theme and mode', 
 // of the two inks reads better: white on Tangerine was 2.89:1, near-black is 6.38:1.
 // The variables themeCss sets for one mode.
 const varsOf = (theme, accent, dark) => {
-  const block = themeCss(theme, accent).split('\n').find(line => line.startsWith(dark ? 'html body[data-ds-dark-theme]{' : 'html body{'))
+  const block = themeCss(theme, accent).split('\n').find(line => line.startsWith(dark ? 'html body[data-bt-dark]{' : 'html body{'))
   return Object.fromEntries(block.slice(block.indexOf('{') + 1, -1).split(';').map(item => item.split(':')))
 }
 
@@ -138,7 +138,7 @@ test('every danger color reads --bt-danger, which the base sheet sets once', () 
 })
 
 // A dark skin repaints the host bubble surface (dsh-dream-skin's underwater theme
-// sets this value) and leaves ds-bot's colors alone.
+// sets this value) and leaves the app's colors alone.
 const DARK_SKIN = { '--dsw-specific-bubble': 'rgba(31,33,38,.92)', '--dsw-alias-label-primary': '#ffffff' }
 const resolve = (value, vars) => {
   const plain = value.replace(/!important$/, '')

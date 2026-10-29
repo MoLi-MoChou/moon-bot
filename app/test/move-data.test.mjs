@@ -41,7 +41,7 @@ const files = (dir) => {
 
 test('the new data location is an empty or new folder apart from the data, the team workspace, DSH and the program', (t) => {
   const { root, from } = setup(t)
-  const places = { from, workspace: join(root, 'work'), dshHome: join(root, 'dsh'), program: join(root, 'program') }
+  const places = { from, workspace: join(root, 'work'), otherAppHome: join(root, 'dsh'), program: join(root, 'program') }
   const problem = to => moveProblem({ ...places, to })
   assert.equal(problem(join(root, 'new')), undefined)
   mkdirSync(join(root, 'empty'))
@@ -53,7 +53,7 @@ test('the new data location is an empty or new folder apart from the data, the t
   assert.equal(problem(join(root, 'work', 'data')), 'workspace')
   assert.equal(moveProblem({ ...places, workspace: join(root, 'new', 'work'), to: join(root, 'new') }), 'workspace')
   assert.equal(problem(join(root, 'dsh', 'data')), 'dsh')
-  assert.equal(moveProblem({ ...places, dshHome: join(root, 'new', '.dsh'), to: join(root, 'new') }), 'dsh')
+  assert.equal(moveProblem({ ...places, otherAppHome: join(root, 'new', '.dsh'), to: join(root, 'new') }), 'dsh')
   assert.equal(problem(join(root, 'program', 'data')), 'program')
   write(join(root, 'full', 'note.txt'), 'x')
   assert.equal(problem(join(root, 'full')), 'notEmpty')
@@ -111,9 +111,9 @@ test('a folder that a link leads into counts as that folder', (t) => {
   const { root, from } = setup(t)
   mkdirSync(join(root, 'dsh'))
   symlinkSync(join(root, 'dsh'), join(root, 'dsh-link'), folderLink)
-  assert.equal(moveProblem({ from, to: join(root, 'dsh-link', 'data'), dshHome: join(root, 'dsh') }), 'dsh')
+  assert.equal(moveProblem({ from, to: join(root, 'dsh-link', 'data'), otherAppHome: join(root, 'dsh') }), 'dsh')
   symlinkSync(from, join(root, 'data-link'), folderLink)
-  assert.equal(moveProblem({ from, to: join(root, 'data-link', 'inside'), dshHome: join(root, 'dsh') }), 'nested')
+  assert.equal(moveProblem({ from, to: join(root, 'data-link', 'inside'), otherAppHome: join(root, 'dsh') }), 'nested')
 })
 
 test('a data folder that is itself a link moves with its contents', async (t) => {

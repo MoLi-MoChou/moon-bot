@@ -4,7 +4,7 @@
 import { LOGO_DARK, LOGO_LIGHT } from '../brand-art.ts'
 import { spring, SPRING_POP, SPRING_SHAPE, SPRING_STRETCH, SPRING_TAP } from '../motion.tsx'
 
-// A sidebar skin may seat DSH's footer outlets in a footer of its own; matching the
+// A sidebar skin may seat the host's footer outlets in a footer of its own; matching the
 // outlets keeps that footer on one row whatever the skin names its boxes. The shell's
 // own footer is left to the _footArea rules, which lay it out differently.
 const SKIN_FOOT = ':is(div,footer):not([class*="_footArea"]):has(> div > [data-slot="sidebar.footer.action"] > .bt-connect-wrap)'
@@ -16,7 +16,7 @@ export const SHELL_FRAME_CSS = `
 .bt-brand{display:inline-flex;align-items:center;gap:6px;margin-right:auto;padding:4px 8px 4px 4px;border:0;border-radius:8px;background:none;cursor:pointer;font-family:inherit;font-size:15px;line-height:20px;font-weight:600;letter-spacing:-.01em;color:var(--bt-ink);white-space:nowrap}
 .bt-brand-whale{display:inline-flex;color:var(--bt-accent)}
 .bt-moon-mark{display:inline-block;flex:none;background:url("${LOGO_LIGHT}") center/contain no-repeat}
-body[data-ds-dark-theme] .bt-moon-mark{background-image:url("${LOGO_DARK}")}
+body[data-bt-dark] .bt-moon-mark{background-image:url("${LOGO_DARK}")}
 .bt-round{width:36px;height:36px;border-radius:50%;border:1px solid var(--bt-line);background:var(--bt-main);color:var(--bt-ink);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;transition:background-color .12s ease,transform .12s ease}
 .bt-round:hover{background:var(--bt-hover)}
 .bt-round:active{transform:scale(.94)}
@@ -111,7 +111,7 @@ html[data-windows-titlebar] .bt-side-collapse,html[data-platform=darwin] .bt-sid
    other plugin's entry takes a whole row above it, in the shell's order, so none of them
    squeezes the Bot row. */
 [class*="_footArea"]{grid-template-columns:auto minmax(0,1fr);grid-auto-flow:row dense;align-items:center;gap:4px 9px;padding:8px 6px 6px!important}
-/* DSH hides the footer of a collapsed sidebar under a Windows title bar; the grid
+/* the host hides the footer of a collapsed sidebar under a Windows title bar; the grid
    stays out of that one place. */
 html:not([data-windows-titlebar]) [class*="_footArea"],:not([class*="_collapsed"])>[class*="_footArea"]{display:grid!important}
 [class*="_footArea"]>[class*="_footerActions"],[class*="_footArea"]>[class*="_footerActions"]>div{display:contents!important}

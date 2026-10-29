@@ -15,9 +15,9 @@ const names = rows => rows.map(row => row.bot?.name ?? 'everyone')
 
 // The mention format is a contract with what the client already stored: the session id
 // as base64url JSON inside `dsh-session:`, the label escaped for a markdown link text.
-const mentionOf = (id, label) => `@[${label.replace(/[\\\]]/g, mark => `\\${mark}`)}](dsh-session:${Buffer.from(JSON.stringify(id), 'utf8').toString('base64url')})`
+const mentionOf = (id, label) => `@[${label.replace(/[\\\]]/g, mark => `\\${mark}`)}](moon-bot-session:${Buffer.from(JSON.stringify(id), 'utf8').toString('base64url')})`
 const readMention = text => {
-  const found = /@\[(.*?)\]\(dsh-session:([A-Za-z0-9_-]+)\)/.exec(text)
+  const found = /@\[(.*?)\]\((?:moon-bot-session|dsh-session):([A-Za-z0-9_-]+)\)/.exec(text)
   if (found === null) return { text, references: [] }
   const label = (found[1] ?? '').replace(/\\(.)/g, '$1')
   const sessionId = JSON.parse(Buffer.from(found[2] ?? '', 'base64url').toString('utf8'))

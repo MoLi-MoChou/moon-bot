@@ -96,7 +96,7 @@ export function createNews({ rt, root, reviewOn, delay, botShot, getStorage }: N
     const lastUser = lastIndexWhere(log, line => line.who === 'User' && line.botId === undefined)
     let start = since === undefined ? Math.max(0, Math.min(log.length - REVIEW_FIRST_LINES, lastUser === -1 ? log.length : lastUser)) : log.findIndex(line => line.seq > since)
     const oldest = room.log[0]?.seq
-    if (since !== undefined && oldest !== undefined && oldest > since + 1) rt.warn('ds-bot: %d lines of group "%s" left its log before they were reviewed', oldest - since - 1, room.name)
+    if (since !== undefined && oldest !== undefined && oldest > since + 1) rt.warn('moon-bot: %d lines of group "%s" left its log before they were reviewed', oldest - since - 1, room.name)
     if (start === -1) start = log.length
     const line = (entry: RoomLine): MemoryLine => {
       const who = entry.botId === undefined && entry.who === 'User' ? 'user' : 'bot'
@@ -139,7 +139,7 @@ export function createNews({ rt, root, reviewOn, delay, botShot, getStorage }: N
         else if (op === 'remove' && target !== undefined) done.push(await store.removeEntry({ scope, topic: target.file.topic, match: target.text, actor, label }))
       } catch (failure) {
         if (errorCode(failure) === GONE) return 0
-        rt.warn('ds-bot: memory review of %s left out a change: %s', name, errorMessage(failure))
+        rt.warn('moon-bot: memory review of %s left out a change: %s', name, errorMessage(failure))
         if (errorCode(failure) !== NO_MATCH && errorCode(failure) !== DENIED) failed ??= failure
       }
     }
@@ -301,7 +301,7 @@ export function createNews({ rt, root, reviewOn, delay, botShot, getStorage }: N
       try {
         if (waited !== undefined && rt.readOnly() === undefined) await (waited.roomId === undefined ? reviewChat(waited) : reviewGroup(waited))
       } catch (error) {
-        rt.warn('ds-bot: memory review of %s failed: %s', waited?.key ?? seen.key, errorMessage(error))
+        rt.warn('moon-bot: memory review of %s failed: %s', waited?.key ?? seen.key, errorMessage(error))
       } finally {
         reviewsRunning -= 1
       }
@@ -337,7 +337,7 @@ export function createNews({ rt, root, reviewOn, delay, botShot, getStorage }: N
       for (const timer of reviewTimers.values()) clearTimeout(timer)
       reviewTimers.clear()
       turnOwners.clear()
-    }, 'ds-bot: memory review')
+    }, 'moon-bot: memory review')
   }
 
   return {

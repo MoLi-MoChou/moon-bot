@@ -171,7 +171,7 @@ export function install(rt: MemoryRuntime): void {
     order: 645,
     interpolate: false,
     text: context => storage.sectionFor(context?.agent?.id),
-  }), 'ds-bot: memory section')
+  }), 'moon-bot: memory section')
 
   // ---------------------------------------------------------------------------
   // A deleted Bot's memory moves to the archive, whole.
@@ -189,7 +189,7 @@ export function install(rt: MemoryRuntime): void {
       await mkdir(join(root, 'archive'), { recursive: true })
       await rename(dir, join(root, 'archive', name))
       await storage.journal({ op: 'archive', scope: storage.scopeKey(storage.ownScope(botId)), actor: 'user', actorName: 'user', botName: bot?.name, to: `archive/${name}` })
-    }).catch(error => rt.warn('ds-bot: memory of %s not archived: %s', bot?.name ?? botId, error))
+    }).catch(error => rt.warn('moon-bot: memory of %s not archived: %s', bot?.name ?? botId, error))
   }
 
   // A deleted group chat's memory moves to the archive, whole. Called before the
@@ -207,7 +207,7 @@ export function install(rt: MemoryRuntime): void {
       await mkdir(join(root, 'archive'), { recursive: true })
       await rename(dir, join(root, 'archive', name))
       await storage.journal({ op: 'archive', scope: storage.scopeKey(storage.groupScope(room.id)), actor: 'user', actorName: 'user', groupName: room.name, to: `archive/${name}` })
-    }).catch(error => rt.warn('ds-bot: memory of group %s not archived: %s', room.name, error))
+    }).catch(error => rt.warn('moon-bot: memory of group %s not archived: %s', room.name, error))
   }
 
   // ---------------------------------------------------------------------------

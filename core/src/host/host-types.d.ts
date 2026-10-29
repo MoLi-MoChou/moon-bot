@@ -1,8 +1,8 @@
 // The DeepSeek Harness plugin API, as far as Moon Bot uses it.
 //
-// DSH is the底座 and must not be patched or re-exported: these are structural types for the
+// The host owns these shapes and must not be patched or re-exported: these are structural types for the
 // context and services a plugin receives, written here so the host can be checked without
-// depending on files inside a DSH install. When DSH changes an API, this file changes.
+// depending on files inside a host install. When the host changes an API, this file changes.
 //
 // Nothing in this module runs: it is types only, so JS and TS host code can both use it.
 
@@ -25,7 +25,7 @@ export interface Logger {
 // Sessions and agents
 
 export interface SessionHeader {
-  /** The folder DSH runs the session's tools in. */
+  /** The folder the host runs the session's tools in. */
   readonly cwd?: string
   readonly [key: string]: unknown
 }
@@ -45,7 +45,7 @@ export interface SessionEventData {
   readonly [key: string]: unknown
 }
 
-/** One message DSH put in a Session's inbox, as a plugin sees it before delivery. */
+/** One message the host put in a Session's inbox, as a plugin sees it before delivery. */
 export interface InboxMessage {
   readonly id: string
   readonly source?: Record<string, unknown>
@@ -61,7 +61,7 @@ export interface AgentSession {
   readonly id: string
   readonly seq: number
   readonly header?: SessionHeader
-  /** The event at `seq`, when this DSH keeps history in memory. */
+  /** The event at `seq`, when the host keeps history in memory. */
   readonly surface?: { readonly nodes: readonly number[] }
   eventAt?(seq: number): SessionEvent | undefined
   deriveEventMessage?(event: SessionEvent): { readonly content?: readonly MessageContentBlock[] } | undefined
@@ -80,7 +80,7 @@ export interface Agent {
   readonly session: AgentSession
   readonly inbox?: SessionInbox
   readonly status?: string
-  /** A DSH Agent carries its own tool surface, which the Agent page restricts. */
+  /** An Agent carries its own tool surface, which the Agent page restricts. */
   readonly ctx?: {
     readonly tools?: { restrict?(options: { readonly deny: readonly string[] }): void }
     plugin?(plugin: unknown, config?: unknown): PluginFiber
@@ -115,7 +115,7 @@ export interface AssistantStreamEvent {
 }
 
 export interface SessionCreateOptions {
-  /** A folder outside the team workspace; DSH makes the session by cwd alone. */
+  /** A folder outside the team workspace; the host makes the session by cwd alone. */
   readonly cwd?: string
   readonly workspaceId?: string
   readonly agentPreset?: string
@@ -166,7 +166,7 @@ export interface SessionController {
   resolveAgent(sessionId: string): Promise<
     { readonly agent: Agent } | { readonly error: { readonly code?: string; readonly message?: string } }
   >
-  /** Every Session DSH knows, including archived parts and subagents. */
+  /** Every Session the host knows, including archived parts and subagents. */
   list(options: Readonly<Record<string, unknown>>, signal?: AbortSignal): Promise<SessionListing>
   /** A Session's projection watermark; null once the Session is gone. */
   projections(options: { readonly sessionId: string }, signal?: AbortSignal): Promise<SessionProjections | null | undefined>
@@ -489,7 +489,7 @@ export interface AgentDefaultModelService {
   saveSelection?(selection: ModelSelection): Promise<unknown>
 }
 
-/** One provider DSH's directory of configurable providers offers. */
+/** One provider the host's directory of configurable providers offers. */
 export interface ConfigurableProvider {
   readonly provider: string
   readonly displayName: string
@@ -538,13 +538,13 @@ export interface PluginManagerRegistries {
   readonly fallbackRegistries?: readonly string[]
 }
 
-/** A bundle DSH's plugin manager installed. */
+/** A bundle the host's plugin manager installed. */
 export interface PluginManagerBundle {
   readonly name?: string
   readonly source?: unknown
 }
 
-/** DSH's plugin manager, as far as the update check reads it. */
+/** the host's plugin manager, as far as the update check reads it. */
 export interface PluginManagerService {
   registries?(): Promise<PluginManagerRegistries | null> | PluginManagerRegistries | null
   listBundles?(): Promise<readonly PluginManagerBundle[]> | readonly PluginManagerBundle[] | null
@@ -573,7 +573,7 @@ export type DshServiceName = keyof DshServices
 // ---------------------------------------------------------------------------
 // The plugin context
 
-export interface DshContext {
+export interface HostContext {
   readonly logger: Logger
   get<T>(name: string): T | undefined
   // The second argument is `next()` for a waterfall event and another value for events
@@ -586,7 +586,7 @@ export interface DshContext {
   emit?(name: string, payload: unknown): void
   effect(execute: () => void | Disposer, label?: string): void
   plugin?(plugin: unknown, config?: unknown): PluginFiber
-  inject?(dependencies: readonly string[], inject: (ctx: DshContext) => void): void
+  inject?(dependencies: readonly string[], inject: (ctx: HostContext) => void): void
   readonly tools: ToolsService
   readonly llm: LlmService
   readonly sessions: SessionsService

@@ -2,7 +2,7 @@
 // Agent's own context, so it lives as long as that Session does and goes away with it.
 // One reconcile chain per Agent: a slow MCP server holds up only its own Agent.
 import { createHash } from 'node:crypto'
-import type { Agent, DshContext, PluginFiber } from './dsh-types.js'
+import type { Agent, HostContext, PluginFiber } from './host-types.js'
 import { configFor } from './capabilities-config.ts'
 import { createStandaloneMounts } from './capabilities-standalone.ts'
 import type { CapabilityItem, HostRuntime, StoredBot, StoredState } from './runtime.js'
@@ -17,11 +17,11 @@ export interface CapabilityStatus {
 interface MountRecord {
   readonly key: string
   readonly fiber: PluginFiber | undefined
-  /** The standalone mount's own teardown (no DSH fiber involved). */
+  /** The standalone mount's own teardown (no the host fiber involved). */
   readonly drop?: (() => void) | undefined
 }
 interface MountOptions {
-  readonly ctx: DshContext
+  readonly ctx: HostContext
   readonly rt: HostRuntime
   readonly state: StoredState
   library(): Record<string, CapabilityItem>
@@ -169,7 +169,7 @@ export function createCapabilityMounts({ rt, state, library, expand }: MountOpti
     statusSet(botId, name, sessionId, { state: 'connecting' })
     try {
       // An MCP server mounts through our own connector into the tool registry the
-      // engine serves; a skill is a DSH-hosted idea and none is offered here.
+      // engine serves; a skill is a host-hosted idea and none is offered here.
       if (item.kind !== 'mcp') throw new Error('Only MCP servers can be mounted.')
       const drop = await standalone.mount(name, config)
       agentMounts.set(name, { key, fiber: undefined, drop })
@@ -219,7 +219,7 @@ export function createCapabilityMounts({ rt, state, library, expand }: MountOpti
       const sessionId = agent.session.id
       if (stopped || agents.get(sessionId)?.deref() !== agent) return
       await reconcileAgent(agent, botOfSession(sessionId))
-    }).catch((error: unknown) => rt.warn('ds-bot: capability reconcile for %s failed: %s', agent.session?.id, error))
+    }).catch((error: unknown) => rt.warn('moon-bot: capability reconcile for %s failed: %s', agent.session?.id, error))
     chains.set(agent, run)
     return run
   }
@@ -251,7 +251,7 @@ export function createCapabilityMounts({ rt, state, library, expand }: MountOpti
     if (!scheduled) {
       scheduled = new Promise<void>(resolve => queueMicrotask(() => {
         scheduled = null
-        resolve(reconcile().catch(error => rt.warn('ds-bot: capability reconcile failed: %s', error)))
+        resolve(reconcile().catch(error => rt.warn('moon-bot: capability reconcile failed: %s', error)))
       }))
     }
     return scheduled
@@ -261,7 +261,7 @@ export function createCapabilityMounts({ rt, state, library, expand }: MountOpti
   const stalled = new WeakSet<Agent>()
   const prepare = async (agent: Agent, sessionId: string): Promise<void> => {
     const run = loadInputs().then(() => reconcileOne(agent)).then(() => true, (error: unknown) => {
-      rt.warn('ds-bot: capability mount for %s failed: %s', sessionId, error)
+      rt.warn('moon-bot: capability mount for %s failed: %s', sessionId, error)
       return true
     })
     if (stalled.has(agent)) return
@@ -272,7 +272,7 @@ export function createCapabilityMounts({ rt, state, library, expand }: MountOpti
     if (completed) return
     stalled.add(agent)
     void run.then(() => stalled.delete(agent))
-    rt.warn('ds-bot: capability mount for %s did not finish within %dms; continuing', sessionId, timeoutMs)
+    rt.warn('moon-bot: capability mount for %s did not finish within %dms; continuing', sessionId, timeoutMs)
   }
   async function ensureCapabilities(sessionId: string): Promise<void> {
     await rt.load()
@@ -284,13 +284,13 @@ export function createCapabilityMounts({ rt, state, library, expand }: MountOpti
     try {
       agent = await rt.resolveAgent(sessionId)
     } catch (error) {
-      rt.warn('ds-bot: capability Agent for %s could not be resolved: %s', sessionId, rt.redactSecrets(String(error)))
+      rt.warn('moon-bot: capability Agent for %s could not be resolved: %s', sessionId, rt.redactSecrets(String(error)))
       return
     }
     trackAgent(agent)
     await prepare(agent, sessionId)
   }
-  // Whether a DSH plugin host serves this process: standalone (no loader service), an
+  // Whether a host plugin host serves this process: standalone (no loader service), an
   // agent has no context at all and its capabilities mount through our connector.
   const trackAgent = (agent: Agent | undefined): void => {
     const sessionId = agent?.session?.id
@@ -303,7 +303,7 @@ export function createCapabilityMounts({ rt, state, library, expand }: MountOpti
       clearSession(sessionId)
       for (const mount of mounts.get(agent)?.values() ?? []) void disposeMount(mount)
       mounts.delete(agent)
-    }, `ds-bot: capabilities ${sessionId}`)
+    }, `moon-bot: capabilities ${sessionId}`)
   }
   const trackBotAgents = async (bot: StoredBot): Promise<void> => {
     const sessionIds = new Set<string>()
@@ -311,20 +311,20 @@ export function createCapabilityMounts({ rt, state, library, expand }: MountOpti
       const sessionId = rt.chatOf(bot.id)
       if (typeof sessionId === 'string') sessionIds.add(sessionId)
     } catch (error) {
-      rt.warn('ds-bot: capability chat session for %s could not be read: %s', bot.id, error)
+      rt.warn('moon-bot: capability chat session for %s could not be read: %s', bot.id, error)
     }
     try {
       for (const sessionId of rt.groupSessionsOf(bot.id) ?? []) {
         if (typeof sessionId === 'string') sessionIds.add(sessionId)
       }
     } catch (error) {
-      rt.warn('ds-bot: capability group sessions for %s could not be read: %s', bot.id, error)
+      rt.warn('moon-bot: capability group sessions for %s could not be read: %s', bot.id, error)
     }
     for (const sessionId of sessionIds) {
       try {
         trackAgent(await rt.resolveAgent(sessionId))
       } catch (error) {
-        rt.warn('ds-bot: capability Agent for %s could not be resolved: %s', sessionId, error)
+        rt.warn('moon-bot: capability Agent for %s could not be resolved: %s', sessionId, error)
       }
     }
   }

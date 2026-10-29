@@ -240,7 +240,7 @@ export function BotSettingsForm({ bot, roster, actions, run }: BotSettingsFormPr
         void run(actions.deleteBot(bot.id));
     else
         setConfirming(true); };
-    // DSH settings can change the model list at any time; the hint should match it.
+    // the host settings can change the model list at any time; the hint should match it.
     useEffect(() => { void actions.refreshModels?.(); }, [bot.id]);
     return <div className='bt-bs'><div className='bt-bs-hero'><div className='bt-avatar-anchor'><button type='button' className='bt-avatar-trigger' aria-label={t('Edit Bot avatar')} aria-expanded={editing} onClick={() => setEditing(value => !value)}><BotMark bot={bot} size={64} live /><span className='bt-avatar-pencil' aria-hidden><PencilIcon /></span></button>{editing ? <AvatarEditor bot={bot} actions={actions} run={run} onClose={closeEditor} /> : null}</div><div className='bt-bs-who'><span className='bt-bs-name'>{bot.name}</span><span className='bt-bs-sub'>{[bot.role, isMainBot ? t('Main Bot') : ''].filter(Boolean).join(' · ') || t('Bot')}</span></div></div><Card title={t('Profile')}>
       <Row label={t('Name')}>

@@ -1,7 +1,7 @@
-// Moon Bot: Download in DSH's workspace file panel, and a card for what it cannot
-// preview. DSH's panel previews images, PDF, Word/PowerPoint, Excel/CSV, Markdown and
+// Moon Bot: Download in the host's workspace file panel, and a card for what it cannot
+// preview. the host's panel previews images, PDF, Word/PowerPoint, Excel/CSV, Markdown and
 // code/text, but cannot save a file, and shows a bare "Preview is not available" for
-// everything else. This adds, without patching DSH (only its stable data-* hooks):
+// everything else. This adds, without patching the host (only its stable data-* hooks):
 // - a Download button on every row of the tree (a folder downloads as a .zip);
 // - a Download button in every preview's toolbar;
 // - in place of the bare notice, a card with the file's icon, name, size and type and

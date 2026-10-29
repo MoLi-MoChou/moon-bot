@@ -1,12 +1,12 @@
-// The Models page of a window that has no DSH settings of its own: the model providers
-// DSH serves, with their API keys and models, and the providers it can add. DSH keeps
+// The Models page of a window that has no the host settings of its own: the model providers
+// the host serves, with their API keys and models, and the providers it can add. the host keeps
 // all of it; a key only ever travels from these inputs to the host.
 import { createElement as h, useEffect, useState } from 'react';
 import { CheckIcon, TrashIcon } from './icons.tsx';
 import { KeyIcon, MaskedInput } from './secret-card.tsx';
 import { Segmented, SPRING_SHAPE } from './motion.tsx';
 import { hostText, t } from './i18n.ts';
-// A model provider as DSH reports it: its models, its key state, and whether it can go.
+// A model provider as the host reports it: its models, its key state, and whether it can go.
 interface ProviderModel {
     ref: string;
     name: string;
@@ -22,7 +22,7 @@ export interface Provider {
     error?: string;
     removable?: boolean;
 }
-// The page's view of DSH's provider set.
+// The page's view of the host's provider set.
 export interface ProvidersView {
     available: boolean;
     providers: readonly Provider[];

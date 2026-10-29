@@ -1,10 +1,11 @@
 import { createUserMessage } from './llm-bits.ts'
-import type { LlmUserMessage } from './dsh-types.js'
-import type { Agent } from './dsh-types.js'
+import type { LlmUserMessage } from './host-types.js'
+import type { Agent } from './host-types.js'
 import type { HostRuntime } from './runtime.js'
 
-const SOURCE = 'ds-bot-time-context'
-const isClock = (source: { readonly kind?: unknown } | undefined): boolean => source?.kind === SOURCE || source?.kind === 'time-context'
+const SOURCE = 'moon-bot-time-context'
+// `ds-bot-time-context` is what an older build wrote into stored messages; it still reads as a clock.
+const isClock = (source: { readonly kind?: unknown } | undefined): boolean => source?.kind === SOURCE || source?.kind === 'ds-bot-time-context' || source?.kind === 'time-context'
 
 /** The decision a pre-step listener may rewrite. */
 interface PreStepDecision {
@@ -17,7 +18,7 @@ interface PreStepPayload {
   readonly signal: AbortSignal
 }
 
-/** DSH's projection state for a Session, by projection key. */
+/** the host's projection state for a Session, by projection key. */
 interface SessionProjectionsService {
   stateOf(session: unknown, key: string): unknown
 }
@@ -39,7 +40,7 @@ export function install(rt: HostRuntime): void {
     if (decision.kind === 'reject' || signal.aborted) return decision
     await rt.load()
     if (!rt.isBotSession(agent.id) || signal.aborted) return decision
-    // A loaded DSH clock covers every step itself. Its listener may run before or
+    // A loaded the host clock covers every step itself. Its listener may run before or
     // after this one (a reload reorders them), so its presence is read from its
     // projection, not from the messages added so far.
     if (ctx.get<SessionProjectionsService>('sessionProjections')?.stateOf(agent.session, 'timeContext') !== undefined) return decision

@@ -3,7 +3,7 @@
 import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
 import type { ToolContext } from '../../engine/registry.ts'
-import type { Disposer, DshContext, LlmStreamOptions } from '../dsh-types.js'
+import type { Disposer, HostContext, LlmStreamOptions } from '../host-types.js'
 import type { HostRuntime } from '../runtime.js'
 import {
   SECRET_NAME,
@@ -281,7 +281,7 @@ export function install(rt: HostRuntime): void {
     for (const secret of store.secrets.values()) {
       if (!canUse(secret, botId)) continue
       values[envName(secret.name)] = secret.value
-      values[`${LEGACY_ENV_PREFIX}${secret.name}`] = secret.value // the DSH-era name still works
+      values[`${LEGACY_ENV_PREFIX}${secret.name}`] = secret.value // the host-era name still works
       if (command.includes(envName(secret.name)) || command.includes(`${LEGACY_ENV_PREFIX}${secret.name}`)) {
         secret.lastUsedAt = Date.now()
         used = true
@@ -306,13 +306,13 @@ export function install(rt: HostRuntime): void {
       if (list.length === 0) return
       try {
         unregister = sub.shellEnv.register({
-          name: 'ds-bot-secrets',
+          name: 'moon-bot-secrets',
           variables: Object.fromEntries(list.map(secret => [envName(secret.name), { description: `Moon Bot secret ${secret.name}${secret.purpose ? `: ${secret.purpose}` : ''}` }])),
           resolve: resolveEnv,
         })
       } catch (error) {
         declared = ''
-        rt.warn('ds-bot: secrets not offered to the shell: %s', (error as { readonly message?: unknown } | null | undefined)?.message ?? error)
+        rt.warn('moon-bot: secrets not offered to the shell: %s', (error as { readonly message?: unknown } | null | undefined)?.message ?? error)
       }
     }
     refreshEnv()
@@ -321,11 +321,11 @@ export function install(rt: HostRuntime): void {
       unregister = null
       declared = ''
       refreshEnv = () => {}
-    }, 'ds-bot: secrets shell env')
+    }, 'moon-bot: secrets shell env')
   }
   if (typeof ctx.inject === 'function') {
     ctx.inject(['shellEnv'], (sub) => {
-      const shellEnv = (sub as DshContext & { readonly shellEnv: ShellEnvService }).shellEnv
+      const shellEnv = (sub as HostContext & { readonly shellEnv: ShellEnvService }).shellEnv
       attachShellEnv({ shellEnv, effect: (execute, label) => sub.effect(execute, label) })
     })
   } else {
@@ -336,7 +336,7 @@ export function install(rt: HostRuntime): void {
   ctx.effect(() => {
     void store.load()
     return () => { store.dispose() }
-  }, 'ds-bot: load secrets')
+  }, 'moon-bot: load secrets')
 
   Object.assign(rt, {
     secretsView: () => store.secretsView(),

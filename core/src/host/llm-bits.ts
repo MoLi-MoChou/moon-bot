@@ -1,6 +1,6 @@
-// The two message utilities the host used to take from DSH's llm package, written for
+// The two message utilities the host used to take from the host's llm package, written for
 // the standalone runtime (plan §三.3: the five runtime symbols go, one batch at a time).
-// The shapes are the wire's, not DSH's: a user message is its content and source, and
+// The shapes are the wire's, not the host's: a user message is its content and source, and
 // the assembler folds a stream's chunks into blocks in stream order.
 import { randomUUID } from 'node:crypto'
 

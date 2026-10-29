@@ -21,7 +21,7 @@ for await (const line of createInterface({ input: process.stdin })) {
       result = {
         protocolVersion: request.params?.protocolVersion,
         capabilities: { tools: {} },
-        serverInfo: { name: 'ds-bot-echo', version: '1.0.0' },
+        serverInfo: { name: 'moon-bot-echo', version: '1.0.0' },
       }
       break
     case 'ping':

@@ -1,4 +1,4 @@
-import { ContextGauge, useContext } from './model-context.tsx';
+import { CompactChat, ContextGauge, useContext } from './model-context.tsx';
 import type { ContextValues } from './model-context.tsx';
 export type { ContextPressure, ContextValues, ContextUsage } from './model-context.tsx';
 export { contextOf } from './model-context.tsx';
@@ -234,6 +234,7 @@ export interface ModelMenuOptionalActions {
     refreshModels?: (() => Promise<unknown>) | undefined;
     efforts?: ((ref: string) => Promise<ModelReasoning | null | undefined>) | undefined;
     runStats?: ((botId: string) => Promise<ContextValues | undefined>) | undefined;
+    compactChat?: ((botId: string) => Promise<{ readonly compacted: boolean; readonly reason?: string | undefined }>) | undefined;
     openModels?: (() => void) | undefined;
     openShellSettingsPanel?: ((page?: string) => void) | undefined;
     canSignIn?: (() => boolean) | undefined;
@@ -283,7 +284,7 @@ export function ModelMenu(props: ModelMenuProps) {
             close();
             return;
         }
-        // DSH settings can change the list at any time, so opening asks again.
+        // the host settings can change the list at any time, so opening asks again.
         void props.actions.refreshModels?.();
         open();
     };
@@ -314,7 +315,7 @@ export function ModelMenu(props: ModelMenuProps) {
         toggle();
     } }}><span className='bt-model-copy'><span className='bt-model-name'>{shown?.name ?? t('Choose a model')}</span>{shown ? <span className='bt-model-provider'>{shown.served || models.length === 0
         ? (effortLabel === undefined ? shown.provider : `${shown.provider} · ${effortLabel}`)
-        : t('{provider} · not available', { provider: shown.provider })}</span> : null}</span><Caret /></button>{shownPlace ? createPortal(<div ref={menu} className={`bt-menu bt-model-menu${shownPlace.bottom !== undefined ? ' bt-menu-up' : ''}`} role='menu' aria-label={t('Model for {name}', { name: bot.name })} style={shownPlace} data-leaving={leaving || undefined}>{context ? <ContextGauge context={context} /> : null}{context ? <div className='bt-menu-sep' role='separator'/> : null}{models.length > 0 ? h(ModelRows, { roster, current, onPick: pick })
+        : t('{provider} · not available', { provider: shown.provider })}</span> : null}</span><Caret /></button>{shownPlace ? createPortal(<div ref={menu} className={`bt-menu bt-model-menu${shownPlace.bottom !== undefined ? ' bt-menu-up' : ''}`} role='menu' aria-label={t('Model for {name}', { name: bot.name })} style={shownPlace} data-leaving={leaving || undefined}>{context ? <ContextGauge context={context} /> : null}<CompactChat botId={bot.id} compact={props.actions.compactChat} />{context ? <div className='bt-menu-sep' role='separator'/> : null}{models.length > 0 ? h(ModelRows, { roster, current, onPick: pick })
         : <div className='bt-model-none'>{t('No models are set up yet.')}</div>}{effortRows(reasoning).length > 0 ? <EffortRows reasoning={reasoning} current={picked} onPick={pickEffort} /> : null}{manage ? <div className='bt-menu-sep' role='separator'/> : null}{manage ? <button type='button' role='menuitem' onClick={() => { close(); manage(); }}><SlidersIcon /><span className='bt-menu-label'>{t('Models and providers…')}</span></button> : null}</div>, document.body) : null}</>;
 }
 

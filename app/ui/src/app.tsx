@@ -17,7 +17,7 @@ const NARROW = '(max-width: 640px)'
 // A touch keyboard's Return belongs to the text: it inserts a line and the send button
 // sends. The composer's own key handler keeps Return-to-send for a fine pointer, so the
 // newline is inserted here, ahead of it, and the controlled field learns it from `input`.
-const TRIGGER_MENU = '.dsb-trigger-menu'
+const TRIGGER_MENU = '.mb-trigger-menu'
 
 function installTouchNewline(root: HTMLElement): () => void {
   const onKey = (event: KeyboardEvent): void => {
@@ -59,8 +59,8 @@ function useVisualViewport(): void {
     if (viewport === null) return undefined
     const root = document.documentElement
     const sync = (): void => {
-      root.style.setProperty('--dsb-vv-height', `${viewport.height}px`)
-      root.style.setProperty('--dsb-vv-top', `${viewport.offsetTop}px`)
+      root.style.setProperty('--mb-vv-height', `${viewport.height}px`)
+      root.style.setProperty('--mb-vv-top', `${viewport.offsetTop}px`)
     }
     sync()
     viewport.addEventListener('resize', sync)
@@ -68,8 +68,8 @@ function useVisualViewport(): void {
     return () => {
       viewport.removeEventListener('resize', sync)
       viewport.removeEventListener('scroll', sync)
-      root.style.removeProperty('--dsb-vv-height')
-      root.style.removeProperty('--dsb-vv-top')
+      root.style.removeProperty('--mb-vv-height')
+      root.style.removeProperty('--mb-vv-top')
     }
   }, [])
 }
@@ -161,36 +161,36 @@ export function App(): ReactElement {
     actions.closeOverlay()
     actions.reportError(error instanceof Error ? error : new Error(String(error)), 'overlay')
   }
-  return <div className='dsb-frame' data-rail={sidebar ? undefined : ''} data-drawer={narrow && drawer ? '' : undefined}>
-    <aside ref={side} id='dsb-sidebar' className='dsb-side' tabIndex={-1} onClick={(event) => {
+  return <div className='mb-frame' data-rail={sidebar ? undefined : ''} data-drawer={narrow && drawer ? '' : undefined}>
+    <aside ref={side} id='mb-sidebar' className='mb-side' tabIndex={-1} onClick={(event) => {
       if (!narrow || !drawer || !(event.target instanceof Element)) return
       // Any seat that navigates or opens a layer hands the phone over to it.
       if (event.target.closest('button,a,[role=button]') !== null) setDrawer(false)
     }}>
-      <div className='dsb-band' />
-      <div className='dsb-side-list'>
-        {sidebar ? null : <button type='button' className='dsb-expand' aria-label={t('Expand sidebar')} title={t('Expand sidebar')} onClick={() => { actions.toggleSidebar() }}>
+      <div className='mb-band' />
+      <div className='mb-side-list'>
+        {sidebar ? null : <button type='button' className='mb-expand' aria-label={t('Expand sidebar')} title={t('Expand sidebar')} onClick={() => { actions.toggleSidebar() }}>
           <BrandMark size={22} />
         </button>}
         <TeamSidebar {...asViews<Parameters<typeof TeamSidebar>[0]>({ ...views, wide: sidebar })} />
       </div>
-      <div className='dsb-side-foot'>
-        <button type='button' className='dsb-settings' title={t('Settings')} onClick={() => { actions.openSettings() }}>
+      <div className='mb-side-foot'>
+        <button type='button' className='mb-settings' title={t('Settings')} onClick={() => { actions.openSettings() }}>
           <YouAvatar />
         </button>
       </div>
     </aside>
-    {narrow && drawer ? <div className='dsb-scrim' aria-hidden onClick={() => { setDrawer(false) }} /> : null}
+    {narrow && drawer ? <div className='mb-scrim' aria-hidden onClick={() => { setDrawer(false) }} /> : null}
     {/* The details panel makes room by giving the shell's `_centerCol` column a right margin. */}
-    <main ref={main} className='dsb-main dsb_centerCol'>
-      <div className='dsb-band' />
+    <main ref={main} className='mb-main dsb_centerCol'>
+      <div className='mb-band' />
       {/* On a phone this is the only way to the sidebar; a wide window keeps its column. */}
-      <button ref={menu} type='button' className='dsb-menu' aria-label={drawer ? t('Collapse sidebar') : t('Expand sidebar')} title={drawer ? t('Collapse sidebar') : t('Expand sidebar')} aria-expanded={drawer} aria-controls='dsb-sidebar' onClick={() => { setDrawer(value => !value) }}>
+      <button ref={menu} type='button' className='mb-menu' aria-label={drawer ? t('Collapse sidebar') : t('Expand sidebar')} title={drawer ? t('Collapse sidebar') : t('Expand sidebar')} aria-expanded={drawer} aria-controls='mb-sidebar' onClick={() => { setDrawer(value => !value) }}>
         <SidebarIcon />
       </button>
       {shown !== null
         ? h(Fragment, { key: shown },
-          <div className='dsb-head'>
+          <div className='mb-head'>
             <HeaderPill {...asViews<Parameters<typeof HeaderPill>[0]>({ ...views, sessionId: shown, useSession: team.sessionHook(shown) })} />
           </div>,
           <Chat sessionId={shown} team={team} />)

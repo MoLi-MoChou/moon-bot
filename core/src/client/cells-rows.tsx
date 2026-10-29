@@ -170,7 +170,7 @@ export function ThinkingRow({ text, live, at, ms, viewKey }: ThinkingRowProps) {
     return <details className='bt-think' open={open} onToggle={toggle}><summary>{title}{live && at !== undefined ? <Elapsed at={at} className='bt-think-time' /> : null}{!live && ms !== undefined ? <span className='bt-think-time'>{`· ${elapsedLabel(Math.max(1000, ms))}`}</span> : null}</summary><div ref={box} className='bt-think-text' role='region' aria-label={title} tabIndex={0} data-fade={fade} onScroll={measure}>{text}</div></details>;
 }
 // The files a finished turn changed or delivered, linked from inline code in its
-// reply as in DSH's own chat. DSH resolves them for the step that closes the turn.
+// reply as in the host's own chat. the host resolves them for the step that closes the turn.
 function useFileMentions({ node, openFile, fileMentions, useTurnData }: {
     node: CellStepNode;
     openFile: unknown;
@@ -210,7 +210,7 @@ export function AssistantCell({ node, groupPart, sessionId, openFile, fileMentio
     if (hidden)
         return null;
     // A relay spliced mid-turn is a 'context' node, hidden from the chat flow on
-    // DSH 0.2; the step that answers it shows the event line where it was read,
+    // the host; the step that answers it shows the event line where it was read,
     // once, in the step's first cell.
     const relays: RelayEntry[] = relayPart(data, groupPart) ? relaysBefore(contexts, steps, data) : [];
     // Moon Bot: one work line on the turn's last step, once the turn has settled.

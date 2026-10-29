@@ -16,7 +16,7 @@
 // where the member that asked for it answers.
 import { randomUUID } from 'node:crypto'
 import { ROOM_REPLY_TIMEOUT_MS, ROOM_WORK_GRACE_MS, SOURCE_KIND, TEAM_TOOLS } from '../constants.ts'
-import type { Agent, AttachmentRef } from '../dsh-types.js'
+import type { Agent, AttachmentRef } from '../host-types.js'
 import type { StoredBot } from '../runtime.ts'
 import type { GroupRuntime } from './types.ts'
 import { textOf } from '../text.ts'
@@ -111,7 +111,7 @@ export function installRounds(rt: GroupRuntime, log: RoomLogApi): RoundsApi {
       // Still at earlier work: the call waits in its inbox and is answered after that.
       else if (busy) rt.roomWaiters.get(exchangeId)?.resolve({ working: true })
     } catch (error) {
-      rt.warn('ds-bot: group delivery to %s failed: %s', member.name, error)
+      rt.warn('moon-bot: group delivery to %s failed: %s', member.name, error)
       // A delivery that failed is not a pass: the round shows it. Nothing here can
       // repair a lost Session, so the member's next turn in the group starts a new one.
       const lost = lostSession(error)
@@ -177,7 +177,7 @@ export function installRounds(rt: GroupRuntime, log: RoomLogApi): RoundsApi {
       if (message.source?.kind !== 'user') continue
       const content: readonly unknown[] = Array.isArray(message.content) ? message.content : []
       const text = textOf(content)
-      if (text === '' || content.some(block => !isTextBlock(block)) || text.includes('dsh-session:')) break
+      if (text === '' || content.some(block => !isTextBlock(block)) || (text.includes('moon-bot-session:') || text.includes('dsh-session:'))) break
       lines.push({ id: message.id, text })
     }
     return lines
@@ -235,7 +235,7 @@ export function installRounds(rt: GroupRuntime, log: RoomLogApi): RoundsApi {
       try {
         session = await log.groupSessionFor(room, member)
       } catch (error) {
-        rt.warn('ds-bot: group Session for %s in %s failed: %s', member.name, room.name, error)
+        rt.warn('moon-bot: group Session for %s in %s failed: %s', member.name, room.name, error)
         round.speaking = null
         slot.status = 'failed'
         round.failed.push(member.name)

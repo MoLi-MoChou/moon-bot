@@ -4,7 +4,7 @@
 //
 // Types only: nothing here runs, so the four logic modules around it stay under the
 // size gate and carry no declaration noise.
-import type { DshContext } from './dsh-types.js'
+import type { HostContext } from './host-types.js'
 import type {
   HandoffLines, Lines, SwitchAgent, SwitchOwner, SwitchPart, SwitchSession, WrittenNote,
 } from './parts-switch-move.ts'
@@ -95,7 +95,7 @@ export interface CheckpointResult {
 }
 
 export interface PartNoteOptions {
-  readonly ctx: DshContext
+  readonly ctx: HostContext
   readonly rt: PartNoteRuntime
   readonly clock: (time: number) => string
   readonly limits: NoteLimits

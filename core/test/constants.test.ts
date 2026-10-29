@@ -4,7 +4,7 @@ import * as plugin from '../index.js'
 import { COLORS, EXTRA_COLORS, LEGACY_COLORS, ROOM_MODES } from '../src/host/constants.ts'
 
 test('the plugin entry re-exports the shared colors', () => {
-  assert.equal(plugin.name, 'ds-bot')
+  assert.equal(plugin.name, 'moon-bot')
   assert.deepEqual([...plugin.COLORS], [...COLORS])
   assert.equal('LABS' in plugin, false)
   assert.equal(typeof plugin.apply, 'function')

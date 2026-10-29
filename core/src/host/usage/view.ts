@@ -1,6 +1,6 @@
 // Reading the usage ledger: who each Session's calls belong to, catching the ledger up
 // with every Session log, and the hourly rows the Usage page sums by day, week, month.
-import type { SessionAddress, SessionEvent, SessionListEntry, SessionProjections } from '../dsh-types.js'
+import type { SessionAddress, SessionEvent, SessionListEntry, SessionProjections } from '../host-types.js'
 import type { HostRuntime } from '../runtime.js'
 import { foldCalls } from './fold.ts'
 import { SLOT_MS } from './ledger.ts'
@@ -101,7 +101,7 @@ export function liveOwners(rt: HostRuntime, listed: readonly SessionListEntry[] 
       for (const segment of segments) owners.set(segment.sessionId, memberOwner(botId))
     }
   }
-  // The DSH Agent is part of the team: its Sessions count beside the Bots, not
+  // The Agent is part of the team: its Sessions count beside the Bots, not
   // with the other sessions.
   for (const agent of Object.values(rt.state.agents ?? {})) {
     for (const sessionId of agent.sessions) owners.set(sessionId, { owner: `agent:${agent.id}`, name: agent.name })
@@ -132,7 +132,7 @@ export function inGroup(rt: HostRuntime): Set<string> {
   ]))
 }
 
-// DSH reads a subagent Session only through its parent's address; the parent
+// the host reads a subagent Session only through its parent's address; the parent
 // need not exist any more. One with no parent on record cannot be read.
 const addressOf = (item: SessionListEntry): SessionAddress | undefined => (item.origin !== 'subagent'
   ? { kind: 'session', sessionId: item.sessionId }
@@ -208,7 +208,7 @@ export function createViewer({ rt, openLedger }: ViewerDeps): UsageViewer {
       try {
         listed = (await ctx.sessionController.list({}, signal)).items ?? []
       } catch (error) {
-        rt.warn('ds-bot: usage could not list the Sessions: %s', error)
+        rt.warn('moon-bot: usage could not list the Sessions: %s', error)
       }
       const stored = ledger.owners()
       const owners = liveOwners(rt, listed, stored)
@@ -244,7 +244,7 @@ export function createViewer({ rt, openLedger }: ViewerDeps): UsageViewer {
         } catch (error) {
           if (unreadable.has(sessionId)) return
           unreadable.add(sessionId)
-          rt.warn('ds-bot: usage could not read %s: %s', sessionId, error)
+          rt.warn('moon-bot: usage could not read %s: %s', sessionId, error)
         }
       })
     })().finally(() => {
@@ -257,7 +257,7 @@ export function createViewer({ rt, openLedger }: ViewerDeps): UsageViewer {
 
   // Tokens per hour, owner, model, and use, for the browser to sum by day, week, or month.
   async function view(options: UsageViewOptions = {}): Promise<UsageView> {
-    const job = scan().catch(error => rt.warn('ds-bot: usage scan failed: %s', error))
+    const job = scan().catch(error => rt.warn('moon-bot: usage scan failed: %s', error))
     let timer: ReturnType<typeof setTimeout> | undefined
     await Promise.race([job, new Promise<void>((resolve) => { timer = setTimeout(resolve, VIEW_WAIT_MS) })])
     clearTimeout(timer)

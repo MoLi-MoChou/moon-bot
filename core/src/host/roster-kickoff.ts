@@ -42,7 +42,7 @@ export function kickoffText({ main, originalName, creatorName, brief, language }
 
 export function sendKickoff(rt: HostRuntime, bot: StoredBot, { text, from }: { readonly text: string; readonly from?: string }): void {
   void rt.deliver({ ...(from === undefined ? {} : { fromId: from }), toId: bot.id, text, role: 'kickoff' })
-    .catch(error => rt.warn('ds-bot: kickoff failed: %s', error))
+    .catch(error => rt.warn('moon-bot: kickoff failed: %s', error))
 }
 
 // The user wrote first, so the held greeting would only interrupt.

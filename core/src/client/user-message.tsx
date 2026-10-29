@@ -1,5 +1,5 @@
 import { Fragment, createElement as h, useState } from 'react';
-// DSH's drawing helpers for the blocks it renders itself; the standalone product
+// the host's drawing helpers for the blocks it renders itself; the standalone product
 // draws plain versions of the same parts, and canDrawUserMessages stays true.
 const ui = {
   projectUserText: (text: string, ..._rest: readonly unknown[]): string => { void _rest; return text },
@@ -15,7 +15,7 @@ import { dateLocale, t } from './i18n.ts';
 import { clockLabel, messageClock } from './text.ts';
 import { useFold } from './fold.tsx';
 import type { MentionTarget } from '../shared/mentions.ts';
-// One block of a message: text, an attachment, or something DSH draws itself.
+// One block of a message: text, an attachment, or something the host draws itself.
 export interface ContentBlock {
     type?: string;
     text?: string;
@@ -76,11 +76,11 @@ interface UserRoster {
     } | undefined>;
 }
 // -------------------------------------------------------------------------
-// The user's own messages. DSH draws every "@word" in them as a file reference, and
+// The user's own messages. the host draws every "@word" in them as a file reference, and
 // cuts it at the first space, so "@新 Bot" showed as a file "新". Here the Bot mentions
-// are cut out first, by the rule the group host calls them with; DSH's own drawing
+// are cut out first, by the rule the group host calls them with; the host's own drawing
 // keeps everything else (files, conversation references, skills).
-// DSH releases without the text projection keep their own bubble.
+// the host releases without the text projection keep their own bubble.
 export const canDrawUserMessages = () => typeof ui.projectUserText === 'function';
 export function contentParts(content: unknown): {
     text: string;
@@ -195,8 +195,8 @@ export function UserMessageCell({ node, sessionId, useRoster, actions, renderMes
 }
 export const USER_MESSAGE_CSS = `
 .bt-umsg{display:flex;flex-direction:row-reverse;align-items:center;justify-content:flex-start;gap:4px}
-.bt-ustack{min-width:0;max-width:min(calc(var(--dsh-chat-content-width,748px) * .702),82%);display:flex;flex-direction:column;align-items:flex-end;gap:8px}
-.bt-ubody{max-width:100%;box-sizing:border-box;background:var(--bt-user);color:var(--bt-user-ink);border-radius:18px;padding:7px 12px;font-size:var(--dsh-content-font-size,14px);line-height:calc(var(--dsh-content-font-size,14px) + 8px);white-space:pre-wrap;word-break:break-word}
+.bt-ustack{min-width:0;max-width:min(calc(var(--bt-chat-content-width,748px) * .702),82%);display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.bt-ubody{max-width:100%;box-sizing:border-box;background:var(--bt-user);color:var(--bt-user-ink);border-radius:18px;padding:7px 12px;font-size:var(--bt-content-font-size,14px);line-height:calc(var(--bt-content-font-size,14px) + 8px);white-space:pre-wrap;word-break:break-word}
 .bt-ubody a{color:inherit}
 .bt-umention{display:inline-flex;align-items:center;gap:3px;vertical-align:-3px;max-width:100%;padding:0 1px;border:0;background:none;color:inherit;font:inherit;font-weight:600;line-height:inherit;cursor:pointer;border-radius:6px;white-space:nowrap}
 .bt-umention:hover{text-decoration:underline;text-underline-offset:2px}

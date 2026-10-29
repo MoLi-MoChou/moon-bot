@@ -46,7 +46,7 @@ export function ModelChoiceDock({ sessionId, useRoster, actions }: ModelChoiceDo
     // An unknown catalog (none listed) cannot tell a lost model from a slow provider.
     if (bot.model && (!lost || models.length === 0))
         return null;
-    // A window without DSH's own settings takes the missing key here.
+    // A window without the host's own settings takes the missing key here.
     const keyFor = usable.length === 0 && actions.setProviderKey ? models.find(model => model.needsKey) : undefined;
     const manage = manageModels(actions);
     const pick = (ref: string): void => {
@@ -98,7 +98,7 @@ export function ModelKeyCard({ model, actions }: {
 }
 // Ways to get a first model when the catalog is empty.
 // Standalone Moon Bot opens its own Models page (openModels). The DeepSeek sign-in
-// and shell onboarding editors exist only where the DSH Desktop shell carries them;
+// and shell onboarding editors exist only where the the desktop app shell carries them;
 // never offer those chips when the window already has openModels, or they would be
 // dead ends beside the real path.
 export function setupChoices(actions: ModelMenuOptionalActions): [

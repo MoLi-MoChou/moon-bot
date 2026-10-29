@@ -2,7 +2,7 @@
 // @mentions and references, notices and the wording of a member's prompt.
 //
 // Nothing here touches a Session or the stored state.
-import type { AttachmentRef } from '../dsh-types.js'
+import type { AttachmentRef } from '../host-types.js'
 import type { FailureText, GroupRoom, GroupSlot, RoomLine, RoomReference } from './types.ts'
 import { escapeRegExp } from '../text.ts'
 import { mentionSpans, speakerOf } from '../../shared/mentions.ts'
@@ -89,7 +89,7 @@ export const adminNote = (room: GroupRoom): string => [
 // The opening turn of a group the user just made without a first message.
 export const roomKickoff = (language: string | undefined): string => `The user just created this group and has not written yet. Greet the user in one short message and ask what they want this group to work on. Do not call members with @ yet, and do not reply [PASS]. No name prefix. Write in ${language ?? 'the user\'s language if known; otherwise Chinese'}.`
 
-// DSH cannot open the Session at all: it is gone, or its stored log is corrupt. DSH
+// the host cannot open the Session at all: it is gone, or its stored log is corrupt. the host
 // reports a corrupt log only in the message of a generic failure.
 export const lostSession = (error: unknown): boolean => {
   const cause: { readonly code?: unknown; readonly message?: unknown } = error !== null && typeof error === 'object' ? error : {}

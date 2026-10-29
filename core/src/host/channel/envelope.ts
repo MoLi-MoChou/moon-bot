@@ -138,7 +138,7 @@ export interface RoomProgress {
   readonly speaking?: string | null
 }
 
-/** DSH's projection state for a Session, read for `run-stats`. */
+/** the host's projection state for a Session, read for `run-stats`. */
 export interface SessionProjectionsService {
   snapshot(session: unknown, types: readonly string[]): { readonly values: Readonly<Record<string, unknown>> }
 }

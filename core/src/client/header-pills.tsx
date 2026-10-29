@@ -91,7 +91,7 @@ function useTranscriptView(): TranscriptView | null {
         const readComposer = (scroller: Element | null) => {
             if (!scroller || typeof getComputedStyle !== 'function')
                 return;
-            composerHeight = parseFloat(getComputedStyle(scroller).getPropertyValue('--dsh-composer-height')) || 152;
+            composerHeight = parseFloat(getComputedStyle(scroller).getPropertyValue('--bt-composer-height')) || 152;
         };
         const observer = new MutationObserver(() => schedule());
         const measure = () => {

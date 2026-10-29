@@ -61,7 +61,7 @@ import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const PORT = Number(process.env.MOCK_PORT ?? 8765)
-const LOG = process.env.MOCK_LOG ?? fileURLToPath(new URL('../../.dsh-test/mock.jsonl', import.meta.url))
+const LOG = process.env.MOCK_LOG ?? fileURLToPath(new URL('../../.moon-bot-test/mock.jsonl', import.meta.url))
 mkdirSync(dirname(LOG), { recursive: true })
 const DELAY = Number(process.env.MOCK_DELAY_MS ?? 600)
 // Random extra latency per call, to shake out ordering assumptions.

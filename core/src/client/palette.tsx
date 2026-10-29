@@ -1,5 +1,5 @@
 import { Fragment, type Ref, createElement as h, useEffect, useRef, useState } from 'react';
-import { FishLogo } from './dsh-primitives.tsx';
+import { FishLogo } from './primitives.tsx';
 import { isMainOf } from './sources.ts';
 import { currentPart, stripHeader } from './text.ts';
 import { PlusIcon, SearchIcon, PeopleIcon, CloseIcon, GearIcon } from './icons.tsx';
@@ -153,7 +153,7 @@ export function CommandPalette({ start, token, roster, actions, useSessions }: C
         sections.push([t('Bots'), people]);
     const agents: PaletteRow[] = (roster.agents ?? []).filter(() => matchesName('Agent')).map(agent => ({
         key: agent.id, avatar: <span className='bt-palette-agent'>{h(FishLogo, { size: 18 })}</span>, title: 'Agent',
-        subtitle: t('Plain dsh session'),
+        subtitle: t('Plain agent session'),
         run: () => actions.openAgent(agent.id),
     }));
     if (agents.length)

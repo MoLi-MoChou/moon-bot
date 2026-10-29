@@ -54,7 +54,7 @@ export function registerCollectedTool(ctx: ToolCollectorContext, entry: ToolEntr
         }
         const outcome = await entry.execute(args as Readonly<Record<string, unknown>>, context)
         if (typeof outcome === 'string') return outcome
-        if (outcome.isError === true) rt.warn('ds-bot: %s answered an error: %s', entry.name, asText(outcome))
+        if (outcome.isError === true) rt.warn('moon-bot: %s answered an error: %s', entry.name, asText(outcome))
         return asText(outcome)
       },
     } as Record<string, unknown>))

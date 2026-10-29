@@ -42,7 +42,7 @@ export function serveBrowserReads({ browsers, post, clientId = globalThis.crypto
         if (oldest !== undefined) answered.delete(oldest)
       }
     }
-    await post('browser-result', await job).catch(error => console.warn('[ds-bot] browser result', error))
+    await post('browser-result', await job).catch(error => console.warn('[moon-bot] browser result', error))
   }
   const loop = async (): Promise<void> => {
     let failures = 0

@@ -4,7 +4,7 @@
 //
 // `delivery.ts` keeps the live records and their bookkeeping; this module reads the
 // Session events and decides where each message goes.
-import type { AgentSession, MessageContentBlock, TurnEndReason } from '../dsh-types.js'
+import type { AgentSession, MessageContentBlock, TurnEndReason } from '../host-types.js'
 import type { TurnInfo } from '../runtime.ts'
 import { HANDOFF_ACK, MESSAGE_INLINE_MAX, REFERENCE_KIND, REPLY_KIND, SOURCE_KIND } from '../constants.ts'
 import { absoluteLinks } from '../links.ts'
@@ -27,7 +27,7 @@ interface TurnEventData {
   readonly reason?: TurnEndReason | undefined
 }
 
-// DSH's `session/event` as this module reads it: a session id plus the payload each turn
+// the host's `session/event` as this module reads it: a session id plus the payload each turn
 // event carries. The API types the second argument generically, so this is the name for it.
 interface TurnSessionEvent {
   readonly type: string
@@ -244,7 +244,7 @@ export function installRoute(rt: TurnsRuntime, core: TurnsCore): void {
             work: result.info.work,
             ...(result.info.roomId ? { roomId: result.info.roomId } : {}),
             deferred: true,
-          }).catch(error => rt.warn('ds-bot: handing back a result failed: %s', error))
+          }).catch(error => rt.warn('moon-bot: handing back a result failed: %s', error))
         }
         const reason = data?.reason
         // A turn cut off drops what waited behind it (the engine's queue goes with the
@@ -261,7 +261,7 @@ export function installRoute(rt: TurnsRuntime, core: TurnsCore): void {
         // the call.
         const wroteCall = failure === undefined && reason?.kind === 'completed' && lastCalled !== true && writesToolCall(lastText)
         const retry = wroteCall && info?.retried !== true && !(info?.role === 'room' && core.stoppedRoomTurns.has(info.exchangeId))
-        if (retry) void retryWrittenCall(rt, id, info).catch(error => rt.warn('ds-bot: asking %s to run its written tool call failed: %s', id, error))
+        if (retry) void retryWrittenCall(rt, id, info).catch(error => rt.warn('moon-bot: asking %s to run its written tool call failed: %s', id, error))
         const replyText = (): string => {
           const reply = (wroteCall ? texts.map(stripWrittenCalls) : texts).join('\n\n').trim()
           return wroteCall && reply === '' ? 'Tried to run a tool but wrote the call as text, so it did not run.' : reply
@@ -297,7 +297,7 @@ export function installRoute(rt: TurnsRuntime, core: TurnsCore): void {
           if (text.length <= MESSAGE_INLINE_MAX) return core.tellSender(id, asker, text)
           void rt.attachLong(text, `Answer from ${name}.txt`)
             .then(long => core.tellSender(id, asker, text, long))
-            .catch(error => rt.warn('ds-bot: answer from %s not sent: %s', name, error))
+            .catch(error => rt.warn('moon-bot: answer from %s not sent: %s', name, error))
         }
         // A retried turn answers the same waiter or sender, so this one passes nothing on.
         if (!retry && info?.role === 'room') {
@@ -313,7 +313,7 @@ export function installRoute(rt: TurnsRuntime, core: TurnsCore): void {
             else void rt.lateRoomReply?.(id, info, groupReply(), { shown })
           }
         } else if (!retry && core.speaksInGroup(id, info)) {
-          // A turn that failed before it took any input (DSH can turn it down before its first step) never names its call, so the call waiting on this Session fails.
+          // A turn that failed before it took any input (the host can turn it down before its first step) never names its call, so the call waiting on this Session fails.
           const inRound = failure !== undefined && info === undefined && rt.failRoomTurn?.(id, failure) === true
           if (failure !== undefined) { if (!inRound) void rt.lateRoomFailure?.(id, info ?? {}, failure) }
           else if (reason?.kind !== 'aborted') void rt.lateRoomReply?.(id, info ?? {}, groupReply(), { shown })
@@ -336,7 +336,7 @@ export function installRoute(rt: TurnsRuntime, core: TurnsCore): void {
             exchangeId: request.info.exchangeId,
             ...(request.info.senderRoomId ? { fromRoomId: request.info.senderRoomId } : {}),
             deferred: true,
-          }).catch(error => rt.warn('ds-bot: deferred request delivery failed: %s', error))
+          }).catch(error => rt.warn('moon-bot: deferred request delivery failed: %s', error))
         }
         break
       }

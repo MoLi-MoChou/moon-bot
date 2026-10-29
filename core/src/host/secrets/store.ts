@@ -153,7 +153,7 @@ class SecretStoreImpl implements SecretStore {
       if (!this.loadedReadOnly) await chmod(this.path, 0o600).catch(() => {})
     } catch (error) {
       if ((error as { readonly code?: unknown } | null | undefined)?.code === 'ENOENT') this.secrets.clear()
-      else this.rt.warn('ds-bot: unreadable secrets file %s (%s)', this.path, reason(error))
+      else this.rt.warn('moon-bot: unreadable secrets file %s (%s)', this.path, reason(error))
     }
     this.changed()
   }
@@ -175,7 +175,7 @@ class SecretStoreImpl implements SecretStore {
         throw error
       }
     })
-    this.writing = job.catch((error: unknown) => this.rt.warn('ds-bot: secrets write failed (%s)', reason(error)))
+    this.writing = job.catch((error: unknown) => this.rt.warn('moon-bot: secrets write failed (%s)', reason(error)))
     return job
   }
 
@@ -261,7 +261,7 @@ class SecretStoreImpl implements SecretStore {
   async tell(botId: string, text: string): Promise<void> {
     if (this.rt.botOf(botId) === undefined) return
     await this.rt.deliver({ toId: botId, role: 'secret', text })
-      .catch((error: unknown) => this.rt.warn('ds-bot: secret note to %s failed: %s', botId, error))
+      .catch((error: unknown) => this.rt.warn('moon-bot: secret note to %s failed: %s', botId, error))
   }
 
   // A deleted Bot leaves every list it was on, and its cards go with it.

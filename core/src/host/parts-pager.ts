@@ -4,7 +4,7 @@
 import { HISTORY_TIMEOUT_MS, REPLY_KIND, SOURCE_KIND } from './constants.ts'
 import { readReply, replyText } from './parts-text.ts'
 import { textOf } from './text.ts'
-import type { SessionEvent } from './dsh-types.js'
+import type { SessionEvent } from './host-types.js'
 import type { HostRuntime } from './runtime.js'
 import type { SwitchPart } from './parts-switch-move.ts'
 import type { ChatItem, ChatPage, EarlierPage, PageCursor, PartPage } from './parts-types.js'

@@ -1,5 +1,5 @@
 import { clearTimeout, setTimeout } from 'node:timers'
-import type { AgentDefaultModelService, ModelSelection } from './dsh-types.js'
+import type { AgentDefaultModelService, ModelSelection } from './host-types.js'
 import type { HostRuntime, ModelEntry, ModelReasoning, StoredBot } from './runtime.js'
 import { resolveModelSpec } from '../shared/model-catalog.ts'
 
@@ -49,7 +49,7 @@ export function install(rt: HostRuntime): void {
     return value
   }
 
-  // A provider's model list can change in DSH settings without any event, so a picker
+  // A provider's model list can change in the host settings without any event, so a picker
   // that is about to be used asks for a `fresh` one. Entries for models a Bot uses
   // also carry their `reasoning`, so the picker can offer thinking levels.
   async function catalog({ fresh = false }: { readonly fresh?: boolean } = {}): Promise<readonly ModelEntry[]> {
@@ -75,7 +75,7 @@ export function install(rt: HostRuntime): void {
         })
       }
     }
-    // DSH serves a provider's models whether or not its key is set; without one, every
+    // the host serves a provider's models whether or not its key is set; without one, every
     // turn on them fails.
     const missing = await rt.missingKeys?.([...new Set(entries.map(entry => entry.provider).filter((id): id is string => id !== undefined))]) ?? new Set()
     for (const entry of entries) if (entry.provider !== undefined && missing.has(entry.provider)) entry.needsKey = true
@@ -88,12 +88,12 @@ export function install(rt: HostRuntime): void {
     return entries
   }
 
-  // The profile default model of DSH as set, served or not.
+  // The profile default model of the host as set, served or not.
   const defaultRef = (): string | undefined => {
     const selection = ctx.get<AgentDefaultModelService>('agentDefaultModel')?.currentSelection?.()
     return selection?.provider && selection?.model ? `${selection.provider}/${selection.model}` : undefined
   }
-  // The profile default model of DSH, when it is served; else the first served model.
+  // The profile default model of the host, when it is served; else the first served model.
   function pickDefault(entries: readonly ModelEntry[]): string | undefined {
     const ref = defaultRef()
     return entries.find(entry => entry.ref === ref)?.ref ?? entries[0]?.ref
@@ -146,7 +146,7 @@ export function install(rt: HostRuntime): void {
     throw new Error(`Thinking level ${wanted} is not available for ${ref}. Available: ${efforts.map(effort => effort.name).join(', ')}`)
   }
 
-  // DSH's selectModel also saves the selection as the profile default model, in the
+  // the host's selectModel also saves the selection as the profile default model, in the
   // background. A Bot's model is its own, so the user's default is written back after
   // it. Selections run one at a time and wait for the write-back: profile writes land in
   // submission order, so the next one reads the user's default, not a Bot's.
@@ -161,7 +161,7 @@ export function install(rt: HostRuntime): void {
       })
       const saved = result?.selected ?? { provider, model, ...(reasoningEffort === undefined ? {} : { reasoningEffort }) }
       if (before?.provider && before?.model && !sameSelection(before, saved)) {
-        await defaults?.saveSelection?.(before).catch(error => rt.warn('ds-bot: the default model was not restored: %s', error))
+        await defaults?.saveSelection?.(before).catch(error => rt.warn('moon-bot: the default model was not restored: %s', error))
       }
       return result
     })
@@ -184,7 +184,7 @@ export function install(rt: HostRuntime): void {
     await selectSessionModel(rt.chatOf(bot.id), route)
     for (const sessionId of rt.groupSessionsOf(bot.id)) {
       await selectSessionModel(sessionId, route)
-        .catch(error => rt.warn('ds-bot: model for %s in a group not applied: %s', bot.name, error))
+        .catch(error => rt.warn('moon-bot: model for %s in a group not applied: %s', bot.name, error))
     }
     bot.appliedModel = ref
     if (effort === undefined) delete bot.appliedEffort
@@ -223,7 +223,7 @@ export function install(rt: HostRuntime): void {
   }
   async function syncAll(): Promise<void> {
     for (const bot of Object.values(state.bots)) {
-      await applyModel(bot).catch(error => rt.warn('ds-bot: model for %s not applied: %s', bot.name, error))
+      await applyModel(bot).catch(error => rt.warn('moon-bot: model for %s not applied: %s', bot.name, error))
     }
   }
 

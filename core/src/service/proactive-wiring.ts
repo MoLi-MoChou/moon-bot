@@ -4,6 +4,7 @@ import { install } from '../host/proactive-install.ts'
 import { localTimeAt } from '../host/proactive/review.ts'
 import { dayStartFor } from '../host/proactive/trigger.ts'
 import { startDuePoll, type DueDeps } from '../host/proactive/schedule.ts'
+import { ProgressWatch, startProgressPoll, type ProgressDeps } from '../host/proactive/progress.ts'
 import type { HostRuntime } from '../host/runtime.js'
 import type { Store } from '../store/db.ts'
 
@@ -29,30 +30,24 @@ const shapeOf = (row: {
 const textOf = (row: { readonly content: readonly { readonly type: string, readonly text?: unknown }[] }): string =>
   row.content.filter(block => block.type === 'text').map(block => String(block.text ?? '')).join(' ')
 
-/** Starts the poll that lets a subscription fire on its own; returns the disposer. */
-export function startProactivePoll(runtime: HostRuntime, store: Store, agentOf: (sessionId: string) => unknown): () => void {
-  const timeZone = runtime.config.timeZone
-  const deps: DueDeps = {
+/** The dependencies both polls share: how to ask, how to send, what to read. */
+function triggerDepsOf(runtime: HostRuntime, store: Store, timeZone: string | undefined): DueDeps {
+  const ask = async ({ system, prompt }: { readonly system: string, readonly prompt: string }): Promise<string> => {
+    const small = runtime.smallShot
+    if (small === undefined || currentBot === undefined) throw new Error('No model is available')
+    return small(currentBot, system, prompt)
+  }
+  return {
     pipeline: {
-      ask: async ({ system, prompt }) => {
-        const botId = currentBot ?? ''
-        const small = runtime.smallShot
-        if (small === undefined || botId === '') throw new Error('No model is available')
-        return small(botId, system, prompt)
-      },
-      judgeAsk: async ({ system, prompt }) => {
-        const botId = currentBot ?? ''
-        const small = runtime.smallShot
-        if (small === undefined || botId === '') throw new Error('No model is available')
-        return small(botId, system, prompt)
-      },
+      ask,
+      judgeAsk: ask,
       newId: () => `c-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
       now: () => Date.now(),
       log: (message, ...rest) => runtime.warn(message, ...rest),
     },
     send: {
       send: (sessionId, text, source) => {
-        const agent = agentOf(sessionId) as { followup?(value: unknown): void } | undefined
+        const agent = agentOfRef?.(sessionId) as { followup?(value: unknown): void } | undefined
         if (agent?.followup === undefined) return false
         agent.followup({ content: [{ type: 'text', text }], source })
         return true
@@ -72,9 +67,16 @@ export function startProactivePoll(runtime: HostRuntime, store: Store, agentOf: 
     now: () => Date.now(),
     log: (message, ...rest) => runtime.warn(message, ...rest),
   }
-  return startDuePoll(deps)
 }
 
+/** Starts the poll that lets a subscription fire on its own; returns the disposer. */
+export function startProactivePoll(runtime: HostRuntime, store: Store, agentOf: (sessionId: string) => unknown): () => void {
+  agentOfRef = agentOf
+  return startDuePoll(triggerDepsOf(runtime, store, runtime.config.timeZone))
+}
+
+/** How to reach a Session's engine; set once when the surface is installed. */
+let agentOfRef: ((sessionId: string) => unknown) | undefined
 /** The Bot whose run is in flight, so the model call knows whose credentials to use. */
 let currentBot: string | undefined
 
@@ -102,16 +104,43 @@ async function contextFor(runtime: HostRuntime, store: Store, subscriptionId: st
     })),
     alreadySaid: earlier.map(item => item.text),
     deliveredToday: store.proactive.deliveredOn(subscriptionId, dayStart, now),
-    // The screen's "the user just raised this" check is the prep prompt's job here: the
-    // model is told what was said today and is asked not to repeat it.
+    // The "the user just raised this" check is the prep prompt's job in a triggered run: the
+    // model is told what was said today and asked not to repeat it.
     mentionedRecently: false,
   }
 }
 
-/** Installs the surface and starts the poll. Returns the poll's disposer, if any. */
+/** The activity the no-progress hook reads: one watch for the whole host. */
+export const progressWatch = new ProgressWatch()
+
+/** Starts the no-progress hook: a subscription that names it fires after that much silence. */
+export function startProgress(runtime: HostRuntime, store: Store): () => void {
+  const timeZone = runtime.config.timeZone
+  const deps: ProgressDeps = {
+    ...triggerDepsOf(runtime, store, timeZone),
+    watched: () => store.proactive.enabledSubscriptions()
+      .filter(row => row.eventHook === 'no-progress' && (row.eventMinutes ?? 0) > 0)
+      .map(row => ({ subscriptionId: row.id, botId: row.botId, sessionId: runtime.chatOf(row.botId), minutes: row.eventMinutes ?? 0 })),
+    lastActivityAt: sessionId => progressWatch.lastActivityAt(sessionId),
+    busy: sessionId => runtime.live.get(sessionId) !== undefined,
+    noteFired: (id, at) => { store.proactive.noteFired(id, at) },
+    now: () => Date.now(),
+  }
+  return startProgressPoll(deps)
+}
+
+/** Installs the surface and starts both polls. Returns the combined disposer. */
 export function installProactive(runtime: HostRuntime, store: Store, agentOf: (sessionId: string) => unknown): () => void {
   installProactiveFrom(runtime, store, agentOf)
-  return startProactivePoll(runtime, store, agentOf)
+  // Movement is any turn event: a message landing, a turn starting or ending. The hook only
+  // reads this; it never writes to a conversation.
+  runtime.ctx.on('session/event', (session: { readonly id?: string } | undefined) => {
+    if (session?.id !== undefined) progressWatch.moved(session.id)
+    return undefined
+  })
+  const stopDue = startProactivePoll(runtime, store, agentOf)
+  const stopProgress = startProgress(runtime, store)
+  return () => { stopDue(); stopProgress() }
 }
 
 export function installProactiveFrom(runtime: HostRuntime, store: Store, agentOf: (sessionId: string) => unknown): void {

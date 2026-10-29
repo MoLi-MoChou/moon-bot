@@ -21,6 +21,7 @@ import type { StoredBot } from '../runtime.ts'
 import type { GroupRuntime } from './types.ts'
 import { textOf } from '../text.ts'
 import { isPass, lostSession, mentionsIn, stripOwnName } from './notice.ts'
+import { openingSpeakersOf } from './speakers.ts'
 import type {
   FailureDetail, GroupRoom, GroupRound, GroupSlot, MemberSession, ReadyRoom, RoomPost, RoomTurnResult, RoomWaiter,
 } from './types.ts'
@@ -202,7 +203,7 @@ export function installRounds(rt: GroupRuntime, log: RoomLogApi): RoundsApi {
       round.replies.push({ kind: 'user', text: line.text, time: Date.now() })
       const { all, found } = mentionsIn(line.text, members)
       const note = all || found.length > 0 ? 'the user mentioned you' : 'new message from the user'
-      callMembers(round, turns, index - 1, openingSpeakers(room, { text: line.text }), note, ROOM_ADMIN_TURNS_EACH, undefined)
+      callMembers(round, turns, index - 1, openingSpeakersOf(rt, room, { text: line.text }), note, ROOM_ADMIN_TURNS_EACH, undefined)
     }
     // The user spoke in this room, so late results may call members again.
     room.lateRounds = 0
@@ -294,23 +295,6 @@ export function installRounds(rt: GroupRuntime, log: RoomLogApi): RoundsApi {
   // the admin answers alone in admin mode, or first of everyone. What a member posts
   // after its round moved on is answered by the member that asked for it; work the
   // user asked for is left for the user to read.
-  function openingSpeakers(room: GroupRoom, opener: RoomPost): StoredBot[] {
-    const everyone = room.members.map(rt.botOf).filter((bot): bot is StoredBot => bot !== undefined)
-    const members = everyone.filter(bot => bot.id !== opener.botId)
-    const admin = members.find(bot => rt.isAdminOf(room, bot.id))
-    if (opener.kickoff) return admin ? [admin] : []
-    if (opener.quiet) return []
-    if (opener.done) return members.filter(bot => bot.id === opener.askedBy)
-    const { all, found: named } = mentionsIn(opener.text ?? '', everyone, opener.references)
-    const found = named.filter(bot => bot.id !== opener.botId)
-    if (opener.progress) return found
-    if (opener.late) return found.length > 0 ? found : members.filter(bot => bot.id === opener.askedBy)
-    if (opener.member) return found
-    if (found.length > 0 && !all) return found
-    if (!all && room.mode === 'admin' && admin) return [admin]
-    return admin ? [admin, ...members.filter(bot => bot !== admin)] : members
-  }
-
   // A group chat's own Session never consults the model: models drift from "only call
   // group_relay" (they message one member directly when the user names it), so the
   // relay step is synthesized here. Auxiliary calls such as titles, and DS Bot's own
@@ -348,5 +332,5 @@ export function installRounds(rt: GroupRuntime, log: RoomLogApi): RoundsApi {
     })()
   })
 
-  return { openingSpeakers, runRound }
+  return { openingSpeakers: (room: GroupRoom, opener: RoomPost) => openingSpeakersOf(rt, room, opener), runRound }
 }

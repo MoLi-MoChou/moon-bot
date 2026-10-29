@@ -9,15 +9,25 @@ export interface TextBot { id: string; name: string }
 
 // The Bots a text calls, by the rule the group host reads (shared/mentions.ts). The
 // speaker's own name takes part so that it is never read as a shorter name inside it
-// ("@新 Bot" in "@新 Bot 2"); it then stays plain text.
-export function linkMentions(text: string, bots: readonly TextBot[], selfId?: string): string {
+// ("@新 Bot" in "@新 Bot 2"); it then stays plain text. In a group, an everyone
+// mention keeps its typed label and appends one named internal link per member. Both
+// markdown hosts render those links as that member's mark, so the transcript shows the
+// actual people called without changing the stored text.
+export function linkMentions(text: string, bots: readonly TextBot[], selfId?: string, everyoneBots?: readonly TextBot[]): string {
   if (!text || !text.includes('@')) return text
   let out = ''
   let cursor = 0
-  for (const span of mentionSpans(text, bots) as { start: number; end: number; bot?: TextBot }[]) {
-    if (!span.bot || span.bot.id === selfId) continue
-    out += `${text.slice(cursor, span.start)}[${text.slice(span.start + 1, span.end).replace(/[[\]\\]/g, '\\$&')}](${MENTION_ORIGIN}${span.bot.id})`
-    cursor = span.end
+  for (const span of mentionSpans(text, bots) as { start: number; end: number; bot?: TextBot; all?: true }[]) {
+    if (span.bot && span.bot.id !== selfId) {
+      out += `${text.slice(cursor, span.start)}[${text.slice(span.start + 1, span.end).replace(/[[\]\\]/g, '\\$&')}](${MENTION_ORIGIN}${span.bot.id})`
+      cursor = span.end
+      continue
+    }
+    if (span.all && everyoneBots !== undefined && everyoneBots.length > 0) {
+      const marks = everyoneBots.map(bot => `[${bot.name.replace(/[[\]\\]/g, '\\$&')}](${MENTION_ORIGIN}${bot.id})`).join(' ')
+      out += `${text.slice(cursor, span.start)}${text.slice(span.start, span.end)} (${marks})`
+      cursor = span.end
+    }
   }
   return cursor === 0 ? text : out + text.slice(cursor)
 }

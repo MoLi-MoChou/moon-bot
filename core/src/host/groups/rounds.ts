@@ -75,8 +75,9 @@ export function installRounds(rt: GroupRuntime, log: RoomLogApi): RoundsApi {
     const turn = { botId: member.id, sessionId, exchangeId }
     const { started } = round
     started.push(turn)
-    room.seen[member.id] = room.seq
-    // Checked before the delivery, which may start the turn at once.
+    // Checked before the delivery, which may start the turn at once. Advance the
+    // transcript watermark only after delivery succeeds; a failed delivery must be
+    // replayed to the member's next session.
     const busy = rt.live.get(sessionId)?.turn !== undefined
     const done = new Promise<RoomTurnResult>((resolve) => {
       let timer: ReturnType<typeof setTimeout> | undefined
@@ -104,6 +105,7 @@ export function installRounds(rt: GroupRuntime, log: RoomLogApi): RoundsApi {
     })
     try {
       await rt.deliver({ fromId: undefined, toId: member.id, sessionId, role: 'room', roomId: room.id, exchangeId, note, text, files, ...(by ? { askedBy: by } : {}) })
+      room.seen[member.id] = room.seq
       // Still held by an earlier request: this turn cannot start until the user answers.
       if (rt.waitsForApproval?.(sessionId)) rt.roomWaiters.get(exchangeId)?.approval()
       // Still at earlier work: the call waits in its inbox and is answered after that.

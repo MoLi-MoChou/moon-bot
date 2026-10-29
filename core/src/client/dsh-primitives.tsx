@@ -4,6 +4,9 @@
 // app/vite.config.js — so this file serves every other loader.
 import { createElement as h, type ReactElement } from 'react'
 
+const MENTION_ORIGIN = 'https://bots.local/'
+const mentionLink = /\[([^\]\n]*)\]\(https:\/\/bots\.local\/([^\s)]+)\)/g
+
 export const FishLogo = (): null => null
 
 export interface MarkdownTextProps {
@@ -16,5 +19,16 @@ export interface MarkdownTextProps {
 }
 
 export function MarkdownText({ text }: MarkdownTextProps): ReactElement {
-  return <div className='md-plain'>{text}</div>
+  const children: (string | ReactElement)[] = []
+  let cursor = 0
+  for (const match of text.matchAll(mentionLink)) {
+    const start = match.index ?? 0
+    if (start > cursor) children.push(text.slice(cursor, start))
+    const label = match[1] ?? ''
+    const id = match[2] ?? ''
+    children.push(<a href={`${MENTION_ORIGIN}${id}`} className='bt-mention-link'>{label}</a>)
+    cursor = start + match[0].length
+  }
+  if (cursor < text.length) children.push(text.slice(cursor))
+  return <div className='md-plain'>{children}</div>
 }

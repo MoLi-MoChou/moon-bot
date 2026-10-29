@@ -124,7 +124,7 @@ cd ../app && npm test
 
 ## 许可和致谢
 
-Apache-2.0，见 [LICENSE](LICENSE)。Moon Bot 基于 Fei2411 的 [DS Bot（DeepSeek-Bot）](https://github.com/Fei2411/DeepSeek-Bot)（Apache-2.0）修改，DS Bot 的代码直接放在本仓库里并做了改动，改动清单和第三方声明（framer-motion、open-claude-ui 等）见 [NOTICE](NOTICE)。原 DS Bot 的说明保留在 [docs/ds-bot-README.zh.md](docs/ds-bot-README.zh.md)。运行时是本仓库自己的：Fastify 服务、内置引擎（[@earendil-works/pi-agent-core](https://www.npmjs.com/package/@earendil-works/pi-agent-core) + `pi-ai`，MIT）、SQLite 存储与 Electron 窗口，不依赖 DeepSeek Harness。
+Apache-2.0，见 [LICENSE](LICENSE)。Moon Bot 基于 Fei2411 的 [DS Bot（DeepSeek-Bot）](https://github.com/Fei2411/DeepSeek-Bot)（Apache-2.0）修改，DS Bot 的代码直接放在本仓库里并做了改动，改动清单和第三方声明（framer-motion、open-claude-ui 等）见 [NOTICE](NOTICE)。运行时是本仓库自己的：Fastify 服务、内置引擎（[@earendil-works/pi-agent-core](https://www.npmjs.com/package/@earendil-works/pi-agent-core) + `pi-ai`，MIT）、SQLite 存储与 Electron 窗口，不依赖 DeepSeek Harness。
 
 ---
 

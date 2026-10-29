@@ -1,7 +1,7 @@
 {
   "name": "moon-bot",
   "productName": "Moon Bot",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "private": true,
   "description": "Moon Bot desktop and web app: the Bot team on Moon Bot's own runtime.",
   "author": "MoLi-MoChou",

@@ -235,6 +235,10 @@ export const ZH = {
 
   'Write this rule': '写下这条规则',
 
+  'Brought up on its own': '它自己提起的',
+
+  'Last 7 days: {prepared} prepared, {delivered} sent ({rate}%), {rejected} dropped. {disabled} subscriptions off.': '最近 7 天：准备 {prepared} 条，发出 {delivered} 条（{rate}%），丢弃 {rejected} 条，关闭 {disabled} 条订阅。',
+
   // Sidebar and account menu
   'Bot list': 'Bot 列表',
   'Setting up your Main Bot…': '正在设置你的主 Bot…',

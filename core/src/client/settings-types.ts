@@ -114,6 +114,7 @@ export interface SettingsActions extends FolderMenuActions, SecretActions, Conne
   proactiveRemove?: ((id: string) => Promise<unknown>) | undefined
   proactiveEnable?: ((id: string, enabled: boolean) => Promise<unknown>) | undefined
   proactiveReview?: ((botId: string) => Promise<Record<string, unknown>>) | undefined
+  proactiveStats?: ((days: number) => Promise<Record<string, unknown> | undefined>) | undefined
   preAuthList?: ((botId: string) => Promise<readonly Record<string, unknown>[]>) | undefined
   preAuthWrite?: ((input: Record<string, unknown>) => Promise<unknown>) | undefined
   preAuthRevoke?: ((id: string) => Promise<unknown>) | undefined

@@ -22,6 +22,8 @@ export interface ChatUserItem {
     kind: 'user';
     text?: string | undefined;
     images?: number | undefined;
+    /** Set when the Bot brought this up on its own; the row says so. */
+    proactive?: boolean | undefined;
     time?: number | undefined;
 }
 export interface ChatDividerItem {
@@ -114,7 +116,10 @@ const scrollParent = (node: Element | null): Element | null => {
 function EarlierUser({ row }: EarlierUserProps) {
     const { shown, folded, control } = useFold(row.text ?? '');
     const body = row.text ? <MarkdownText text={shown} labels={mdLabels()} variant='compact' /> : null;
-    return <div className='bt-urow'><div className='bt-ububble' data-folded={folded || undefined}>{control ? <div className='bt-fold-body'>{body}</div> : body}{control}{row.images ? <span className='bt-uimages'>{row.images === 1 ? t('1 image') : t('{count} images', { count: row.images })}</span> : null}</div></div>;
+    // A proactive message is marked, and the mark comes before the text: the user has to be
+    // able to tell what they did not say before they read it.
+    const mark = row.proactive === true ? <span className='bt-upmark'>{t('Brought up on its own')}</span> : null;
+    return <div className='bt-urow' data-proactive={row.proactive === true || undefined}><div className='bt-ububble' data-folded={folded || undefined}>{mark}{control ? <div className='bt-fold-body'>{body}</div> : body}{control}{row.images ? <span className='bt-uimages'>{row.images === 1 ? t('1 image') : t('{count} images', { count: row.images })}</span> : null}</div></div>;
 }
 // The chat line a failed turn leaves: what failed, in words a person reads, and the
 // model's own text under it when that says more. `failureLabel` keeps the words for a

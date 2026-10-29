@@ -209,6 +209,7 @@ export interface BotChannelRpcMap {
   'proactive-preauth-list': { request: { botId: string }; response: { readonly rules: readonly Record<string, unknown>[] } }
   'proactive-preauth-write': { request: { botId: string; id?: string; subscriptionId: string; purpose: string; minutes: number; tools: readonly string[]; prohibitions?: readonly string[]; dailyCap?: number; allowQuietHours?: boolean }; response: { readonly rule: Record<string, unknown> } }
   'proactive-preauth-revoke': { request: { id: string }; response: { readonly revoked: boolean } }
+  'proactive-stats': { request: { days?: number }; response: { readonly prepared: number; readonly delivered: number; readonly rejected: number; readonly disabled: number; readonly since: number } }
   'proactive-review': { request: { botId: string }; response: Record<string, unknown> }
   'reset-bot': { request: { id: string; memory?: boolean; conversation?: boolean; history?: boolean; identity?: boolean }; response: { readonly done: readonly string[]; readonly failed: readonly { readonly part: string; readonly reason: string }[] } }
   'archive-room': { request: { id: string; archived: boolean }; response: StateView }

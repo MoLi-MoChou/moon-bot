@@ -111,6 +111,7 @@ export function teamActions({ call, after, partFor, roster, ui, live, cards, hel
     folderList: (path: string | undefined) => call('folder-list', { path: path ?? '' }),
     setTeamWorkspace: (path: string) => after(call('team-workspace', { path })),
     deleteBot: (id: string) => after(call('delete-bot', { id })),
+    resetBot: (id: string, parts: Record<string, boolean>) => after(call('reset-bot', { id, ...parts })),
     duplicateBot: (id: string) => after(call('duplicate-bot', { id })),
     setPrefs: (prefs: Record<string, unknown>) => after(call('set-prefs', prefs)),
     setMain: (id: string, main = true, options: Record<string, unknown> = {}) => after(call('set-main', { id, main, ...options })),

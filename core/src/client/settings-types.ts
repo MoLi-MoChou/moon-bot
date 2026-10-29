@@ -107,6 +107,8 @@ export interface SettingsActions extends FolderMenuActions, SecretActions, Conne
   updateBot: (id: string, patch: BotPatch) => Promise<unknown>
   duplicateBot: (id: string) => Promise<{ id: string }>
   deleteBot: (id: string) => Promise<unknown>
+  /** Resets a Bot's memory, conversation, history or settings; see docs/plans/2026-10-29-reset-bot.md. */
+  resetBot?: ((id: string, parts: Record<string, boolean>) => Promise<{ readonly done: readonly string[]; readonly failed: readonly { readonly part: string; readonly reason: string }[] } | undefined>) | undefined
   openSession: (id: string) => void
   createBot: (payload: Record<string, unknown>) => Promise<{ id: string }>
   closeOverlay: () => void

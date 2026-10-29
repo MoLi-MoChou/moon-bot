@@ -13,6 +13,7 @@ import { BotCapabilitiesCard } from './capability-settings.tsx';
 import { useMemoryCount } from './memory-panel.tsx';
 import { SPRING_SHAPE, SPRING_TAP, spring, useGlide } from './motion.tsx';
 import { t } from './i18n.ts';
+import { BotResetCard, type ResetActions } from './bot-reset.tsx';
 import type { AvatarEditorProps, BotPatch, BotSettingsFormProps, CardProps, CharacterGridProps, InlineTextProps, RowProps, SettingsActions, SettingsBot, SettingsBotEngine, SettingsEngineOption, SettingsRoster, SwitchProps, SwitchRowProps } from './settings-types.ts';
 const capitalize = (word: string): string => word.charAt(0).toUpperCase() + word.slice(1);
 // Uploaded avatars are center-cropped to a small square so state.json stays light.
@@ -263,7 +264,7 @@ export function BotSettingsForm({ bot, roster, actions, run }: BotSettingsFormPr
     isTile ? null : <Card title={t('Sidebar')}>
       <SwitchRow label={t('Pin')} hint={t('Kept above the other chats.')} on={bot.pinned === true} onChange={pinned => run(actions.setFlags(bot.id, { pinned }))} />
       {isMainBot ? null : <SwitchRow label={t('Hide from sidebar')} hint={t('Search still finds it.')} on={bot.hidden === true} onChange={hidden => run(actions.setFlags(bot.id, { hidden }))} />}
-    </Card>}<Card title={t('Manage')}>
+    </Card>}{actions.resetBot === undefined ? null : h(BotResetCard, { bot, actions: actions as unknown as ResetActions, run })}<Card title={t('Manage')}>
       <button type='button' className='bt-set-row bt-bs-row' onClick={duplicate}><span className='bt-set-copy'><span className='bt-bs-label'>{t('Duplicate')}</span><span className='bt-set-hint'>{t('A copy with the same job and model, and fresh memory.')}</span></span><span className='bt-chevron'><ChevronRightIcon /></span></button>
       {isMainBot ? null : <button type='button' className='bt-set-row bt-bs-row bt-bs-danger' data-confirm={confirming || undefined} onClick={remove}><span className='bt-set-copy'><span className='bt-bs-label'>{confirming ? t('Delete {name}?', { name: bot.name }) : t('Delete Bot')}</span><span className='bt-set-hint'>{confirming ? t('Click again to delete. Its chats are archived.') : t('Removes the Bot from the team.')}</span></span><span className='bt-chevron'><ChevronRightIcon /></span></button>}
     </Card></div>;
@@ -299,5 +300,16 @@ label.bt-bs-row{cursor:text}
 .bt-switch:active:not(:disabled) .bt-switch-knob{width:21px}
 .bt-switch[aria-checked=true]:active:not(:disabled) .bt-switch-knob{transform:translateX(11px)}
 .bt-avedit :is(.bt-shapes,.bt-colors,.bt-dropzone){animation:bt-veil-in .18s ease-out}
+.bt-reset-panel{padding:4px 0 10px}
+.bt-reset-part{display:flex;gap:8px;align-items:flex-start;padding:6px 12px;cursor:pointer}
+.bt-reset-part input{margin-top:2px;accent-color:var(--bt-accent)}
+.bt-reset-copy{display:flex;flex-direction:column;gap:2px;min-width:0}
+.bt-reset-label{color:var(--bt-ink);font-size:13px}
+.bt-reset-loss{display:flex;flex-direction:column;gap:4px;margin:8px 12px;padding:8px 10px;border-radius:10px;background:color-mix(in srgb,var(--bt-danger) 7%,transparent);border:.5px solid color-mix(in srgb,var(--bt-danger) 25%,transparent)}
+.bt-reset-loss-title{color:var(--bt-danger);font-size:12px;font-weight:600}
+.bt-reset-loss-line{color:var(--bt-ink-2);font-size:12px;line-height:1.5}
+.bt-reset-confirm{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:0 12px}
+.bt-reset-question{color:var(--bt-ink);font-size:13px}
+.bt-reset-panel>.bt-soft{margin-left:12px}
 @media (prefers-reduced-motion:reduce){.bt-switch,.bt-switch-knob{transition:none}.bt-avedit :is(.bt-shapes,.bt-colors,.bt-dropzone){animation:none}}
 `;

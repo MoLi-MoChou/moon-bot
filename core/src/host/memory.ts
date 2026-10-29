@@ -28,7 +28,7 @@
 // memory/storage.ts, prompts in memory/prompt.ts, the review in memory/news.ts, and
 // the read paths in memory/recall.ts.
 import { existsSync } from 'node:fs'
-import { mkdir, rename, unlink } from 'node:fs/promises'
+import { mkdir, rename, rm, unlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import { z } from 'zod'
 import { BlockAssembler, type LlmStreamChunk } from './llm-bits.ts'
@@ -307,8 +307,25 @@ export function install(rt: MemoryRuntime): void {
     throw new Error(`Unknown endpoint ${endpoint}`)
   }
 
+  // A reset empties a Bot's memory for good: unlike deleting the Bot, whose memory moves
+  // to the archive, a reset is the user starting this Bot over, so the notes go.
+  function clearBotMemory(botId: string): Promise<void> {
+    for (const sessionId of [botId, rt.chatOf(botId), ...(rt.botOf(botId)?.segments ?? []).map(segment => segment.sessionId), ...rt.groupSessionsOf(botId)]) storage.renewMemory(sessionId)
+    recall.forgetSummary(botId)
+    news?.delete(botId)
+    return storage.enqueue(async () => {
+      if (rt.readOnly() !== undefined) return
+      await unlink(join(root, 'summaries', `${storage.safeId(botId)}.json`)).catch(() => {})
+      const dir = storage.dirOf(storage.ownScope(botId))
+      if (!existsSync(dir)) return
+      await rm(dir, { recursive: true, force: true })
+      await storage.journal({ op: 'reset', scope: storage.scopeKey(storage.ownScope(botId)), actor: 'user', actorName: 'user', botName: rt.botOf(botId)?.name })
+    }).catch(error => rt.warn('moon-bot: memory of %s not cleared: %s', rt.botOf(botId)?.name ?? botId, error))
+  }
+
   Object.assign(rt, {
     memoryEnabled: true,
+    clearBotMemory,
     renewMemory: storage.renewMemory,
     archiveBotMemory,
     archiveGroupMemory,

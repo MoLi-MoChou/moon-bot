@@ -1,6 +1,7 @@
 // The team half of the channel: the state view and its live figures, conversations,
 // files, and every endpoint that changes Bots, groups or the team's Agents.
 import { COLORS, EXTRA_COLORS } from '../constants.ts'
+import { resetBot as reset, resetFrom } from '../bot-reset.ts'
 import type { AttachmentRef } from '../host-types.ts'
 import type { RpcEndpoint } from '../../shared/rpc.ts'
 import type {
@@ -252,6 +253,7 @@ export function teamHandlers(rt: ChannelRuntime, locale: LocaleState): ChannelHa
       await rt.deleteBot(body.id)
       return ok(view())
     },
+    'reset-bot': async (body) => ok(await reset(rt, String(body.id ?? ''), resetFrom(body))),
     'set-main': async (body) => {
       await rt.load()
       await rt.setMain(body.id, body.main !== false, {

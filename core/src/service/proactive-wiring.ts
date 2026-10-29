@@ -6,6 +6,7 @@ import { dayStartFor } from '../host/proactive/trigger.ts'
 import { startDuePoll, type DueDeps } from '../host/proactive/schedule.ts'
 import { ProgressWatch, startProgressPoll, type ProgressDeps } from '../host/proactive/progress.ts'
 import { retryFrom } from '../host/proactive/retry.ts'
+import { statsSince } from '../store/proactive-stats.ts'
 import type { HostRuntime } from '../host/runtime.js'
 import type { Store } from '../store/db.ts'
 
@@ -188,7 +189,10 @@ export function installProactive(runtime: HostRuntime, store: Store, agentOf: (s
 
 export function installProactiveFrom(runtime: HostRuntime, store: Store, agentOf: (sessionId: string) => unknown): void {
   // The rules surface the channel reads; the gate itself lives in proactive-gate.
-  Object.assign(runtime, { proactiveRules: () => store.proactiveRules })
+  Object.assign(runtime, {
+    proactiveRules: () => store.proactiveRules,
+    proactiveStats: (since: number) => statsSince(store.raw, since),
+  })
   const timeZone = runtime.config.timeZone
   install(runtime, {
     deps: {

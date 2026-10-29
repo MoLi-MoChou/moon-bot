@@ -43,3 +43,18 @@ test('an empty review is distinguishable from no review yet', () => {
   assert.equal(hasCandidates({ candidates: [] }), false)
   assert.equal(hasCandidates({ candidates: [{}] }), true)
 })
+
+test('a proactive row is marked before its text, so the mark is read first', async () => {
+  // The client rule forbids importing a .tsx from a test, so this pins the contract the two
+  // sides share: the field the host sets and the field the row reads.
+  const { readFileSync } = await import('node:fs')
+  const chat = readFileSync(new URL('../src/client/cells-chat.tsx', import.meta.url), 'utf8')
+  assert.match(chat, /proactive\?: boolean/, 'the row type carries the mark')
+  assert.match(chat, /row\.proactive === true \? <span className='bt-upmark'/, 'the mark is rendered')
+  assert.match(chat, /data-proactive=/, 'the row can be styled apart without relying on the text')
+  const pager = readFileSync(new URL('../src/host/parts-pager.ts', import.meta.url), 'utf8')
+  // A proactive message comes from its own source kind, and is presented as a user row
+  // because the Bot answers it — but it keeps the mark.
+  assert.match(pager, /source\?\.kind === 'user' \|\| source\?\.kind === PROACTIVE_KIND/)
+  assert.match(pager, /proactive: true/)
+})

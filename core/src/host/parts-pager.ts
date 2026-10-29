@@ -8,6 +8,7 @@ import type { SessionEvent } from './host-types.js'
 import type { HostRuntime } from './runtime.js'
 import type { SwitchPart } from './parts-switch-move.ts'
 import type { ChatItem, ChatPage, EarlierPage, PageCursor, PartPage } from './parts-types.js'
+import { PROACTIVE_KIND } from './constants.ts'
 
 const EARLIER_PAGE = 60
 
@@ -73,10 +74,13 @@ export function createPartPager(options: PartPagerOptions): PartPager {
         readonly senderName?: unknown
         readonly roomId?: unknown
       } | undefined
-      if (source?.kind === 'user') {
+      if (source?.kind === 'user' || source?.kind === PROACTIVE_KIND) {
         const content: readonly unknown[] = Array.isArray(data.content) ? data.content : []
         const images = content.filter(raw => (raw as { readonly type?: unknown } | undefined)?.type === 'image').length
-        items.push({ kind: 'user', text: textOf(content), ...(images > 0 ? { images } : {}), time })
+        // A message the Bot brought up itself reads as a user row — the Bot answers it — but
+        // it carries the mark so the interface never pretends the user typed it.
+        const proactive = source?.kind === PROACTIVE_KIND || undefined
+        items.push({ kind: 'user', text: textOf(content), ...(images > 0 ? { images } : {}), ...(proactive === true ? { proactive: true } : {}), time })
       } else if (source?.kind === REPLY_KIND) {
         const text = textOf(data.content)
         const reply = readReply(text)

@@ -119,6 +119,7 @@ export function teamActions({ call, after, partFor, roster, ui, live, cards, hel
     proactiveRemove: (id: string) => after(call('proactive-unsubscribe', { id })),
     proactiveEnable: (id: string, enabled: boolean) => after(call('proactive-enable', { id, enabled })),
     proactiveReview: (botId: string) => call('proactive-review', { botId }) as Promise<Record<string, unknown>>,
+    proactiveStats: (days: number) => call('proactive-stats', { days }).catch(() => undefined),
     preAuthList: (botId: string) => call('proactive-preauth-list', { botId }).then(value => (value as { rules: readonly Record<string, unknown>[] }).rules).catch(() => []),
     preAuthWrite: (input: Record<string, unknown>) => after(call('proactive-preauth-write', input as never)),
     preAuthRevoke: (id: string) => after(call('proactive-preauth-revoke', { id })),

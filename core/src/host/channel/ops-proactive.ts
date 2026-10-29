@@ -124,6 +124,16 @@ export function proactiveHandlers(rt: ChannelRuntime): ChannelHandlers {
       // the user can turn it back on when they want it again.
       return ok({ enabled: store.setEnabled(id, body.enabled !== false) })
     },
+    'proactive-stats': async (body) => {
+      await rt.load()
+      const stats = (rt as unknown as { proactiveStats?: (since: number) => Record<string, number> }).proactiveStats
+      if (stats === undefined) return fail('Proactive messages are turned off on this host', 'bot/unavailable')
+      // A window, not a lifetime: the question is whether it is working now. A week is the
+      // shortest span that covers a full weekly rhythm of the user's work.
+      const days = Math.min(Math.max(Number(body.days ?? 7), 1), 90)
+      const since = Date.now() - days * 24 * 60 * 60_000
+      return ok({ ...stats(since), since })
+    },
     'proactive-preauth-list': async (body) => {
       await rt.load()
       const rules = (rt as unknown as PreAuthReader).proactiveRules?.()

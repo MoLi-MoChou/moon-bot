@@ -39,12 +39,20 @@ export interface Review {
     readonly considered: number;
 }
 
+export interface ProactiveStats {
+    readonly prepared: number;
+    readonly delivered: number;
+    readonly rejected: number;
+    readonly disabled: number;
+}
+
 export interface ProactiveActions {
     proactiveList?: ((botId: string) => Promise<readonly Subscription[]>) | undefined;
     proactiveAdd: (input: { botId: string; topics: string; dailyCap: number; quietFrom: string | null; quietTo: string | null }) => Promise<unknown>;
     proactiveRemove: (id: string) => Promise<unknown>;
     proactiveEnable: (id: string, enabled: boolean) => Promise<unknown>;
     proactiveReview?: ((botId: string) => Promise<Review>) | undefined;
+    proactiveStats?: ((days: number) => Promise<Record<string, unknown> | undefined>) | undefined;
 }
 
 const inputValue = (event: { readonly target: EventTarget }): string => (event.target as HTMLInputElement).value;
@@ -127,6 +135,25 @@ function SubscribeForm({ botId, actions, onDone }: { botId: string; actions: Pro
     </form>;
 }
 
+/**
+ * The numbers the rollout is gated on, shown where the decision is made: how often a
+ * prepared candidate actually reaches the user, and how often the user turns the feature
+ * off. Without these the trial is a feeling rather than a measurement.
+ */
+function StatsLine({ actions }: { actions: ProactiveActions }) {
+    const [stats, setStats] = useState<ProactiveStats | null>(null);
+    useEffect(() => {
+        void (actions.proactiveStats?.(7) ?? Promise.resolve(undefined)).then(value => {
+            if (value !== undefined) setStats(value as unknown as ProactiveStats);
+        }, () => undefined);
+    }, []);
+    if (stats === null || stats.prepared === 0) return null;
+    const rate = Math.round((stats.delivered / stats.prepared) * 100);
+    return <p className='bt-pro-stats'>{t('Last 7 days: {prepared} prepared, {delivered} sent ({rate}%), {rejected} dropped. {disabled} subscriptions off.', {
+        prepared: stats.prepared, delivered: stats.delivered, rate, rejected: stats.rejected, disabled: stats.disabled,
+    })}</p>;
+}
+
 function ReviewPanel({ botId, actions }: { botId: string; actions: ProactiveActions }) {
     const [review, setReview] = useState<Review | null>(null);
     const [busy, setBusy] = useState(false);
@@ -148,6 +175,7 @@ function ReviewPanel({ botId, actions }: { botId: string; actions: ProactiveActi
             </button>
         </div>
         <p className='bt-pro-hint'>{t('This only shows what the Bot would say. Nothing is sent.')}</p>
+        <StatsLine actions={actions} />
         {error === null ? null : <div className='bt-pro-error' role='alert'>{error}</div>}
         {review === null ? null : review.candidates.length === 0
             ? <p className='bt-pro-hint'>{t('Nothing worth bringing up today.')}</p>

@@ -339,5 +339,8 @@ label.bt-bs-row{cursor:text}
 .bt-pro-outcome{font-size:11.5px;color:var(--bt-ink-2)}
 .bt-pro-outcome[data-would=send]{color:var(--bt-accent)}
 .bt-pro-outcome[data-would=drop]{color:var(--bt-danger)}
+.bt-urow[data-proactive] .bt-ububble{border:.5px solid color-mix(in srgb,var(--bt-accent) 35%,transparent);background:color-mix(in srgb,var(--bt-accent) 6%,transparent)}
+.bt-pro-stats{margin:0;padding:8px 10px;border-radius:8px;background:color-mix(in srgb,var(--bt-ink) 4%,transparent);color:var(--bt-ink-2);font-size:11.5px;line-height:1.5}
+.bt-upmark{display:inline-block;margin-bottom:4px;padding:1px 6px;border-radius:999px;font-size:10.5px;color:var(--bt-accent);background:color-mix(in srgb,var(--bt-accent) 12%,transparent)}
 @media (prefers-reduced-motion:reduce){.bt-switch,.bt-switch-knob{transition:none}.bt-avedit :is(.bt-shapes,.bt-colors,.bt-dropzone){animation:none}}
 `;

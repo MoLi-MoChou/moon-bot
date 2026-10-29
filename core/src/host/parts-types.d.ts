@@ -33,6 +33,8 @@ export interface UserItem {
   readonly kind: 'user'
   readonly text: string
   readonly images?: number | undefined
+  /** True when the Bot raised this itself: the row looks like the user's, and is marked. */
+  readonly proactive?: boolean | undefined
   readonly time: number
 }
 

@@ -326,6 +326,13 @@ export function install(rt: MemoryRuntime): void {
   Object.assign(rt, {
     memoryEnabled: true,
     clearBotMemory,
+    /** The Bot's own remembered lines, for work that is not the panel: a review. Read-only. */
+    memoryLinesOf(botId: string): readonly { readonly topic: string | null, readonly text: string, readonly added: string | null }[] {
+      const view = recall.memoryView({ botId }) as { readonly entries?: readonly { readonly scope: string, readonly topic: string | null, readonly text: string, readonly added: string | null }[] }
+      // Only this Bot's own memory: the team's is not what it prompts the user about.
+      return (view.entries ?? []).filter(entry => entry.scope === 'yours')
+        .map(entry => ({ topic: entry.topic, text: entry.text, added: entry.added }))
+    },
     // The same one-shot call the memory summary uses, with the same fallback, so a module
     // that needs a small model call does not grow a second copy of that logic.
     smallShot(botId: string, system: string, text: string) {

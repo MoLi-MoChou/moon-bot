@@ -169,6 +169,72 @@ export const ZH = {
 
   'That did not work.': '没成功。',
 
+  'Standing permission': '常驻授权',
+
+  'A rule lets this Bot act on its own within limits you write down here. Outside them it can only suggest.': '规则让这个 Bot 在你写下的范围内自己动手。超出范围它只能建议。',
+
+  'No standing permission': '没有常驻授权',
+
+  'The Bot will only ever suggest things, never act by itself.': '这个 Bot 只会建议，不会自己动手。',
+
+  'Write a rule': '写一条规则',
+
+  'What is this rule for?': '这条规则是干什么的？',
+
+  'hand off work that has stalled': '把停滞的活派出去',
+
+  'After this many minutes of silence': '停摆多少分钟后',
+
+  'What may it do without asking?': '它可以不问就做什么？',
+
+  'Also during quiet hours': '安静时段也可以动手',
+
+  'Without this, the rule waits until the quiet hours end — even for a rescue.': '不开这一项，规则会等到安静时段结束——即使是要救急。',
+
+  'This rule will be able to act at 3 in the morning without asking you.': '这条规则将可以在凌晨三点不经你同意就动手。',
+
+  'Anything that spends money or cannot be undone always asks, whatever a rule says.': '花钱和不可撤销的动作永远会先问你，规则写了也不行。',
+
+  'May use: {tools}': '可以用：{tools}',
+
+  'Never: {tools}': '永不用：{tools}',
+
+  'Quiet hours respected': '遵守安静时段',
+
+  'May act at night': '可在夜间动手',
+
+  'What it has done ({count})': '它做过什么（{count}）',
+
+  'Say what this rule is for.': '说清这条规则是干什么的。',
+
+  'Pick at least one thing it may do.': '至少选一件它可以做的事。',
+
+  'Message another Bot': '给别的 Bot 发消息',
+
+  'Hand work to a teammate': '把活交给队友',
+
+  'Adjust a Bot’s setup': '调整 Bot 的设置',
+
+  'Change instructions, model or folder': '改指令、模型或文件夹',
+
+  'Read its own chat': '读它自己的聊天',
+
+  'Look back over what was said': '回看说过什么',
+
+  'Post in a group chat': '在群聊里发言',
+
+  'Say something where the team can see': '在团队都看得到的地方说话',
+
+  'Search the web': '搜索网络',
+
+  'Always asks, because it costs money': '永远会问，因为要花钱',
+
+  'Create a new Bot': '创建新 Bot',
+
+  'Always asks, because it cannot be undone': '永远会问，因为无法撤销',
+
+  'Write this rule': '写下这条规则',
+
   // Sidebar and account menu
   'Bot list': 'Bot 列表',
   'Setting up your Main Bot…': '正在设置你的主 Bot…',

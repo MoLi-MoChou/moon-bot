@@ -119,7 +119,6 @@ test('the subscriptions of one Bot are its own', (t) => {
 test('a store from before this feature gains the tables without losing anything', async (t) => {
   const { DatabaseSync } = await import('node:sqlite')
   const home = mkdtempSync(join(tmpdir(), 'moon-bot-proactive-old-'))
-  t.after(() => rmSync(home, { recursive: true, force: true, maxRetries: 20, retryDelay: 50 }))
   // A database at the previous schema version, with a session in it already.
   const file = join(home, 'store.sqlite3')
   const old = new DatabaseSync(file)
@@ -130,7 +129,10 @@ test('a store from before this feature gains the tables without losing anything'
   old.exec('PRAGMA user_version = 5')
   old.close()
   const db = openStore(home)
+  // Hooks run in the order they were registered, so the close comes before the delete: on
+  // Windows the directory cannot be removed while this store still holds the file open.
   t.after(() => db.close())
+  t.after(() => rmSync(home, { recursive: true, force: true, maxRetries: 20, retryDelay: 50 }))
   // The old row is still there, and the new store works.
   assert.equal(db.sessions.session('b1')?.id, 'b1')
   db.proactive.addSubscription({ id: 's1', botId: 'b1', sessionId: 'b1', topics: 'work', when: '{}' })

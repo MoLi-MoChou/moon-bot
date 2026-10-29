@@ -101,7 +101,6 @@ test('a database from the previous version opens with the same schema as a fresh
   // a different code path from a new one.
   const { DatabaseSync } = await import('node:sqlite')
   const home = mkdtempSync(join(tmpdir(), 'moon-bot-parity-'))
-  t.after(() => rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }))
   const file = join(home, 'store.sqlite3')
   const old = new DatabaseSync(file)
   for (const migration of MIGRATIONS.slice(0, MIGRATIONS.length - 1)) old.exec(migration.sql)
@@ -116,9 +115,12 @@ test('a database from the previous version opens with the same schema as a fresh
   }
   const upgraded = openStore(home)
   const freshHome = mkdtempSync(join(tmpdir(), 'moon-bot-parity-fresh-'))
-  t.after(() => rmSync(freshHome, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }))
   const fresh = openStore(freshHome)
+  // Hooks run in the order they were registered, so both closes come before either delete:
+  // on Windows the directory cannot be removed while a store still holds its file open.
   t.after(() => { upgraded.close(); fresh.close() })
+  t.after(() => rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }))
+  t.after(() => rmSync(freshHome, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }))
   assert.deepEqual(shapeOf(upgraded), shapeOf(fresh))
   assert.equal(upgraded.raw.pragma('user_version', { simple: true }), MIGRATIONS.length)
 })

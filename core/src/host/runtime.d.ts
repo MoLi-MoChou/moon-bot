@@ -400,6 +400,8 @@ export interface HostRuntime {
     readonly revoke: (id: string) => boolean
     readonly auditOf: (ruleId: string) => readonly Record<string, unknown>[]
   }
+  /** A Bot's own remembered lines, read-only, for work that is not the memory panel. */
+  memoryLinesOf?(botId: string): readonly { readonly topic: string | null, readonly text: string, readonly added: string | null }[]
   /** Empties a Bot's memory for good (a reset, not a delete). */
   clearBotMemory?(botId: string): Promise<void>
   /** Empties one Session's transcript; the Session row stays. */

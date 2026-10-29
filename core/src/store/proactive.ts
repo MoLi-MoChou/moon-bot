@@ -221,10 +221,32 @@ export class ProactiveStore {
     return Number(row?.n ?? 0)
   }
 
+  /** Candidates still waiting on quiet hours, oldest first. The morning retry reads this. */
+  delayedSince(windowStart: number): readonly (CandidateRow & { readonly decidedAt: number | undefined })[] {
+    const rows = this.db.prepare(`
+      SELECT c.*, d.decided_at AS d_decided_at
+      FROM proactive_candidates c
+      JOIN proactive_decisions d ON d.candidate_id = c.id
+      WHERE d.decision = 'delayed' AND c.created_at >= ?
+      ORDER BY c.created_at ASC`).all(windowStart) as Record<string, unknown>[]
+    return rows.map(row => ({
+      ...candidateOf(row),
+      decidedAt: row.d_decided_at === null || row.d_decided_at === undefined ? undefined : Number(row.d_decided_at),
+    }))
+  }
+
   /** Records what was decided. One decision per candidate: the first one wins. */
   decide(candidateId: string, decision: DecisionRow['decision'], reason: string | null = null): void {
     this.db.prepare(`INSERT INTO proactive_decisions (candidate_id, decision, reason, decided_at)
       VALUES (?, ?, ?, ?) ON CONFLICT(candidate_id) DO NOTHING`).run(candidateId, decision, reason, Date.now())
+  }
+
+  /** Replaces a decision: the morning retry needs its outcome to be the current one. */
+  replaceDecision(candidateId: string, decision: DecisionRow['decision'], reason: string | null = null): void {
+    this.db.prepare(`INSERT INTO proactive_decisions (candidate_id, decision, reason, decided_at)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT(candidate_id) DO UPDATE SET decision = excluded.decision, reason = excluded.reason, decided_at = excluded.decided_at`)
+      .run(candidateId, decision, reason, Date.now())
   }
 
   decision(candidateId: string): DecisionRow | undefined {

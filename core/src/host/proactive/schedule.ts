@@ -18,6 +18,12 @@ export interface DueSubscription {
 }
 
 export interface DueDeps extends TriggerDeps {
+  /**
+   * Runs before the due check each tick: the morning retry of anything quiet hours held
+   * back. It lives on this poll because it is the same question — is it time to speak? —
+   * asked of a different set.
+   */
+  readonly beforeTick?: (() => Promise<void>) | undefined
   readonly dueSubscriptions: () => readonly DueSubscription[]
   /** When this subscription last fired, as the store recorded it, or undefined. */
   readonly lastFiredAt: (subscriptionId: string) => number | undefined
@@ -49,6 +55,13 @@ export function dueAt(subscription: DueSubscription, lastFiredAt: number | undef
  * retry every thirty seconds for the rest of the day.
  */
 export async function pollDue(deps: DueDeps): Promise<readonly string[]> {
+  // The retry goes first: a candidate that waited all night should reach the user at the
+  // first tick after the window, not after a fresh proposal has used the day's cap.
+  if (deps.beforeTick !== undefined) {
+    await deps.beforeTick().catch((error: unknown) => {
+      deps.log('moon-bot: proactive retry failed: %s', error instanceof Error ? error.message : error)
+    })
+  }
   const now = deps.now()
   const fired: string[] = []
   for (const subscription of deps.dueSubscriptions()) {

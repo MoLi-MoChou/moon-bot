@@ -114,6 +114,9 @@ export interface SettingsActions extends FolderMenuActions, SecretActions, Conne
   proactiveRemove?: ((id: string) => Promise<unknown>) | undefined
   proactiveEnable?: ((id: string, enabled: boolean) => Promise<unknown>) | undefined
   proactiveReview?: ((botId: string) => Promise<Record<string, unknown>>) | undefined
+  preAuthList?: ((botId: string) => Promise<readonly Record<string, unknown>[]>) | undefined
+  preAuthWrite?: ((input: Record<string, unknown>) => Promise<unknown>) | undefined
+  preAuthRevoke?: ((id: string) => Promise<unknown>) | undefined
   resetBot?: ((id: string, parts: Record<string, boolean>) => Promise<{ readonly done: readonly string[]; readonly failed: readonly { readonly part: string; readonly reason: string }[] } | undefined>) | undefined
   openSession: (id: string) => void
   createBot: (payload: Record<string, unknown>) => Promise<{ id: string }>

@@ -9,6 +9,7 @@ import { t } from './i18n.ts';
 import { ClockIcon, PlusIcon } from './icons.tsx';
 import { EmptyState } from './empty-state.tsx';
 import { Card } from './bot-settings.tsx';
+import { PreAuthCard, type PreAuthActions } from './proactive-preauth.tsx';
 import { outcomeText, quietLabel } from './proactive-copy.ts';
 
 export interface Subscription {
@@ -178,7 +179,10 @@ export function ProactivePage({ botId, actions }: { botId: string; actions: Proa
         {subscriptions === null ? null : subscriptions.length === 0
             ? <EmptyState icon={<ClockIcon />} title={t('Nothing set up yet')} hint={t('Add one below and the Bot will start looking for things worth telling you.')} />
             : <ul className='bt-pro-list'>
-                {subscriptions.map(subscription => <SubscriptionRow key={subscription.id} subscription={subscription} actions={actions} onChange={load} />)}
+                {subscriptions.map(subscription => <li key={subscription.id} className='bt-pro-block'>
+                    <SubscriptionRow subscription={subscription} actions={actions} onChange={load} />
+                    <PreAuthCard botId={botId} subscriptionId={subscription.id} actions={actions as unknown as PreAuthActions} />
+                </li>)}
             </ul>}
         {adding
             ? <SubscribeForm botId={botId} actions={actions} onDone={() => { setAdding(false); load(); }} />

@@ -10,6 +10,7 @@ import { OVERLAYS_CSS } from './overlays.ts'
 import { MEMORY_DIALOG_CSS, PANELS_CSS } from './panels.ts'
 import { SHELL_CHROME_CSS, SHELL_FRAME_CSS, SHELL_NOTICE_CSS } from './shell.ts'
 import { BASE_TOKENS_CSS } from './tokens.ts'
+import { PREAUTH_CSS } from '../proactive-preauth-css.ts'
 
 // The first fragment starts with the newline the original template opened with; the
 // final newline is the one before its closing backtick.
@@ -27,6 +28,7 @@ export const SHELL_CSS = sheet(
   OVERLAYS_CSS,
   MEMORY_DIALOG_CSS,
   SHELL_NOTICE_CSS,
+  PREAUTH_CSS,
 )
 
 export const CONVERSATION_CSS = sheet(CONVERSATION_CELLS_CSS, CONVERSATION_COMPOSER_CSS)

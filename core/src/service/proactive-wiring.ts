@@ -5,6 +5,7 @@ import { localTimeAt } from '../host/proactive/review.ts'
 import { dayStartFor } from '../host/proactive/trigger.ts'
 import { startDuePoll, type DueDeps } from '../host/proactive/schedule.ts'
 import { ProgressWatch, startProgressPoll, type ProgressDeps } from '../host/proactive/progress.ts'
+import { retryFrom } from '../host/proactive/retry.ts'
 import type { HostRuntime } from '../host/runtime.js'
 import type { Store } from '../store/db.ts'
 
@@ -72,7 +73,11 @@ function triggerDepsOf(runtime: HostRuntime, store: Store, timeZone: string | un
 /** Starts the poll that lets a subscription fire on its own; returns the disposer. */
 export function startProactivePoll(runtime: HostRuntime, store: Store, agentOf: (sessionId: string) => unknown): () => void {
   agentOfRef = agentOf
-  return startDuePoll(triggerDepsOf(runtime, store, runtime.config.timeZone))
+  const shared = triggerDepsOf(runtime, store, runtime.config.timeZone)
+  return startDuePoll({
+    ...shared,
+    beforeTick: () => retryDelayedNow(runtime, store, agentOf),
+  })
 }
 
 /** How to reach a Session's engine; set once when the surface is installed. */
@@ -94,7 +99,7 @@ async function contextFor(runtime: HostRuntime, store: Store, subscriptionId: st
     sessionId,
     quietFrom: subscription.quietFrom,
     quietTo: subscription.quietTo,
-    memory: [] as readonly { readonly topic: string | null, readonly text: string, readonly added: string | null }[],
+    memory: runtime.memoryLinesOf?.(botId) ?? [],
     messages: store.sessions.since(sessionId, dayStart).map(row => ({ role: row.role, text: textOf(row), at: row.createdAt })),
     earlier: earlier.map(item => ({
       fingerprint: item.fingerprint,
@@ -129,6 +134,44 @@ export function startProgress(runtime: HostRuntime, store: Store): () => void {
   return startProgressPoll(deps)
 }
 
+/** Retries the candidates quiet hours held back. Called from the same poll as the schedule. */
+export async function retryDelayedNow(runtime: HostRuntime, store: Store, agentOf: (sessionId: string) => unknown): Promise<void> {
+  const timeZone = runtime.config.timeZone
+  await retryFrom(runtime, {
+    delayedOf: now => store.proactive.delayedSince(now - 7 * 24 * 60 * 60_000).map(row => ({
+      id: row.id, subscriptionId: row.subscriptionId, sessionId: row.sessionId,
+      text: row.text, evidence: JSON.parse(row.evidence) as readonly string[], ttl: row.ttl,
+      fingerprint: row.fingerprint, topicKeys: JSON.parse(row.topicKeys) as readonly string[],
+      createdAt: row.createdAt, decidedAt: row.decidedAt,
+    })),
+    earlierOf: subscriptionId => store.proactive.recentCandidates(subscriptionId, Date.now() - 7 * 24 * 60 * 60_000)
+      .filter(item => item.decision?.decision !== 'delayed')
+      .map(item => ({
+        fingerprint: item.fingerprint,
+        topicKeys: JSON.parse(item.topicKeys) as readonly string[],
+        decision: item.decision?.decision as 'delivered' | 'quiet' | 'dropped' | undefined,
+        decidedAt: item.decision?.decidedAt,
+      })),
+    deliveredToday: subscriptionId => store.proactive.deliveredOn(subscriptionId, dayStartFor(timeZone), Date.now()),
+    dailyCapOf: subscriptionId => store.proactive.subscription(subscriptionId)?.dailyCap ?? 1,
+    quietOf: subscriptionId => {
+      const row = store.proactive.subscription(subscriptionId)
+      return row === undefined || row.quietFrom === null || row.quietTo === null ? null : { from: row.quietFrom, to: row.quietTo }
+    },
+    mentionedRecently: () => false,
+    localTime: () => localTimeAt(Date.now(), timeZone),
+    now: () => Date.now(),
+    send: (sessionId, text, source) => {
+      const agent = agentOf(sessionId) as { followup?(value: unknown): void } | undefined
+      if (agent?.followup === undefined) return false
+      agent.followup({ content: [{ type: 'text', text }], source })
+      return true
+    },
+    record: (candidateId, decision, reason) => store.proactive.replaceDecision(candidateId, decision, reason ?? null),
+    log: (message, ...rest) => runtime.warn(message, ...rest),
+  })
+}
+
 /** Installs the surface and starts both polls. Returns the combined disposer. */
 export function installProactive(runtime: HostRuntime, store: Store, agentOf: (sessionId: string) => unknown): () => void {
   installProactiveFrom(runtime, store, agentOf)
@@ -155,7 +198,7 @@ export function installProactiveFrom(runtime: HostRuntime, store: Store, agentOf
       })),
       // Memory is read through the host in a later step; a review with none still works,
       // it just has less to notice.
-      memoryOf: () => [],
+      memoryOf: botId => runtime.memoryLinesOf?.(botId) ?? [],
       localTimeOf: at => localTimeAt(at, timeZone),
       timeZone: () => timeZone,
     },

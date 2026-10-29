@@ -69,7 +69,7 @@ npm run web -w moon-bot                # 网页版：密码页 + 服务，默认
 - `core/test/`：单元测试（`.test.ts`）和 fixtures；`core/test/eval/` 是五项能力评测集。`core/dev/`：mock 模型、测试台、冒烟检查、脚本。
 - `app/`：桌面应用（主进程与窗口、服务子进程、首次启动、搬移数据、安装包与更新）；`app/ui/` 是窗口自己的界面，从 `core/src/client/` 取 Bot 视图（[分区文档](app/AGENTS.md)）。
 - `connect/`：`moon-bot-connect` CLI，把 ACP agent 经 WebSocket 中转接入。
-- `docs/`：愿景（`docs/vision.md`）、已定设计（`docs/plans/`，中文）和发版 runbook（`docs/RELEASING.md`）。`docs/dev/` 是旧的手动检查单（早于独立运行时，内容待更新）。
+- `docs/`：愿景（`docs/vision.md`）、已定设计（`docs/plans/`，中文）和发版 runbook（`docs/RELEASING.md`）。`docs/dev/release-checklist.md` 是发版前的真机检查单。
 - `deploy/`：在服务器上运行网页版的入口（一次安装脚本、compose、更新与回滚脚本）。
 
 ## 代码风格

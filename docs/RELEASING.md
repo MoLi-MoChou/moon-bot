@@ -29,6 +29,9 @@ node scripts/version.mjs 0.2.1      # write both manifests (commit the result)
 5. Watch both workflows; a red end-to-end job means no image was published, which is the
    intended failure mode — fix forward, do not publish by hand.
 
+A release also walks the hand checklist in `docs/dev/release-checklist.md` on a real
+machine (window frame, input method, high DPI, install and upgrade); CI cannot see any of it.
+
 ## What the web image carries
 
 | Tag | When |

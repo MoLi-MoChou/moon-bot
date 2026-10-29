@@ -7,7 +7,7 @@
 # The tag comes from .env's MOON_BOT_TAG (update.sh rewrites it); `latest` follows `main`.
 services:
   moon-bot:
-    image: ${MOON_BOT_REGISTRY:-ghcr.io/moli-mochou/moon-bot}:${MOON_BOT_TAG:-latest}
+    image: ${MOON_BOT_REGISTRY:-ghcr.io/zk020106/moon-bot}:${MOON_BOT_TAG:-latest}
     # A second instance on the same host (a test, a tenant) sets MOON_BOT_CONTAINER.
     container_name: ${MOON_BOT_CONTAINER:-moon-bot}
     restart: unless-stopped

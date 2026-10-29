@@ -16,7 +16,7 @@
 //  4. Test files may not import `.tsx`: Node's type stripping does not handle JSX, so such a
 //     test dies at load time with a confusing extension error. Failing in lint says what to
 //     do instead, before `npm test` crashes.
-//  5. `dsh-types.js` is a type-only contract: a value import of it would load a file that
+//  5. `host-types.js` is a type-only contract: a value import of it would load a file that
 //     does not exist, so every reference must be `import type`.
 //  6. A declaration file carries no runtime: no top-level value export in a `.d.ts`.
 //  7. Built-in tags are JSX: `h('div')` under core/src/client or app/ui/src fails. The
@@ -28,6 +28,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import ts from 'typescript'
+import { findSleeps } from './sleep-debt.mjs'
 
 const MAX_LINES = 350
 const SOURCE_EXTENSIONS = new Set(['.js', '.ts', '.tsx'])
@@ -81,7 +82,7 @@ for (let index = 0; index < argv.length; index += 1) {
 const sourceRoot = join(root, 'src')
 if (!existsSync(sourceRoot)) usage(`no src directory under ${root}`)
 
-const findings = { boundaries: [], lines: [], floating: [], tsx: [], typeOnly: [], declarationValues: [], intrinsicH: [], staleExemptions: [] }
+const findings = { boundaries: [], lines: [], floating: [], tsx: [], typeOnly: [], declarationValues: [], intrinsicH: [], staleExemptions: [], sleep: [] }
 
 // ---------------------------------------------------------------------------
 // Source discovery and path helpers.
@@ -320,7 +321,7 @@ function withoutAmbientBlocks(text) {
 // ---------------------------------------------------------------------------
 // 5. The type-only contract files stay type-only.
 
-// `dsh-types.d.ts` describes DSH; nothing loads it at run time. A value import of it
+// `host-types.d.ts` describes DSH; nothing loads it at run time. A value import of it
 // would be a runtime import of a file that does not exist, so every reference must be
 // `import type` (or an `export type`).
 const VALUE_IMPORT_PATTERNS = [
@@ -330,7 +331,7 @@ const VALUE_IMPORT_PATTERNS = [
   { kind: 'dynamic import', pattern: /\bimport\s*\(\s*(['"])([^'"]+)\1\s*\)/g },
 ]
 
-const TYPE_ONLY_SPECIFIER = /(?:^|\/)dsh-types\.js$/
+const TYPE_ONLY_SPECIFIER = /(?:^|\/)host-types\.js$/
 
 function checkTypeOnlyImports() {
   for (const file of sourceFiles()) {
@@ -573,6 +574,24 @@ function buildProgram() {
 // still refuse. A stale entry hides a file that quietly grew back over the limit.
 const NATURE_EXEMPTIONS = new Set(['src/client/brand-art.ts'])
 
+// A test file may keep the clock waits it already has. One more, or a file that had
+// none, is reported with its line. A drop stays listed until sleep-debt.mjs --write.
+function checkTestSleep() {
+  const debtPath = join(root, 'test', 'sleep-debt.json')
+  const baseline = existsSync(debtPath) ? JSON.parse(readFileSync(debtPath, 'utf8')) : {}
+  const { counts, lines } = findSleeps(root)
+  const files = new Set([...Object.keys(baseline), ...Object.keys(counts)])
+  for (const file of files) {
+    const allowed = baseline[file] ?? 0
+    const actual = counts[file] ?? 0
+    if (actual > allowed) {
+      for (const line of lines[file] ?? []) findings.sleep.push(`${file}:${line} - test waits on the clock`)
+    } else if (actual < allowed) {
+      findings.sleep.push(`${file}: ${actual} clock waits, baseline ${allowed}; run node scripts/sleep-debt.mjs --write`)
+    }
+  }
+}
+
 function checkStaleExemptions() {
   // The fixture trees under test/fixtures/gates are not the real checkout, so an
   // entry that names a real file simply has no file there.
@@ -594,12 +613,13 @@ function main() {
   checkTypeOnlyImports()
   checkDeclarationValues()
   checkIntrinsicH()
+  checkTestSleep()
   checkStaleExemptions()
 
   const all = [
     ...findings.boundaries, ...findings.lines, ...findings.floating, ...findings.tsx,
     ...findings.typeOnly, ...findings.declarationValues, ...findings.intrinsicH,
-    ...findings.staleExemptions,
+    ...findings.staleExemptions, ...findings.sleep,
   ]
   if (all.length === 0) {
     console.log('gates: ok')
@@ -615,6 +635,7 @@ function main() {
     `${findings.declarationValues.length} value-export-in-declaration`,
     `${findings.intrinsicH.length} intrinsic-h`,
     `${findings.staleExemptions.length} stale-exemption`,
+    `${findings.sleep.length} test-sleep`,
   ].join(', ')
   console.error(`gates: ${all.length} failure(s) (${summary})`)
   process.exit(1)

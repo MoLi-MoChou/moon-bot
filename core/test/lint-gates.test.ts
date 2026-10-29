@@ -109,6 +109,17 @@ test('a built-in tag written as h(...) fails in both client trees', () => {
   assert.ok(!text.includes('h(Icon)'), text)
 })
 
+test('a test that waits on the clock fails with the file and line', () => {
+  const result = runGates('sleep')
+  assert.notEqual(result.status, 0, output(result))
+  const text = output(result)
+  assert.match(text, /test\/bad\.test\.ts:4 - test waits on the clock/)
+  assert.match(text, /test\/bad\.test\.ts:5 - test waits on the clock/)
+  assert.match(text, /test\/bad\.test\.ts:9 - test waits on the clock/)
+  assert.match(text, /3 test-sleep/)
+  assert.ok(!text.includes('ok.test.ts'), text)
+})
+
 test('a clean fixture passes with the one-line success message', () => {
   const result = runGates('clean')
   assert.equal(result.status, 0, output(result))

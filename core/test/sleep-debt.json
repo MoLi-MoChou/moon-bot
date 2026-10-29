@@ -1,0 +1,16 @@
+{
+  "test/acp-agent.test.ts": 4,
+  "test/acp-bot.test.ts": 2,
+  "test/blocking-question.test.ts": 2,
+  "test/bot-browsers.test.ts": 2,
+  "test/builtin-engine.test.ts": 2,
+  "test/capability-standalone.test.ts": 1,
+  "test/connectors.test.ts": 2,
+  "test/engine-bridge.test.ts": 2,
+  "test/install.test.ts": 1,
+  "test/pi-proto.test.ts": 2,
+  "test/relay.test.ts": 2,
+  "test/service-providers.test.ts": 1,
+  "test/service-turn.test.ts": 2,
+  "test/usage.test.ts": 1
+}

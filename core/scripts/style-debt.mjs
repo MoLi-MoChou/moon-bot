@@ -9,6 +9,9 @@
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { lowered } from './ratchet.mjs'
+
+export { lowered }
 
 const PLUGIN = resolve(import.meta.dirname, '..')
 const CLIENT = join(PLUGIN, 'src', 'client')
@@ -129,15 +132,6 @@ export function findStyles(dir = CLIENT) {
 }
 
 export const readDebt = () => JSON.parse(readFileSync(DEBT, 'utf8'))
-
-// Each listed entry keeps the smaller of its listed and its found count.
-export function lowered(debt, found) {
-  return Object.fromEntries(Object.entries(debt).map(([kind, files]) => [kind, Object.fromEntries(Object.entries(files)
-    .map(([file, values]) => [file, Object.fromEntries(Object.entries(values)
-      .map(([value, count]) => [value, Math.min(count, found[kind]?.[file]?.[value] ?? 0)])
-      .filter(([, count]) => count > 0))])
-    .filter(([, values]) => Object.keys(values).length > 0))]))
-}
 
 const sorted = item => (typeof item === 'object'
   ? Object.fromEntries(Object.entries(item).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)).map(([key, value]) => [key, sorted(value)]))

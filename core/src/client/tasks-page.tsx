@@ -1,4 +1,4 @@
-import { Fragment, createElement as h, useEffect, useState } from 'react';
+import { Fragment, createElement as h, useEffect, useRef, useState } from 'react';
 import type { TaskHold } from '../shared/rpc.ts';
 import { t } from './i18n.ts';
 import { SPRING_SHAPE } from './motion.tsx';
@@ -125,19 +125,25 @@ export function useTasks(taskActions: TaskActions): TasksState {
     const [stopped, setStopped] = useState<ReadonlySet<string>>(() => new Set());
     const [notice, setNotice] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const request = useRef(0);
+    const mounted = useRef(true);
     const refresh = (): void => {
+        const current = ++request.current;
         void taskActions.tasks().then(next => {
+            if (!mounted.current || current !== request.current) return;
             setAnswer(next);
             // A stopped row leaves with its turn; a turn that starts after it (a queued
             // message) is a different one and is not marked.
             setStopped(marked => new Set([...marked].filter(key => (next.running ?? []).some(task => turnKey(task) === key))));
-        }).catch(failure => setError(failure?.message ?? String(failure)));
+        }).catch(failure => {
+            if (mounted.current && current === request.current) setError(failure?.message ?? String(failure));
+        });
     };
     useEffect(() => {
         refresh();
         const poll = setInterval(() => { setNow(Date.now()); refresh(); }, 2000);
         const tick = setInterval(() => setNow(Date.now()), 1000);
-        return () => { clearInterval(poll); clearInterval(tick); };
+        return () => { mounted.current = false; clearInterval(poll); clearInterval(tick); };
     }, []);
     const stop = (task: TaskRunning): void => {
         setBusy(task.sessionId);

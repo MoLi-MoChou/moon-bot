@@ -67,22 +67,29 @@ const insertionOf = (value: unknown): Insertion | undefined => {
   return typeof at.start === 'number' && typeof at.end === 'number' ? { start: at.start, end: at.end } : undefined
 }
 
-function useChat(botId: string | undefined, part: string, feed: Team['chat']) {
+export function useChat(botId: string | undefined, part: string, feed: Team['chat']) {
   const [view, setView] = useState<ChatView>({ sessionId: null, items: [], cursor: null, loading: botId !== undefined, failed: false })
   const [stream, setStream] = useState<StreamState | null>(null)
   const [pending, setPending] = useState<readonly PendingEntry[]>([])
   const ready = useRef(false)
   const early = useRef<readonly EarlyEntry[]>([])
   const busy = useRef(false)
+  const request = useRef(0)
+  const active = useRef<AbortController | null>(null)
   const keep = useRef<number | null>(null)
 
   const load = useCallback(async (cursor: string | null | undefined, scroller?: HTMLElement | null): Promise<void> => {
-    if (busy.current || botId === undefined) return
+    if (botId === undefined || (cursor !== undefined && busy.current)) return
+    const order = ++request.current
+    active.current?.abort()
+    const controller = new AbortController()
+    active.current = controller
     busy.current = true
     if (cursor === undefined) ready.current = false
     setView(current => ({ ...current, loading: true, failed: false }))
     try {
-      const page = await call<ChatPage>('chat', { botId, ...(cursor ? { cursor } : {}) })
+      const page = await call<ChatPage>('chat', { botId, ...(cursor ? { cursor } : {}) }, controller.signal)
+      if (order !== request.current) return
       if (cursor === undefined) {
         const later = early.current.filter(entry => entry.sessionId === page.sessionId && !page.items.some(item => sameItem(item, entry.item)))
         early.current = []
@@ -94,15 +101,28 @@ function useChat(botId: string | undefined, part: string, feed: Team['chat']) {
         setView(current => ({ ...current, items: [...page.items, ...current.items], cursor: page.cursor ?? null, loading: false }))
       }
     } catch {
+      if (order !== request.current || controller.signal.aborted) return
       ready.current = cursor !== undefined || ready.current
       setView(current => ({ ...current, loading: false, failed: true }))
     } finally {
-      busy.current = false
+      if (order === request.current) {
+        busy.current = false
+        if (active.current === controller) active.current = null
+      }
     }
   }, [botId])
 
-  // A new part starts the chat over.
-  useEffect(() => { void load(undefined) }, [load, part])
+  // A new part starts the chat over. Invalidate and cancel the previous request first so its
+  // answer cannot paint the newly selected conversation, even if the transport ignores abort.
+  useEffect(() => {
+    void load(undefined)
+    return () => {
+      request.current += 1
+      active.current?.abort()
+      active.current = null
+      busy.current = false
+    }
+  }, [load, part])
 
   useEffect(() => feed.on((event: string, data: Record<string, unknown>) => {
     // The feed came back after a break: entries may have been missed.

@@ -145,7 +145,7 @@ for (const kind of ['main', 'copy', 'made by a Main Bot', 'made by the user']) {
       await until(() => sent.some(entry => entry.sessionId === original.id))
       bot = (await call('duplicate-bot', { id: original.id })).value
     } else if (kind === 'made by a Main Bot') {
-      await ctx.registeredTools.get('create_bot').execute({ name: 'Writer', role: 'Writer', instructions, brief: 'Review the team notes.' }, { agent: { id: chief } })
+      await ctx.registeredTools.get('create_bot').execute({ name: 'Writer', role: 'Writer', instructions, brief: 'Review the team notes.', engine: 'builtin' }, { agent: { id: chief } })
       bot = (await call('state', {})).value.bots.find(entry => entry.name === 'Writer')
     } else {
       bot = (await call('create-bot', { name: 'Writer', instructions })).value
@@ -716,13 +716,13 @@ test('create_bot stores a named thinking level and refuses one without a model',
   const chief = (await call('state', {})).value.mainBotId
   const exec = { agent: { id: chief } }
   const create = args => ctx.registeredTools.get('create_bot').execute(args, exec)
-  assert.match(await create({ name: 'Writer', role: 'Write', instructions: 'Write clearly', model: 'deepseek/deepseek-v4-flash', effort: 'low' }), /^Created Writer/)
+  assert.match(await create({ name: 'Writer', role: 'Write', instructions: 'Write clearly', model: 'deepseek/deepseek-v4-flash', effort: 'low', engine: 'builtin' }), /^Created Writer/)
   const writer = (await call('state', {})).value.bots.find(bot => bot.name === 'Writer')
   assert.equal(writer.model, 'deepseek/deepseek-v4-flash')
   assert.equal(writer.effort, 'low')
   await until(() => sent.some(entry => entry.sessionId === writer.id))
   // A level the model does not serve leaves no Bot behind.
-  assert.match(await create({ name: 'Phantom', role: 'Write', instructions: 'Write', model: 'deepseek/deepseek-v4-flash', effort: 'bogus' }), /^Could not create the Bot: Thinking level bogus is not available/)
+  assert.match(await create({ name: 'Phantom', role: 'Write', instructions: 'Write', model: 'deepseek/deepseek-v4-flash', effort: 'bogus', engine: 'builtin' }), /^Could not create the Bot: Thinking level bogus is not available/)
   assert.equal((await call('state', {})).value.bots.some(bot => bot.name === 'Phantom'), false)
 })
 
@@ -735,7 +735,7 @@ test('create_bot with a level but no resolvable model fails before a Session is 
   let created = 0
   const create = ctx.sessionController.create
   ctx.sessionController.create = async (...args) => { created += 1; return create(...args) }
-  const answer = await ctx.registeredTools.get('create_bot').execute({ name: 'Phantom', role: 'Write', instructions: 'Write', effort: 'low' }, { agent: { id: chief } })
+  const answer = await ctx.registeredTools.get('create_bot').execute({ name: 'Phantom', role: 'Write', instructions: 'Write', effort: 'low', engine: 'builtin' }, { agent: { id: chief } })
   assert.match(answer, /^Could not create the Bot: Pick a model before choosing a thinking level/)
   assert.equal(created, 0)
   assert.equal((await call('state', {})).value.bots.some(bot => bot.name === 'Phantom'), false)
@@ -795,7 +795,7 @@ test('create_bot stores a photo, and update_bot changes and clears it', async (t
   const photo = join(dir, 'photo.png')
   writeFileSync(photo, PNG_BYTES)
   const exec = { agent: { id: chief } }
-  assert.match(await ctx.registeredTools.get('create_bot').execute({ name: 'Writer', role: 'Write', instructions: 'Write', avatar: photo }, exec), /^Created Writer/)
+  assert.match(await ctx.registeredTools.get('create_bot').execute({ name: 'Writer', role: 'Write', instructions: 'Write', avatar: photo, engine: 'builtin' }, exec), /^Created Writer/)
   const writer = async () => (await call('state', {})).value.bots.find(bot => bot.name === 'Writer')
   assert.equal((await writer()).avatar.image, PNG_DATA_URL)
   const writerId = (await writer()).id
@@ -818,7 +818,7 @@ test('a photo through update_bot keeps the Bot\'s other avatar fields', async (t
   t.after(stop)
   const chief = (await call('state', {})).value.mainBotId
   const exec = { agent: { id: chief } }
-  assert.match(await ctx.registeredTools.get('create_bot').execute({ name: 'Writer', role: 'Write', instructions: 'Write' }, exec), /^Created Writer/)
+  assert.match(await ctx.registeredTools.get('create_bot').execute({ name: 'Writer', role: 'Write', instructions: 'Write', engine: 'builtin' }, exec), /^Created Writer/)
   const writer = async () => (await call('state', {})).value.bots.find(bot => bot.name === 'Writer')
   const writerId = (await writer()).id
   await until(() => sent.some(entry => entry.sessionId === writerId))
@@ -856,7 +856,7 @@ test('a photo that cannot be read changes nothing, and a non-Main Bot cannot set
   const notes = join(dir, 'notes.png')
   writeFileSync(notes, 'this is not an image')
   const exec = { agent: { id: chief } }
-  assert.match(await ctx.registeredTools.get('create_bot').execute({ name: 'Phantom', role: 'Write', instructions: 'Write', avatar: notes }, exec), /^Could not create the Bot: The avatar must be a PNG, JPEG, WebP, or GIF image/)
+  assert.match(await ctx.registeredTools.get('create_bot').execute({ name: 'Phantom', role: 'Write', instructions: 'Write', avatar: notes, engine: 'builtin' }, exec), /^Could not create the Bot: The avatar must be a PNG, JPEG, WebP, or GIF image/)
   assert.equal((await call('state', {})).value.bots.some(bot => bot.name === 'Phantom'), false)
 
   const writer = (await call('create-bot', { name: 'Writer' })).value
@@ -882,4 +882,27 @@ test('a Main Bot still wearing the blue whale from setup moves to Moon Bot\'s sp
   assert.deepEqual([team.m1.color, team.m1.avatar], ['lilac', { shape: 'moonbot' }])
   // A whale in a color the user picked was their choice and stays.
   assert.deepEqual([team.w2.color, team.w2.avatar], ['red', { shape: 'whale' }])
+})
+
+test('create_bot asks which engine instead of picking the built-in one', async (t) => {
+  const { call, stop, ctx } = start()
+  t.after(stop)
+  const chief = (await call('state', {})).value.mainBotIds[0]
+  const create = args => ctx.registeredTools.get('create_bot').execute(args, { agent: { id: chief } })
+  const answer = await create({ name: 'Writer', role: 'Write', instructions: 'Write' })
+  assert.match(answer, /^Which engine should Writer run on\?/)
+  assert.match(answer, /builtin \(Moon Bot built-in\)/)
+  assert.match(answer, /Ask the user, then call create_bot again with engine set\./)
+  // Nothing was created while the tool waited for the user's choice.
+  const bots = Object.values((await call('state', {})).value.bots) as { name: string }[]
+  assert.equal(bots.filter(bot => bot.name === 'Writer').length, 0)
+})
+
+test('a name that is not an engine is refused with the list', async (t) => {
+  const { call, stop, ctx } = start()
+  t.after(stop)
+  const chief = (await call('state', {})).value.mainBotIds[0]
+  const answer = await ctx.registeredTools.get('create_bot').execute({ name: 'Writer', role: 'Write', instructions: 'Write', engine: 'claud' }, { agent: { id: chief } })
+  assert.match(answer, /There is no engine "claud"/)
+  assert.match(answer, /builtin \(Moon Bot built-in\)/)
 })

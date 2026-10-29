@@ -34,6 +34,7 @@ export interface PolicyRule {
 const RULES: Readonly<Record<string, PolicyRule>> = {
   list_bots: { level: 0 },
   list_models: { level: 0 },
+  list_engines: { level: 0 },
   read_own_chat: { level: 0 },
   read_group_chat: { level: 0 },
   list_capabilities: { level: 0 },

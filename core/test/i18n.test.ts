@@ -32,12 +32,15 @@ const walkSources = (roots: readonly string[]): string[] => {
 }
 
 // The dictionary and the translator define the keys rather than ask for them.
-const skipSource = (file: string): boolean => /(^|\/)(i18n\.ts|i18n\/zh\.ts)$/.test(file)
+// Paths in a report read the same on every platform: Windows's backslashes would
+// otherwise leak into the message a failing run prints.
+const slashed = (path: string): string => path.replaceAll('\\', '/')
+const skipSource = (file: string): boolean => /(^|\/)(i18n\.ts|i18n\/zh\.ts)$/.test(slashed(file))
 
 const interfaceSources = (): { readonly name: string, readonly text: string }[] =>
   walkSources([join(PLUGIN, 'src'), join(PLUGIN, '..', 'app', 'ui', 'src')])
     .filter(file => !skipSource(file))
-    .map(file => ({ name: relative(PLUGIN, file), text: readFileSync(file, 'utf8') }))
+    .map(file => ({ name: slashed(relative(PLUGIN, file)), text: readFileSync(file, 'utf8') }))
 
 /** Every literal passed to `t()` in one source text, unescaped. */
 const literalsOf = (text: string): string[] =>
@@ -57,7 +60,7 @@ test('the scan is recursive, and the fixture tree proves it', () => {
   // A nested file with a key the fixture dictionary lacks must be reported: a top-level-only
   // scan cannot see it, which is how 16 window strings shipped untranslated.
   const root = join(PLUGIN, 'test', 'fixtures', 'i18n', 'tree')
-  const sources = walkSources([root]).filter(file => !skipSource(file)).map(file => ({ name: relative(root, file), text: readFileSync(file, 'utf8') }))
+  const sources = walkSources([root]).filter(file => !skipSource(file)).map(file => ({ name: slashed(relative(root, file)), text: readFileSync(file, 'utf8') }))
   assert.deepEqual(missingLiterals(sources, { Known: '已知' }), ['nested/inner.tsx: Missing from a nested file'])
 })
 

@@ -165,3 +165,36 @@ Prep 抛错 → 隐身（任务面板一行）；同一订阅并发触发按 `su
 ### 预授权（§7，A 保守版）
 
 命中规则 → 三约束检查（写审计 / 守每日上限与静默 / 越界判定）→ 执行 → 留痕。`respectQuietHours=false` 必须用户在制定规则时当场勾选并看到警告。越界即停，退回只提议。制定、修改、撤销只走明确对话。
+
+## 实现记录（v1.0 落地）
+
+九步全部实现，每步单独提交、三件套全绿（`npm test` / `typecheck` / `lint` / `check-docs`，直接看退出码）。
+
+| 步骤 | 落点 |
+|---|---|
+| 1 数据层 | 迁移 V6：订阅、候选、决策三张表；上限在 store 层夹紧 |
+| 2 硬规则 | `proactive/screen-hard.ts`：上限 → 7 天去重 → 24h 已提过 → 静默分级 |
+| 3 准备层 | `proactive/prep.ts`：读记忆与当天对话，无依据一律拒绝 |
+| 4 手动回顾 | `proactive/review.ts` + `channel/ops-proactive.ts` + 设置页卡片 |
+| 5 软判断 | `proactive/screen-judge.ts`：含糊即丢，只对过了硬规则的候选发问 |
+| 6 投递 | `proactive/send.ts` + `deliver.ts`：来源标记 `proactive`，每种结果都记决策 |
+| 7 定时触发 | `proactive/schedule.ts`：复用 `nextRunOf` 计时 |
+| 8 事件 hook | `proactive/progress.ts`：观察最后活动时间，不看"当前在做什么" |
+| 9 预授权 | `proactive/preauth.ts` + `service/proactive-gate.ts` + 两张表 |
+
+### 与 v1.0 的三处实现差异
+
+1. **相似度没有 embedding**（v1.0 已说明）：改用指纹 + 词集相似度，`similarityOf` 是可替换的接缝。
+2. **删掉了「上一条未回应」规则**：它是死代码，见「已定的行为 §3」的说明。
+3. **`appendMessage` 未改**：`source` 字段已是自由 Record，直接带 `{ kind: 'proactive', … }`，没有加列。
+
+### 预授权的红线（实现时定死的两条）
+
+- `preAuthGate` 只从**审批路径**调用，不在它之前：规则只能回答"本来就要问用户"的问题，不能扩大 Bot 能做的事。
+- `coverableByRule` 用真实策略表判断，L3/L4 永远询问。`create_bot` 是 L4、`web_search` 是 L3，测试把这两条钉住。
+
+### 尚未做的
+
+- 设置页只暴露订阅与回顾；预授权规则的**编写界面**尚未接（后端端点已通，可经 `api/bot` 调用）。
+- 延迟队列：静默时段的 `long` 候选记 `delayed`，但早上重跑尚未接。
+- `memoryOf` 目前返回空：回顾只读当天对话，不读记忆条目。

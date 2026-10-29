@@ -24,17 +24,16 @@ import { ServiceContext } from './context.ts'
 import { historyPageOf } from './history-page.ts'
 import type { HostRuntime } from '../host/runtime.js'
 import { installProactive } from './proactive-wiring.ts'
+import { preAuthGate } from './proactive-gate.ts'
 import { FileAttachments } from './attachments.ts'
 
 import { ServiceApproval } from './approval.ts'
 import { MemorySync } from './memory-sync.ts'
 import { TaskScheduler } from './scheduler.ts'
 import { PolicyEngine, ruleOf } from '../engine/policy.ts'; import { gateOfPreset } from '../engine/permission-presets.ts'
-import { PermissionPresets } from './permission-presets.ts'
-import { LocalRunner } from '../engine/runner.ts'
+import { PermissionPresets } from './permission-presets.ts'; import { LocalRunner } from '../engine/runner.ts'
 import { localEngineCatalog } from '../engine/acp/discovery.ts'; import { detailOfPermission } from '../engine/acp/permission.ts'; import { RelayRegistry } from './relay.ts'
 import { collectDeliverables } from '../host/deliverables.ts'; import type { StandaloneLlm } from './llm.ts'
-
 /** The host runtime's own shape, as the wiring reads it. */
 interface Runtime {
   botOf(id: string | undefined): { model?: string, appliedModel?: string, effort?: string, appliedEffort?: string, engine?: unknown, runtimeId?: string } | undefined
@@ -226,6 +225,7 @@ export function wireService(options: WireOptions): WiredService {
           if (rule.asksItself === true || gateOfPreset(presets.of(sessionId), rule.level) === 'within') return { kind: 'allow' }
           return askApproval(sessionId, tool, `This Bot's permission preset asks before ${tool}.`)
         }
+        if (preAuthGate(runtime as unknown as HostRuntime, store, sessionId, tool) !== undefined) return { kind: 'allow' }
         return askApproval(sessionId, tool, decision.reason)
       },
     },
@@ -334,7 +334,7 @@ ${task.prompt}` }],
   // A history page from the store, in its own module: the chat's pagers and the failed
   // turn's line share it.
   context.pageWith(historyPageOf(store))
-  // The surface, and the poll that lets a subscription fire on its own.
+  // The surface and the polls that let a subscription fire on its own.
   context.effect(() => installProactive(runtime as unknown as HostRuntime, store, agentOf), 'moon-bot: proactive poll')
 
   return {

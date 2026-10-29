@@ -176,6 +176,30 @@ CREATE TABLE proactive_candidates (
 );
 CREATE INDEX proactive_candidates_subscription ON proactive_candidates(subscription_id, created_at);
 
+CREATE TABLE proactive_preauth (
+  id TEXT PRIMARY KEY,
+  subscription_id TEXT NOT NULL REFERENCES proactive_subscriptions(id) ON DELETE CASCADE,
+  purpose TEXT NOT NULL,
+  when_json TEXT NOT NULL,         -- the trigger it sits on
+  tools TEXT NOT NULL,             -- JSON array: what it may call
+  prohibitions TEXT NOT NULL,      -- JSON array: what it may never call
+  daily_cap INTEGER NOT NULL DEFAULT 3,
+  respect_quiet_hours INTEGER NOT NULL DEFAULT 1,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX proactive_preauth_subscription ON proactive_preauth(subscription_id);
+
+CREATE TABLE proactive_audit (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  rule_id TEXT NOT NULL,
+  tool TEXT NOT NULL,
+  outcome TEXT NOT NULL,           -- 'acted' | 'waited' | 'proposed'
+  reason TEXT,
+  at INTEGER NOT NULL
+);
+CREATE INDEX proactive_audit_rule ON proactive_audit(rule_id, at);
+
 CREATE TABLE proactive_decisions (
   candidate_id TEXT PRIMARY KEY REFERENCES proactive_candidates(id) ON DELETE CASCADE,
   decision TEXT NOT NULL,          -- 'delivered' | 'quiet' | 'dropped' | 'delayed'

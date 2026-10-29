@@ -144,6 +144,8 @@ export function installProactive(runtime: HostRuntime, store: Store, agentOf: (s
 }
 
 export function installProactiveFrom(runtime: HostRuntime, store: Store, agentOf: (sessionId: string) => unknown): void {
+  // The rules surface the channel reads; the gate itself lives in proactive-gate.
+  Object.assign(runtime, { proactiveRules: () => store.proactiveRules })
   const timeZone = runtime.config.timeZone
   install(runtime, {
     deps: {

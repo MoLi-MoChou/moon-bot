@@ -38,6 +38,15 @@ interface Review {
   readonly considered: number
 }
 
+interface PreAuthReader {
+  proactiveRules?(): {
+    readonly rulesForBot: (botId: string) => readonly Record<string, unknown>[]
+    readonly add: (input: Record<string, unknown>) => Record<string, unknown>
+    readonly revoke: (id: string) => boolean
+    readonly auditOf: (ruleId: string) => readonly Record<string, unknown>[]
+  } | undefined
+}
+
 interface ProactiveReader {
   proactiveStore?(): {
     readonly subscriptionsOf: (botId: string) => readonly ProactiveEntry[]
@@ -114,6 +123,47 @@ export function proactiveHandlers(rt: ChannelRuntime): ChannelHandlers {
       // Saying "not this kind" turns a subscription off; it never silently deletes it, so
       // the user can turn it back on when they want it again.
       return ok({ enabled: store.setEnabled(id, body.enabled !== false) })
+    },
+    'proactive-preauth-list': async (body) => {
+      await rt.load()
+      const rules = (rt as unknown as PreAuthReader).proactiveRules?.()
+      if (rules === undefined) return fail('Pre-authorised rules are turned off on this host', 'bot/unavailable')
+      const botId = String(body.botId ?? '')
+      if (botId === '') return fail('Say which Bot these are for', 'bot/invalid')
+      return ok({
+        rules: rules.rulesForBot(botId).map(rule => ({ ...rule, audit: rules.auditOf(String(rule.id)) })),
+      })
+    },
+    'proactive-preauth-write': async (body) => {
+      await rt.load()
+      const rules = (rt as unknown as PreAuthReader).proactiveRules?.()
+      if (rules === undefined) return fail('Pre-authorised rules are turned off on this host', 'bot/unavailable')
+      const purpose = String(body.purpose ?? '').trim()
+      const tools = Array.isArray(body.tools) ? body.tools.map(String) : []
+      // A rule with no purpose or no tools is not a rule: it would be an open permission.
+      if (purpose === '') return fail('Say what this rule is for', 'bot/invalid')
+      if (tools.length === 0) return fail('Name at least one thing this rule may do', 'bot/invalid')
+      const minutes = Number(body.minutes ?? 0)
+      if (!Number.isFinite(minutes) || minutes <= 0) return fail('Say how many minutes of silence count', 'bot/invalid')
+      const made = rules.add({
+        id: String(body.id ?? `rule-${Date.now().toString(36)}`),
+        subscriptionId: String(body.subscriptionId ?? ''),
+        purpose,
+        when: JSON.stringify({ kind: 'no-progress', minutes }),
+        tools,
+        prohibitions: Array.isArray(body.prohibitions) ? body.prohibitions.map(String) : [],
+        dailyCap: Number(body.dailyCap ?? 3),
+        // The conservative default: quiet hours are respected unless the user said otherwise.
+        respectQuietHours: body.allowQuietHours !== true,
+        enabled: true,
+      })
+      return ok({ rule: made })
+    },
+    'proactive-preauth-revoke': async (body) => {
+      await rt.load()
+      const rules = (rt as unknown as PreAuthReader).proactiveRules?.()
+      if (rules === undefined) return fail('Pre-authorised rules are turned off on this host', 'bot/unavailable')
+      return ok({ revoked: rules.revoke(String(body.id ?? '')) })
     },
     'proactive-review': async (body) => {
       await rt.load()

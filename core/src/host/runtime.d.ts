@@ -394,6 +394,12 @@ export interface HostRuntime {
   proactiveReview?(botId: string): Promise<unknown>
   proactiveLocalTime?(): string
   proactiveSend?(sessionId: string, message: Record<string, unknown>): boolean
+  proactiveRules?(): {
+    readonly rulesForBot: (botId: string) => readonly Record<string, unknown>[]
+    readonly add: (input: Record<string, unknown>) => Record<string, unknown>
+    readonly revoke: (id: string) => boolean
+    readonly auditOf: (ruleId: string) => readonly Record<string, unknown>[]
+  }
   /** Empties a Bot's memory for good (a reset, not a delete). */
   clearBotMemory?(botId: string): Promise<void>
   /** Empties one Session's transcript; the Session row stays. */

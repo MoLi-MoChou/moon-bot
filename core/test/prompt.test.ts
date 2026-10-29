@@ -44,3 +44,24 @@ test('the group relay and non-Bot sessions do not get progress instructions', (t
   assert.doesNotMatch(prompt('room'), /progress|milestone/)
   assert.equal(prompt('outside'), '')
 })
+
+test('a Bot is told it can set reminders, so the tool is not left unreachable', (t) => {
+  const { ctx, prompt } = start()
+  t.after(() => ctx.dispose())
+  const text = prompt('worker')
+  // The tool exists in the registry; without a rule pointing at it a Bot asked to remind
+  // the user answers that it cannot, which is what happened before this rule.
+  assert.match(text, /create_schedule/)
+  assert.match(text, /list_schedules/)
+  assert.match(text, /delete_schedule/)
+  // The old refusal must not be shipped alongside it.
+  assert.doesNotMatch(text, /You cannot set reminders, timers or scheduled tasks/)
+})
+
+test('every tool a Bot is told about is one the host actually registers', async () => {
+  // The rule names the tools by hand; this keeps the names honest against the registry.
+  const { TEAM_TOOLS } = await import('../src/host/constants.ts')
+  for (const name of ['create_schedule', 'list_schedules', 'delete_schedule']) {
+    assert.ok(TEAM_TOOLS.includes(name), `${name} must be in TEAM_TOOLS to reach a Bot`)
+  }
+})

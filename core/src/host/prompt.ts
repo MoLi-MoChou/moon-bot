@@ -8,6 +8,9 @@ const keepRule = (rule: string): boolean => (LEAN.groups || !/group chat|_group\
   && (LEAN.schedules || !/schedule_/i.test(rule))
 // Moon Bot patch: with schedules hidden, no Bot can act at a later time on its own.
 const NO_TIMERS = '- You cannot set reminders, timers or scheduled tasks, and you only act when a message arrives. Never promise to remind the user or to do something later by yourself; say plainly that you cannot remind them, and suggest they set a reminder in their own calendar.'
+// With schedules on, the Bot can be woken later, so it is told how. Without this the tool
+// exists but nothing points at it, and a Bot asked to remind the user answers that it cannot.
+const TIMERS = '- You can come back to something later: create_schedule sets a reminder that returns to this conversation on its own, and you are told its prompt then. When the user asks you to remind them, or to do something at a later time ("明天早上提醒我写周报", "in 20 minutes"), work out the time and call create_schedule in that same turn — do not answer that you cannot, and do not only remember it in your notes. Ask the user only when the time is genuinely unclear (which day, which hour, or a repeating rule you cannot read). Once it is set, say in one short line when it will happen. list_schedules shows the reminders here; delete_schedule cancels one. You still cannot act before that moment, so never promise to watch or to follow up on your own.'
 const TEAM_RULES: string = [
   '## How your Bot team works',
   '- Every Bot is its own long-lived conversation with the user, with its own memory and computer.',
@@ -31,7 +34,7 @@ const TEAM_RULES: string = [
   '- web_search results say which search backend answered. If web_search fails, never guess URLs or present pages you remember as search results: use a browser tool if you have one, otherwise tell the user that search is unavailable and the reason it gave.',
   '- Your conversations are long-lived. When one grows long, either its older messages are condensed in place into a summary you wrote (a "[Checkpoint N]" message), or it moves on to a fresh part that opens with a handoff note you wrote and your latest messages (a "[Handoff · part N]" message). What leaves your working context stays saved. When you need the exact earlier wording or a detail the summary or note does not show in full (a full path, a figure, every item of a complete list or a final summary), call read_own_chat with words to look for, or with part N to read the note that closed an earlier part; never fill such a detail in from memory. Each line it returns starts with an anchor such as [part 2 #1234 · 10-08 14:22]; pass the anchor as around to read what was said around it.',
   '- Reply in the user\'s language.',
-].filter(keepRule).concat(LEAN.schedules ? [] : [NO_TIMERS]).join('\n')
+].filter(keepRule).concat(LEAN.schedules ? [TIMERS] : [NO_TIMERS]).join('\n')
 
 const MAIN_RULES: string = [
   '## You are the Main Bot (Chief of Staff)',

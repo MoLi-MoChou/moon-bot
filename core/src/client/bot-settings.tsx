@@ -264,7 +264,7 @@ export function BotSettingsForm({ bot, roster, actions, run }: BotSettingsFormPr
     isTile ? null : <Card title={t('Sidebar')}>
       <SwitchRow label={t('Pin')} hint={t('Kept above the other chats.')} on={bot.pinned === true} onChange={pinned => run(actions.setFlags(bot.id, { pinned }))} />
       {isMainBot ? null : <SwitchRow label={t('Hide from sidebar')} hint={t('Search still finds it.')} on={bot.hidden === true} onChange={hidden => run(actions.setFlags(bot.id, { hidden }))} />}
-    </Card>}{actions.resetBot === undefined ? null : h(BotResetCard, { bot, actions: actions as unknown as ResetActions, run })}<Card title={t('Manage')}>
+    </Card>}{actions.resetBot === undefined ? null : <BotResetCard bot={bot} actions={actions as unknown as ResetActions} run={run} />}<Card title={t('Manage')}>
       <button type='button' className='bt-set-row bt-bs-row' onClick={duplicate}><span className='bt-set-copy'><span className='bt-bs-label'>{t('Duplicate')}</span><span className='bt-set-hint'>{t('A copy with the same job and model, and fresh memory.')}</span></span><span className='bt-chevron'><ChevronRightIcon /></span></button>
       {isMainBot ? null : <button type='button' className='bt-set-row bt-bs-row bt-bs-danger' data-confirm={confirming || undefined} onClick={remove}><span className='bt-set-copy'><span className='bt-bs-label'>{confirming ? t('Delete {name}?', { name: bot.name }) : t('Delete Bot')}</span><span className='bt-set-hint'>{confirming ? t('Click again to delete. Its chats are archived.') : t('Removes the Bot from the team.')}</span></span><span className='bt-chevron'><ChevronRightIcon /></span></button>}
     </Card></div>;

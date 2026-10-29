@@ -335,7 +335,7 @@ ${task.prompt}` }],
   // turn's line share it.
   context.pageWith(historyPageOf(store))
 
-  installProactiveFrom(runtime as unknown as HostRuntime, store)
+  installProactiveFrom(runtime as unknown as HostRuntime, store, agentOf)
 
   return {
     context, runtime, store, engine, relay, agentOf, emitEvent,

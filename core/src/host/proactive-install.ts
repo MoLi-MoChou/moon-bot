@@ -22,6 +22,8 @@ export interface ProactiveSubscription {
 
 export interface ProactiveInstall {
   readonly deps: ProactiveDeps
+  /** Hands a prepared message to a Session's engine; false when it cannot take one. */
+  readonly hand?: ((sessionId: string, message: { readonly content: readonly { readonly type: 'text', readonly text: string }[], readonly source: { readonly kind: 'proactive', readonly subscriptionId: string, readonly candidateId: string } }) => boolean) | undefined
   /** Every subscription of a Bot, enabled or not, for the settings surface. */
   readonly listOf: (botId: string) => readonly ProactiveSubscription[]
   readonly add: (input: Record<string, unknown>) => ProactiveSubscription
@@ -41,6 +43,9 @@ export function install(rt: HostRuntime, install: ProactiveInstall): void {
     }),
     proactiveSubscriptionsOf: install.listOf,
     proactiveReview: reviewFor,
+    // The delivery half is reachable only through a send, which the trigger calls; a review
+    // never sends.
+    proactiveSend: install.hand,
     // The quiet-hours check needs the host's own clock, not the browser's: a message must
     // not go out at 23:00 because the user's laptop is in another time zone.
     proactiveLocalTime: () => localTimeAt(Date.now(), deps.timeZone()),

@@ -119,6 +119,8 @@ export async function review(rt: HostRuntime, deps: ProactiveDeps, botId: string
     if (outcome.kind === 'prepared') {
       considered += 1
       candidates.push(toReviewCandidate(outcome))
+      // A review records nothing: the user is looking, not deciding. Recording here would
+      // let a look consume the day's cap and the de-duplication window.
     }
   }
   return { candidates, considered }

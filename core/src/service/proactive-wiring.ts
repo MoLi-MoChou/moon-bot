@@ -27,7 +27,7 @@ const shapeOf = (row: {
 const textOf = (row: { readonly content: readonly { readonly type: string, readonly text?: unknown }[] }): string =>
   row.content.filter(block => block.type === 'text').map(block => String(block.text ?? '')).join(' ')
 
-export function installProactiveFrom(runtime: HostRuntime, store: Store): void {
+export function installProactiveFrom(runtime: HostRuntime, store: Store, agentOf: (sessionId: string) => unknown): void {
   const timeZone = runtime.config.timeZone
   install(runtime, {
     deps: {
@@ -45,5 +45,11 @@ export function installProactiveFrom(runtime: HostRuntime, store: Store): void {
     add: input => shapeOf(store.proactive.addSubscription(input as never)),
     setEnabled: (id, enabled) => store.proactive.setEnabled(id, enabled),
     remove: id => store.proactive.removeSubscription(id),
+    hand: (sessionId, message) => {
+      const agent = agentOf(sessionId) as { followup?(value: unknown): void } | undefined
+      if (agent?.followup === undefined) return false
+      agent.followup(message)
+      return true
+    },
   })
 }

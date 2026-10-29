@@ -6,7 +6,7 @@
 // Session events and decides where each message goes.
 import type { AgentSession, MessageContentBlock, TurnEndReason } from '../host-types.js'
 import type { TurnInfo } from '../runtime.ts'
-import { HANDOFF_ACK, MESSAGE_INLINE_MAX, REFERENCE_KIND, REPLY_KIND, SOURCE_KIND } from '../constants.ts'
+import { HANDOFF_ACK, MESSAGE_INLINE_MAX, PROACTIVE_KIND, REFERENCE_KIND, REPLY_KIND, SOURCE_KIND } from '../constants.ts'
 import { absoluteLinks } from '../links.ts'
 import { reminderText } from '../schedules.ts'
 import { textOf } from '../text.ts'
@@ -105,10 +105,10 @@ export function installRoute(rt: TurnsRuntime, core: TurnsCore): void {
         // still claims it as today, a later one only joins it.
         const opened = entry.opened === true
         if (entry.turn !== undefined && !bare(source)
-          && (source?.kind === 'user' || source?.kind === REPLY_KIND || source?.kind === 'schedule' || source?.kind === SOURCE_KIND)) {
+          && (source?.kind === 'user' || source?.kind === REPLY_KIND || source?.kind === 'schedule' || source?.kind === PROACTIVE_KIND || source?.kind === SOURCE_KIND)) {
           entry.opened = true
         }
-        if (entry.turn !== undefined && (source?.kind === 'user' || source?.kind === REPLY_KIND || source?.kind === SOURCE_KIND)) {
+        if (entry.turn !== undefined && (source?.kind === 'user' || source?.kind === REPLY_KIND || source?.kind === PROACTIVE_KIND || source?.kind === SOURCE_KIND)) {
           if (bare(source)) {
             if (entry.answers === true) break
           } else {

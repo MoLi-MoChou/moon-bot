@@ -22,19 +22,18 @@ import { resolveModelSpec } from '../shared/model-catalog.ts'
 import { openStore, type Store } from '../store/db.ts'
 import { ServiceContext } from './context.ts'
 import { historyPageOf } from './history-page.ts'
+import type { HostRuntime } from '../host/runtime.js'
+import { installProactiveFrom } from './proactive-wiring.ts'
 import { FileAttachments } from './attachments.ts'
+
 import { ServiceApproval } from './approval.ts'
 import { MemorySync } from './memory-sync.ts'
 import { TaskScheduler } from './scheduler.ts'
-import { PolicyEngine, ruleOf } from '../engine/policy.ts'
-import { gateOfPreset } from '../engine/permission-presets.ts'
+import { PolicyEngine, ruleOf } from '../engine/policy.ts'; import { gateOfPreset } from '../engine/permission-presets.ts'
 import { PermissionPresets } from './permission-presets.ts'
 import { LocalRunner } from '../engine/runner.ts'
-import { localEngineCatalog } from '../engine/acp/discovery.ts'
-import { detailOfPermission } from '../engine/acp/permission.ts'
-import { RelayRegistry } from './relay.ts'
-import { collectDeliverables } from '../host/deliverables.ts'
-import type { StandaloneLlm } from './llm.ts'
+import { localEngineCatalog } from '../engine/acp/discovery.ts'; import { detailOfPermission } from '../engine/acp/permission.ts'; import { RelayRegistry } from './relay.ts'
+import { collectDeliverables } from '../host/deliverables.ts'; import type { StandaloneLlm } from './llm.ts'
 
 /** The host runtime's own shape, as the wiring reads it. */
 interface Runtime {
@@ -335,6 +334,8 @@ ${task.prompt}` }],
   // A history page from the store, in its own module: the chat's pagers and the failed
   // turn's line share it.
   context.pageWith(historyPageOf(store))
+
+  installProactiveFrom(runtime as unknown as HostRuntime, store)
 
   return {
     context, runtime, store, engine, relay, agentOf, emitEvent,

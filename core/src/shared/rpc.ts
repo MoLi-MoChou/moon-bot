@@ -202,6 +202,11 @@ export interface BotChannelRpcMap {
   'create-room': { request: { members: readonly string[]; name?: string; admin?: string; greet?: boolean }; response: RoomView }
   'update-room': { request: { id: string; [field: string]: unknown }; response: { readonly room: RoomView | undefined; readonly changes: readonly string[] } }
   'delete-room': { request: { id: string }; response: StateView }
+  'proactive-subscriptions': { request: { botId: string }; response: { readonly subscriptions: readonly Record<string, unknown>[] } }
+  'proactive-subscribe': { request: { botId: string; topics: string; when?: string; dailyCap?: number; quietFrom?: string | null; quietTo?: string | null; eventHook?: string | null; eventMinutes?: number }; response: { readonly subscription: Record<string, unknown> } }
+  'proactive-unsubscribe': { request: { id: string }; response: { readonly removed: boolean } }
+  'proactive-enable': { request: { id: string; enabled?: boolean }; response: { readonly enabled: boolean } }
+  'proactive-review': { request: { botId: string }; response: Record<string, unknown> }
   'reset-bot': { request: { id: string; memory?: boolean; conversation?: boolean; history?: boolean; identity?: boolean }; response: { readonly done: readonly string[]; readonly failed: readonly { readonly part: string; readonly reason: string }[] } }
   'archive-room': { request: { id: string; archived: boolean }; response: StateView }
   folders: { request: Record<string, never>; response: { readonly team: string; readonly picker: string | null; readonly folders: readonly { readonly path: string; readonly title: string }[] } }

@@ -99,6 +99,23 @@ export class Sessions {
    * Empties a Session's transcript and keeps the row: a reset clears what was said, and
    * the Session itself stays the Bot's current chat, so nothing else has to be rewired.
    */
+  /**
+   * Messages since a moment, oldest first. A review of "today" reads by time rather than by
+   * sequence, because a day may span several parts and only this Session's own messages
+   * belong in it.
+   */
+  since(sessionId: string, at: number, limit = 500): MessageRow[] {
+    const rows = this.db.prepare('SELECT * FROM messages WHERE session_id = ? AND created_at >= ? ORDER BY seq LIMIT ?')
+      .all(sessionId, at, limit) as Record<string, unknown>[]
+    return rows.map(row => MessageRow.parse({
+      id: row.id, sessionId: row.session_id, seq: row.seq, turn: row.turn, role: row.role,
+      content: parse(String(row.content), [], z.array(ContentBlock)),
+      source: row.source === null ? null : parse(String(row.source), {}, z.record(z.unknown())),
+      stopReason: row.stop_reason === null ? null : parse(String(row.stop_reason), null, z.unknown()),
+      createdAt: row.created_at,
+    }))
+  }
+
   clearMessages(sessionId: string): void {
     this.db.prepare('DELETE FROM messages WHERE session_id = ?').run(sessionId)
   }

@@ -326,6 +326,13 @@ export function install(rt: MemoryRuntime): void {
   Object.assign(rt, {
     memoryEnabled: true,
     clearBotMemory,
+    // The same one-shot call the memory summary uses, with the same fallback, so a module
+    // that needs a small model call does not grow a second copy of that logic.
+    smallShot(botId: string, system: string, text: string) {
+      const bot = rt.botOf(botId)
+      if (bot === undefined) throw new Error('Unknown Bot')
+      return botShot(bot, system, text, undefined)
+    },
     renewMemory: storage.renewMemory,
     archiveBotMemory,
     archiveGroupMemory,

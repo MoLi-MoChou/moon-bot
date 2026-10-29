@@ -93,3 +93,35 @@ test('quiet hours turn a long-lived candidate into a delay, not a drop', async (
   if (outcome.kind !== 'prepared') return
   assert.deepEqual(outcome.verdict, { kind: 'delay' })
 })
+
+test('the soft judgement runs only on a candidate the hard rules allowed', async () => {
+  // Asking about a candidate that is already dropped would spend a request to learn nothing.
+  let judged = 0
+  await runOnce(request(), deps({ judgeAsk: async () => { judged += 1; return 'INTERRUPT' } }))
+  assert.equal(judged, 1)
+  judged = 0
+  await runOnce(request({ screen: { ...request().screen, deliveredToday: 1 } }), deps({ judgeAsk: async () => { judged += 1; return 'INTERRUPT' } }))
+  assert.equal(judged, 0, 'a capped candidate must not reach the judge')
+})
+
+test('a candidate the judge turns down becomes a drop with the judge\'s reason', async () => {
+  const outcome = await runOnce(request(), deps({ judgeAsk: async () => 'DROP: only restates yesterday' }))
+  assert.equal(outcome.kind, 'prepared')
+  if (outcome.kind !== 'prepared') return
+  assert.deepEqual(outcome.verdict, { kind: 'drop', reason: 'not-worth-it' })
+  assert.match(String(outcome.why), /restates yesterday/)
+})
+
+test('a judge that fails drops the candidate instead of sending it', async () => {
+  const outcome = await runOnce(request(), deps({ judgeAsk: async () => { throw new Error('offline') } }))
+  assert.equal(outcome.kind, 'prepared')
+  if (outcome.kind !== 'prepared') return
+  assert.equal(outcome.verdict.kind, 'drop')
+})
+
+test('a run with no judge still works: the hard rules alone decide', async () => {
+  const outcome = await runOnce(request(), deps())
+  assert.equal(outcome.kind, 'prepared')
+  if (outcome.kind !== 'prepared') return
+  assert.deepEqual(outcome.verdict, { kind: 'accept' })
+})

@@ -162,6 +162,7 @@ export const ZH = {
 
   'quiet hours': '安静时段',
 
+  'it judged this not worth interrupting for': '它判断这不值得打扰你',
   'not worth interrupting for': '不值得为此打扰',
 
   'Say what this Bot should keep an eye on.': '说清让它留意什么。',

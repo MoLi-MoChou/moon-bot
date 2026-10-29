@@ -19,6 +19,7 @@ export function reasonText(reason: string | undefined): string {
     case 'repeats': return t('it said this in the last week')
     case 'mentioned-recently': return t('you brought it up yourself today')
     case 'quiet-hours': return t('quiet hours')
+    case 'not-worth-it': return t('it judged this not worth interrupting for')
     default: return t('not worth interrupting for')
   }
 }

@@ -105,6 +105,13 @@ export async function review(rt: HostRuntime, deps: ProactiveDeps, botId: string
         if (small === undefined) throw new Error('No model is available for a review')
         return small(botId, system, prompt)
       },
+      // The soft judgement runs inside a review too: the panel must show what would really
+      // happen, including a candidate the judge turns down.
+      judgeAsk: async ({ system, prompt }) => {
+        const small = rt.smallShot
+        if (small === undefined) throw new Error('No model is available for a review')
+        return small(botId, system, prompt)
+      },
       newId: () => `c-${now.toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
       now: () => now,
       log: (message, ...rest) => rt.warn(message, ...rest),

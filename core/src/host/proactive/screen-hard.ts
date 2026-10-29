@@ -51,6 +51,7 @@ export type DropReason =
   | 'repeats'
   | 'mentioned-recently'
   | 'quiet-hours'
+  | 'not-worth-it'
   | 'concurrent'
 
 export type ScreenVerdict =

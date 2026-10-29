@@ -8,10 +8,13 @@
 import type { Candidate, PrepareAsk } from './prep.ts'
 import { prepare } from './prep.ts'
 import { screenHard, type EarlierCandidate, type ScreenVerdict, type TriggerSource } from './screen-hard.ts'
+import { judge, type JudgeAsk } from './screen-judge.ts'
 
 /** What a run needs from the outside, injected so the pipeline can be tested alone. */
 export interface RunDeps {
   readonly ask: PrepareAsk
+  /** The soft judgement. Optional: a run without it stops after the hard rules. */
+  readonly judgeAsk?: JudgeAsk | undefined
   readonly newId: () => string
   readonly now: () => number
   readonly log: (message: string, ...rest: readonly unknown[]) => void
@@ -49,7 +52,7 @@ export interface RunRequest {
 export type RunOutcome =
   | { readonly kind: 'nothing' }
   | { readonly kind: 'failed'; readonly reason: string }
-  | { readonly kind: 'prepared'; readonly candidate: Candidate; readonly verdict: ScreenVerdict }
+  | { readonly kind: 'prepared'; readonly candidate: Candidate; readonly verdict: ScreenVerdict; readonly why?: string | undefined }
 
 /**
  * Runs the pipeline once and reports what happened, without delivering anything: the caller
@@ -90,5 +93,11 @@ export async function runOnce(request: RunRequest, deps: RunDeps): Promise<RunOu
     localTime: request.screen.localTime,
     quiet: request.screen.quiet,
   })
+  // The soft question is only asked about a candidate the hard rules already allowed: the
+  // other ones are decided, and asking would spend a request to learn nothing.
+  if (verdict.kind === 'accept' && deps.judgeAsk !== undefined) {
+    const judged = await judge(candidate, deps.judgeAsk).catch(() => ({ kind: 'drop' as const, reason: 'the judge failed' }))
+    if (judged.kind === 'drop') return { kind: 'prepared', candidate, verdict: { kind: 'drop', reason: 'not-worth-it' }, why: judged.reason }
+  }
   return { kind: 'prepared', candidate, verdict }
 }

@@ -65,3 +65,28 @@ test('every tool a Bot is told about is one the host actually registers', async 
     assert.ok(TEAM_TOOLS.includes(name), `${name} must be in TEAM_TOOLS to reach a Bot`)
   }
 })
+
+test('every tool a Bot receives either has a rule or is named in its own description', async (t) => {
+  // A tool that reaches the model but is never named in the prompt is only discoverable
+  // from its schema, and a Bot asked to use it may answer that it cannot — which is what
+  // happened with create_schedule. This lists the ones with no rule so a new tool is a
+  // deliberate choice rather than an oversight.
+  const { TEAM_TOOLS } = await import('../src/host/constants.ts')
+  const { ctx, prompt } = start()
+  t.after(() => ctx.dispose())
+  const text = prompt('worker')
+  // Tools whose use needs no rule: their description is the whole instruction, they are
+  // internal (the relay is synthesized by the host, never chosen by a model), or they are
+  // Main-Bot-only and covered by MAIN_RULES rather than the team rules.
+  const NEEDS_NO_RULE = [
+    'forget', 'recall', 'read_browser', 'list_capabilities', 'save_capability',
+    'delete_capability', 'attach_capability', 'detach_capability', 'list_engines',
+    'list_models', 'stop_bot', 'group_relay',
+    // Main Bot tools: MAIN_RULES names them, an ordinary Bot has no rule because it
+    // cannot use them.
+    'create_bot', 'create_group', 'delete_group',
+  ]
+  const unnamed = TEAM_TOOLS.filter(tool => !text.includes(tool))
+  const unexplained = unnamed.filter(tool => !NEEDS_NO_RULE.includes(tool))
+  assert.deepEqual(unexplained, [], 'a tool reaches the model with no prompt rule; add one or list it as self-explanatory')
+})

@@ -123,6 +123,14 @@ export function wireService(options: WireOptions): WiredService {
   context.provide('relayRegistry', relay)
   // The deliverables the channel reads: the same store the turn-end scan writes.
   Object.assign(runtime, {
+    // Resetting a Bot (docs/plans/2026-10-29-reset-bot.md): emptying a transcript keeps the
+    // Session row, and a fresh part archives the old one through the workspace registry the
+    // same way a context switch does.
+    clearSessionHistory: (sessionId: string): void => { store.sessions.clearMessages(sessionId) },
+    // A reset restarts a conversation by emptying the transcript it reads next turn. The
+    // Session row and the Bot's place in its groups stay, so nothing else has to be
+    // rewired; an earlier part that was archived before this reset is untouched.
+    startFreshPart: async (sessionId: string): Promise<void> => { store.sessions.clearMessages(sessionId) },
     deliverablesOf: (sessionId: string, turn: number) => store.deliverables.forTurn(sessionId, turn).map(row => ({ name: row.name, path: row.path, size: row.size, createdAt: row.createdAt })),
     libraryOf: (options: { since?: number, limit?: number }) => store.deliverables.list(options).map(row => ({ sessionId: row.sessionId, turn: row.turn, ownerId: row.ownerId, name: row.name, path: row.path, size: row.size, createdAt: row.createdAt })),
   })

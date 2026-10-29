@@ -378,6 +378,14 @@ export interface HostRuntime {
   capabilitiesStateSaved?(): void
   archiveGroupMemory?(room: StoredRoom): Promise<unknown>
   archiveBotMemory?(botId: string): Promise<unknown>
+  /** Empties a Bot's memory for good (a reset, not a delete). */
+  clearBotMemory?(botId: string): Promise<void>
+  /** Empties one Session's transcript; the Session row stays. */
+  clearSessionHistory?(sessionId: string): void
+  /** Moves a Session on to a fresh part, keeping the old one readable. */
+  startFreshPart?(sessionId: string): Promise<void>
+  /** Moves a Bot's own chat on to a fresh part without a running turn. */
+  freshChatPart?(botId: string): Promise<void>
   readonly roomInbox: Map<string, unknown>
   readonly roomProgress: ReadonlyMap<string | undefined, { readonly roomId?: string }>
   dropGroupLines?(roomId: string): void

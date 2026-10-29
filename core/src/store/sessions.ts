@@ -95,6 +95,14 @@ export class Sessions {
     this.db.prepare('DELETE FROM sessions WHERE id = ?').run(id)
   }
 
+  /**
+   * Empties a Session's transcript and keeps the row: a reset clears what was said, and
+   * the Session itself stays the Bot's current chat, so nothing else has to be rewired.
+   */
+  clearMessages(sessionId: string): void {
+    this.db.prepare('DELETE FROM messages WHERE session_id = ?').run(sessionId)
+  }
+
   /** Appends one message; the per-session sequence moves with it. Returns the stored row. */
   appendMessage(input: AppendMessage): MessageRow {
     const at = now()

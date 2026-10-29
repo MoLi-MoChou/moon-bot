@@ -59,6 +59,45 @@ export const ZH = {
   "Open {name}'s chat": '打开 {name} 的对话',
   'New Bot': '新 Bot',
 
+  'Reset this Bot': '重置这个 Bot',
+  'Reset this Bot…': '重置这个 Bot…',
+
+  'Reset {name}': '重置 {name}',
+
+  'Clear what it remembers, or start it over. You choose what goes.': '清掉它记住的事，或者从头开始。删什么由你决定。',
+
+  'Forget everything it learned': '忘掉它学到的一切',
+
+  'Its memory: the notes it keeps and the topics they live in.': '它的记忆：保存的条目和它们所在的话题。',
+
+  'Start the conversation over': '重新开始这段对话',
+
+  'Clears what it can see of this chat. Earlier parts stay in the history.': '清掉它在这段对话里能看到的上下文。更早的分段仍保留在历史里。',
+
+  'Delete the conversation history': '删除对话历史',
+
+  'Its own chat and what it said in group chats.': '它自己的聊天，以及它在群聊里说过的话。',
+
+  'Restore its default settings': '恢复默认设置',
+
+  'Role, instructions, model, thinking level, permission preset, avatar and working folder.': '角色、指令、模型、思考强度、权限预设、头像和工作文件夹。',
+
+  'Everything this Bot remembered — facts about you, decisions, preferences — is deleted. It cannot be recovered.': '这个 Bot 记住的一切——关于你的事实、决定、偏好——都会被删除，无法恢复。',
+
+  'The conversation it reads next turn is empty, as if you had just met.': '它下一轮读到的对话是空的，就像你们刚认识。',
+
+  'The messages are deleted, not archived. The chat shows as empty.': '消息会被删除而不是归档，聊天会显示为空。',
+
+  'Those settings go back to the defaults. Its name stays, and it stays in its groups.': '这些设置回到默认值。名字保留，它在群里的位置也保留。',
+
+  'Pick at least one thing to reset.': '至少要选一项要重置的内容。',
+
+  'This will:': '这将会：',
+
+  'Reset {name} now? This cannot be undone.': '现在重置 {name}？这不能被撤销。',
+
+  'Yes, reset': '是，重置',
+
   // Sidebar and account menu
   'Bot list': 'Bot 列表',
   'Setting up your Main Bot…': '正在设置你的主 Bot…',

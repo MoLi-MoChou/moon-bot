@@ -94,3 +94,31 @@ test('the memory index rebuilds a scope and finds Chinese text by trigram', (t) 
   const corrected = memory.search('bot:chief', 'tea')
   assert.deepEqual(corrected.map(hit => hit.row.entryKey), [])
 })
+
+test('a database from the previous version opens with the same schema as a fresh one', async (t) => {
+  // The parity the host area rules ask for when a migration is added: an upgraded store
+  // and a new store must end up with the same tables and columns, or an old install takes
+  // a different code path from a new one.
+  const { DatabaseSync } = await import('node:sqlite')
+  const home = mkdtempSync(join(tmpdir(), 'moon-bot-parity-'))
+  t.after(() => rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }))
+  const file = join(home, 'store.sqlite3')
+  const old = new DatabaseSync(file)
+  for (const migration of MIGRATIONS.slice(0, MIGRATIONS.length - 1)) old.exec(migration.sql)
+  old.exec(`PRAGMA user_version = ${MIGRATIONS.length - 1}`)
+  old.close()
+
+  const shapeOf = (store) => {
+    const tables = store.raw.prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name").all().map(row => row.name)
+    const columns = {}
+    for (const table of tables) columns[table] = store.raw.prepare(`PRAGMA table_info(${table})`).all().map(column => column.name)
+    return { tables, columns }
+  }
+  const upgraded = openStore(home)
+  const freshHome = mkdtempSync(join(tmpdir(), 'moon-bot-parity-fresh-'))
+  t.after(() => rmSync(freshHome, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }))
+  const fresh = openStore(freshHome)
+  t.after(() => { upgraded.close(); fresh.close() })
+  assert.deepEqual(shapeOf(upgraded), shapeOf(fresh))
+  assert.equal(upgraded.raw.pragma('user_version', { simple: true }), MIGRATIONS.length)
+})

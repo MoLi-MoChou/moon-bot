@@ -1,3 +1,4 @@
+import { installScheduleTools } from './schedules-tools.ts'
 import type { Disposer } from './host-types.js'
 import type { HostRuntime } from './runtime.js'
 
@@ -56,6 +57,7 @@ type ScheduleBody = Readonly<Record<string, unknown>>
 
 interface SelectorInput {
   readonly kind?: string
+  readonly expression?: unknown
   readonly at?: unknown
   readonly time?: unknown
   readonly timeZone?: unknown
@@ -127,6 +129,11 @@ function selectorOf(when: SelectorInput | undefined): ScheduleSelector {
       const weekdays = [...new Set((Array.isArray(when.weekdays) ? when.weekdays : []).map(Number))].filter(day => Number.isInteger(day) && day >= 1 && day <= 7).sort()
       if (weekdays.length === 0) throw invalid('Pick at least one day')
       return { weekly: { time: `${when.time}:00`, time_zone: zone, weekdays } }
+    }
+    case 'cron': {
+      const expression = String((when as unknown as { expression?: unknown }).expression ?? '').trim()
+      if (expression.split(/\s+/).length !== 5) throw invalid('A cron expression has five fields, such as "0 9 * * 1-5"')
+      return { cron: { expression, time_zone: zone } }
     }
     case 'every': {
       const minutes = Number(when.minutes)
@@ -224,7 +231,27 @@ export function install(rt: HostRuntime): void {
     }
   }
 
+  installScheduleTools(rt)
+
   Object.assign(rt, {
+    // The Bot tools read the same service the settings endpoints do, so a task made in
+    // chat and one made in Settings are the same task, fired the same way.
+    scheduleFor: (): ScheduleService | null => service,
+    scheduleOwnerOf: ownerOf,
+    // `when` is the settings form's shape, so a tool and the form accept the same timings.
+    createScheduleFrom: async (sessionId: string, title: string, prompt: string, when: SelectorInput | undefined): Promise<void> => {
+      if (service === null) throw invalid('Scheduled tasks are turned off')
+      await service.create(sessionId, { title, prompt, ...selectorOf(when) })
+    },
+    listSchedulesOf: async (sessionId: string): Promise<readonly ScheduleRecord[]> => (service === null ? [] : service.list({ sessionId })),
+    // Only a task of this Session may go: another conversation's id is refused rather
+    // than deleted, so a Bot cannot cancel someone else's reminder by guessing an id.
+    deleteScheduleOf: async (sessionId: string, id: string): Promise<void> => {
+      if (service === null) throw invalid('Scheduled tasks are turned off')
+      const own = await service.list({ sessionId })
+      if (!own.some(record => record.id === id)) throw invalid(`No reminder ${id} comes back to this conversation`)
+      await service.delete({ sessionId, id })
+    },
     scheduleEndpoint: (endpoint: string, body: ScheduleBody | undefined): Promise<unknown> => {
       const handler = endpoints[endpoint]
       if (handler === undefined) throw invalid(`No such schedules endpoint: ${endpoint}`)

@@ -72,6 +72,7 @@ export const TEAM_TOOLS: readonly string[] = [
   'read_group_chat', 'remember', 'forget', 'recall', 'read_browser',
   'list_capabilities', 'save_capability', 'delete_capability',
   'attach_capability', 'detach_capability', 'web_search',
+  'create_schedule', 'list_schedules', 'delete_schedule',
 ]
 // Answers a group gives to what members post after the round moved on (their finished
 // work, mostly), before the user speaks there again.

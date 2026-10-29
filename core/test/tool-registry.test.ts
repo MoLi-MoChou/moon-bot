@@ -41,7 +41,7 @@ test('a registered tool serves DSH unchanged and the engine schema-validated', a
     sessions: { flush: async () => {} },
   })
   const rt = createRuntime(ctx, { home }) as unknown as { toolRegistry?: RegistryLike }
-  t.after(() => void ctx.dispose())
+  t.after(async () => { await ctx.dispose() })
 
   // The DSH path: the tool registered exactly as before.
   assert.ok(ctx.registeredTools.has('create_group'), 'registered with DSH')

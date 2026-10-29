@@ -1,28 +1,8 @@
 import { clearTimeout, setTimeout } from 'node:timers'
-import type { SessionEvent } from './dsh-types.js'
+import type { SessionEvent } from './host-types.js'
 import type { DeliveryInput, HostRuntime, TurnInfo } from './runtime.js'
-
-/** The trigger fields a resumed turn needs to answer the same sender. */
-interface ResumeTrigger {
-  readonly role?: string | undefined
-  readonly exchangeId?: string | undefined
-  readonly senderSessionId?: string | undefined
-  readonly roomId?: string | undefined
-  readonly work?: string | undefined
-  readonly audience?: string | undefined
-  readonly askedBy?: string | undefined
-  readonly senderRoomId?: string | undefined
-}
-
-/** A running turn noted in `inflight.json`. */
-interface TurnNote {
-  readonly botId?: string | undefined
-  readonly roomId?: string
-  readonly since: number
-  trigger?: ResumeTrigger
-  approval?: { readonly tool: string; readonly reason: string }
-  resumed?: boolean
-}
+import { deliverResume, tellCut } from './resume-continue.ts'
+import { recoveryOf, type ResumeTrigger, type TurnNote } from './resume-recovery.ts'
 
 /** A delivery a turn has not taken up yet. */
 interface QueuedNote {
@@ -33,37 +13,31 @@ interface QueuedNote {
 interface ResumeNotes {
   turns: Record<string, TurnNote>
   queued: Record<string, QueuedNote[]>
+  settling: Record<string, TurnNote>
+  parked: Record<string, TurnNote>
 }
 
 interface InboxDiscardEvent {
   readonly message?: { readonly source?: { readonly kind?: unknown; readonly exchangeId?: unknown } }
 }
 
-// Resume: Bot work that DeepSeek Harness dropped when it closed or restarted. DSH closes
-// a turn it never finished as interrupted when the Session next opens, and a clean
-// shutdown also cancels the messages still waiting in a Session's inbox; nothing would
-// ever run either again, and whoever waited for them was not told. DS Bot notes each
-// running Bot turn and each message it delivers until a turn takes it up, in
-// inflight.json; what is still noted at the next start is picked up once.
+// A restart used to run an unfinished turn again. It now settles the note, reconciles it
+// with what this process can already see, and records that the turn was cut off. The
+// model prompt is sent only when the user continues. Deliveries no turn took up are
+// still sent once: they had not started.
 import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { SOURCE_KIND } from './constants.ts'
 
-// Long enough for DSH to finish opening its workspaces after a start.
+// Long enough for the host to finish opening sessions after a start.
 export const RESUME_DELAY_MS = 3000
 // A delivery waiting longer than this was not lost to a restart.
 const QUEUED_KEPT_MS = 24 * 60 * 60 * 1000
 const QUEUED_MAX = 50
 
-export const resumeText = (record: TurnNote): string => [
-  'Moon Bot restarted while you were working on this, so your last turn stopped before it finished.',
-  record.approval ? `You were waiting for the user's approval to run ${record.approval.tool || 'a tool'}${record.approval.reason ? ` (${record.approval.reason})` : ''}; that request is gone, so ask again if you still need it.` : '',
-  'Check what is already done (files, commands, messages) before you repeat anything, then finish the task and give your reply.',
-].filter(Boolean).join(' ')
-
-// The trigger fields a resumed turn needs to answer the same sender.
+// The trigger fields a continued turn needs to answer the same sender.
 const triggerOf = (info: TurnInfo): ResumeTrigger => ({
   role: info.role,
   ...(info.exchangeId ? { exchangeId: info.exchangeId } : {}),
@@ -78,11 +52,16 @@ const triggerOf = (info: TurnInfo): ResumeTrigger => ({
 const readNotes = (file: string): ResumeNotes => {
   try {
     const parsed = JSON.parse(readFileSync(file, 'utf8'))
-    const source = parsed as { readonly turns?: unknown; readonly queued?: unknown } | undefined
+    const source = parsed as { readonly turns?: unknown; readonly queued?: unknown; readonly settling?: unknown; readonly parked?: unknown } | undefined
     const object = (value: unknown): Record<string, never> | Record<string, unknown> => (value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {})
-    return { turns: object(source?.turns) as Record<string, TurnNote>, queued: object(source?.queued) as Record<string, QueuedNote[]> }
+    return {
+      turns: object(source?.turns) as Record<string, TurnNote>,
+      queued: object(source?.queued) as Record<string, QueuedNote[]>,
+      settling: object(source?.settling) as Record<string, TurnNote>,
+      parked: object(source?.parked) as Record<string, TurnNote>,
+    }
   } catch {
-    return { turns: {}, queued: {} }
+    return { turns: {}, queued: {}, settling: {}, parked: {} }
   }
 }
 
@@ -96,14 +75,26 @@ export function install(rt: HostRuntime): void {
   let turns: Record<string, TurnNote> = {}
   // Deliveries no turn has taken up, by Session.
   let queued: Record<string, QueuedNote[]> = {}
+  const writable = rt.readOnly() === undefined
+  // Old turns leave `turns` immediately so a crash cannot auto-run them. Reconcile
+  // still sees them in `settling`.
+  let settling: Record<string, TurnNote> = writable ? { ...interrupted.settling, ...interrupted.turns } : { ...interrupted.settling }
+  let parked: Record<string, TurnNote> = { ...interrupted.parked }
+  let heldQueued: Record<string, QueuedNote[]> | undefined = Object.keys(interrupted.queued).length > 0 ? interrupted.queued : undefined
   let writing: Promise<unknown> = Promise.resolve()
   let stopped = false
   let latest: string | undefined
   let due = false
+  const queuedSnapshot = (): Record<string, QueuedNote[]> => {
+    if (heldQueued === undefined) return queued
+    const merged: Record<string, QueuedNote[]> = { ...heldQueued }
+    for (const [id, list] of Object.entries(queued)) merged[id] = [...(merged[id] ?? []), ...list].slice(-QUEUED_MAX)
+    return merged
+  }
   const persist = () => {
-    // Only the host that saves the team runs its work again.
+    // Only the host that saves the team writes the notes.
     if (stopped || rt.readOnly() !== undefined) return
-    latest = JSON.stringify({ turns, queued })
+    latest = JSON.stringify({ turns, queued: queuedSnapshot(), settling, parked })
     // One write waits at a time and takes the latest notes, so a busy round does not
     // write the file once per change.
     if (due) return
@@ -116,8 +107,9 @@ export function install(rt: HostRuntime): void {
       if (snapshot === undefined) return
       await mkdir(home, { recursive: true })
       await writeFile(file, snapshot, 'utf8')
-    }).catch(error => rt.warn('ds-bot: noting running turns failed: %s', error))
+    }).catch(error => rt.warn('moon-bot: noting running turns failed: %s', error))
   }
+  if (writable && Object.keys(interrupted.turns).length > 0) persist()
   const update = (id: string, change: (record: TurnNote | undefined) => TurnNote | undefined): void => {
     const next = change(turns[id])
     if (next === turns[id]) return
@@ -169,8 +161,8 @@ export function install(rt: HostRuntime): void {
   let taken: Set<string> | undefined = Object.keys(interrupted.queued).length > 0 ? new Set<string>() : undefined
   // The first turn event of each Session since this start, until the noted turns are
   // picked up. A turn that ends, or still runs, before one starts here outlived the
-  // last run: only DS Bot restarted (the plugin reloaded) and DSH went on.
-  let firstTurn: Map<string, string> | undefined = Object.keys(interrupted.turns).length > 0 ? new Map<string, string>() : undefined
+  // last run: only DS Bot restarted (the plugin reloaded) and the host went on.
+  let firstTurn: Map<string, string> | undefined = Object.keys(settling).length > 0 ? new Map<string, string>() : undefined
   ctx.on<{ readonly id?: string }, SessionEvent>('session/event', (session, event) => {
     const id = session?.id
     if (id === undefined) return
@@ -197,7 +189,7 @@ export function install(rt: HostRuntime): void {
         break
       }
       case 'turn/end': {
-        // DSH stops every turn as it shuts down; that one is picked up at the next start.
+        // the host stops every turn as it shuts down; that one is picked up at the next start.
         const reason = event.data?.reason as { readonly kind?: string; readonly reason?: { readonly kind?: string } } | undefined
         if (reason?.kind === 'aborted' && reason.reason?.kind === 'disposed') break
         update(id, () => undefined)
@@ -210,32 +202,7 @@ export function install(rt: HostRuntime): void {
   rt.noteApproval = (sessionId: string | undefined, approval): void => { if (sessionId === undefined) return; update(sessionId, record => (record === undefined ? record
     : approval === undefined ? (({ approval: _, ...rest }) => rest)(record) : { ...record, approval })) }
 
-  async function resumeTurn(sessionId: string, record: TurnNote): Promise<void> {
-    const bot = rt.botOf(record.botId)
-    if (bot === undefined) return
-    const text = resumeText(record)
-    if (record.roomId !== undefined) {
-      const room = rt.roomOf(record.roomId)
-      if (room === undefined || !(room.members?.includes(bot.id) ?? false)) return
-      await rt.postToRoom(room, bot, '', { resumed: true, quiet: true, ...(record.resumed ? { again: true } : {}) })
-      // A turn already picked up once and cut off again stays stopped: a restart loop
-      // must not run it forever.
-      if (record.resumed) return
-      await rt.deliver({ toId: bot.id, sessionId: room.sessions?.[bot.id] ?? sessionId, role: 'room', roomId: room.id, note: 'picking up after a restart', resumed: true, text, ...(record.trigger?.askedBy ? { askedBy: record.trigger.askedBy } : {}) })
-      return
-    }
-    if (record.resumed) return
-    const trigger = record.trigger
-    if ((trigger?.role === 'request' || trigger?.role === 'stopped') && trigger.senderSessionId && trigger.audience !== 'user' && rt.botOf(trigger.senderSessionId)) {
-      // The sender still waits for this turn's answer, so it goes on under the same exchange.
-      await rt.deliver({ fromId: trigger.senderSessionId, toId: bot.id, role: trigger.role, ...(trigger.exchangeId ? { exchangeId: trigger.exchangeId } : {}), ...(trigger.senderRoomId ? { fromRoomId: trigger.senderRoomId } : {}), resumed: true, text })
-      return
-    }
-    // A turn that went on with work another Bot asked for still owes that Bot its answer.
-    await rt.deliver({ toId: bot.id, role: 'resume', resumed: true, text, ...(trigger?.work ? { work: trigger.work } : {}) })
-  }
-
-  // A hard stop keeps the inbox, which the Session runs once it wakes; only what DSH
+  // A hard stop keeps the inbox, which the Session runs once it wakes; only what was
   // cancelled is sent again.
   async function resendQueued(sessionId: string, list: readonly QueuedNote[]): Promise<void> {
     // A Session that moved on to a new part since is reached at its current one.
@@ -262,33 +229,58 @@ export function install(rt: HostRuntime): void {
   async function resumeAll(): Promise<void> {
     await rt.load()
     if (rt.readOnly() !== undefined) return
-    const { turns: noted, queued: dropped } = interrupted
-    interrupted = { turns: {}, queued: {} }
-    // Taken up now, so another restart does not pick them up twice.
+    const noted = settling
+    const dropped = interrupted.queued
+    settling = {}
+    heldQueued = undefined
+    interrupted = { turns: {}, queued: {}, settling: {}, parked }
+    // The batch is no longer "will auto-run". Reconcile decides keep, park, or drop.
     persist()
-    // Agents and inboxes are read before anything wakes their Sessions.
-    const cut: [string, TurnNote][] = []
     for (const [sessionId, record] of Object.entries(noted)) {
-      const first = firstTurn?.get(sessionId)
-      if (first === 'turn/end') continue
-      // Still running: noted again, as if it had started here.
-      if (first === undefined && (await rt.resolveAgent(sessionId).catch(() => undefined))?.status === 'running') update(sessionId, () => record)
-      else cut.push([sessionId, record])
+      const raw = firstTurn?.get(sessionId)
+      const fact = raw === 'turn/end' || raw === 'turn/start' ? raw : undefined
+      const running = fact === undefined && (await rt.resolveAgent(sessionId).catch(() => undefined))?.status === 'running'
+      const decision = recoveryOf(fact, running, record.resumed === true)
+      if (decision === 'keep') update(sessionId, () => record)
+      else if (decision === 'park') {
+        parked = { ...parked, [sessionId]: record }
+        persist()
+        await tellCut(rt, record).catch(error => rt.warn('moon-bot: noting a cut-off turn failed: %s', error))
+      } else if (decision === 'stop') await tellCut(rt, record).catch(error => rt.warn('moon-bot: noting a cut-off turn failed: %s', error))
     }
     firstTurn = undefined
     for (const [sessionId, list] of Object.entries(dropped)) {
       if (!Array.isArray(list)) continue
-      await resendQueued(sessionId, list).catch(error => rt.warn('ds-bot: sending again what %s was sent failed: %s', sessionId, error))
+      await resendQueued(sessionId, list).catch(error => rt.warn('moon-bot: sending again what %s was sent failed: %s', sessionId, error))
     }
     taken = undefined
-    for (const [sessionId, record] of cut) {
-      await resumeTurn(sessionId, record).catch(error => rt.warn('ds-bot: picking up the turn of %s failed: %s', sessionId, error))
-    }
   }
 
+  const parkedTurns = (): readonly { readonly sessionId: string; readonly botId: string; readonly roomId?: string }[] => Object.entries(parked).flatMap(([sessionId, record]) => (
+    record.resumed === true || record.botId === undefined || record.botId === '' ? [] : [{ sessionId, botId: record.botId, ...(record.roomId === undefined ? {} : { roomId: record.roomId }) }]
+  ))
+
+  async function continueParked(sessionId: string): Promise<boolean> {
+    if (rt.readOnly() !== undefined) return false
+    const record = parked[sessionId]
+    const bot = rt.botOf(record?.botId)
+    if (record === undefined || record.resumed === true || bot === undefined) return false
+    if (record.roomId !== undefined) {
+      const room = rt.roomOf(record.roomId)
+      if (room === undefined || !(room.members?.includes(bot.id) ?? false)) return false
+    }
+    await deliverResume(rt, sessionId, record)
+    parked = { ...parked }
+    delete parked[sessionId]
+    persist()
+    return true
+  }
+
+  Object.assign(rt, { parkedTurns, continueParked })
+
   ctx.effect(() => {
-    const pending = Object.keys(interrupted.turns).length > 0 || Object.keys(interrupted.queued).length > 0
-    const timer = pending ? setTimeout(() => void resumeAll().catch(error => rt.warn('ds-bot: picking up interrupted work failed: %s', error)), RESUME_DELAY_MS) : undefined
+    const pending = Object.keys(settling).length > 0 || Object.keys(interrupted.queued).length > 0 || Object.keys(interrupted.turns).length > 0
+    const timer = pending ? setTimeout(() => void resumeAll().catch(error => rt.warn('moon-bot: picking up interrupted work failed: %s', error)), RESUME_DELAY_MS) : undefined
     timer?.unref?.()
     // What the turns stopped by this shutdown left stays as last noted.
     return () => {
@@ -296,5 +288,5 @@ export function install(rt: HostRuntime): void {
       clearTimeout(timer)
       return writing
     }
-  }, 'ds-bot: resume interrupted turns')
+  }, 'moon-bot: resume interrupted turns')
 }

@@ -5,16 +5,19 @@
 // are a small ring this module fills from turn/end, since the host keeps no history of
 // finished turns. Stopping goes through the same cancel a Main Bot's stop_bot uses.
 import type { TaskHold } from '../shared/rpc.ts'
+import { SOURCE_KIND } from './constants.ts'
 import type { HostRuntime } from './runtime.js'
 
 /** What this module reads off the runtime: the turn and handoff views install theirs at
  *  startup, so they are named here rather than in the shared contract. */
 interface PanelRuntime extends HostRuntime {
+  closeWork?(id: string | undefined, name: string, text: string): string | undefined
   workView?(): Readonly<Record<string, { readonly since?: number; readonly tool?: string; readonly target?: string; readonly said?: string; readonly switching?: boolean; readonly roomId?: string }>>
   workOf?(info: unknown): string | undefined
   workAsker?(workId: string): { readonly senderSessionId?: string } | undefined
   waitingView?(): Readonly<Record<string, { readonly bots: readonly string[]; readonly rooms: readonly string[]; readonly for: readonly string[] }>>
   approvalsView?(): readonly { readonly botId: string; readonly sessionId: string; readonly tool?: string; readonly at: number }[]
+  parkedTurns?(): readonly { readonly sessionId: string; readonly botId: string; readonly roomId?: string }[]
 }
 
 /** A live Session as the stop reads it: its running turn, or the send it has not started
@@ -26,11 +29,27 @@ interface PanelLive {
 
 /** The slice of an Agent this module reads: the queue behind its running turn, and the
  *  cancel both the panel and a Main Bot's stop_bot go through. The built-in engine's
- *  agent counts its own waiting followups; an agent from a DSH host keeps them in its
+ *  agent counts its own waiting followups; an agent from a host host keeps them in its
  *  durable inbox instead, so both shapes are read. */
+interface QueueMessage {
+  readonly id?: string
+  readonly content?: unknown
+  readonly source?: {
+    readonly kind?: string
+    readonly role?: string
+    readonly audience?: string
+    readonly exchangeId?: string
+    readonly senderSessionId?: string
+    readonly senderRoomId?: string
+  }
+}
+
 interface PanelAgent {
   pendingTurns?(): number
-  readonly inbox?: { readonly nextTurn: readonly unknown[] } | undefined
+  readonly inbox?: {
+    readonly nextTurn: readonly unknown[]
+    remove?(id: string): boolean
+  } | undefined
   /** A runner's explicit state; only `running` is enough to report engine-busy. */
   readonly status?: 'running' | 'idle' | string
   cancel?(cause: { readonly kind: string }): void
@@ -50,6 +69,8 @@ export interface TaskRunningView {
   readonly fromName?: string
   /** Messages waiting behind the running turn (the engine's queue); absent when none. */
   readonly queued?: number
+  /** The same messages, in queue order. Absent when the host cannot name them. */
+  readonly queue?: readonly { readonly id: string; readonly preview: string }[]
   /** A reason is included only when the host has a matching live fact. */
   readonly hold?: TaskHold
 }
@@ -70,6 +91,8 @@ export interface TaskWaitingView {
   readonly botId: string
   readonly botName: string
   readonly for: readonly string[]
+  /** Set for a turn parked by a restart, so Continue knows which session. */
+  readonly sessionId?: string
   /** A reason is included only when the host has a matching live fact. */
   readonly hold?: TaskHold
 }
@@ -114,15 +137,14 @@ export function install(rt: PanelRuntime): void {
   }
 
   // What waits behind the running turn: the engine's own count of accepted followups
-  // that have not begun their own turn (the built-in bridge), or DSH's durable inbox
+  // that have not begun their own turn (the built-in bridge), or the host's durable inbox
   // when one hosts the agent. Either way it is the real queue, not one the panel keeps.
   // A Session whose turn has not started (the message being admitted is still the next
   // turn's trigger) counts nothing: it is working, not queued behind itself.
   //
-  // Known gap, left for its own design: the built-in bridge's `inbox` is still an empty
-  // stub, so the host branches that read it (duplicate-request checks in tools/shared,
-  // the shutdown cancel in resume, the group relay in groups) never see queued input.
-  // This panel reads `pendingTurns()` instead and does not depend on that inbox.
+  // The built-in bridge's inbox is that same waiting list, so the host branches that
+  // read it (duplicate requests, shutdown cancel, group relay) see the queued input.
+  // The count still prefers `pendingTurns()` when an agent publishes one.
   const agentOf = async (sessionId: string): Promise<PanelAgent | undefined> => {
     try { return await rt.resolveAgent(sessionId) as PanelAgent | undefined } catch { return undefined }
   }
@@ -156,18 +178,26 @@ export function install(rt: PanelRuntime): void {
       const live = rt.live.get(row.sessionId)
       const agent = await agentOf(row.sessionId)
       const queued = live?.turn === undefined ? 0 : queueOf(agent)
+      const queue = live?.turn === undefined ? [] : queueItems(agent)
       const hold: TaskHold | undefined = approvalSessions.has(row.sessionId) ? 'approval'
         : queued > 0 ? 'queued'
           : agent?.status === 'running' && live?.turn === undefined ? 'engine-busy'
             : undefined
       return hold === undefined
-        ? queued > 0 ? { ...row, queued } : row
-        : { ...row, ...(queued > 0 ? { queued } : {}), hold }
+        ? queued > 0 ? { ...row, queued, ...(queue.length > 0 ? { queue } : {}) } : row
+        : { ...row, ...(queued > 0 ? { queued } : {}), ...(queue.length > 0 ? { queue } : {}), hold }
     }))
     running.sort((a, b) => b.since - a.since)
-    const waiting: TaskWaitingView[] = Object.entries(waitingFacts).map(([botId, entry]) => ({
-      botId, botName: nameOf(botId), for: [...entry.bots, ...entry.rooms, ...entry.for].slice(0, 6), hold: 'handoff',
-    }))
+    const waiting: TaskWaitingView[] = [
+      ...Object.entries(waitingFacts).map(([botId, entry]): TaskWaitingView => ({
+        botId, botName: nameOf(botId), for: [...entry.bots, ...entry.rooms, ...entry.for].slice(0, 6), hold: 'handoff',
+      })),
+      ...(rt.parkedTurns?.() ?? []).flatMap((note): readonly TaskWaitingView[] => {
+        if (note.botId === '') return []
+        const room = roomOf(note.roomId)
+        return [{ botId: note.botId, botName: nameOf(note.botId), sessionId: note.sessionId, for: room === undefined ? [] : [room.name], hold: 'interrupted' }]
+      }),
+    ]
     return { running, completed: [...done], waiting }
   }
 
@@ -212,7 +242,76 @@ export function install(rt: PanelRuntime): void {
     return true
   }
 
-  Object.assign(rt, { tasksView, noteTurn, stopTask })
+  // Drops one message that has not started. A Bot request that still owes a reply tells
+  // its sender; the user's own line does not. The running turn is left alone.
+  async function removeQueued(sessionId: string, id: string): Promise<boolean> {
+    if (sessionId === '' || id === '') return false
+    const agent = await agentOf(sessionId)
+    const inbox = agent?.inbox
+    if (inbox?.remove === undefined) return false
+    const found = inbox.nextTurn.map(messageOf).find(message => message?.id === id)
+    if (found?.id === undefined || inbox.remove(id) !== true) return false
+    tellWithdrawn(sessionId, found)
+    return true
+  }
+
+  // A queued Bot request still owes its sender a reply. Withdrawing it closes that
+  // work instead of leaving the sender waiting, and does not open a new one.
+  const tellWithdrawn = (sessionId: string, message: QueueMessage): void => {
+    if (!owesReply(message)) return
+    const source = message.source
+    const sender = source?.senderSessionId
+    if (sender === undefined || sender === '') return
+    const name = nameOf(rt.selfOf(sessionId))
+    const who = name === '' ? 'The other Bot' : name
+    const text = `${who} had not read your message, and the user withdrew it.`
+    const exchangeId = source?.exchangeId
+    const work = exchangeId === undefined || exchangeId === '' ? undefined : rt.closeWork?.(exchangeId, who, text)
+    const back = source?.senderRoomId === undefined ? undefined : rt.roomOf(source.senderRoomId)?.sessions?.[sender]
+    void rt.deliver({
+      ...(rt.selfOf(sessionId) !== undefined ? { fromId: rt.selfOf(sessionId) } : {}),
+      toId: sender,
+      ...(typeof back === 'string' ? { sessionId: back } : {}),
+      text,
+      role: 'reply',
+      ...(exchangeId !== undefined && exchangeId !== '' ? { replyTo: exchangeId } : {}),
+      ...(work !== undefined && work !== '' ? { work } : {}),
+    }).catch(error => rt.warn('moon-bot: withdrawn queue item not delivered: %s', error))
+  }
+
+  Object.assign(rt, { tasksView, noteTurn, stopTask, removeQueued })
+}
+
+const PREVIEW_MAX = 120
+
+const messageOf = (value: unknown): QueueMessage | undefined =>
+  value !== null && typeof value === 'object' ? value as QueueMessage : undefined
+
+const previewOf = (message: QueueMessage): string => {
+  const content = Array.isArray(message.content) ? message.content : []
+  const block = content.find((item): item is { readonly text: string } => {
+    if (item === null || typeof item !== 'object') return false
+    const record = item as { readonly type?: unknown; readonly text?: unknown }
+    return record.type === 'text' && typeof record.text === 'string'
+  })
+  return (block?.text.split('\n')[0] ?? '').slice(0, PREVIEW_MAX)
+}
+
+const queueItems = (agent: PanelAgent | undefined): readonly { readonly id: string; readonly preview: string }[] => {
+  const items: { id: string; preview: string }[] = []
+  for (const value of agent?.inbox?.nextTurn ?? []) {
+    const message = messageOf(value)
+    if (message?.id === undefined || message.id === '') continue
+    items.push({ id: message.id, preview: previewOf(message) })
+  }
+  return items
+}
+
+const owesReply = (message: QueueMessage): boolean => {
+  const source = message.source
+  if (source?.kind !== SOURCE_KIND) return false
+  if (source.role !== 'request' && source.role !== 'stopped') return false
+  return !(source.role === 'request' && source.audience === 'user')
 }
 
 const kindOf = (reason: unknown): string => {

@@ -20,6 +20,8 @@ interface State {
   error: string | null
   refresh: () => void
   stop: (task: Record<string, unknown>) => void
+  withdraw?: (sessionId: string, id: string) => void
+  continueTurn?: ((sessionId: string) => Promise<unknown>) | undefined
 }
 const module = { exports: {} as {
   elapsed: (ms: number) => string
@@ -223,6 +225,22 @@ test('a running row says how many messages wait behind its turn, and who its Sto
   assert.ok(labels.includes('Stop Writer'), `the stop names the Bot: ${labels.join(', ')}`)
 })
 
+test('a running row lists each queued preview and withdraws that one', () => {
+  const withdrawn: string[] = []
+  const tree = TasksBoard({
+    state: rows({
+      answer: { running: [running({ queued: 1, queue: [{ id: 'q1', preview: 'check the logs' }] })], completed: [], waiting: [] },
+      withdraw: (_sessionId, id) => { withdrawn.push(id) },
+    }),
+    onOpen: () => {},
+  })
+  assert.match(textOf(tree), /check the logs/)
+  const button = elements(tree).find(element => element.props['aria-label'] === 'Withdraw check the logs')
+  assert.ok(button !== undefined, 'each queued line can be withdrawn')
+  ;(button.props.onClick as () => void)()
+  assert.deepEqual(withdrawn, ['q1'])
+})
+
 test('a row with nothing queued says nothing about a queue', () => {
   const tree = TasksBoard({ state: rows({ answer: { running: [running()], completed: [], waiting: [] } }), onOpen: () => {} })
   assert.doesNotMatch(textOf(tree), /queued/)
@@ -338,4 +356,21 @@ test('filters that match nothing offer a clear path', () => {
   // The Waiting filter hid the running row; filters stay so they can be cleared.
   const labels = propsOf(tree).map(props => props['aria-label']).filter(label => typeof label === 'string')
   assert.ok(labels.includes('Filter by state'))
+})
+
+test('a turn cut off by a restart says so, and Continue resumes that session', async () => {
+  const continued: string[] = []
+  const tree = TasksBoard({
+    state: rows({
+      answer: { running: [], completed: [], waiting: [{ botId: 'b1', botName: 'Writer', for: ['Chief'], hold: 'interrupted', sessionId: 'chat:b1' }] },
+      continueTurn: async (sessionId) => { continued.push(sessionId) },
+    }),
+    onOpen: () => {},
+  })
+  assert.match(textOf(tree), /Cut off by a restart/)
+  const button = elements(tree).find(element => (element.children ?? []).includes('Continue'))
+  assert.ok(button !== undefined, 'the parked turn offers Continue')
+  ;(button.props.onClick as () => void)()
+  await tick()
+  assert.deepEqual(continued, ['chat:b1'])
 })

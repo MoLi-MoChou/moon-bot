@@ -4,6 +4,8 @@ import { EmptyState } from './empty-state.tsx';
 import { t } from './i18n.ts';
 import { TasksIcon } from './icons.tsx';
 import { SPRING_SHAPE } from './motion.tsx';
+import { TaskQueue } from './tasks-queue.tsx';
+import type { TaskQueueItem } from './tasks-queue.tsx';
 // Settings → Tasks and the sidebar's task popover (2026-10-28 tasks-panel): who is
 // working right now, for whom, and for how long; what waits in its queue; what finished
 // lately; and the stop that ends one turn. The rows come from the host's tasks endpoint,
@@ -25,6 +27,8 @@ export interface TaskRunning {
     fromName?: string;
     /** Messages waiting behind the running turn; the host leaves the field out at zero. */
     queued?: number;
+    /** Those messages, in order. Absent when the host cannot name them. */
+    queue?: readonly TaskQueueItem[];
     hold?: TaskHold;
 }
 export interface TaskDone {
@@ -42,6 +46,8 @@ export interface TaskWaiting {
     botId: string;
     botName: string;
     for: readonly string[];
+    /** Set when a restart parked this session and Continue can run it. */
+    sessionId?: string;
     hold?: TaskHold;
 }
 export interface TasksAnswer {
@@ -67,9 +73,17 @@ export function filterTasks(answer: TasksAnswer, filters: TaskFilters): TasksAns
 export interface TaskStopAnswer {
     readonly stopped?: boolean;
 }
+export interface TaskQueueAnswer {
+    readonly removed?: boolean;
+}
+export interface TaskContinueAnswer {
+    readonly continued?: boolean;
+}
 export interface TaskActions {
     tasks: () => Promise<TasksAnswer>;
     stopTask: (sessionId: string) => Promise<TaskStopAnswer | undefined>;
+    removeQueued: (sessionId: string, id: string) => Promise<TaskQueueAnswer | undefined>;
+    continueTurn?: ((sessionId: string) => Promise<TaskContinueAnswer | undefined>) | undefined;
     openSession: (sessionId: string) => void;
 }
 /** mm:ss under an hour, h:mm:ss above it — the panel's clocks. */
@@ -103,6 +117,7 @@ export function holdText(hold: TaskHold | undefined): string | undefined {
     if (hold === 'approval') return t('Waiting for your approval');
     if (hold === 'queued') return t('Queued');
     if (hold === 'handoff') return t('Waiting for another Bot');
+    if (hold === 'interrupted') return t('Cut off by a restart');
     return t('Engine busy');
 }
 /** One running turn: the same Session's next turn starts at a new time, so a stop's
@@ -118,6 +133,8 @@ export interface TasksState {
     readonly error: string | null;
     readonly refresh: () => void;
     readonly stop: (task: TaskRunning) => void;
+    readonly withdraw?: ((sessionId: string, id: string) => void) | undefined;
+    readonly continueTurn: (sessionId: string) => void;
 }
 /** The endpoint's polling and the stop's feedback, shared by the page and the popover. */
 export function useTasks(taskActions: TaskActions): TasksState {
@@ -163,7 +180,27 @@ export function useTasks(taskActions: TaskActions): TasksState {
             refresh();
         }).catch(failure => setError(failure?.message ?? String(failure))).finally(() => setBusy(null));
     };
-    return { answer, now, busy, stopped, notice, error, refresh, stop };
+    const withdraw = (sessionId: string, id: string): void => {
+        setBusy(`queue:${id}`);
+        setNotice(null);
+        setError(null);
+        void taskActions.removeQueued(sessionId, id).then(result => {
+            if (result?.removed === false) setNotice(t('That message had already started, so it stayed.'));
+            refresh();
+        }).catch(failure => setError(failure?.message ?? String(failure))).finally(() => setBusy(null));
+    };
+    const continueTurn = (sessionId: string): void => {
+        const run = taskActions.continueTurn;
+        if (run === undefined) return;
+        setBusy(`continue:${sessionId}`);
+        setNotice(null);
+        setError(null);
+        void run(sessionId).then(result => {
+            if (result?.continued === false) setNotice(t('That turn is not waiting to continue.'));
+            refresh();
+        }).catch(failure => setError(failure?.message ?? String(failure))).finally(() => setBusy(null));
+    };
+    return { answer, now, busy, stopped, notice, error, refresh, stop, withdraw, continueTurn };
 }
 export interface TasksBoardProps {
     readonly state: TasksState;
@@ -173,7 +210,7 @@ export interface TasksBoardProps {
 }
 /** Who is working, who waits, what finished lately — the sections both surfaces draw. */
 export function TasksBoard({ state, onOpen, initialFilters }: TasksBoardProps) {
-    const { answer, now, busy, stopped, notice, error, stop } = state;
+    const { answer, now, busy, stopped, notice, error, stop, withdraw, continueTurn } = state;
     const [filters, setFilters] = useState<TaskFilters>(initialFilters ?? { state: 'all', botId: 'all' });
     const running = answer?.running ?? [];
     const completed = answer?.completed ?? [];
@@ -212,7 +249,8 @@ export function TasksBoard({ state, onOpen, initialFilters }: TasksBoardProps) {
                     const isStopped = stopped.has(turnKey(task));
                     // The count pill already says how many wait; a second "Queued" hold is noise.
                     const hold = task.hold === 'queued' ? undefined : task.hold;
-                    return <div key={task.sessionId} className='bt-task-row' data-stopped={isStopped || undefined}>
+                    return <div key={task.sessionId} className='bt-task-block'>
+                        <div className='bt-task-row' data-stopped={isStopped || undefined}>
                         <button type='button' className='bt-task-who' onClick={() => onOpen(task.sessionId)}>
                             <span className='bt-task-name'>{task.botName}</span>
                             <span className='bt-task-sub'>{doingText(task)}{task.roomName !== undefined ? ` · ${task.roomName}` : ''}</span>
@@ -228,16 +266,19 @@ export function TasksBoard({ state, onOpen, initialFilters }: TasksBoardProps) {
                                 title={t('Stop {name}', { name: task.botName })}
                                 aria-label={t('Stop {name}', { name: task.botName })}
                                 onClick={() => stop(task)}>{busy === task.sessionId ? t('Stopping…') : t('Stop')}</button>}
+                        </div>
+                        <TaskQueue sessionId={task.sessionId} items={task.queue} busy={busy} onWithdraw={withdraw} />
                     </div>;
                 })}
         </div></section> : null}
         {show('waiting') && shownWaiting.length > 0 ? <section className='bt-set-section'><h3>{t('Waiting for another Bot')}</h3><div className='bt-set-card'>
-            {shownWaiting.map(entry => <div key={entry.botId} className='bt-task-row'>
-                <button type='button' className='bt-task-who' onClick={() => onOpen(entry.botId)}>
+            {shownWaiting.map(entry => <div key={`${entry.hold ?? 'wait'}:${entry.sessionId ?? entry.botId}`} className='bt-task-row'>
+                <button type='button' className='bt-task-who' onClick={() => onOpen(entry.sessionId ?? entry.botId)}>
                     <span className='bt-task-name'>{entry.botName}</span>
-                    <span className='bt-task-sub'>{t('Waiting for {names}', { names: entry.for.join(', ') })}</span>
+                    <span className='bt-task-sub'>{entry.hold === 'interrupted' ? (entry.for[0] ?? t('Cut off by a restart')) : t('Waiting for {names}', { names: entry.for.join(', ') })}</span>
                 </button>
                 {holdText(entry.hold) !== undefined ? <span className='bt-task-hold'>{holdText(entry.hold)}</span> : null}
+                {entry.hold === 'interrupted' && entry.sessionId !== undefined ? <button type='button' className='bt-soft bt-soft-sm' disabled={busy === `continue:${entry.sessionId}`} onClick={() => continueTurn(entry.sessionId ?? '')}>{t('Continue')}</button> : null}
             </div>)}
         </div></section> : null}
         {show('completed') ? <section className='bt-set-section'><h3>{t('Recently finished')}</h3><div className='bt-set-card'>
@@ -257,7 +298,11 @@ export function TasksPage({ taskActions }: { taskActions: TaskActions }) {
     return <TasksBoard state={state} onOpen={taskActions.openSession} />;
 }
 export const TASKS_CSS = `
+.bt-task-block{display:flex;flex-direction:column;width:100%}
 .bt-task-row{display:flex;align-items:center;gap:10px;padding:8px 12px;min-height:48px;border:0;background:none;width:100%;text-align:left;font:inherit;color:inherit}
+.bt-task-queue{display:flex;flex-direction:column;gap:4px;margin:0;padding:0 12px 8px;list-style:none}
+.bt-task-queue-line{display:flex;align-items:center;gap:8px;min-width:0}
+.bt-task-queue-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;line-height:15px;color:var(--bt-ink-3)}
 .bt-task-done{cursor:pointer;border-radius:8px}
 .bt-task-done:hover{background:var(--bt-hover)}
 .bt-task-row[data-stopped]{opacity:.65}
@@ -278,8 +323,8 @@ button.bt-task-who:hover .bt-task-name{color:var(--bt-accent)}
 .bt-tasks-notice{padding:8px 12px;border-radius:10px;background:var(--bt-hover);color:var(--bt-ink-2);font-size:12px;line-height:16px}
 .bt-pending-queued{align-self:flex-end;padding:1px 8px;border-radius:999px;background:var(--bt-tag-bg);color:var(--bt-tag-ink);font-size:11px;line-height:16px;white-space:nowrap}
 /* The sidebar's task popover: the same sections in a dialog over the conversation. */
-.bt-tasks-layer{position:fixed;inset:var(--dsh-frame-chrome-top,0px) 0 0;z-index:60;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif}
-.bt-tasks{position:relative;width:min(460px,calc(100vw - 32px));max-height:min(720px,calc(100vh - 2*max(24px,var(--dsh-frame-overlay-top,24px))));background:var(--bt-main);border-radius:16px;border:.5px solid var(--bt-line-2);box-shadow:0 24px 80px var(--bt-line),0 0 0 .5px var(--bt-line-2);display:flex;flex-direction:column;overflow:hidden;color:var(--bt-ink);animation:bt-dialog-rise ${SPRING_SHAPE.duration}ms ${SPRING_SHAPE.easing},bt-veil-in .2s ease-out}
+.bt-tasks-layer{position:fixed;inset:var(--bt-frame-chrome-top,0px) 0 0;z-index:60;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif}
+.bt-tasks{position:relative;width:min(460px,calc(100vw - 32px));max-height:min(720px,calc(100vh - 2*max(24px,var(--bt-frame-overlay-top,24px))));background:var(--bt-main);border-radius:16px;border:.5px solid var(--bt-line-2);box-shadow:0 24px 80px var(--bt-line),0 0 0 .5px var(--bt-line-2);display:flex;flex-direction:column;overflow:hidden;color:var(--bt-ink);animation:bt-dialog-rise ${SPRING_SHAPE.duration}ms ${SPRING_SHAPE.easing},bt-veil-in .2s ease-out}
 .bt-tasks:focus-visible{outline:none}
 .bt-tasks-head{display:flex;align-items:center;gap:8px;height:60px;flex:none;padding:0 12px 0 18px;border-bottom:.5px solid var(--bt-line);box-sizing:border-box}
 .bt-tasks-head .bt-icon-btn{width:32px;height:32px;flex:none}

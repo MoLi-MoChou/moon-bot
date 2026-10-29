@@ -7,6 +7,7 @@ import { startDuePoll, type DueDeps } from '../host/proactive/schedule.ts'
 import { ProgressWatch, startProgressPoll, type ProgressDeps } from '../host/proactive/progress.ts'
 import { retryFrom } from '../host/proactive/retry.ts'
 import { statsSince } from '../store/proactive-stats.ts'
+import { createRoundLog, install as installRounds } from '../host/proactive/rounds.ts'
 import type { HostRuntime } from '../host/runtime.js'
 import type { Store } from '../store/db.ts'
 
@@ -68,6 +69,9 @@ function triggerDepsOf(runtime: HostRuntime, store: Store, timeZone: string | un
     noteFired: (id, at) => { store.proactive.noteFired(id, at) },
     now: () => Date.now(),
     log: (message, ...rest) => runtime.warn(message, ...rest),
+    noteRound: round => {
+      roundLog.note({ ...round, botName: runtime.botOf(round.botId)?.name ?? round.botId, at: Date.now() })
+    },
   }
 }
 
@@ -115,6 +119,9 @@ async function contextFor(runtime: HostRuntime, store: Store, subscriptionId: st
     mentionedRecently: false,
   }
 }
+
+/** Every proactive run this process made, for the task panel. */
+const roundLog = createRoundLog()
 
 /** The activity the no-progress hook reads: one watch for the whole host. */
 export const progressWatch = new ProgressWatch()
@@ -176,6 +183,7 @@ export async function retryDelayedNow(runtime: HostRuntime, store: Store, agentO
 /** Installs the surface and starts both polls. Returns the combined disposer. */
 export function installProactive(runtime: HostRuntime, store: Store, agentOf: (sessionId: string) => unknown): () => void {
   installProactiveFrom(runtime, store, agentOf)
+  installRounds(runtime, roundLog)
   // Movement is any turn event: a message landing, a turn starting or ending. The hook only
   // reads this; it never writes to a conversation.
   runtime.ctx.on('session/event', (session: { readonly id?: string } | undefined) => {

@@ -44,13 +44,15 @@ function boot(home: string) {
   return { ctx, rt }
 }
 
-test('web_search is registered for Bots', () => {
+test('web_search is registered for Bots', async () => {
   const home = mkdtempSync(join(tmpdir(), 'moon-web-search-'))
   const { ctx } = boot(home)
   try {
     assert.ok(ctx.registeredTools.has('web_search'), 'web_search registered')
   } finally {
-    void ctx.dispose()
+    // Await the host's own shutdown first: it still writes while disposing, and removing
+    // the folder under a write is what made ENOTEMPTY on CI.
+    await ctx.dispose()
     rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 })
   }
 })
@@ -64,7 +66,9 @@ test('web_search refuses an empty query', async () => {
     const answer = await tool.execute({ queries: [] }, { agent: { id: 'r' }, callId: 'c1' })
     assert.match(String(answer), /needs at least one query/)
   } finally {
-    void ctx.dispose()
+    // Await the host's own shutdown first: it still writes while disposing, and removing
+    // the folder under a write is what made ENOTEMPTY on CI.
+    await ctx.dispose()
     rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 })
   }
 })
@@ -81,7 +85,10 @@ test('web_search returns keyless fallback sources from a mocked Bing page', asyn
   }) as typeof fetch
   t.after(() => { globalThis.fetch = original })
   const { ctx } = boot(home)
-  t.after(() => { void ctx.dispose(); rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }) })
+  t.after(async () => {
+    await ctx.dispose()
+    rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 })
+  })
   const tool = ctx.registeredTools.get('web_search')
   assert.ok(tool)
   const answer = await tool.execute({ queries: ['moon bot'] }, { agent: { id: 'r' }, callId: 'c1' })

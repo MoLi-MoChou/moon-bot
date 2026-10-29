@@ -32,7 +32,7 @@ Both forms are the same product: the same host services, the same engine, the sa
 
 ## Principles for trade-offs
 
-- **Correct Bot behavior comes first.** Where the runtime's own design does not fit Bots, Moon Bot does not pile up complexity to stay compatible. Concessions go into the plans, to be removed by the next refactor (the DSH-era ledger at [DSH concessions](plans/2026-10-13-dsh-concessions.md) is historical).
+- **Correct Bot behavior comes first.** Where the runtime's own design does not fit Bots, Moon Bot does not pile up complexity to stay compatible. Concessions go into `docs/plans/`, to be removed by the next refactor.
 - **Data stays on the user's computer.** Teams, chats and memory live in DS Bot's data folder on the user's computer.
 - **Done means checked.** Behavior is covered by tests; interface changes are looked at for real.
 

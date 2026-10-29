@@ -36,7 +36,6 @@
 
 | 文档 | 内容 |
 |---|---|
-| [DSH 让步总账](2026-10-13-dsh-concessions.md) | 因 DSH 本身的限制而做的妥协，以及桌面应用之后怎么处理。判断「是 DS Bot 的 bug 还是 DSH 的限制」先看这里 |
 | [角色与权限](2026-10-07-roles-and-permissions.md) | 用户、Main Bot、群管理员、普通 Bot 各能做什么；Bot 的权限预设和群的统一权限 |
 | [群聊](2026-10-07-group-chat.md) | 谁来回答、按顺序发言、@ 提及、轮数上限、干活中的进度和迟到的回复、审批 |
 | [浏览器、搜索、密钥和连接器](2026-10-08-browser-and-secrets.md) | 每个 Bot 的浏览器和 `read_browser`、`auto` 联网搜索、密钥卡和替换规则、GitHub 连接器 |
@@ -46,7 +45,6 @@
 | [桌面应用](2026-10-16-desktop-app.md) | 壳、引擎和界面怎么分；锁定的 DSH 版本、独立的数据位置、首次启动和导入、插件怎么兼容 DSH、安装和更新 |
 | [Bot 之间派活](2026-10-16-bot-handoffs.md) | Bot 看得到对方的状态；没读的消息合成一条；派活树：下面的活交回后才往上交，不许发给在等结果的 Bot；不设总量和链长上限 |
 | [Bot 视图](2026-10-20-widget-views.md) | Bot 在聊天里画结构化的视图卡：固定组件目录的 JSON 蓝图，自己渲染；提问卡回路的泛化 |
-| [TypeScript 迁移（阶段 1）](2026-10-23-ts-phase1.md) | 客户端从 JS 迁到 TS/TSX 的分阶段计划：tsconfig 严格项、构建入口探测、测试不能 import .tsx |
 | [独立个人 Agent](2026-10-24-standalone-personal-agent.md) | 离开 DSH 启动路径后的整体架构：自有服务、SQLite 存储、策略引擎、内置引擎与 ACP 接缝、五项能力评测 |
 | [远程 Agent 接入](2026-10-27-remote-agents.md) | 外部 agent 主动连出：邀请码、WebSocket 中转、`acp-remote` 引擎、`moon-bot-connect` CLI |
 | [连接器市场](2026-10-27-connector-market.md) | 随应用发布的 MCP 目录：条目格式、密钥槽位、一键安装后的能力系统行为 |

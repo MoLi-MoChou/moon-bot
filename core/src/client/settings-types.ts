@@ -108,6 +108,12 @@ export interface SettingsActions extends FolderMenuActions, SecretActions, Conne
   duplicateBot: (id: string) => Promise<{ id: string }>
   deleteBot: (id: string) => Promise<unknown>
   /** Resets a Bot's memory, conversation, history or settings; see docs/plans/2026-10-29-reset-bot.md. */
+  /** Proactive messages: the subscriptions and the manual review (2026-10-29). */
+  proactiveList?: ((botId: string) => Promise<readonly Record<string, unknown>[]>) | undefined
+  proactiveAdd?: ((input: Record<string, unknown>) => Promise<unknown>) | undefined
+  proactiveRemove?: ((id: string) => Promise<unknown>) | undefined
+  proactiveEnable?: ((id: string, enabled: boolean) => Promise<unknown>) | undefined
+  proactiveReview?: ((botId: string) => Promise<Record<string, unknown>>) | undefined
   resetBot?: ((id: string, parts: Record<string, boolean>) => Promise<{ readonly done: readonly string[]; readonly failed: readonly { readonly part: string; readonly reason: string }[] } | undefined>) | undefined
   openSession: (id: string) => void
   createBot: (payload: Record<string, unknown>) => Promise<{ id: string }>

@@ -112,6 +112,13 @@ export function teamActions({ call, after, partFor, roster, ui, live, cards, hel
     setTeamWorkspace: (path: string) => after(call('team-workspace', { path })),
     deleteBot: (id: string) => after(call('delete-bot', { id })),
     resetBot: (id: string, parts: Record<string, boolean>) => after(call('reset-bot', { id, ...parts })),
+    // Proactive messages (2026-10-29): a review decides nothing, so it is not `after` —
+    // nothing in the team changed and there is nothing to re-read.
+    proactiveList: (botId: string) => call('proactive-subscriptions', { botId }).then(value => (value as { subscriptions: readonly Record<string, unknown>[] }).subscriptions).catch(() => []),
+    proactiveAdd: (input: Record<string, unknown>) => after(call('proactive-subscribe', input as never)),
+    proactiveRemove: (id: string) => after(call('proactive-unsubscribe', { id })),
+    proactiveEnable: (id: string, enabled: boolean) => after(call('proactive-enable', { id, enabled })),
+    proactiveReview: (botId: string) => call('proactive-review', { botId }) as Promise<Record<string, unknown>>,
     duplicateBot: (id: string) => after(call('duplicate-bot', { id })),
     setPrefs: (prefs: Record<string, unknown>) => after(call('set-prefs', prefs)),
     setMain: (id: string, main = true, options: Record<string, unknown> = {}) => after(call('set-main', { id, main, ...options })),

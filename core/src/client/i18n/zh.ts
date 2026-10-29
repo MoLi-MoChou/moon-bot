@@ -98,6 +98,76 @@ export const ZH = {
 
   'Yes, reset': '是，重置',
 
+  'Proactive messages': '主动消息',
+
+  'Let this Bot come back to something on its own.': '让这个 Bot 自己回来找你一件事。',
+
+  'Proactive messages are off': '主动消息未开启',
+
+  'This host does not send them.': '这个主机不发送主动消息。',
+
+  'A Bot can come back to something on its own, within limits you set. It stays silent unless you turn this on.': '在你能设的范围内，Bot 可以自己回来找你一件事。不开这个，它就永远保持沉默。',
+
+  'Nothing set up yet': '还没有设置',
+
+  'Add one below and the Bot will start looking for things worth telling you.': '在下面加一条，Bot 就会开始留意值得告诉你的事。',
+
+  'What should it keep an eye on?': '让它留意什么？',
+
+  'my work, the deploy, the weekly report': '我的工作、部署、周报',
+
+  'At most a day': '每天最多',
+
+  'Quiet from': '安静时段从',
+
+  'Quiet to': '到',
+
+  'Turn on proactive messages': '开启主动消息',
+
+  'Add a subscription': '加一条订阅',
+
+
+
+
+
+  'At most {count} a day': '每天最多 {count} 条',
+
+  'No quiet hours': '没有安静时段',
+
+  'Quiet {from}–{to}': '安静时段 {from}–{to}',
+
+  'Also when nothing moves for {count} min': '停摆 {count} 分钟时也会',
+
+  'Look back over today': '回顾今天',
+
+  'Review now': '现在回顾',
+
+  'Looking…': '回顾中…',
+
+  'This only shows what the Bot would say. Nothing is sent.': '这里只显示 Bot 会说什么，不会真的发出。',
+
+  'Nothing worth bringing up today.': '今天没有值得提的事。',
+
+  'Would send now': '现在会发出',
+
+  'Held for the morning': '留到早上再发',
+
+  'Would not send: {reason}': '不会发出：{reason}',
+
+  'it already spoke today': '它今天已经发过了',
+
+  'it said this in the last week': '这周已经说过这件事',
+
+  'you brought it up yourself today': '你今天自己提过了',
+
+  'quiet hours': '安静时段',
+
+  'not worth interrupting for': '不值得为此打扰',
+
+  'Say what this Bot should keep an eye on.': '说清让它留意什么。',
+
+  'That did not work.': '没成功。',
+
   // Sidebar and account menu
   'Bot list': 'Bot 列表',
   'Setting up your Main Bot…': '正在设置你的主 Bot…',
@@ -203,6 +273,7 @@ export const ZH = {
   'No capabilities match “{query}”': '没有匹配「{query}」的能力',
   'Showing {count} of {total}.': '显示 {count} / {total}。',
   Off: '关闭',
+  On: '开启',
   'On. Connects on its next turn.': '已开启。下次回合会连接。',
   'Needs approval. Open Capabilities to allow it.': '需要批准。到「能力」页允许它。',
   'Connected. The server offers no tools.': '已连接。这个服务没有提供工具。',

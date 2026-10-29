@@ -33,9 +33,9 @@ const contrast = (ink, paper) => {
 
 function effectiveVars(id, theme, dark) {
   const css = themeCss(theme)
-  const baseSelector = dark ? 'html body[data-ds-dark-theme]{' : 'html body{'
+  const baseSelector = dark ? 'html body[data-bt-dark]{' : 'html body{'
   const themeSelector = dark
-    ? `html body[data-bt-theme=${id}][data-ds-dark-theme]{`
+    ? `html body[data-bt-theme=${id}][data-bt-dark]{`
     : `html body[data-bt-theme=${id}]{`
   const vars = {}
   for (const line of css.split(/\r?\n/)) {

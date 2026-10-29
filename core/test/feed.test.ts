@@ -4,6 +4,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { apply } from '../index.js'
+import { DEFAULT_WINDOW } from '../src/host/steward.ts'
+import { estimateTokens } from '../src/host/text.ts'
 import { fakeContext } from './fake-ctx.ts'
 
 const TEAM = {
@@ -24,12 +26,12 @@ const TEAM = {
 const userMessage = (text, time) => ({ type: 'user/message', time, data: { source: { kind: 'user' }, content: [{ type: 'text', text }] } })
 const botMessage = (text, time, turn = 1) => ({ type: 'assistant/message', time, data: { turn, message: { content: [{ type: 'text', text }] } } })
 
-function start({ pages = {}, services = {} } = {}) {
+function start({ pages = {}, services = {}, sessionFor } = {}) {
   const home = mkdtempSync(join(tmpdir(), 'ds-bot-feed-'))
   writeFileSync(join(home, 'state.json'), JSON.stringify(TEAM))
   const ctx = fakeContext({ services })
   ctx.sessionController = {
-    resolveAgent: async sessionId => ({ agent: { session: { id: sessionId, seq: 100 } } }),
+    resolveAgent: async sessionId => ({ agent: { session: sessionFor?.(sessionId) ?? { id: sessionId, seq: 100 } } }),
     // Two pages per Session, newest first, keyed by the cursor that asks for them.
     page: async ({ address, beforeSeq }) => pages[`${address.sessionId}:${beforeSeq ?? 'end'}`] ?? { records: [], hasMore: false },
   }
@@ -196,9 +198,25 @@ test('the run-stats endpoint reads DSH\'s figures for the current part of a Bot\
   assert.equal((await call('run-stats', { botId: 'nobody' })).error.code, 'bot/not-found')
 })
 
-test('without DSH\'s session projections the run-stats endpoint has nothing to show', async (t) => {
+test('without session projections a part that cannot be measured still shows nothing', async (t) => {
   const { call, stop } = start()
   t.after(stop)
   await call('state')
   assert.deepEqual(await call('run-stats', { botId: 'm1' }), { ok: true, value: null })
+})
+
+test('without session projections run-stats estimates the current part', async (t) => {
+  const text = 'hello'
+  const { call, stop } = start({
+    sessionFor: sessionId => ({
+      id: sessionId,
+      seq: 2,
+      deriveMessages: () => [{ content: [{ type: 'text', text }] }],
+    }),
+  })
+  t.after(stop)
+  await call('state')
+  assert.deepEqual((await call('run-stats', { botId: 'm1' })).value, {
+    contextPressure: { projectedTokens: estimateTokens(text), contextWindow: DEFAULT_WINDOW },
+  })
 })

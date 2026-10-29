@@ -8,7 +8,8 @@
 import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
 import { createRuntime } from '../index.ts'
-import type { DshContext, PromptSection } from '../host/dsh-types.js'
+import type { HostContext, PromptSection } from '../host/host-types.js'
+import { BUILTIN_CAPABILITIES, offeredTools } from '../engine/capabilities.ts'
 import { BuiltinRuntime } from '../engine/builtin/runtime.ts'
 import { sqliteTranscriptOf } from '../engine/builtin/transcript.ts'
 import { engineAgentOf } from '../engine/builtin/bridge.ts'
@@ -109,7 +110,7 @@ export function wireService(options: WireOptions): WiredService {
     llm: options.llm,
   })
   emitRequest = (request, next) => { context.emit('approval/request', request, next) }
-  const runtime = createRuntime(context as unknown as DshContext, { home: options.home }) as unknown as Runtime
+  const runtime = createRuntime(context as unknown as HostContext, { home: options.home }) as unknown as Runtime
   const store = openStore(options.home)
   // The relay over the store's invites; the channel ops and the WebSocket route share
   // this one registry, so a revoke cuts the live connection the same second.
@@ -152,7 +153,7 @@ export function wireService(options: WireOptions): WiredService {
     },
   }
 
-  const toolsFor = (): readonly string[] => runtime.toolRegistry.names().filter(name => !EXCLUDED_TOOLS.has(name))
+  const toolsFor = (): readonly string[] => offeredTools(runtime.toolRegistry.names().filter(name => !EXCLUDED_TOOLS.has(name)), BUILTIN_CAPABILITIES)
   const services: EngineServices = {
     models: {
       resolve: async (sessionId, config): Promise<ResolvedModel | undefined> => {
@@ -243,7 +244,7 @@ export function wireService(options: WireOptions): WiredService {
     }).catch(() => undefined)
   }
   const emitEvent = (sessionId: string, event: EngineEvent): void => {
-    // The session/event envelope: a type plus its data, as the DSH runtime delivered it.
+    // The session/event envelope: a type plus its data, as the host runtime delivered it.
     context.emit('session/event', { id: sessionId }, { type: event.type, data: event })
     noteTurnEvent(sessionId, event)
     ;(runtime as unknown as { noteTurn?(sessionId: string, event: EngineEvent): void }).noteTurn?.(sessionId, event)

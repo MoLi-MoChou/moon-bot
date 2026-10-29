@@ -2,94 +2,94 @@
    rules give the frame the sizes the views have in DSH. Colors come from the --bt-* variables. */
 html,body,#root{height:100%;margin:0}
 body{color-scheme:light;background:var(--bt-main);color:var(--bt-ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei","Helvetica Neue",Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
-body[data-ds-dark-theme]{color-scheme:dark}
+body[data-bt-dark]{color-scheme:dark}
 ::-webkit-scrollbar{width:12px;height:12px}
 ::-webkit-scrollbar-thumb{border:3px solid transparent;border-radius:12px;background:var(--bt-line-2) content-box}
 ::-webkit-scrollbar-thumb:hover{background-color:var(--bt-ink-3)}
 ::-webkit-scrollbar-track,::-webkit-scrollbar-corner{background:transparent}
 
-.dsb-frame{display:grid;grid-template-columns:280px minmax(0,1fr);height:100%}
-.dsb-frame[data-rail]{grid-template-columns:56px minmax(0,1fr)}
+.mb-frame{display:grid;grid-template-columns:280px minmax(0,1fr);height:100%}
+.mb-frame[data-rail]{grid-template-columns:56px minmax(0,1fr)}
 
 /* The window has no title bar. A band along the top of the sidebar and of the conversation
    moves the window (BAND in src/main.mjs); its first row of controls sits centered in it.
    The system draws its window buttons over the band: at the right end on Windows and Linux
-   (--dsb-buttons-w wide), at the left end on macOS. */
-:root{--dsb-band:48px;--dsb-buttons-w:calc(100vw - env(titlebar-area-x,0px) - env(titlebar-area-width,100vw));--dsh-frame-overlay-top:calc(var(--dsb-band) + 8px)}
-.dsb-band{position:absolute;inset:0 0 auto;height:var(--dsb-band);pointer-events:none;-webkit-app-region:drag;app-region:drag}
-.dsb-frame :is(button,a,input,textarea,select,label,[role=button]),body>:not(#root){-webkit-app-region:no-drag;app-region:no-drag}
-.bt-panel .bt-drawer-top{padding-top:6px;padding-right:calc(17px + var(--dsb-buttons-w))}
-.bt-panel .bt-ptabs{padding-right:calc(6px + var(--dsb-buttons-w))}
-.bt-pane :is(.bt-to,.bt-create-head){padding-right:calc(12px + var(--dsb-buttons-w))}
+   (--mb-buttons-w wide), at the left end on macOS. */
+:root{--mb-band:48px;--mb-buttons-w:calc(100vw - env(titlebar-area-x,0px) - env(titlebar-area-width,100vw));--bt-frame-overlay-top:calc(var(--mb-band) + 8px)}
+.mb-band{position:absolute;inset:0 0 auto;height:var(--mb-band);pointer-events:none;-webkit-app-region:drag;app-region:drag}
+.mb-frame :is(button,a,input,textarea,select,label,[role=button]),body>:not(#root){-webkit-app-region:no-drag;app-region:no-drag}
+.bt-panel .bt-drawer-top{padding-top:6px;padding-right:calc(17px + var(--mb-buttons-w))}
+.bt-panel .bt-ptabs{padding-right:calc(6px + var(--mb-buttons-w))}
+.bt-pane :is(.bt-to,.bt-create-head){padding-right:calc(12px + var(--mb-buttons-w))}
 
 /* Sidebar; collapsed, a rail of marks under the brand, which expands it again. */
-.dsb-side{position:relative;display:flex;flex-direction:column;min-width:0;min-height:0;padding:0 12px 6px;background:var(--bt-sidebar);border-right:1px solid color-mix(in srgb,var(--bt-ink) 12%,transparent);box-sizing:border-box}
-.dsb-side-list{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;margin:0 -12px 0 -4px;padding-left:4px}
-.dsb-side .bt-list{overflow-x:hidden}
-.dsb-frame[data-rail] .dsb-side{padding:0 10px 6px}
-.dsb-frame[data-rail] .dsb-side-list{margin:0;padding:0;align-items:center}
-.dsb-expand{flex:none;width:36px;height:36px;margin:6px 0 12px;padding:0;border:0;border-radius:50%;background:none;display:inline-grid;place-items:center;cursor:pointer;transition:background-color .12s ease}
-html[data-mac] .dsb-frame .dsb-side{padding-top:var(--dsb-band)}
-.dsb-expand:hover{background:color-mix(in srgb,var(--bt-ink) 6%,transparent)}
-.dsb-side-foot{display:flex;align-items:center;gap:9px;padding:8px 6px 6px}
-.dsb-frame[data-rail] .dsb-side-foot{margin:0 -5px;padding:8px 0 6px}
-.dsb-settings{padding:0;border:0;background:none;border-radius:50%;cursor:pointer}
-.dsb-settings:hover .bt-you{background:color-mix(in srgb,var(--bt-ink) 9%,var(--bt-sidebar))}
+.mb-side{position:relative;display:flex;flex-direction:column;min-width:0;min-height:0;padding:0 12px 6px;background:var(--bt-sidebar);border-right:1px solid color-mix(in srgb,var(--bt-ink) 12%,transparent);box-sizing:border-box}
+.mb-side-list{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;margin:0 -12px 0 -4px;padding-left:4px}
+.mb-side .bt-list{overflow-x:hidden}
+.mb-frame[data-rail] .mb-side{padding:0 10px 6px}
+.mb-frame[data-rail] .mb-side-list{margin:0;padding:0;align-items:center}
+.mb-expand{flex:none;width:36px;height:36px;margin:6px 0 12px;padding:0;border:0;border-radius:50%;background:none;display:inline-grid;place-items:center;cursor:pointer;transition:background-color .12s ease}
+html[data-mac] .mb-frame .mb-side{padding-top:var(--mb-band)}
+.mb-expand:hover{background:color-mix(in srgb,var(--bt-ink) 6%,transparent)}
+.mb-side-foot{display:flex;align-items:center;gap:9px;padding:8px 6px 6px}
+.mb-frame[data-rail] .mb-side-foot{margin:0 -5px;padding:8px 0 6px}
+.mb-settings{padding:0;border:0;background:none;border-radius:50%;cursor:pointer}
+.mb-settings:hover .bt-you{background:color-mix(in srgb,var(--bt-ink) 9%,var(--bt-sidebar))}
 
 /* Conversation: a floating header pill over the transcript, and the composer below. */
-.dsb-main{position:relative;display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--bt-main);--dsh-chat-content-width:min(960px,100%)}
-.dsb-head{position:absolute;top:0;left:0;right:0;z-index:8;display:flex;justify-content:center;padding:4px 0 0;pointer-events:none}
-.dsb-head::before{content:"";position:absolute;inset:0 0 auto;height:60px;background:linear-gradient(to bottom,var(--bt-main),color-mix(in srgb,var(--bt-main) 0%,transparent));pointer-events:none;z-index:-1}
-.dsb-head .bt-head{flex:1 1 auto;width:100%}
-.dsb-chat{display:flex;flex-direction:column;flex:1 1 auto;min-height:0}
+.mb-main{position:relative;display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--bt-main);--bt-chat-content-width:min(960px,100%)}
+.mb-head{position:absolute;top:0;left:0;right:0;z-index:8;display:flex;justify-content:center;padding:4px 0 0;pointer-events:none}
+.mb-head::before{content:"";position:absolute;inset:0 0 auto;height:60px;background:linear-gradient(to bottom,var(--bt-main),color-mix(in srgb,var(--bt-main) 0%,transparent));pointer-events:none;z-index:-1}
+.mb-head .bt-head{flex:1 1 auto;width:100%}
+.mb-chat{display:flex;flex-direction:column;flex:1 1 auto;min-height:0}
 /* A thin gutter kept for the scrollbar, so the column does not move when one appears. */
-.dsb-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;scrollbar-gutter:stable;margin-right:2px;padding:60px 11px 16px 16px}
-.dsb-scroll::-webkit-scrollbar{width:5px}
-.dsb-scroll::-webkit-scrollbar-thumb{border:0;border-radius:5px;background:var(--bt-line-2)}
-.dsb-column{max-width:min(960px,100%);margin:0 auto}
-.dsb-flow{display:flex;flex-direction:column;gap:6px}
+.mb-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;scrollbar-gutter:stable;margin-right:2px;padding:60px 11px 16px 16px}
+.mb-scroll::-webkit-scrollbar{width:5px}
+.mb-scroll::-webkit-scrollbar-thumb{border:0;border-radius:5px;background:var(--bt-line-2)}
+.mb-column{max-width:min(960px,100%);margin:0 auto}
+.mb-flow{display:flex;flex-direction:column;gap:6px}
 /* The first separator sits where DSH puts a transcript's opening time. */
-.dsb-flow>.bt-time-sep{margin:8px 0 2px}
-.dsb-flow>.bt-time-sep:first-child{margin:17px 0 6px}
-.dsb-flow>.bt-urow+.bt-astack,.dsb-flow>.bt-urow+.bt-time-sep+.bt-astack{margin-top:10px}
-.dsb-pending{display:contents}
-.dsb-pending .bt-ububble{opacity:.6}
+.mb-flow>.bt-time-sep{margin:8px 0 2px}
+.mb-flow>.bt-time-sep:first-child{margin:17px 0 6px}
+.mb-flow>.bt-urow+.bt-astack,.mb-flow>.bt-urow+.bt-time-sep+.bt-astack{margin-top:10px}
+.mb-pending{display:contents}
+.mb-pending .bt-ububble{opacity:.6}
 
-.dsb-composer-root{display:flex;flex-direction:column;align-items:center;padding:0 11px 13px 16px}
-.dsb-composer-wrap{position:relative;width:100%;max-width:min(992px,100%)}
-.dsb-composer{position:relative}
-.dsb-composer[data-multiline]{border-radius:18px!important}
-.dsb-composer-tools{order:1;display:flex;flex:none;align-self:flex-end}
-.dsb-composer-input{display:flex;flex:1 1 0;min-width:0;padding:0 8px;align-self:flex-end}
-.dsb-composer-input textarea{flex:1;width:100%;max-height:168px;margin:0;border:0;outline:0;resize:none;background:none;color:var(--bt-ink);font:inherit;font-size:14px;line-height:24px;padding:6px 0 2px;box-sizing:border-box;overflow-y:auto}
-.dsb-composer-input textarea::placeholder{color:color-mix(in srgb,var(--bt-ink) 36%,transparent)}
-.dsb-composer-trailing{order:3;display:flex;flex:none;align-self:flex-end;align-items:center;gap:8px}
-.dsb-send{flex:none;width:28px;height:28px;padding:0;border:0;border-radius:50%;display:inline-grid;place-items:center;background:var(--bt-accent);color:var(--bt-accent-ink,#fff);cursor:pointer;transition:opacity .15s ease}
-.dsb-send:hover{opacity:.9}
-.dsb-send svg{width:14px;height:14px}
-.dsb-send:disabled{display:none}
+.mb-composer-root{display:flex;flex-direction:column;align-items:center;padding:0 11px 13px 16px}
+.mb-composer-wrap{position:relative;width:100%;max-width:min(992px,100%)}
+.mb-composer{position:relative}
+.mb-composer[data-multiline]{border-radius:18px!important}
+.mb-composer-tools{order:1;display:flex;flex:none;align-self:flex-end}
+.mb-composer-input{display:flex;flex:1 1 0;min-width:0;padding:0 8px;align-self:flex-end}
+.mb-composer-input textarea{flex:1;width:100%;max-height:168px;margin:0;border:0;outline:0;resize:none;background:none;color:var(--bt-ink);font:inherit;font-size:14px;line-height:24px;padding:6px 0 2px;box-sizing:border-box;overflow-y:auto}
+.mb-composer-input textarea::placeholder{color:color-mix(in srgb,var(--bt-ink) 36%,transparent)}
+.mb-composer-trailing{order:3;display:flex;flex:none;align-self:flex-end;align-items:center;gap:8px}
+.mb-send{flex:none;width:28px;height:28px;padding:0;border:0;border-radius:50%;display:inline-grid;place-items:center;background:var(--bt-accent);color:var(--bt-accent-ink,#fff);cursor:pointer;transition:opacity .15s ease}
+.mb-send:hover{opacity:.9}
+.mb-send svg{width:14px;height:14px}
+.mb-send:disabled{display:none}
 /* An empty composer offers voice chat where the send button goes; a group chat, dictation. */
-[data-composer-card]:has(.dsb-send:disabled) .bt-voice{display:inline-grid}
-body[data-bt-room] [data-composer-card]:has(.dsb-send:disabled) .bt-mic:not([aria-pressed=true]){background:var(--bt-accent);color:var(--bt-accent-ink,#fff)}
-.dsb-composer-error{margin:0 0 6px 4px;font-size:12px;line-height:16px;color:var(--bt-danger)}
+[data-composer-card]:has(.mb-send:disabled) .bt-voice{display:inline-grid}
+body[data-bt-room] [data-composer-card]:has(.mb-send:disabled) .bt-mic:not([aria-pressed=true]){background:var(--bt-accent);color:var(--bt-accent-ink,#fff)}
+.mb-composer-error{margin:0 0 6px 4px;font-size:12px;line-height:16px;color:var(--bt-danger)}
 
 /* A phone-width window has no sidebar column: the menu button in the conversation opens
    the sidebar as a drawer (the rules below), and the button is the drawer's only handle. */
-.dsb-menu{display:none;position:absolute;left:8px;top:4px;z-index:9;width:44px;height:44px;padding:0;border:0;border-radius:10px;background:color-mix(in srgb,var(--bt-main) 88%,transparent);color:var(--bt-ink);place-items:center;cursor:pointer;pointer-events:auto;-webkit-app-region:no-drag;app-region:no-drag;transition:background-color .12s ease}
-.dsb-menu:hover{background:var(--bt-hover)}
-.dsb-menu svg{width:18px;height:18px}
-.dsb-scrim{display:none}
+.mb-menu{display:none;position:absolute;left:8px;top:4px;z-index:9;width:44px;height:44px;padding:0;border:0;border-radius:10px;background:color-mix(in srgb,var(--bt-main) 88%,transparent);color:var(--bt-ink);place-items:center;cursor:pointer;pointer-events:auto;-webkit-app-region:no-drag;app-region:no-drag;transition:background-color .12s ease}
+.mb-menu:hover{background:var(--bt-hover)}
+.mb-menu svg{width:18px;height:18px}
+.mb-scrim{display:none}
 
 /* Autocomplete trigger menu for @ and / */
-.dsb-trigger-menu{position:absolute;bottom:calc(100% + 8px);left:0;right:0;max-height:260px;overflow-y:auto;background:var(--bt-sidebar);border:1px solid color-mix(in srgb,var(--bt-ink) 12%,transparent);border-radius:14px;box-shadow:0 8px 24px color-mix(in srgb,var(--bt-ink) 14%,transparent);padding:6px;z-index:30;display:flex;flex-direction:column;gap:2px}
-.dsb-trigger-head{padding:4px 8px 2px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:color-mix(in srgb,var(--bt-ink) 45%,transparent)}
-.dsb-trigger-item{display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:9px;border:0;background:none;width:100%;text-align:left;font:inherit;color:var(--bt-ink);cursor:pointer;transition:background-color .1s ease}
-.dsb-trigger-item:hover,.dsb-trigger-item[data-active=true]{background:color-mix(in srgb,var(--bt-ink) 8%,transparent)}
-.dsb-trigger-icon{flex:none;display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;color:var(--bt-ink-2)}
-.dsb-trigger-info{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:1px}
-.dsb-trigger-title{font-size:13px;font-weight:500;line-height:18px;display:flex;align-items:center;gap:6px}
-.dsb-trigger-badge{font-size:10px;padding:1px 5px;border-radius:4px;background:color-mix(in srgb,var(--bt-ink) 10%,transparent);color:color-mix(in srgb,var(--bt-ink) 70%,transparent)}
-.dsb-trigger-sub{font-size:11px;line-height:15px;color:color-mix(in srgb,var(--bt-ink) 50%,transparent);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mb-trigger-menu{position:absolute;bottom:calc(100% + 8px);left:0;right:0;max-height:260px;overflow-y:auto;background:var(--bt-sidebar);border:1px solid color-mix(in srgb,var(--bt-ink) 12%,transparent);border-radius:14px;box-shadow:0 8px 24px color-mix(in srgb,var(--bt-ink) 14%,transparent);padding:6px;z-index:30;display:flex;flex-direction:column;gap:2px}
+.mb-trigger-head{padding:4px 8px 2px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:color-mix(in srgb,var(--bt-ink) 45%,transparent)}
+.mb-trigger-item{display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:9px;border:0;background:none;width:100%;text-align:left;font:inherit;color:var(--bt-ink);cursor:pointer;transition:background-color .1s ease}
+.mb-trigger-item:hover,.mb-trigger-item[data-active=true]{background:color-mix(in srgb,var(--bt-ink) 8%,transparent)}
+.mb-trigger-icon{flex:none;display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;color:var(--bt-ink-2)}
+.mb-trigger-info{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:1px}
+.mb-trigger-title{font-size:13px;font-weight:500;line-height:18px;display:flex;align-items:center;gap:6px}
+.mb-trigger-badge{font-size:10px;padding:1px 5px;border-radius:4px;background:color-mix(in srgb,var(--bt-ink) 10%,transparent);color:color-mix(in srgb,var(--bt-ink) 70%,transparent)}
+.mb-trigger-sub{font-size:11px;line-height:15px;color:color-mix(in srgb,var(--bt-ink) 50%,transparent);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* Markdown in the bubbles (primitives.js). */
 .md_markdown{overflow-wrap:anywhere}
@@ -116,20 +116,20 @@ body[data-bt-room] [data-composer-card]:has(.dsb-send:disabled) .bt-mic:not([ari
 html,body,#root{height:100%}
 html,body,#root{height:100dvh}
 body{overflow:hidden;overscroll-behavior:none}
-.dsb-frame{grid-template-columns:minmax(0,1fr);height:var(--dsb-vv-height,100dvh);transform:translateY(var(--dsb-vv-top,0px))}
-.dsb-side{position:fixed;inset:0 auto 0 0;width:min(86vw,320px);z-index:50;padding:env(safe-area-inset-top) 12px calc(6px + env(safe-area-inset-bottom));border-right:1px solid color-mix(in srgb,var(--bt-ink) 12%,transparent);box-shadow:0 18px 48px color-mix(in srgb,var(--bt-ink) 24%,transparent);transform:translateX(-100%);transition:transform .22s cubic-bezier(.22,1,.36,1)}
-.dsb-frame[data-drawer] .dsb-side{transform:translateX(0)}
-.dsb-side .bt-side-collapse{display:none}
-.dsb-scrim{display:block;position:fixed;inset:0;z-index:49;background:color-mix(in srgb,var(--bt-ink) 44%,transparent)}
-.dsb-head{padding:calc(4px + env(safe-area-inset-top)) 8px 0}
-.dsb-head::before{height:calc(60px + env(safe-area-inset-top))}
-.dsb-head .bt-pill{height:44px;max-width:calc(100% - 120px)}
-.dsb-menu{display:inline-grid;top:calc(4px + env(safe-area-inset-top))}
-.dsb-scroll{padding:calc(64px + env(safe-area-inset-top)) 12px 12px}
-.dsb-scroll::-webkit-scrollbar{width:0}
-.dsb-composer-root{padding:0 10px calc(10px + env(safe-area-inset-bottom))}
-.dsb-composer-input textarea{font-size:16px;line-height:22px;max-height:132px}
-.dsb-composer-trailing{gap:6px}
-.dsb-send{width:44px;height:44px}
-.dsb-send svg{width:18px;height:18px}
+.mb-frame{grid-template-columns:minmax(0,1fr);height:var(--mb-vv-height,100dvh);transform:translateY(var(--mb-vv-top,0px))}
+.mb-side{position:fixed;inset:0 auto 0 0;width:min(86vw,320px);z-index:50;padding:env(safe-area-inset-top) 12px calc(6px + env(safe-area-inset-bottom));border-right:1px solid color-mix(in srgb,var(--bt-ink) 12%,transparent);box-shadow:0 18px 48px color-mix(in srgb,var(--bt-ink) 24%,transparent);transform:translateX(-100%);transition:transform .22s cubic-bezier(.22,1,.36,1)}
+.mb-frame[data-drawer] .mb-side{transform:translateX(0)}
+.mb-side .bt-side-collapse{display:none}
+.mb-scrim{display:block;position:fixed;inset:0;z-index:49;background:color-mix(in srgb,var(--bt-ink) 44%,transparent)}
+.mb-head{padding:calc(4px + env(safe-area-inset-top)) 8px 0}
+.mb-head::before{height:calc(60px + env(safe-area-inset-top))}
+.mb-head .bt-pill{height:44px;max-width:calc(100% - 120px)}
+.mb-menu{display:inline-grid;top:calc(4px + env(safe-area-inset-top))}
+.mb-scroll{padding:calc(64px + env(safe-area-inset-top)) 12px 12px}
+.mb-scroll::-webkit-scrollbar{width:0}
+.mb-composer-root{padding:0 10px calc(10px + env(safe-area-inset-bottom))}
+.mb-composer-input textarea{font-size:16px;line-height:22px;max-height:132px}
+.mb-composer-trailing{gap:6px}
+.mb-send{width:44px;height:44px}
+.mb-send svg{width:18px;height:18px}
 }

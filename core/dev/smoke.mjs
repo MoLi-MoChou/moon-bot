@@ -20,7 +20,7 @@ if (!name || !port) {
 }
 const outFile = rest[0] === '--out' ? rest[1] : undefined
 const ROOT = dirname(dirname(dirname(fileURLToPath(import.meta.url))))
-const HOME = join(ROOT, `.dsh-test-${name}`)
+const HOME = join(ROOT, `.moon-bot-test-${name}`)
 const BASE = `http://127.0.0.1:${port}`
 const QUIET_MS = 2500
 const STEP_TIMEOUT_MS = 120_000
@@ -353,10 +353,10 @@ await step('update Writer', () => api('update-bot', { id: botNamed('Writer').id,
   return expect(writer.role === 'Copywriter' && writer.instructions === 'Write the copy.', 'update not saved')
 })
 
-// dsh keeps each Session under a folder named after its cwd. A change of working folder
+// The host keeps each Session under a folder named after its cwd. A change of working folder
 // moves the Bot's own chat on to a fresh part made there; the fresh part then stays put.
-// The native realpath is the one DS Bot saves; on Windows the JS one keeps 8.3 short names.
-const project = realpathSync.native(mkdtempSync(join(tmpdir(), 'ds-bot-smoke-folder-')))
+// The native realpath is the one the host saves; on Windows the JS one keeps 8.3 short names.
+const project = realpathSync.native(mkdtempSync(join(tmpdir(), 'moon-bot-smoke-folder-')))
 const folderOf = sessionId => readdirSync(join(HOME, 'sessions')).find(dir => existsSync(join(HOME, 'sessions', dir, sessionId)))
 const coderParts = () => (botNamed('Coder').segments ?? []).length
 const partsBeforeFolder = coderParts()
@@ -403,7 +403,7 @@ await step('delete the copy', async () => {
 const echoName = 'smoke-echo'
 const skillName = 'smoke-guide'
 const skillDescription = 'Smoke test skill'
-const echoServer = join(ROOT, 'ds-bot', 'dev', 'mcp-echo-server.mjs')
+const echoServer = join(ROOT, 'core', 'dev', 'mcp-echo-server.mjs')
 const sees = `工具 mcp__${echoName}__echo；技能 ${skillName}（${skillDescription}）`
 const seesNothing = '工具 无；技能 无'
 const reportOf = (calls, bot) => calls.flatMap(call => call.out ?? []).find(block => block.type === 'text' && block.text.startsWith(`${bot} 能力：`))?.text

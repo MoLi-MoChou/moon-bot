@@ -3,7 +3,7 @@
 import { randomUUID } from 'node:crypto'
 import { mkdir, unlink } from 'node:fs/promises'
 import { join } from 'node:path'
-import type { LlmStreamOptions } from '../dsh-types.js'
+import type { LlmStreamOptions } from '../host-types.js'
 import type { HostRuntime } from '../runtime.js'
 import { tokensOf } from './fold.ts'
 import { memoryLedger, sqliteLedger } from './ledger.ts'
@@ -15,7 +15,7 @@ interface UsageTag {
   readonly kind: string
 }
 
-/** A request as `llm/stream` carries it: DSH names the Session and the purpose. */
+/** A request as `llm/stream` carries it: the host names the Session and the purpose. */
 interface StreamRequest extends LlmStreamOptions {
   readonly purpose?: string | undefined
 }
@@ -49,7 +49,7 @@ export function install(rt: HostRuntime): void {
         ({ DatabaseSync } = await import('node:sqlite'))
         await mkdir(home, { recursive: true })
       } catch (error) {
-        rt.warn('ds-bot: usage is kept in memory only: %s', error)
+        rt.warn('moon-bot: usage is kept in memory only: %s', error)
         return memoryLedger()
       }
       // Only proven damage warrants a rebuild: Desktop and Web share this file,
@@ -62,7 +62,7 @@ export function install(rt: HostRuntime): void {
           return sqliteLedger(DatabaseSync, path)
         } catch (error) {
           if (fresh || !damaged(error)) {
-            rt.warn('ds-bot: usage is kept in memory only: %s', error)
+            rt.warn('moon-bot: usage is kept in memory only: %s', error)
             return memoryLedger()
           }
         }
@@ -84,7 +84,7 @@ export function install(rt: HostRuntime): void {
     ledger?.close()
     ledger = undefined
     opening = undefined
-  }, 'ds-bot: usage ledger')
+  }, 'moon-bot: usage ledger')
 
   const viewer = createViewer({ rt, openLedger })
 
@@ -135,14 +135,14 @@ export function install(rt: HostRuntime): void {
       await rt.load()
       const book = ledger ?? await openLedger().catch(() => undefined)
       if (book === undefined) return
-      try { journal(book, sessionId) } catch (error) { rt.warn('ds-bot: usage could not journal %s: %s', sessionId, error) }
+      try { journal(book, sessionId) } catch (error) { rt.warn('moon-bot: usage could not journal %s: %s', sessionId, error) }
     })()
   }
   function record({ sessionId, kind, provider, model, usage }: RecordedCall): void {
     noteSession(sessionId ?? '')
     const row: LedgerCall = { key: `live:${randomUUID()}`, session: sessionId ?? '', time: Date.now(), provider: provider ?? '', model: model ?? '', kind, ...tokensOf(usage) }
     if (ledger !== undefined) {
-      try { ledger.add(row) } catch (error) { rt.warn('ds-bot: usage could not record a call: %s', error) }
+      try { ledger.add(row) } catch (error) { rt.warn('moon-bot: usage could not record a call: %s', error) }
       return
     }
     early.push(row)

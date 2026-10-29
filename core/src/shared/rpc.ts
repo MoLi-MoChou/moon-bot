@@ -135,7 +135,7 @@ export interface RelayInviteView {
 }
 
 /** A hold is emitted only when the host can point to the fact that caused it. */
-export type TaskHold = 'approval' | 'queued' | 'handoff' | 'engine-busy'
+export type TaskHold = 'approval' | 'queued' | 'handoff' | 'engine-busy' | 'interrupted'
 
 // -----------------------------------------------------------------__________
 // The endpoint map
@@ -170,6 +170,10 @@ export interface BotChannelRpcMap {
   // how many messages wait behind its turn (`queued`, from the Session's own inbox).
   tasks: { request: Record<string, never>; response: { readonly running: readonly (Record<string, unknown> & { readonly hold?: TaskHold })[]; readonly completed: readonly Record<string, unknown>[]; readonly waiting: readonly (Record<string, unknown> & { readonly hold?: TaskHold })[] } }
   'task-stop': { request: { sessionId: string }; response: { readonly stopped: boolean } }
+  // One queued message that has not started its turn (2026-10-29 session-queue).
+  'queue-remove': { request: { sessionId: string; id: string }; response: { readonly removed: boolean } }
+  // Continue one turn that a restart parked (2026-10-29 crash-recovery). Not an approval.
+  'turn-continue': { request: { sessionId: string }; response: { readonly continued: boolean } }
 
   // Conversations
   chat: { request: { botId: string; cursor?: ChatCursor }; response: ChatPage }
@@ -184,6 +188,9 @@ export interface BotChannelRpcMap {
   'workspace-download': { request: { path: string; sessionId?: string }; response: { readonly name: string; readonly mime: string; readonly size: number; readonly data: string; readonly folder?: boolean } }
   'workspace-describe': { request: { path: string; sessionId?: string }; response: { readonly name: string; readonly size: number; readonly folder: boolean; readonly mime: string; readonly modified: string; readonly downloadable: boolean } }
   'run-stats': { request: { sessionId: string }; response: RunnerStats }
+  // Condense the Bot's current part in place (2026-10-29 manual-compact). A refusal
+  // carries the sentence; it does not switch to a new part.
+  'context-compact': { request: { botId: string }; response: { readonly compacted: boolean; readonly reason?: string } }
   usage: { request: { timeZone?: string }; response: Record<string, unknown> }
   'room-progress': { request: { roomId: string }; response: readonly Record<string, unknown>[] }
 
@@ -195,13 +202,14 @@ export interface BotChannelRpcMap {
   'create-room': { request: { members: readonly string[]; name?: string; admin?: string; greet?: boolean }; response: RoomView }
   'update-room': { request: { id: string; [field: string]: unknown }; response: { readonly room: RoomView | undefined; readonly changes: readonly string[] } }
   'delete-room': { request: { id: string }; response: StateView }
+  'archive-room': { request: { id: string; archived: boolean }; response: StateView }
   folders: { request: Record<string, never>; response: { readonly team: string; readonly picker: string | null; readonly folders: readonly { readonly path: string; readonly title: string }[] } }
   'folder-pick': { request: Record<string, never>; response: string }
   'folder-list': { request: { path?: string }; response: Record<string, unknown> }
   'team-workspace': { request: { path: string }; response: { readonly team: string } }
   'set-flags': { request: { id: string; pinned?: boolean; hidden?: boolean }; response: Record<string, unknown> }
 
-  // Agents (plain dsh Sessions the team can see)
+  // Agents (plain session Sessions the team can see)
   'add-agent': { request: { sessionId: string; name?: string }; response: StateView }
   'agent-session': { request: Record<string, unknown>; response: StateView }
   'agent-adopt': { request: Record<string, unknown>; response: StateView }

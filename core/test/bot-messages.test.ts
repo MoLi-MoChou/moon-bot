@@ -291,7 +291,7 @@ test('stop_bot cancels the running turns and tells the Bot why in a new turn', a
   const out = await tool('stop_bot', { bot: 'Writer', reason: 'that command deletes data' }, 'a')
   assert.match(out, /Stopped Writer in its own chat and group "Ops"/)
   assert.deepEqual(agents.get('b').calls.map(([kind]) => kind), ['cancel', 'followup'])
-  assert.deepEqual(agents.get('b').calls[0][1], { kind: 'hook', reason: 'ds-bot/stopped' })
+  assert.deepEqual(agents.get('b').calls[0][1], { kind: 'hook', reason: 'moon-bot/stopped' })
   assert.deepEqual(agents.get('gb').calls.map(([kind]) => kind), ['cancel'])
   const notice = agents.get('b').calls[1][1]
   assert.match(textOf(notice.content), /^\[Stopped by Chief\]\nthat command deletes data$/)
@@ -394,7 +394,7 @@ test('a joined request in a stopped turn tells its sender, and is not handed bac
   emit('b', 'assistant/message', assistantText('first half'))
   emit('b', 'user/message', { content: textBlock('[Message from Chief]\nmore'), source: replySource('request', { exchangeId: 'e1' }) })
   emit('b', 'assistant/message', assistantText('second half'))
-  emit('b', 'turn/end', { turn: 1, reason: { kind: 'aborted', reason: { kind: 'hook', reason: 'ds-bot/stopped' } } })
+  emit('b', 'turn/end', { turn: 1, reason: { kind: 'aborted', reason: { kind: 'hook', reason: 'moon-bot/stopped' } } })
   assert.equal(delivered.length, 1)
   assert.equal(delivered[0].toId, 'a')
   assert.equal(delivered[0].replyTo, 'e1')

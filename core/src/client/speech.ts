@@ -1,4 +1,4 @@
-// The recognizer of DSH's Voice Input plugin (local SenseVoice). Its `speech` Remote
+// The recognizer of the host's Voice Input plugin (local SenseVoice). Its `speech` Remote
 // exists only while that plugin is on; the browser's own speech service stays the
 // fallback. The plugin takes one complete 16 kHz mono PCM16 WAV per request.
 export const VOICE_BUNDLE = 'voice-input'
@@ -23,7 +23,7 @@ export interface SpeechAnswer<T> {
   readonly error?: { readonly message?: string }
 }
 
-// The remote the DSH voice-input plugin mounts; only the members used here are declared.
+// The remote the host voice-input plugin mounts; only the members used here are declared.
 export interface SpeechService {
   catalog(): Promise<SpeechAnswer<SpeechCatalogValue>>
   transcribe(request: { readonly audioBase64: string; readonly [key: string]: unknown }, signal?: AbortSignal): Promise<SpeechAnswer<{ readonly text?: string }>>

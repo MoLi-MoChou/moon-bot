@@ -1,6 +1,6 @@
 import type {
   AgentSession, ApprovalService, DirectoryPicker, SandboxPolicy, ToolExecution, WorkingDirectoryService,
-} from './dsh-types.js'
+} from './host-types.js'
 import type { ToolContext } from '../engine/registry.ts'
 import type { HostRuntime } from './runtime.js'
 
@@ -36,9 +36,9 @@ export const within = (inner: string, outer: string): boolean => inner === outer
 
 const expandHome = (text: string): string => (text === '~' ? homedir() : /^~[\\/]/.test(text) ? join(homedir(), text.slice(2)) : text)
 
-// Read as DSH reads it, so the team's data and the guarded folder are where DSH keeps
+// Read as the host reads it, so the team's data and the guarded folder are where the host keeps
 // its own: a blank value counts as unset.
-export const dshHomeOf = (value: string | undefined): string => resolve(expandHome(value?.trim() ? value : join(homedir(), '.dsh')))
+export const otherAppHomeOf = (value: string | undefined): string => resolve(expandHome(value?.trim() ? value : join(homedir(), '.dsh')))
 
 export function install(rt: HostRuntime): void {
   const { ctx, state } = rt
@@ -64,10 +64,10 @@ export function install(rt: HostRuntime): void {
     const team = teamFolder()
     return team === undefined ? undefined : real(team)
   }
-  // Where `input` leads from `base`, as a real path, the way DSH's working_directory resolves
+  // Where `input` leads from `base`, as a real path, the way the host's working_directory resolves
   // a change; undefined when nothing is there.
   const folderAt = (base: string, input: string): Promise<string | undefined> => realpath(resolve(base, input)).catch(() => undefined)
-  // Where a Session works: the folder DSH has for it, else the one DS Bot made it for.
+  // Where a Session works: the folder the host has for it, else the one DS Bot made it for.
   const sessionFolder = (session: AgentSession | undefined): string | undefined => {
     const reported = session?.header === undefined ? undefined : ctx.get<WorkingDirectoryService>('workingDirectory')?.get?.(session) ?? session.header.cwd
     if (reported !== undefined) return reported
@@ -75,10 +75,10 @@ export function install(rt: HostRuntime): void {
     return workDirOf({ botId: rt.selfOf?.(id), roomId: id === undefined ? undefined : rt.groupOwners.get(id)?.roomId }) ?? teamFolder()
   }
 
-  // The desktop app runs its own DSH and names the user's, which Bots must not write either.
-  const dataRoots = (): string[] => [rt.dshHome, rt.home, process.env.DS_BOT_USER_DSH_HOME?.trim()].filter((root): root is string => root !== undefined && root !== '')
+  // The desktop app runs its own the host and names the user's, which Bots must not write either.
+  const dataRoots = (): string[] => [rt.otherAppHome, rt.home, process.env.DS_BOT_USER_DSH_HOME?.trim()].filter((root): root is string => root !== undefined && root !== '')
 
-  // A Bot that could write where DSH or the team keeps its data could change its own
+  // A Bot that could write where the host or the team keeps its data could change its own
   // permissions or the team, so neither those folders nor one that holds them is allowed.
   async function guarded(path: string): Promise<boolean> {
     const team = await realTeam()
@@ -90,7 +90,7 @@ export function install(rt: HostRuntime): void {
     return false
   }
 
-  // A file a Bot names to read into the team, such as a photo, may not come from DSH's or
+  // A file a Bot names to read into the team, such as a photo, may not come from the host's or
   // the team's data; the team workspace, which can lie in it, is the exception.
   async function inData(path: string): Promise<boolean> {
     const team = await realTeam()
@@ -132,7 +132,7 @@ export function install(rt: HostRuntime): void {
     const text = unquote(input)
     const expanded = expandHome(text)
     if (text === '' || !isAbsolute(expanded)) throw new Error(`Give the full path of the folder, not ${text}`)
-    // The plugin's own default lies in DSH's data, and going back to it stays possible: that
+    // The plugin's own default lies in the host's data, and going back to it stays possible: that
     // folder itself, not where a link put in its place leads.
     const fallback = resolve(defaultTeamFolder())
     const own = join(await realBeyond(dirname(fallback)), basename(fallback))
@@ -162,7 +162,7 @@ export function install(rt: HostRuntime): void {
   // A folder outside the team workspace widens where a Bot may write, so a Bot that
   // sets one for Bots whose writes are bounded by their folder asks the user first.
   // `sessions` are the Sessions that would work there; the default policy counts too,
-  // since the Sessions made there later start under it. `exec` is a DSH exec with the
+  // since the Sessions made there later start under it. `exec` is a host exec with the
   // calling agent at hand, or a tool context, whose live agent is resolved then; the
   // approval must be asked by that same agent, as it scopes the request. Throws when
   // it is not allowed.

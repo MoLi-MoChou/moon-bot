@@ -149,7 +149,7 @@ export async function chooseLocations(signal: AbortSignal): Promise<FirstRunResu
   const throwaway = process.env.MOON_BOT_DATA
   if (throwaway) return { dataDir: throwaway, workspace: process.env.MOON_BOT_WORKSPACE || undefined }
   const file = locationsFile()
-  // Before the Moon Bot rename the app was "Mochou" or "DSH Bot": their saved places still apply.
+  // Before the Moon Bot rename the app was "Mochou" or "the host Bot": their saved places still apply.
   const legacy = ['Mochou', 'DSH Bot'].map(name => join(app.getPath('appData'), name, 'locations.json')).find(path => existsSync(path))
   if (!existsSync(file) && legacy !== undefined) {
     return JSON.parse(readFileSync(legacy, 'utf8')) as SavedPlaces

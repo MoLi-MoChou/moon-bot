@@ -1,5 +1,5 @@
 import { createElement as h, Fragment, useEffect, useState } from 'react';
-import { MarkdownText } from './dsh-primitives.tsx';
+import { MarkdownText } from './primitives.tsx';
 import { failureLabel } from './diagnostics.ts';
 import { t } from './i18n.ts';
 import { BotMark, toolState } from './mark.tsx';

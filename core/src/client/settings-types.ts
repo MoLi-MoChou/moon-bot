@@ -25,6 +25,7 @@ export interface SettingsEngineOption {
   reason?: string
   online?: boolean
   onDemand?: boolean
+  health?: 'ready' | 'unversioned' | 'on-demand' | 'unsupported' | 'missing'
 }
 export interface SettingsBotEngine {
   kind: 'builtin' | 'acp' | 'acp-remote'
@@ -120,7 +121,7 @@ export interface SettingsActions extends FolderMenuActions, SecretActions, Conne
   diagnosticsLog: () => Promise<string>
   diagnosticsClear: () => Promise<unknown>
   dismissToast: (token: string) => void
-  // The update surface the About page and the sidebar share: the plugin update, DSH's own,
+  // The update surface the About page and the sidebar share: the plugin update, the host's own,
   // and the desktop app updater and engine downloader that index.js installs at start.
   checkUpdate: () => Promise<unknown>
   installUpdate: () => Promise<unknown>

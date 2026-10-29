@@ -48,7 +48,7 @@ interface ReportBody {
 }
 
 // Diagnostics: what went wrong on this host, kept where the user can see it and report it.
-// DSH mounts no exporter for ctx.logger once it has started, so warnings would otherwise
+// the host mounts no exporter for ctx.logger once it has started, so warnings would otherwise
 // reach only stderr. Entries are kept in memory and in <home>/logs/diagnostics.jsonl, so
 // a report written after a restart still has them. Every text is cleaned of saved keys,
 // credential-like strings and the home folder before it is kept and again before it is
@@ -145,7 +145,7 @@ const ownVersion = (): string | undefined => {
   }
 }
 
-// DSH packages share one version; the LLM package is always beside the plugin.
+// the host packages share one version; the LLM package is always beside the plugin.
 
 export function install(rt: HostRuntime): void {
   const { ctx, home, config } = rt
@@ -161,7 +161,7 @@ export function install(rt: HostRuntime): void {
   ctx.effect(() => () => {
     stopped = true
     return writing
-  }, 'ds-bot: diagnostics log')
+  }, 'moon-bot: diagnostics log')
 
   const clean = (text: unknown): string => cleanText(text, { redact: rt.redactSecrets })
 
@@ -188,7 +188,7 @@ export function install(rt: HostRuntime): void {
     }).catch((error) => {
       if (fileFailed) return
       fileFailed = true
-      console.error('[ds-bot] diagnostics log not written:', error?.code ?? clean(error?.message ?? String(error)))
+      console.error('[moon-bot] diagnostics log not written:', error?.code ?? clean(error?.message ?? String(error)))
     })
   }
 
@@ -212,11 +212,11 @@ export function install(rt: HostRuntime): void {
     const line = clean(format(template, ...args.map(arg => (arg instanceof Error ? errorText(arg) : arg))))
     const frames = typeof error?.stack === 'string' ? error.stack.split('\n').filter(item => /^\s+at /.test(item)).slice(0, STACK_LINES).map(item => item.trim()) : []
     ctx.logger.warn('%s', line)
-    console.error(`[ds-bot] ${line}${frames.length > 0 ? `\n${clean(frames.join('\n'))}` : ''}`)
+    console.error(`[moon-bot] ${line}${frames.length > 0 ? `\n${clean(frames.join('\n'))}` : ''}`)
     note({
       level: 'warn',
       source: 'host',
-      text: line.replace(/^ds-bot: /, ''),
+      text: line.replace(/^(?:ds-bot|moon-bot): /, ''),
       code: typeof (error as { readonly code?: unknown } | undefined)?.code === 'string' ? String((error as { readonly code?: string }).code) : undefined,
       stack: error?.stack,
     })

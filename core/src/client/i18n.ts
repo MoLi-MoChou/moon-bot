@@ -1,8 +1,8 @@
-// Interface copy follows the DSH language. Keys are the English text; `zh` maps them.
+// Interface copy follows the interface language. Keys are the English text; `zh` maps them.
 // Copy is looked up at render time and every slot outlet re-renders on a language
 // switch, so nothing caches a translated string.
 
-export const NAMESPACE = 'ds-bot'
+export const NAMESPACE = 'moon-bot'
 
 import { ZH } from './i18n/zh.ts'
 import type { I18nKey } from './i18n/keys.ts'
@@ -10,7 +10,7 @@ import type { I18nKey } from './i18n/keys.ts'
 // Callers take the key type from here, beside t().
 export type { I18nKey } from './i18n/keys.ts'
 
-// The DSH locale service, as far as this client uses it.
+// The host locale service, as far as this client uses it.
 interface LocaleService {
   register: (namespace: string, language: string, table: Record<string, string>) => unknown
   bind: (namespace: string) => (key: string, params?: Record<string, unknown>) => string
@@ -18,7 +18,7 @@ interface LocaleService {
 }
 
 const HOST_ERRORS: readonly (readonly [RegExp, string])[] = [
-  // Approval refusal from DSH (shows in chat + sidebar preview when the user rejects).
+  // Approval refusal from the host (shows in chat + sidebar preview when the user rejects).
   [/^Error:\s*the user rejected escalating this command to danger-full-access\.?$/i, '你拒绝了完全访问权限，命令没有执行'],
   [/^the user rejected escalating this command to danger-full-access\.?$/i, '你拒绝了完全访问权限，命令没有执行'],
   [/^Error:\s*the user rejected escalating this command to workspace-write\.?$/i, '你拒绝了工作区写入权限，命令没有执行'],
@@ -96,7 +96,7 @@ const fill = (text: string, params?: Record<string, unknown>): string => (params
 let service: LocaleService | null = null
 let bound: ((key: string, params?: Record<string, unknown>) => string) | null = null
 
-// `locale` is the DSH locale service; without one, copy stays English.
+// `locale` is the host locale service; without one, copy stays English.
 export function installLocale(locale: LocaleService | null | undefined): () => void {
   if (!locale || typeof locale.register !== 'function' || typeof locale.bind !== 'function') return () => {}
   service = locale
@@ -183,7 +183,7 @@ export function errorCopy(code: string | null | undefined, message?: string): st
   return [generic, reason, brand(zh ? copy.hintZh : copy.hint)].filter(Boolean).join(' ')
 }
 
-// The active DSH language tag, for dates and times.
+// The active the host language tag, for dates and times.
 export function language(): string {
   const active = service?.getLocale?.().active
   return typeof active === 'string' ? active : 'en'

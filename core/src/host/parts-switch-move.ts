@@ -2,17 +2,17 @@
 // on, the working folder it starts in, and the input the old part hands over. The switch
 // lifecycle and its state tables stay in `parts-switch.ts`, which owns this factory.
 import { createUserMessage } from './llm-bits.ts'
-import type { LlmMessageSource, LlmTextBlock } from './dsh-types.js'
+import type { LlmMessageSource, LlmTextBlock } from './host-types.js'
 import { REPLY_KIND, SOURCE_KIND } from './constants.ts'
 import { estimateTokens, splitRef } from './text.ts'
-import type { DshContext } from './dsh-types.js'
+import type { HostContext } from './host-types.js'
 import type { TurnInfo } from './runtime.js'
 
 export const FOLDER_RETRY_MS = 300_000
 
 /** A Bot's own chat, or its Session in one group. */
 export interface SwitchOwner { readonly botId: string; readonly roomId?: string | undefined }
-/** One message the switch hands on, as DSH's inbox keeps it. */
+/** One message the switch hands on, as the host's inbox keeps it. */
 export interface SwitchMessage { readonly id: string; readonly content?: readonly LlmTextBlock[] | undefined; readonly source?: LlmMessageSource | undefined }
 export type InboxTarget = 'next-step' | 'next-turn'
 export interface SwitchInbox {
@@ -84,7 +84,7 @@ export interface PartMoveRuntime {
   warn(template: string, ...args: readonly unknown[]): void
 }
 export interface PartMoveOptions {
-  readonly ctx: DshContext; readonly rt: PartMoveRuntime; readonly state: SwitchState; readonly tables: SwitchTables
+  readonly ctx: HostContext; readonly rt: PartMoveRuntime; readonly state: SwitchState; readonly tables: SwitchTables
   placeOf(sessionId: string): SwitchOwner | undefined; tokensOf(session: SwitchSession): number | undefined
   contextLines(session: SwitchSession): Promise<Lines | undefined>
   writeNote(agent: SwitchAgent, signal: AbortSignal, options?: { readonly folder?: boolean | undefined }): Promise<WrittenNote>
@@ -115,7 +115,7 @@ export function createPartMove({ ctx, rt, state, tables, placeOf, tokensOf, cont
     const pending: { readonly source?: LlmMessageSource | undefined }[] = [...agent.inbox.nextStep, ...agent.inbox.nextTurn]
     for (const message of messages) {
       const kind = message.source?.kind
-      // DSH's notice of a folder change is about the Session it was queued in; the part
+      // the host's notice of a folder change is about the Session it was queued in; the part
       // that goes on has its own folder, which its handoff names.
       if (kind === 'working-directory') continue
       const exchangeId = message.source?.exchangeId
@@ -169,14 +169,14 @@ export function createPartMove({ ctx, rt, state, tables, placeOf, tokensOf, cont
           await forward(owner, held)
           for (const message of held) agent.inbox.remove(message.id)
           await ctx.workspaceRegistry.archiveSession(sessionId)
-            .catch(error => rt.warn('ds-bot: earlier part %s not archived: %s', sessionId, error))
+            .catch(error => rt.warn('moon-bot: earlier part %s not archived: %s', sessionId, error))
         } else {
-          try { wake(agent) } catch (error) { rt.warn('ds-bot: part %s could not be woken for its kept input: %s', sessionId, error) }
+          try { wake(agent) } catch (error) { rt.warn('moon-bot: part %s could not be woken for its kept input: %s', sessionId, error) }
         }
         delete state.switching[sessionId]
         await rt.save()
       } catch (error) {
-        rt.warn('ds-bot: input kept in part %s was not handed on: %s', sessionId, error)
+        rt.warn('moon-bot: input kept in part %s was not handed on: %s', sessionId, error)
       }
     }
   }
@@ -194,7 +194,7 @@ export function createPartMove({ ctx, rt, state, tables, placeOf, tokensOf, cont
     const split = splitRef(ref)
     const route = split === undefined ? {} : split
     return rt.selectSessionModel(sessionId, { ...route, ...(effort === undefined ? {} : { reasoningEffort: effort }) })
-      .catch(error => rt.warn('ds-bot: model for the fresh part of %s not applied: %s', bot.name, error))
+      .catch(error => rt.warn('moon-bot: model for the fresh part of %s not applied: %s', bot.name, error))
   }
 
   // The folder a part should move to, when it is not the one the part was made in. A
@@ -246,10 +246,10 @@ export function createPartMove({ ctx, rt, state, tables, placeOf, tokensOf, cont
       const wait = noteCooldownMs[Math.min(count, noteCooldownMs.length) - 1] ?? noteCooldownMs[noteCooldownMs.length - 1] ?? 0
       tables.noteFailures.set(agent.id, { count, until: Date.now() + wait })
       job.noteFailed = true
-      rt.warn('ds-bot: handoff note for %s failed (%d in a row); part %d goes on, next try in %ds: %s', bot.name, count, number, wait / 1000, failure)
+      rt.warn('moon-bot: handoff note for %s failed (%d in a row); part %d goes on, next try in %ds: %s', bot.name, count, number, wait / 1000, failure)
       return
     }
-    if (failure !== undefined) rt.warn('ds-bot: handoff note for %s failed past the hard line; moving on with the earlier note: %s', bot.name, failure)
+    if (failure !== undefined) rt.warn('moon-bot: handoff note for %s failed past the hard line; moving on with the earlier note: %s', bot.name, failure)
     const previous = parts.at(-2)
     const noted: Pick<SwitchSegment, 'note' | 'noteFrom' | 'fallback'> = written !== undefined ? { note: written.note }
       : { fallback: whole ? 'whole' : job.failed !== undefined ? 'failure' : job.overflow ? 'overflow' : 'failed', ...(previous?.note ? { note: previous.note, noteFrom: previous.noteFrom ?? previous.number } : {}) }
@@ -261,14 +261,14 @@ export function createPartMove({ ctx, rt, state, tables, placeOf, tokensOf, cont
     const picked = await freshRoute(bot, session)
     if (picked !== undefined) await selectRoute(bot, freshId, picked)
     await rt.applyPermission(bot, freshId, room)
-      .catch(error => rt.warn('ds-bot: permission for the fresh part of %s not applied: %s', bot.name, error))
+      .catch(error => rt.warn('moon-bot: permission for the fresh part of %s not applied: %s', bot.name, error))
     // The fresh part took several awaits: a Bot or group deleted meanwhile, a member that
     // left, or a part that is no longer the current one gets no fresh part.
     const current = room !== undefined ? room.sessions?.[bot.id] : rt.chatOf(bot.id)
     const gone = rt.botOf(bot.id) === undefined || (room !== undefined && (rt.roomOf(room.id) !== room || !room.members.includes(bot.id)))
     if (gone || current !== agent.id) {
       await ctx.workspaceRegistry.archiveSession(freshId, { stopActivity: true })
-        .catch(error => rt.warn('ds-bot: unused fresh part of %s not archived: %s', bot.name, error))
+        .catch(error => rt.warn('moon-bot: unused fresh part of %s not archived: %s', bot.name, error))
       return
     }
     const segment: SwitchSegment = { sessionId: agent.id, endedAt: Date.now(), ...(tokens !== undefined ? { tokens } : {}), ...noted }
@@ -314,7 +314,7 @@ export function createPartMove({ ctx, rt, state, tables, placeOf, tokensOf, cont
       // A fresh part that is not where it was made for would move on at every step.
       if (intended !== undefined && cwd !== undefined && cwd !== intended) {
         tables.folderRetry.set(freshId, Date.now() + FOLDER_RETRY_MS)
-        rt.warn('ds-bot: the fresh part of %s did not start in %s; it works in %s', bot.name, intended, cwd)
+        rt.warn('moon-bot: the fresh part of %s did not start in %s; it works in %s', bot.name, intended, cwd)
       }
       const text = handoffPackage({ room, segment, lines: carried, number: number + 1, resume, overflow: job.overflow, failed: job.failed, bare: job.bare, folder })
       tables.freshParts.set(freshId, estimateTokens(text))
@@ -336,7 +336,7 @@ export function createPartMove({ ctx, rt, state, tables, placeOf, tokensOf, cont
         throw error
       })
     }
-    ctx.logger.info('ds-bot: %s%s moved on to part %d at %d tokens (check line %d, hard line %d); %s; %d latest and %d earlier messages carried%s', bot.name, room ? ` in ${room.name}` : '', number + 1, tokens ?? -1, lines?.check ?? -1, lines?.hard ?? -1,
+    ctx.logger.info('moon-bot: %s%s moved on to part %d at %d tokens (check line %d, hard line %d); %s; %d latest and %d earlier messages carried%s', bot.name, room ? ` in ${room.name}` : '', number + 1, tokens ?? -1, lines?.check ?? -1, lines?.hard ?? -1,
       written !== undefined ? `note written in ${written.attempts} attempt(s)` : `note put together by Moon Bot (${noted.fallback}${noted.note ? `, carries part ${noted.noteFrom}'s` : ', nothing to carry'})`,
       carried.recent.length, carried.earlier.length, folder === undefined ? '' : `; now works in ${folder}`)
   }

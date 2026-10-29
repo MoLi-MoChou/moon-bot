@@ -44,7 +44,7 @@ test('the checks catch what they look for and pass what they allow', () => {
   assert.deepEqual(checks.colors('x.js', '.a{color:#12AB56;background:rgba(1, 2, 3, .5);box-shadow:0 1px 2px rgba(0,0,0,.1)}'), ['#12ab56', 'rgba(1,2,3,.5)'])
   assert.deepEqual(checks.colors('x.js', '.a{border:1px solid Red;fill:oklch(60% .2 20);stroke:currentColor;color:var(--bt-green)}'), ['oklch(60% .2 20)', 'red'])
   assert.deepEqual(checks.colors('x.js', "const bot = { color: 'gray' }"), [])
-  assert.deepEqual(checks.colors('design/tokens.ts', 'body{--bt-x:#fff}\nbody[data-ds-dark-theme]{--bt-x:white}'), [])
+  assert.deepEqual(checks.colors('design/tokens.ts', 'body{--bt-x:#fff}\nbody[data-bt-dark]{--bt-x:white}'), [])
   assert.deepEqual(checks.colors('design/tokens.ts', '.a{--bt-x:#fff}'), ['#fff'])
   assert.deepEqual(checks.colors('x.js', 'body{--bt-x:#fff}'), ['#fff'])
   assert.deepEqual(checks.colors('x.js', '.m{mask-image:linear-gradient(to top,transparent,#000 calc(100% - 8px))}'), [])

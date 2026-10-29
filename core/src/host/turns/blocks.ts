@@ -1,6 +1,6 @@
 // The content blocks a turn event carries, and the attachments among them: what the
 // router reads when a message lands inside a turn (a group post, a request, an image).
-import type { AttachmentRef, MessageContentBlock } from '../dsh-types.js'
+import type { AttachmentRef, MessageContentBlock } from '../host-types.js'
 
 export const contentOf = (value: unknown): readonly MessageContentBlock[] => (Array.isArray(value) ? value as readonly MessageContentBlock[] : [])
 

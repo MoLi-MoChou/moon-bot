@@ -1,9 +1,9 @@
-// The exact thinking time of a Turn, read from the timed model stream DSH keeps in
+// The exact thinking time of a Turn, read from the timed model stream the host keeps in
 // each assistant/message event: for one step, its last reasoning chunk's time minus
 // its first one's, summed over the turn. assistant/attempt events are skipped on
 // purpose — a failed or retried attempt's thinking never reached the reply.
 import { HISTORY_TIMEOUT_MS } from './constants.ts'
-import type { SessionEvent } from './dsh-types.js'
+import type { SessionEvent } from './host-types.js'
 import type { HostRuntime } from './runtime.js'
 
 /** One entry of a timed model stream. A reasoning-chunks record packs member times as

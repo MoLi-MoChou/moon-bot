@@ -4,7 +4,7 @@
 // for an own chat the module hands it back to `next`, which here is the card's promise —
 // so one card flow serves both, and `approval-answer` on the channel settles it.
 import { randomUUID } from 'node:crypto'
-import type { ApprovalOutcome, ApprovalRequest, ApprovalService } from '../host/dsh-types.js'
+import type { ApprovalOutcome, ApprovalRequest, ApprovalService } from '../host/host-types.js'
 
 export type EmitApproval = (request: ApprovalRequest, next: () => Promise<string>) => void
 

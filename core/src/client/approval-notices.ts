@@ -39,7 +39,7 @@ export function noticeApprovals({ work, roster, shownSession, openSession, since
       const room = entry.roomId !== undefined ? snapshot.roomsById?.[entry.roomId] : undefined
       const note = new Notification(t('{name} is waiting for your approval', { name: snapshot.byId?.[entry.botId]?.name ?? t('A Bot') }), {
         body: [room?.name, entry.tool].filter(Boolean).join(' · '),
-        tag: `ds-bot-approval-${entry.id}`,
+        tag: `moon-bot-approval-${entry.id}`,
       })
       note.onclick = () => {
         window.focus()

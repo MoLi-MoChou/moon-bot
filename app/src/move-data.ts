@@ -68,7 +68,7 @@ export interface MovePlaces {
   readonly from: string
   readonly to: string
   readonly workspace?: string | undefined
-  readonly dshHome: string
+  readonly otherAppHome: string
   readonly program?: string | undefined
 }
 
@@ -76,13 +76,13 @@ export interface MovePlaces {
 export function moveProblem(places: MovePlaces): MoveProblem | undefined {
   const from = real(places.from)
   const to = real(places.to)
-  const dshHome = real(places.dshHome)
+  const otherAppHome = real(places.otherAppHome)
   const workspace = places.workspace === undefined ? undefined : real(places.workspace)
   const program = places.program === undefined ? undefined : real(places.program)
   if (dirname(to) === to) return 'drive'
   if (within(to, from) || within(from, to)) return 'nested'
   if (workspace !== undefined && (within(to, workspace) || within(workspace, to))) return 'workspace'
-  if (within(to, dshHome) || within(dshHome, to)) return 'dsh'
+  if (within(to, otherAppHome) || within(otherAppHome, to)) return 'dsh'
   if (program !== undefined && within(to, program)) return 'program'
   if (existsSync(to) && (!statSync(to).isDirectory() || readdirSync(to).length > 0)) return 'notEmpty'
   return undefined

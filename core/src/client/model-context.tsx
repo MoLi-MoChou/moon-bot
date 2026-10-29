@@ -1,5 +1,5 @@
 import { createElement as h, useEffect, useState } from 'react';
-import { t } from './i18n.ts';
+import { hostText, t } from './i18n.ts';
 import { formatTokens } from './text.ts';
 
 export interface ContextPressure {
@@ -44,4 +44,30 @@ export function useContext(botId: string, isOpen: boolean, actions: { runStats?:
         return () => { live = false; };
     }, [botId, isOpen]);
     return context;
+}
+export interface CompactResult {
+    readonly compacted: boolean;
+    readonly reason?: string | undefined;
+}
+// Asks the host to condense this Bot's current part. The host's sentence is the note.
+export function CompactChat({ botId, compact }: {
+    botId: string;
+    compact?: ((botId: string) => Promise<CompactResult>) | undefined;
+}) {
+    const [busy, setBusy] = useState(false);
+    const [note, setNote] = useState<string | undefined>(undefined);
+    if (compact === undefined || botId === '' || botId === 'new-bot')
+        return null;
+    const run = (): void => {
+        setBusy(true);
+        setNote(undefined);
+        void compact(botId).then(result => {
+            setBusy(false);
+            setNote(result.compacted ? t('This chat was condensed.') : hostText(result.reason ?? 'Condensing this chat did not make room.'));
+        }, () => {
+            setBusy(false);
+            setNote(hostText('Condensing this chat did not make room.'));
+        });
+    };
+    return <div className='bt-ctx-act'>{note ? <span role='status'>{note}</span> : null}<button type='button' disabled={busy} onClick={run}>{busy ? t('Condensing…') : t('Condense this chat')}</button></div>;
 }

@@ -49,7 +49,7 @@ npx @deepseek-ai/dsh@0.2.1-rc.2 web
 
 **Docker（NAS、Linux 服务器）**
 
-[`docker/`](docker/) 目录构建一个带 dsh Web 和 DS Bot 的镜像，适合 NAS 或其他常开的机器。CI 已配置为向 GHCR 发布 linux/amd64 预构建镜像。容器就是 bot 的沙箱：bot 对挂进容器的目录有完全权限，其他的碰不到。见 [`docker/README.md`](docker/README.md)（英文）。
+[`docker/`](docker/) 目录构建一个带 dsh Web 和 DS Bot 的镜像，适合 NAS 或其他常开的机器。CI 已配置为向 GHCR 发布 linux/amd64 预构建镜像。容器就是 bot 的沙箱：bot 对挂进容器的目录有完全权限，其他的碰不到。见 `docker/README.md`（英文）。
 
 ## 配置
 
@@ -97,7 +97,7 @@ ds bot 拥有群聊功能。群聊是非常好的多 bot 协作方式，但它�
 
 ## 开发
 
-插件源码在 [`core/`](ds-bot/)。配置项和内部结构见 [`core/README.md`](core/README.md)，开发、测试和协作方式见 [CONTRIBUTING.zh.md](CONTRIBUTING.zh.md)，版本变化见 [CHANGELOG.md](CHANGELOG.md)。
+插件源码在 [`core/`](ds-bot/)。配置项和内部结构见 [`core/README.md`](../core/README.md)，开发、测试和协作方式见 [CONTRIBUTING.zh.md](../CONTRIBUTING.zh.md)，版本变化见 [CHANGELOG.md](../CHANGELOG.md)。
 
 ## 致谢
 

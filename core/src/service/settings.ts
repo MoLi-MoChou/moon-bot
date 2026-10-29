@@ -1,10 +1,10 @@
 // The standalone settings store (plan §阶段 3): the settings sections the providers
 // module reads and writes, in their own JSON file under the team home. `describe`
-// answers the section shape DSH's settings served; `mutate` applies set/remove
+// answers the section shape the host's settings served; `mutate` applies set/remove
 // operations on a path. One revision counter per file keeps optimistic writes honest.
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import type { SettingsOperation, SettingsSection, SettingsService } from '../host/dsh-types.js'
+import type { SettingsOperation, SettingsSection, SettingsService } from '../host/host-types.js'
 
 interface SettingsFile {
   readonly version: 1
@@ -83,7 +83,7 @@ export class FileSettings implements SettingsService {
     const section = file.sections[ns] ??= {}
     for (const operation of operations) {
       if (operation.op === 'set') setAt(section, operation.path, operation.value)
-      // `unset` is the name the host modules use (DSH's settings vocabulary).
+      // `unset` is the name the host modules use (the host's settings vocabulary).
       else if (operation.op === 'unset' || operation.op === 'remove') removeAt(section, operation.path)
     }
     file.revision += 1

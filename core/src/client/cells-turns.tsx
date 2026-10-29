@@ -243,12 +243,12 @@ export function openingTurn(turns: TurnTable | undefined, firstTurns: string, hi
 }
 // Began after the user last left the conversation and before this visit opened it.
 export const unseenSince = (visit: Visit | undefined, time: number): boolean => typeof visit?.seen === 'number' && time > visit.seen && time <= visit.entered;
-// An entry in DSH's own turn tail, after what other plugins put there (the cards of
+// An entry in the host's own turn tail, after what other plugins put there (the cards of
 // the files a turn delivered). The tail sits right before the next turn's first row,
 // so the separator for a pause between turns renders here.
 export function TurnTailCell({ turn: location, sessionId, useTurnClock, useUi, actions }: TurnTailCellProps) {
     const turn = location.turn;
-    // DSH builds the tail from the turn's end, so it is there.
+    // the host builds the tail from the turn's end, so it is there.
     const time = location.end.time;
     useEffect(() => { actions.noteTurnTime(sessionId, turn, 'end', time); }, [sessionId, turn, time]);
     const label = useTurnClock((state) => {

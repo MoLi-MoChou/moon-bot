@@ -179,7 +179,7 @@ test('stopping a round stops the member turn it started, and that turn posts not
   result.stop()
   await settle(() => result() !== undefined)
   await settle(() => host.agentOf('gb').cancelled.length === 1)
-  assert.equal(host.agentOf('gb').cancelled[0].reason, 'ds-bot/stopped')
+  assert.equal(host.agentOf('gb').cancelled[0].reason, 'moon-bot/stopped')
   // The turn may end with text before the stop lands.
   host.emit('gb', 'assistant/message', { message: { content: [{ type: 'text', text: 'Done anyway.' }] } })
   host.emit('gb', 'turn/end', { turn: 1, reason: { kind: 'completed' } })

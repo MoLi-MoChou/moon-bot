@@ -1,9 +1,9 @@
 // The standalone host context (plan §阶段 3): the surface the host modules install on,
-// without DSH. It is the production sibling of the test fakeContext — routes are
+// without the host. It is the production sibling of the test fakeContext — routes are
 // captured for the service to serve, listeners fan out for real, effects are disposed
 // on close — while services the standalone product does not ship yet stay absent, which
 // the host modules already tolerate (the whole suite runs on less than this).
-import type { Disposer } from '../host/dsh-types.js'
+import type { Disposer } from '../host/host-types.js'
 
 /** A history page request, as the host's pagers ask it. */
 export interface PageRequest {
@@ -22,7 +22,7 @@ export interface PageAnswer {
 /**
  * The standalone host context: the surface the host modules install on, shaped like the
  * test fakeContext (a plain object cast at the composition site) rather than the full
- * DSH context type, which names services the standalone product does not ship.
+ * the host context type, which names services the standalone product does not ship.
  */
 
 /** One registered fetch route, as the host modules register them. */
@@ -104,7 +104,7 @@ export class ServiceContext {
   }
 
   /**
-   * DSH's late service injection. The standalone service has no sub-plugins: a named
+   * the host's late service injection. The standalone service has no sub-plugins: a named
    * service that exists is handed over at once, one that does not never arrives — the
    * calling module keeps its absent-service behavior (goals stay unblocked, and so on).
    */
@@ -168,7 +168,7 @@ export class ServiceContext {
       if (this.pageImpl === undefined) return { records: [], hasMore: false }
       return this.pageImpl(input)
     },
-    // A user message into a session: DSH queued it in the inbox; the standalone engine
+    // A user message into a session: the host queued it in the inbox; the standalone engine
     // takes it as the turn's trigger, with the user source the route expects.
     prompt: async (input: { readonly sessionId: string, readonly content: readonly unknown[], readonly mode?: string }, signal?: AbortSignal): Promise<void> => {
       if (this.agentOf === undefined) throw Object.assign(new Error('Session unavailable'), { code: 'bot/unavailable' })

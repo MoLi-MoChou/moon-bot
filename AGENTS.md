@@ -22,7 +22,7 @@ Moon Bot 是一支长期存在的 Bot 小队，跑在自己的运行时上，不
 
 ## 硬规则
 
-1. **运行时必须是我们自己的。** Bot 功能走 host 服务和 `AgentRuntime` 接缝；kernel 留在接缝后面（内置引擎或 ACP 适配器），host 代码永远不直接调用它。`@deepseek-ai` 已从 `core/`、`app/` 的依赖里移除，不要加回来；`core/src/host/dsh-types.d.ts` 只是历史接缝留下的**类型**声明（只能 `import type`），`app/src/move-data.ts` 只把 `DSH_HOME`/`~/.dsh` 当作「别的应用的数据目录」来避开，都不是运行时依赖。
+1. **运行时必须是我们自己的。** Bot 功能走 host 服务和 `AgentRuntime` 接缝；kernel 留在接缝后面（内置引擎或 ACP 适配器），host 代码永远不直接调用它。`@deepseek-ai` 已从 `core/`、`app/` 的依赖里移除，不要加回来；`core/src/host/host-types.d.ts` 只是历史接缝留下的**类型**声明（只能 `import type`），`app/src/move-data.ts` 只把 `DSH_HOME`/`~/.dsh` 当作「别的应用的数据目录」来避开，都不是运行时依赖。
 2. **不要密钥。** 永远不要写、打印或提交 API key、token、cookie 或数据目录里的密钥。测试用 mock 模型（[`core/dev/mock-llm.ts`](core/dev/mock-llm.ts)），不需要 key。
 3. **只用原创材料。** 不要从别的产品或网站复制代码、文字、图标、logo 或图形。只有与 Apache-2.0 兼容的许可证是例外：写明出处，并把它的 notice 加进 `NOTICE`。
 4. **`client.js` 和 `dist/` 是生成物，不提交。** 根 `postinstall` 在安装时构建它们；改 `core/src/` 后运行 `npm run build`（或 `cd core && npm run build`）。永不手改产物，永不提交产物（`core/client.js`、`core/dist/`、`app/ui/dist/`、`app/dist-main/` 都在 `.gitignore` 里）。
@@ -36,6 +36,7 @@ Moon Bot 是一支长期存在的 Bot 小队，跑在自己的运行时上，不
 npm ci                                 # 安装三个 workspace，然后构建 client.js 和 dist/
 npm run build                          # 源码改动后重建产物
 npm test                               # 单元测试（含一个断言 client.js 与源码一致）
+npm run test:related -w moon-bot-core  # 只跑碰得到改动的测试；迭代用，完成定义仍是三件套
 npm run typecheck                      # tsc --noEmit，strict
 npm run lint                           # oxlint + 架构/行数/floating-promise 门禁
 npm run eval                           # 五项能力的评测集
@@ -94,7 +95,7 @@ npm run web -w moon-bot                # 网页版：密码页 + 服务，默认
 
 界面在 `core/src/client/`，被两种宿主加载：服务托管的网页和桌面窗口（见 [app/AGENTS.md](app/AGENTS.md)）。细节见 [`core/src/client/AGENTS.md`](core/src/client/AGENTS.md)。
 
-- **内建标签一律 JSX。** `div`、`span`、`button` 这类原生标签写成 JSX，`h('tag')` 在两棵客户端树（`core/src/client`、`app/ui/src`）里由 `core/scripts/check-gates.mjs` 的 `intrinsic-h` 门禁禁止，`.ts` 文件同样在内；需要在纯 `.ts` 里写内建标签时，把该文件改成 `.tsx`（`dsh-primitives.ts` 就是这样来的），不要为了留在 `.ts` 而开例外。
+- **内建标签一律 JSX。** `div`、`span`、`button` 这类原生标签写成 JSX，`h('tag')` 在两棵客户端树（`core/src/client`、`app/ui/src`）里由 `core/scripts/check-gates.mjs` 的 `intrinsic-h` 门禁禁止，`.ts` 文件同样在内；需要在纯 `.ts` 里写内建标签时，把该文件改成 `.tsx`（`primitives.tsx` 就是这样来的），不要为了留在 `.ts` 而开例外。
 - **组件：静态的写 JSX，动态的才留 `h()`。** 元素类型和 props 在源码里固定的，写成 `<Tick on={...}/>`；元素类型来自变量（`h(entry.component, …)`）、props 来自外部对象、或上下文写不了 JSX 的，才保留 `h(Comp, …)`。静态组件的 JSX 迁移正在进行，新代码不再写静态 `h(Comp)`。
 - **JSX 仍然编译成 `h()`。** `core/tsconfig.json` 是 classic transform（`jsx: react` + `jsxFactory: h`），[`core/scripts/build-client.ts`](core/scripts/build-client.ts) 用同一套；不要引入 `react/jsx-runtime`（宿主只提供 `react`/`react-dom`，[`core/test/client-bundle.test.ts`](core/test/client-bundle.test.ts) 会失败）。
 - **设计 token 不写字面量。** 颜色、圆角、弹簧只用 `--bt-*` 变量和 [`core/src/client/motion.tsx`](core/src/client/motion.tsx) 的预设；门禁是 [`core/test/style-debt.test.ts`](core/test/style-debt.test.ts) + `core/test/style-debt.json`（这份债只减不增）。

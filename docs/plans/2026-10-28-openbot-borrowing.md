@@ -29,19 +29,19 @@
 |---|---|---|---|---|---|
 | 5 | 真 inbox（队列唯一可读来源） | 运行时 1 | `engine/builtin/bridge.ts`、`tasks-panel.ts`、`resume.ts`、`tools/shared.ts`、`groups.ts` | S | `waiting[]` 成为唯一真相，`inbox.nextTurn` 是只读视图且 `remove` 真删；`pendingTurns()` 与其数量一致；三处既有读点第一次能看到排队输入 |
 | 6 | 排队交互 v1（列出 + 撤销） | 产品 2 | `host/turns/*`、`shared/rpc.ts`、`client` 等待块 | M | 能看见是哪几条、按 id 撤销；已开始的返回 `cancelled:false` 并如实说明；编辑/重排留给下一版 |
-| 7 | 公共棘轮 + 两条新门禁 | 工程 10/11/12 | `core/scripts/ratchet.mjs`、`check-gates.mjs`、`test/fixtures/gates/{jsx,sleep}/` | S–M | `--write` 只降不升；静态 `h(Comp)` 存量上基线；测试里等时钟的写法在 lint 阶段报出文件行；两者都有会红的夹具 |
+| 7 | 公共棘轮 + 两条新门禁（已完成） | 工程 10/11/12 | `core/scripts/ratchet.mjs`、`check-gates.mjs`、`test/fixtures/gates/{jsx,sleep}/` | S–M | `--write` 只降不升；静态 `h(Comp)` 存量上基线；测试里等时钟的写法在 lint 阶段报出文件行；两者都有会红的夹具 |
 | 8 | 上下文可观测 + 手动压缩 | 运行时 8/9 | `host/channel/ops-team.ts`、`host/parts.ts`、`shared/rpc.ts`、`client/model-context.tsx` | M | 无 `sessionProjections` 时 `run-stats` 仍有数字；手动压缩只在无运行回合、无未读投递时接受；拒绝原因要说清 |
-| 9 | 文档链接检查 | 工程 14 | 新增 `scripts/check-docs.mjs`、`test.yml` job | S | 相对 md 链接与锚点可解析；失败给出文件与目标；允许清单写理由 |
+| 9 | 文档链接检查（已完成） | 工程 14 | 新增 `scripts/check-docs.mjs`、`test.yml` job | S | 相对 md 链接与锚点可解析；失败给出文件与目标；允许清单写理由 |
 
 ### P2（结构性，需要设计文档）
 
 | # | 事项 | 来源 | 量 | 说明 |
 |---|---|---|---|---|
-| 10 | 投递/回合表 + 状态机，崩溃恢复三分法（先结清、再对账、后补历史） | 运行时 4/10/11 | M | 队列、恢复、审批重放共用一份可查询事实；「自动重跑」收窄为「结清 + 告知发送方 + 继续按钮」 |
-| 11 | 引擎能力描述符 + 健康状态 + doctor | 运行时 7/12/13 | S–M | 描述符只许更保守；`doctor` 走「可执行 → 版本 → 握手 → 一次最小回合」，不发 prompt、不落凭据 |
-| 12 | 错误码补 `QUOTA`/`OVERLOADED`，stderr 噪声分层 | 运行时 14/15 | S | 区分「可重试」与「要用户处理」；无害 stderr 只进日志 |
-| 13 | 群聊归档与恢复 | 产品 3 | M | `archivedAt` 一个字段；归档 ≠ 删除；旧 `state.json` 视为未归档 |
-| 14 | `test:related` | 工程 17 | M | 只用于迭代提速；完成定义仍是全量三件套 |
+| 10 | 投递/回合表 + 状态机，崩溃恢复三分法（先结清、再对账、后补历史）（已完成） | 运行时 4/10/11 | M | 队列、恢复、审批重放共用一份可查询事实；「自动重跑」收窄为「结清 + 告知发送方 + 继续按钮」 |
+| 11 | 引擎能力描述符 + 健康状态 + doctor（已完成） | 运行时 7/12/13 | S–M | 描述符只许更保守；`doctor` 走「可执行 → 版本 → 握手 → 一次最小回合」，不发 prompt、不落凭据 |
+| 12 | 错误码补 `QUOTA`/`OVERLOADED`，stderr 噪声分层（已完成） | 运行时 14/15 | S | 区分「可重试」与「要用户处理」；无害 stderr 只进日志 |
+| 13 | 群聊归档与恢复 | 产品 3 | M | 已完成：[群聊归档](2026-10-29-group-archive.md)。`archivedAt` 一个字段；归档 ≠ 删除；旧 `state.json` 视为未归档 |
+| 14 | `test:related` | 工程 17 | M | 已完成：[相关测试](2026-10-29-related-tests.md)。`npm run test:related -w moon-bot-core`；只用于迭代提速，完成定义仍是全量三件套 |
 
 ## 明确不做（详见各研究文档的「不要借鉴」）
 
@@ -66,4 +66,4 @@
 
 执行规则：每个切片独立 commit，禁止把未验证的多个小时合成一个提交；UI 变更必须同时有组件测试与真实浏览器证据。若安全或迁移语义需要扩大范围，先停在设计文档，不为了赶五小时降低审批或数据安全标准。
 
-先 `P0 2 → 3 → 4`（都是洞），再 `P1 5 → 6 → 7 → 8`，P2 每项单独立设计文档。P0 的第 1 项已完成，见 commit `90d6fcb`。
+先 `P0 2 → 3 → 4`（都是洞），再 `P1 5 → 6 → 7 → 8`，P2 每项单独立设计文档。P0 的第 1 项已完成，见 commit `90d6fcb`。P1 的第 5、6 项收成一份已定设计：[会话队列](2026-10-29-session-queue.md)。P1-8 的数字一半见 [上下文数字](2026-10-29-context-stats.md)，手动压缩见 [手动压缩](2026-10-29-manual-compact.md)。P1-7 的棘轮在 `core/scripts/ratchet.mjs`：`--write` 只降不升，静态 `h(Comp)` 的基线是 `core/test/jsx-debt.json`，测试里的字面量 `setTimeout` 等待由 `check-gates` 按文件报行，存量在 `core/test/sleep-debt.json`。P1-9 的文档链接在 `scripts/check-docs.mjs`，CI 的 `docs` job 跑它。P2-11 的描述符见 [引擎能力描述符](2026-10-29-engine-capabilities.md)，健康状态见 [引擎健康](2026-10-29-engine-health.md)，doctor 见 [引擎 doctor](2026-10-29-engine-doctor.md)。P2-12 见 [失败码：额度与过载](2026-10-29-failure-codes.md)。P2-10 的恢复见 [崩溃恢复](2026-10-29-crash-recovery.md)。P2-13 的群聊归档见 [群聊归档](2026-10-29-group-archive.md)。

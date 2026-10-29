@@ -1,10 +1,10 @@
-// The DSH client context `apply(ctx)` receives, as far as Moon Bot's client entry reads it.
+// The host client context `apply(ctx)` receives, as far as Moon Bot's client entry reads it.
 //
-// DSH hands the client a context object that no package here declares; these are structural
-// types for the services the client uses, written without depending on files inside a DSH
+// the host hands the client a context object that no package here declares; these are structural
+// types for the services the client uses, written without depending on files inside a host
 // install. Nothing in this module runs: it is types only.
 //
-// A value DSH owns but this client only passes along (a speech remote, a slot entry's store)
+// A value the host owns but this client only passes along (a speech remote, a slot entry's store)
 // stays `unknown`; everything the client reads is named here.
 
 import type { CustomShape, ThemeDefinition } from './themes.ts'
@@ -162,7 +162,7 @@ export interface AtMenuSlot {
 // ---------------------------------------------------------------------------
 // The context itself
 
-/** One DSH theme token, light and dark, as `theme.overrideTokens` takes it. */
+/** One the host theme token, light and dark, as `theme.overrideTokens` takes it. */
 export interface ThemeTokenPair {
   readonly light: string
   readonly dark: string
@@ -188,21 +188,21 @@ export interface ClientContext extends EffectScope {
 // ---------------------------------------------------------------------------
 // Globals the client bundle runs with
 
-/** The registration hub a theme or shape plugin receives through `window.dshBot`. */
-export interface DshBotHub {
+/** The registration hub a theme or shape plugin receives through `window.moonBot`. */
+export interface BotHub {
   registerShape(id: string, shape: CustomShape): Disposer
   registerTheme(id: string, theme: ThemeDefinition): Disposer
   themes(): string[]
   shapes(): string[]
 }
-export type DshBotTask = (hub: DshBotHub) => void
+export type BotTask = (hub: BotHub) => void
 /** Before this plugin loads, tasks queue on an array; afterwards, on `push`. */
-export type DshBotQueue = DshBotTask[] | { push(task: DshBotTask): void }
+export type BotQueue = BotTask[] | { push(task: BotTask): void }
 
 declare global {
   interface Window {
-    dshBot?: DshBotHub
-    dshBotQueue?: DshBotQueue
+    moonBot?: BotHub
+    moonBotQueue?: BotQueue
   }
   /** The app version the client build writes in. */
   const __MOON_BOT_VERSION__: string | undefined

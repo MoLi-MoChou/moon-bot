@@ -79,7 +79,7 @@ export function createPartNote(options: PartNoteOptions): PartNote {
       } else {
         return { note, attempts: attempt }
       }
-      rt.warn('ds-bot: handoff note attempt %d of %d for %s not used: %s', attempt, NOTE_ATTEMPTS, session.id, problem)
+      rt.warn('moon-bot: handoff note attempt %d of %d for %s not used: %s', attempt, NOTE_ATTEMPTS, session.id, problem)
     }
     throw new Error(`no usable note in ${NOTE_ATTEMPTS} attempts; the last one: ${problem}`)
   }
@@ -176,9 +176,9 @@ export function createPartNote(options: PartNoteOptions): PartNote {
     try {
       const action = await askSteward(agent, { midTurn })
       if (action !== undefined) return action
-      rt.warn('ds-bot: the context steward gave no usable answer for %s; moving on to a fresh part', agent.id)
+      rt.warn('moon-bot: the context steward gave no usable answer for %s; moving on to a fresh part', agent.id)
     } catch (error) {
-      rt.warn('ds-bot: the context steward failed for %s; moving on to a fresh part: %s', agent.id, error)
+      rt.warn('moon-bot: the context steward failed for %s; moving on to a fresh part: %s', agent.id, error)
     }
     return 'switch'
   }
@@ -207,7 +207,7 @@ export function createPartNote(options: PartNoteOptions): PartNote {
     } catch (error) {
       if (!inTurn && (error as { readonly code?: string } | undefined)?.code === 'busy') return undefined
       if (!inTurn && (error as { readonly code?: string } | undefined)?.code === 'cancelled') return undefined
-      rt.warn('ds-bot: condensing %s failed: %s', agent.id, error)
+      rt.warn('moon-bot: condensing %s failed: %s', agent.id, error)
       return false
     } finally {
       condensing.delete(sessionId)
@@ -216,7 +216,7 @@ export function createPartNote(options: PartNoteOptions): PartNote {
     rt.renewMemory(sessionId)
     const after = tokensOf(agent.session) ?? before
     setPartBase(agent.id, after)
-    logger.info('ds-bot: %s condensed from %d to %d tokens (check line %d, hard line %d)', agent.id, before ?? -1, after ?? -1, lines.check, lines.hard)
+    logger.info('moon-bot: %s condensed from %d to %d tokens (check line %d, hard line %d)', agent.id, before ?? -1, after ?? -1, lines.check, lines.hard)
     // A Session that reports no size after the pass has not provably made room.
     if (after === undefined) return false
     return after < lines.check

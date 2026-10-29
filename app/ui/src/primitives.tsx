@@ -1,5 +1,5 @@
 // The window's own versions of the interface primitives the Bot views draw with (see
-// core/src/client/dsh-primitives.tsx and app/vite.config.js): the markdown renderer the
+// core/src/client/primitives.tsx and app/vite.config.js): the markdown renderer the
 // plugin host would otherwise supply.
 import { createElement as h, useMemo, useRef, useState, type ReactElement } from 'react'
 import Markdown, { type Components } from 'react-markdown'

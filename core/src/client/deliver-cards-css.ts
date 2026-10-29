@@ -12,7 +12,7 @@ export const DELIVER_CSS = `
 .bt-dcard-name{font-size:13px;line-height:18px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bt-dcard-meta{font-size:12px;line-height:16px;color:var(--bt-ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bt-dcard-big{font-size:11px;line-height:15px;color:var(--bt-ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.bt-fpreview-layer{position:fixed;inset:var(--dsh-frame-chrome-top,0px) 0 0;z-index:62;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;animation:bt-veil-in .16s ease-out}
+.bt-fpreview-layer{position:fixed;inset:var(--bt-frame-chrome-top,0px) 0 0;z-index:62;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;animation:bt-veil-in .16s ease-out}
 .bt-fpreview{display:flex;flex-direction:column;width:min(720px,calc(100vw - 48px));height:min(640px,calc(100vh - 64px));border:.5px solid var(--bt-line-2);border-radius:16px;background:var(--bt-main);box-shadow:0 24px 80px rgba(0,0,0,.24);overflow:hidden;color:var(--bt-ink)}
 .bt-fpreview-head{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:.5px solid var(--bt-line-2)}
 .bt-fpreview-copy{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1}

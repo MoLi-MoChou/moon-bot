@@ -24,7 +24,7 @@ export type MentionSpan =
   | { readonly start: number; readonly end: number; readonly bot: MentionTarget }
   | { readonly start: number; readonly end: number; readonly all: true }
 
-/** One `@label` DSH wrote for a referenced conversation (not a call). */
+/** One `@label` the host wrote for a referenced conversation (not a call). */
 export interface ReferenceSpan {
   readonly start: number
   readonly end: number
@@ -37,7 +37,7 @@ export const speakerOf = (line: LogLineLike): string | null | undefined =>
   line.botId !== undefined && USER_NAMES.includes(String(line.who ?? '').trim().toLowerCase()) ? `Bot "${line.who}"` : line.who
 
 // A letter, digit, "_" or "-" after a name means a longer word ("@Mi" in "@MiniMax"),
-// and "/", "\" or a "." that goes on into a word mean a path: DSH writes a file
+// and "/", "\" or a "." that goes on into a word mean a path: the host writes a file
 // reference as "@docs/guide.md", which must not call a Bot named Docs. A letter,
 // digit, "_", "." or "/" before "@" means an address ("a@b", "medium.com/@Writer").
 const NAME_GOES_ON = /^(?:[a-z0-9_\-/\\]|\.[a-z0-9_-])/i
@@ -61,7 +61,7 @@ export function nameProblem(name: string): string | undefined {
   return undefined
 }
 
-// DSH writes each referenced conversation into the message once as "@label"; that one
+// the host writes each referenced conversation into the message once as "@label"; that one
 // occurrence per listed label is a reference, not a call. Longest labels go first so
 // "@K notes" is never read as the label "K".
 export function referenceSpans(text: string, labels: readonly string[] = []): ReferenceSpan[] {

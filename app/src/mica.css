@@ -2,27 +2,27 @@
    shows through the window, while the sidebar and conversation retain their own surfaces. */
 
 body,
-.dsb-frame {
+.mb-frame {
   background: transparent !important;
 }
 
-.dsb-frame {
+.mb-frame {
   padding-top: 0 !important;
 }
 
-.dsb-side {
-  padding-top: var(--dsb-band) !important;
+.mb-side {
+  padding-top: var(--mb-band) !important;
   background: color-mix(in srgb, var(--bt-sidebar) 45%, transparent) !important;
 }
 
-.dsb-side > .dsb-side-list,
-.dsb-side > .dsb-side-foot {
+.mb-side > .mb-side-list,
+.mb-side > .mb-side-foot {
   background: transparent !important;
 }
 
-.dsb-main {
+.mb-main {
   box-sizing: border-box !important;
-  padding-top: var(--dsb-band) !important;
-  border-top: var(--dsb-band) solid var(--bt-main) !important;
+  padding-top: var(--mb-band) !important;
+  border-top: var(--mb-band) solid var(--bt-main) !important;
   background: var(--bt-main) !important;
 }

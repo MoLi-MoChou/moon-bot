@@ -43,11 +43,13 @@
     "build": "node scripts/build-client.ts && node scripts/build-host.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "node --import ./test/harness-resolve.mjs --test \"test/*.test.ts\"",
+    "test:related": "node scripts/test-related.mjs",
     "lint": "node scripts/lint.mjs",
     "check": "sh dev/check.sh",
     "test:gate": "node scripts/test-gate.mjs",
     "build:host": "node scripts/build-host.mjs",
-    "eval": "node scripts/eval.ts"
+    "eval": "node scripts/eval.ts",
+    "doctor": "node dev/engine-doctor.ts"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",

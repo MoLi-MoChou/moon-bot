@@ -1,6 +1,6 @@
 // The tool registry (plan §阶段 2): Zod is the validation truth for every tool the team
 // serves; the descriptive parameter map rides along for the wire and the UI. Entries
-// keep their lenient executors — the DSH derivation runs them exactly as before — while
+// keep their lenient executors — the host derivation runs them exactly as before — while
 // `definitions()` wraps each in schema validation for the engine path, where a kernel
 // hands the registry what the model wrote, unchecked.
 import { z } from 'zod'
@@ -32,7 +32,7 @@ export interface ToolEntry<TInput = Readonly<Record<string, unknown>>> {
   readonly name: string
   readonly label?: string | undefined
   readonly description: string
-  /** The descriptive parameter map (the DSH wire format) shown to models and the UI. */
+  /** The descriptive parameter map (the host wire format) shown to models and the UI. */
   readonly parameters: Readonly<Record<string, unknown>>
   readonly schema: z.ZodType<TInput>
   execute(input: TInput, context: ToolContext): Promise<ToolOutcome | string>

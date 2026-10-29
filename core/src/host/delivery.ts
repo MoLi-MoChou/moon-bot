@@ -1,4 +1,4 @@
-import type { AttachmentRef, AttachmentsService } from './dsh-types.js'
+import type { AttachmentRef, AttachmentsService } from './host-types.js'
 import type { DeliveryInput, ExchangeEntry, HostRuntime } from './runtime.js'
 
 interface HeaderOptions {
@@ -64,7 +64,7 @@ export function install(rt: HostRuntime): void {
   // exchange is recorded already too. `askedBy` is the member whose @mention called a
   // group turn (groups.js). `fromRoomId`: the group whose Session the sender wrote
   // from; the reply goes back to that Session (turns.js). `files` go along as file
-  // blocks, which DSH turns into a read-only path the recipient's tools can read.
+  // blocks, which the host turns into a read-only path the recipient's tools can read.
   // `length`: the whole message's length when it went as a file (attachLong). `work`:
   // the work (handoffs.ts) a result that came back goes on with. `merged`: a request
   // that takes in an earlier one its recipient had not read, under that one's exchange.
@@ -142,14 +142,14 @@ export function install(rt: HostRuntime): void {
         return { text: headOf(text, TEXT_SHOW_MAX), whole: text.length <= TEXT_SHOW_MAX }
       }
     } catch (error) {
-      rt.warn('ds-bot: message %s not read back: %s', entry.id, error)
+      rt.warn('moon-bot: message %s not read back: %s', entry.id, error)
     }
     return { text: entry.text, whole: false }
   }
 
-  // A message a Bot sends past MESSAGE_INLINE_MAX goes as a DSH file: it is stored once,
+  // A message a Bot sends past MESSAGE_INLINE_MAX goes as a host file: it is stored once,
   // not in every Session it reaches, and the model reads it with its file tools when it
-  // needs it. Undefined when this DSH cannot store files.
+  // needs it. Undefined when the host cannot store files.
   async function attachLong(text: string, name: string): Promise<AttachResult | undefined> {
     if (text.length <= MESSAGE_INLINE_MAX) return { text, files: [] }
     try {
@@ -160,7 +160,7 @@ export function install(rt: HostRuntime): void {
       const note = `[A long message: ${text.length} characters. Its start is below; all of it is in the attached file. Read the file before you act on it.${wide ? ` Some lines are longer than the ${READ_LINE_MAX} characters the read tool shows of a line; read those with a shell command.` : ''}]`
       return { text: `${note}\n${headOf(text, LONG_HEAD)}…`, files: [file], length: text.length }
     } catch (error) {
-      rt.warn('ds-bot: long message not stored as a file: %s', error)
+      rt.warn('moon-bot: long message not stored as a file: %s', error)
       return undefined
     }
   }
@@ -177,7 +177,7 @@ export function install(rt: HostRuntime): void {
         if (text.length > TEXT_SHOW_MAX) return { text: headOf(text, TEXT_SHOW_MAX), whole: false }
       }
     } catch (error) {
-      rt.warn('ds-bot: file %s not read: %s', file?.name, error)
+      rt.warn('moon-bot: file %s not read: %s', file?.name, error)
       return undefined
     }
     text += decoder.decode()

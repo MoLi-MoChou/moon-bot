@@ -75,9 +75,9 @@ test('the shared contract layer exists and names the endpoints both ends share',
   }
 })
 
-test('the host types name the DSH context without importing a DSH install', () => {
-  const types = read('src/host/dsh-types.d.ts')
-  assert.match(types, /export interface DshContext/)
+test('the host types name the HostContext without importing an outside install', () => {
+  const types = read('src/host/host-types.d.ts')
+  assert.match(types, /export interface HostContext/)
   assert.match(types, /sessionController/)
   assert.match(types, /workspaceRegistry/)
   assert.doesNotMatch(types, /from '@deepseek-ai\//)

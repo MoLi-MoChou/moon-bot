@@ -1,6 +1,6 @@
-// File links in a Bot's text, read as DSH's chat reads them: a Markdown link (or image) to
+// File links in a Bot's text, read as the host's chat reads them: a Markdown link (or image) to
 // a path, with an optional #L12 or #L12-L20. A relative path names a file in the folder of
-// the Session that wrote it, and DSH opens it from the folder of the Session that shows it.
+// the Session that wrote it, and the host opens it from the folder of the Session that shows it.
 // Text that goes on to another Session (a group, another Bot) may land in another folder,
 // so its relative file links are made absolute first.
 import { resolve } from 'node:path'
@@ -33,7 +33,7 @@ function relativeFile(destination: string): RelativeFile | undefined {
   return { path, fragment }
 }
 
-// DSH decodes the link back to the path, so `%` and what would end the link are escaped.
+// the host decodes the link back to the path, so `%` and what would end the link are escaped.
 const href = (path: string): string => path.replace(/\\/g, '/').replace(/[%\s()<>]/g, char => `%${char.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0')}`)
 
 /** Makes the relative file links in `text` absolute against `folder`, leaving code alone. */

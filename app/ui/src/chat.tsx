@@ -67,22 +67,29 @@ const insertionOf = (value: unknown): Insertion | undefined => {
   return typeof at.start === 'number' && typeof at.end === 'number' ? { start: at.start, end: at.end } : undefined
 }
 
-function useChat(botId: string | undefined, part: string, feed: Team['chat']) {
+export function useChat(botId: string | undefined, part: string, feed: Team['chat']) {
   const [view, setView] = useState<ChatView>({ sessionId: null, items: [], cursor: null, loading: botId !== undefined, failed: false })
   const [stream, setStream] = useState<StreamState | null>(null)
   const [pending, setPending] = useState<readonly PendingEntry[]>([])
   const ready = useRef(false)
   const early = useRef<readonly EarlyEntry[]>([])
   const busy = useRef(false)
+  const request = useRef(0)
+  const active = useRef<AbortController | null>(null)
   const keep = useRef<number | null>(null)
 
   const load = useCallback(async (cursor: string | null | undefined, scroller?: HTMLElement | null): Promise<void> => {
-    if (busy.current || botId === undefined) return
+    if (botId === undefined || (cursor !== undefined && busy.current)) return
+    const order = ++request.current
+    active.current?.abort()
+    const controller = new AbortController()
+    active.current = controller
     busy.current = true
     if (cursor === undefined) ready.current = false
     setView(current => ({ ...current, loading: true, failed: false }))
     try {
-      const page = await call<ChatPage>('chat', { botId, ...(cursor ? { cursor } : {}) })
+      const page = await call<ChatPage>('chat', { botId, ...(cursor ? { cursor } : {}) }, controller.signal)
+      if (order !== request.current) return
       if (cursor === undefined) {
         const later = early.current.filter(entry => entry.sessionId === page.sessionId && !page.items.some(item => sameItem(item, entry.item)))
         early.current = []
@@ -94,15 +101,28 @@ function useChat(botId: string | undefined, part: string, feed: Team['chat']) {
         setView(current => ({ ...current, items: [...page.items, ...current.items], cursor: page.cursor ?? null, loading: false }))
       }
     } catch {
+      if (order !== request.current || controller.signal.aborted) return
       ready.current = cursor !== undefined || ready.current
       setView(current => ({ ...current, loading: false, failed: true }))
     } finally {
-      busy.current = false
+      if (order === request.current) {
+        busy.current = false
+        if (active.current === controller) active.current = null
+      }
     }
   }, [botId])
 
-  // A new part starts the chat over.
-  useEffect(() => { void load(undefined) }, [load, part])
+  // A new part starts the chat over. Invalidate and cancel the previous request first so its
+  // answer cannot paint the newly selected conversation, even if the transport ignores abort.
+  useEffect(() => {
+    void load(undefined)
+    return () => {
+      request.current += 1
+      active.current?.abort()
+      active.current = null
+      busy.current = false
+    }
+  }, [load, part])
 
   useEffect(() => feed.on((event: string, data: Record<string, unknown>) => {
     // The feed came back after a break: entries may have been missed.
@@ -236,14 +256,14 @@ function Composer({ sessionId, placeholder, disabled, onSend, actions, useUi, us
       setError(failure instanceof Error ? failure.message : String(failure))
     }
   }
-  return <div className='dsb-composer-wrap'>
+  return <div className='mb-composer-wrap'>
     {trigger !== null && !dismissed ? <ComposerMenu trigger={trigger} sessionId={sessionId} useRoster={useRoster} actions={actions} activeIndex={activeIndex} onActiveIndexChange={setActiveIndex} onItemsChange={setMenuItems} onPick={handlePick} onDismiss={() => setDismissed(true)} /> : null}
-    {error !== null ? <p className='dsb-composer-error' role='alert'>{error}</p> : null}
-    <div className='dsb-composer' data-composer-card='' data-multiline={text.includes('\n') || undefined}>
-      <div className='dsb-composer-tools'>
+    {error !== null ? <p className='mb-composer-error' role='alert'>{error}</p> : null}
+    <div className='mb-composer' data-composer-card='' data-multiline={text.includes('\n') || undefined}>
+      <div className='mb-composer-tools'>
         <ComposerPlus sessionId={sessionId} inputActions={inputActions} useRoster={useRoster} actions={actions} />
       </div>
-      <div className='dsb-composer-input' data-input-scroll=''>
+      <div className='mb-composer-input' data-input-scroll=''>
         <div className='bt-mention-field'>
           <MentionMirror field={field} text={text} chips={chips} composing={composing} />
           {/*
@@ -310,9 +330,9 @@ function Composer({ sessionId, placeholder, disabled, onSend, actions, useUi, us
             }} />
         </div>
       </div>
-      <div className='dsb-composer-trailing'>
+      <div className='mb-composer-trailing'>
         <ComposerVoice sessionId={sessionId} inputActions={inputActions} actions={actions} useUi={useUi} />
-        <button type='button' className='dsb-send' disabled={disabled || text.trim() === ''} aria-label={t('Send message')} title={t('Send message')} onClick={() => { void submit() }}>
+        <button type='button' className='mb-send' disabled={disabled || text.trim() === ''} aria-label={t('Send message')} title={t('Send message')} onClick={() => { void submit() }}>
           <ArrowUpIcon />
         </button>
       </div>
@@ -355,24 +375,24 @@ export function Chat({ sessionId, team }: { readonly sessionId: string, readonly
       : view.cursor !== null ? <button type='button' className='bt-soft' onClick={() => { void load(view.cursor, scroller.current) }}>{t('Load earlier')}</button> : null
   const waiting = bot?.waiting === true
 
-  return <div className='dsb-chat'>
-    <div ref={scroller} className='dsb-scroll' data-conversation-scroll='' onScroll={onScroll}>
-      <div className='dsb-column'>
+  return <div className='mb-chat'>
+    <div ref={scroller} className='mb-scroll' data-conversation-scroll='' onScroll={onScroll}>
+      <div className='mb-column'>
         {earlier !== null ? <div className='bt-earlier-top'>{earlier}</div> : null}
-        <div className='dsb-flow' data-chat-flow='' role='feed' aria-label={name} aria-busy={view.loading}>
+        <div className='mb-flow' data-chat-flow='' role='feed' aria-label={name} aria-busy={view.loading}>
           {h(ChatRows, { items: view.items, sessionId, roster, actions: cellActions, useUi: cellUi, clock: true })}
-          {pending.length > 0 ? <div className='dsb-pending'>
+          {pending.length > 0 ? <div className='mb-pending'>
             {queued > 0 ? <span className='bt-pending-queued' title={t('Waiting for the running turn to finish')}>{t('{count} queued', { count: queued })}</span> : null}
             {h(ChatRows, { items: pending, sessionId, roster, actions: cellActions, useUi: cellUi })}
           </div> : null}
           {stream !== null && stream.text !== '' ? <Bubbles texts={[stream.text]} roster={roster} selfId={bot?.id} actions={cellActions} streaming sessionId={sessionId} useUi={cellUi} /> : null}
-          {/* The host slot the activity row portals into. The header pill draws the row itself (as it does under DSH); a second indicator here portals a second row into this same slot. */}
+          {/* The host slot the activity row portals into. The header pill draws the row itself (as it does under the host); a second indicator here portals a second row into this same slot. */}
           <div data-chat-running='' />
           {question !== undefined ? <PendingQuestion key={JSON.stringify([sessionId, question.id])} sessionId={sessionId} question={question} actions={actions} inline /> : null}
         </div>
       </div>
     </div>
-    <div className='dsb-composer-root'>
+    <div className='mb-composer-root'>
       <ModelChoiceDock sessionId={sessionId} useRoster={hooks.useRoster as unknown as ModelChoiceDockProps['useRoster']} actions={asActions<ModelChoiceActions>(actions)} />
       <Composer sessionId={sessionId} disabled={waiting} placeholder={waiting ? t('Pick a model and {name} can start.', { name }) : name !== '' ? t('Message {name}', { name }) : t('Message')} onSend={text => send(text, actions, sessionId)} actions={actions} useUi={hooks.useUi} useRoster={hooks.useRoster} />
     </div>

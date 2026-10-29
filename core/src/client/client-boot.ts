@@ -41,7 +41,7 @@ export function createClientState(ctx: ClientContext): ClientState {
   // style so the shell's own interface returns. `plain` stays false until a Bot-mode
   // view hosts a plain session, which drops only the conversation replacements.
   const surface = createSource<ClientSurface>({ mode: readMode(), plain: false })
-  // DSH Agent Session ids from the last pull, so a reload already knows the main
+  // Agent Session ids from the last pull, so a reload already knows the main
   // view is a plain Session before the team answers.
   let agentSessionCache = new Set<string>()
   try {
@@ -63,7 +63,7 @@ export function createClientState(ctx: ClientContext): ClientState {
   // A navigation this plugin started: the surface effect trusts the id it lands on.
   const navigation: { expected: string | null } = { expected: null }
   const setPlain = (plain: boolean): void => { surface.set(state => (state.plain === plain ? state : { ...state, plain })) }
-  // A DSH Agent Session shows the plain conversation: the Bot details and browser
+  // An Agent Session shows the plain conversation: the Bot details and browser
   // panels would follow it and report it is not on the team, so they close.
   const dropPanels = (): void => { ui.set(state => (state.details || state.renaming ? { ...state, details: null, view: 'details', renaming: false, tab: null } : state)) }
   // A Bot's chat spans several parts, so when it was last left is kept per Bot.
@@ -75,7 +75,7 @@ export function createClientState(ctx: ClientContext): ClientState {
     const onPageHide = (): void => leaveVisits(Object.keys(ui.getSnapshot().visits ?? {}))
     window.addEventListener('pagehide', onPageHide)
     return () => window.removeEventListener('pagehide', onPageHide)
-  }, 'ds-bot: remember visits on page hide')
+  }, 'moon-bot: remember visits on page hide')
   // Unread marks, reactions and visits are shared by every window; one saved elsewhere
   // shows here at once. A `null` key is a cleared storage.
   ctx.effect(() => {
@@ -87,7 +87,7 @@ export function createClientState(ctx: ClientContext): ClientState {
     }
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
-  }, 'ds-bot: follow other windows')
+  }, 'moon-bot: follow other windows')
   const activity = createSource<Record<string, string | undefined>>({})
   // Per Bot, the turn it runs and its tool; and the approvals waiting for the user.
   const work = createSource<ClientWork>({ bots: {}, approvals: [] })
@@ -194,7 +194,7 @@ export function createClientState(ctx: ClientContext): ClientState {
         }
         failures = 0
       } catch (error) {
-        if (!stopped) console.warn('[ds-bot] state', error)
+        if (!stopped) console.warn('[moon-bot] state', error)
         failures += 1
         showReconnectNotice(retryNotice(failures))
         // The next good poll asks for the whole team, so changes made while the window
@@ -213,7 +213,7 @@ export function createClientState(ctx: ClientContext): ClientState {
       showReconnectNotice(null)
       clearTimeout(hideNotice)
     }
-  }, 'ds-bot: roster poll')
+  }, 'moon-bot: roster poll')
 
   // Plugin updates: every window that opens asks the host once (the host keeps its
   // answer for a while), again each hour, and every two seconds while installing.
@@ -233,7 +233,7 @@ export function createClientState(ctx: ClientContext): ClientState {
     updateWake = () => { void loop() }
     void loop()
     return () => { stopped = true; clearTimeout(timer); updateWake = () => {} }
-  }, 'ds-bot: update check')
+  }, 'moon-bot: update check')
 
   // The packaged app updates through its own updater; what that updater found is kept
   // beside the service's answer so one card can show both.
@@ -245,7 +245,7 @@ export function createClientState(ctx: ClientContext): ClientState {
       void appUpdates.status().then(take, () => {})
       const unsubscribe = appUpdates.subscribe(take)
       return () => { stopped = true; unsubscribe?.() }
-    }, 'ds-bot: app update status')
+    }, 'moon-bot: app update status')
   }
 
   // Bot browsers need the Desktop shell's webview bridge, and the host serves
@@ -270,10 +270,10 @@ export function createClientState(ctx: ClientContext): ClientState {
       sync()
       const offRoster = roster.subscribe(sync)
       return () => { offRoster(); stopReads?.(); browsers.dispose() }
-    }, 'ds-bot: Bot browsers')
+    }, 'moon-bot: Bot browsers')
   }
 
-  ctx.effect(() => () => { markupCache.clear() }, 'ds-bot: character markup')
+  ctx.effect(() => () => { markupCache.clear() }, 'moon-bot: character markup')
 
   const agentSessions = (agentId: string): string[] => {
     const ids = [...(snapshot().agentsById[agentId]?.sessions ?? [])]

@@ -87,7 +87,7 @@ const TEXT_PAGE = 12_000
 const ITEMS_MAX = 80
 
 /**
- * The window side of the channel, without dsh: clients come and go, reads wait for one.
+ * The window side of the channel, without the host: clients come and go, reads wait for one.
  * @param {{ now?: () => number, waitMs?: number, staleMs?: number, readTimeoutMs?: number, resendMs?: number }} [options]
  */
 export function createBrowserChannel({ now = Date.now, waitMs = WAIT_MS, staleMs = CLIENT_STALE_MS, readTimeoutMs = READ_TIMEOUT_MS, resendMs = RESEND_MS }: ChannelOptions = {}) {
@@ -291,7 +291,7 @@ export function install(rt: HostRuntime): void {
     return
   }
   const channel = createBrowserChannel()
-  ctx.effect(() => () => channel.dispose(), 'ds-bot: browser channel')
+  ctx.effect(() => () => channel.dispose(), 'moon-bot: browser channel')
 
   rt.registerTool({
     name: 'read_browser',

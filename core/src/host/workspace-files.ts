@@ -1,4 +1,4 @@
-// Moon Bot: downloads from the workspace file panel. DSH's panel previews files but
+// Moon Bot: downloads from the workspace file panel. the host's panel previews files but
 // has no way to save one, and in the web build "Show file location" opens nothing on
 // the user's computer. The browser asks here for a file's bytes (or a folder as a
 // zip) over the same api/bot channel as everything else, so it works through the web
@@ -137,7 +137,7 @@ export async function describe(path: string): Promise<{
 
 export function install(rt: HostRuntime): void {
   const { ctx, state } = rt
-  // Folders the team works in: DSH's workspaces, the team folder and every Bot's and
+  // Folders the team works in: the host's workspaces, the team folder and every Bot's and
   // group's own folder.
   const roots = async (): Promise<string[]> => {
     const paths = new Set<string>()

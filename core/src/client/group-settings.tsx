@@ -25,6 +25,7 @@ export interface GroupRoom {
     workDir?: string;
     pinned?: boolean;
     hidden?: boolean;
+    archivedAt?: number;
 }
 export interface GroupRoster {
     bots: GroupBot[];
@@ -41,6 +42,7 @@ export interface GroupRoster {
 export interface GroupActions {
     updateRoom: (id: string, patch: Record<string, unknown>) => Promise<unknown>;
     deleteRoom: (id: string) => Promise<unknown>;
+    archiveRoom?: ((id: string, archived: boolean) => Promise<unknown>) | undefined;
     createRoom: (members: readonly string[], options: Record<string, unknown>) => Promise<{
         id: string;
         name: string;
@@ -66,7 +68,7 @@ export function roomSubtitle(room: GroupRoom, roster: GroupRoster): string {
     return [t('{count} members', { count: room.members.length }), admin ? t('Admin {name}', { name: admin.name }) : t('No admin')].join(' · ');
 }
 // One preset for every member in the group, or each member's own. Turning it on starts
-// from DSH's default preset.
+// from the host's default preset.
 function GroupPermission({ room, catalog, update }: {
     room: GroupRoom;
     catalog: GroupRoster['permissions'];
@@ -144,6 +146,7 @@ export function GroupSettingsForm({ room, roster, actions, run, onDeleted }: {
               <SwitchRow label={t('Pin')} hint={t('Kept above the other chats.')} on={room.pinned === true} onChange={pinned => run(actions.setFlags(room.id, { pinned }))} />
               <SwitchRow label={t('Hide from sidebar')} hint={t('Search still finds it.')} on={room.hidden === true} onChange={hidden => run(actions.setFlags(room.id, { hidden }))} />
             </Card><Card title={t('Manage')}>
+              <button type='button' className='bt-set-row bt-bs-row' onClick={() => { const archive = actions.archiveRoom; if (archive !== undefined) void run(archive(room.id, room.archivedAt === undefined)); }}><span className='bt-set-copy'><span className='bt-bs-label'>{room.archivedAt === undefined ? t('Archive group') : t('Restore group')}</span><span className='bt-set-hint'>{room.archivedAt === undefined ? t('Stops new rounds. The chat, members and memory stay.') : t('The group returns to the sidebar and can speak again.')}</span></span></button>
               <button type='button' className='bt-set-row bt-bs-row bt-bs-danger' data-confirm={confirming || undefined} onClick={remove}><span className='bt-set-copy'><span className='bt-bs-label'>{confirming ? t('Delete {name}?', { name: room.name }) : t('Delete group')}</span><span className='bt-set-hint'>{confirming ? t('Click again to delete. Its history is archived.') : t('Removes the group chat. Its members stay on the team.')}</span></span><span className='bt-chevron'><ChevronRightIcon /></span></button>
             </Card></div>;
 }

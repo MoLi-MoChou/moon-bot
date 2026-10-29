@@ -4,7 +4,7 @@ import { homedir, hostname, tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { test } from 'node:test'
 import { apply } from '../index.js'
-import { dshHomeOf } from '../src/host/folders.ts'
+import { otherAppHomeOf } from '../src/host/folders.ts'
 import { escapeRegExp } from '../src/host/text.ts'
 import { fakeContext } from './fake-ctx.ts'
 
@@ -161,12 +161,12 @@ const notAllowed = path => `Working in ${path} was not allowed, so nothing chang
 
 test('DSH_HOME is read as DSH reads it', () => {
   const dsh = join(homedir(), '.dsh')
-  assert.equal(dshHomeOf(undefined), dsh)
-  assert.equal(dshHomeOf('  '), dsh)
-  assert.equal(dshHomeOf('~'), homedir())
-  assert.equal(dshHomeOf('~/dsh-x'), join(homedir(), 'dsh-x'))
-  assert.equal(dshHomeOf('~\\dsh-x'), join(homedir(), 'dsh-x'))
-  assert.equal(dshHomeOf('dsh-x'), resolve('dsh-x'))
+  assert.equal(otherAppHomeOf(undefined), dsh)
+  assert.equal(otherAppHomeOf('  '), dsh)
+  assert.equal(otherAppHomeOf('~'), homedir())
+  assert.equal(otherAppHomeOf('~/dsh-x'), join(homedir(), 'dsh-x'))
+  assert.equal(otherAppHomeOf('~\\dsh-x'), join(homedir(), 'dsh-x'))
+  assert.equal(otherAppHomeOf('dsh-x'), resolve('dsh-x'))
 })
 
 test('a working folder is a full path to a folder outside another app\'s data', async (t) => {
@@ -440,7 +440,7 @@ test('the folder menu browses through the DSH folder picker', async (t) => {
 
 // A path under no temporary folder of these tests, so nothing is there.
 function rootless() {
-  return join(tmpdir(), `ds-bot-work-dir-none-${process.pid}`)
+  return join(tmpdir(), `moon-bot-work-dir-none-${process.pid}`)
 }
 
 test('a Bot the Main Bot creates runs on its creator\'s model unless one is named', async (t) => {
@@ -690,7 +690,7 @@ test('a Bot deleted while its chat moves to a new folder leaves no fresh part be
   assert.equal(handoffOf(agentOf(fresh)), undefined)
 })
 
-// DSH 0.2.1's working_directory, run through ds-bot's tools/execute listeners as DSH runs
+// The host's working_directory, run through its tools/execute listeners as the host runs
 // them; the last step is the tool, which changes the Session's folder in place.
 async function changeDirectory(ctx, service, agent, cd) {
   let ran = false

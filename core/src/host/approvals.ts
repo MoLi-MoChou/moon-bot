@@ -1,6 +1,6 @@
-// Approvals. A member's group Session is hidden, so DSH's approval card never shows
+// Approvals. A member's group Session is hidden, so the host's approval card never shows
 // there and the turn would wait forever: DS Bot answers those requests itself, from
-// the group chat. A Bot's own chat keeps DSH's card; its requests are only noted, so
+// the group chat. A Bot's own chat keeps the host's card; its requests are only noted, so
 // the team view can say who is waiting.
 import { randomUUID } from 'node:crypto'
 import type { ApprovalDetail, ApprovalNote, HostRuntime } from './runtime.js'
@@ -32,7 +32,7 @@ export function install(rt: HostRuntime): void {
   const { ctx } = rt
   const pending = new Map<string, PendingApproval>()
 
-  // Ahead of DSH's own answerer, which would hold a hidden Session's request unseen.
+  // Ahead of the host's own answerer, which would hold a hidden Session's request unseen.
   ctx.on<ApprovalRequestPayload, () => Promise<string>>('approval/request', (request, next) => {
     const sessionId = request.agent?.session?.id ?? request.agent?.id
     const owner = sessionId === undefined ? undefined : rt.groupOwners.get(sessionId)

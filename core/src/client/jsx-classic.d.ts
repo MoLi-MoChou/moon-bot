@@ -1,4 +1,4 @@
-// JSX here compiles to h() calls (tsconfig: jsx react, jsxFactory h), because the DSH
+// JSX here compiles to h() calls (tsconfig: jsx react, jsxFactory h), because the host
 // shell seeds only react, react-dom and the ui primitives: a bundle that requires
 // react/jsx-runtime fails to resolve in the browser and the client never registers.
 //

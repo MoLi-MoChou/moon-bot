@@ -4,7 +4,7 @@
 // Types only: nothing here runs. Keeping them out of the modules that use them lets the
 // log, the round runner, and the tool surface share one definition without importing
 // each other's runtime.
-import type { AttachmentRef } from '../dsh-types.js'
+import type { AttachmentRef } from '../host-types.js'
 import type { HostRuntime, StoredBot, StoredRoom, TurnInfo } from '../runtime.ts'
 
 /** Why a member's model call failed, as a group shows it. */

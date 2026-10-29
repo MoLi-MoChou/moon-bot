@@ -197,18 +197,18 @@ export function ComposerMenu({
 
   if (items.length === 0) return null
 
-  return <div ref={menuRef} className='dsb-trigger-menu' role='listbox' aria-label={trigger.kind === 'mention' ? t('Mentions') : t('Commands')}>
-    <div className='dsb-trigger-head'>{trigger.kind === 'mention' ? t('Mention Bot') : t('Quick Commands')}</div>
+  return <div ref={menuRef} className='mb-trigger-menu' role='listbox' aria-label={trigger.kind === 'mention' ? t('Mentions') : t('Commands')}>
+    <div className='mb-trigger-head'>{trigger.kind === 'mention' ? t('Mention Bot') : t('Quick Commands')}</div>
     {items.map((item, index) => {
       const isActive = index === activeIndex
-      return <button key={item.id} type='button' className='dsb-trigger-item' data-active={isActive} data-index={index} role='option' aria-selected={isActive} onMouseEnter={() => onActiveIndexChange(index)} onMouseDown={(e: React.MouseEvent) => {
+      return <button key={item.id} type='button' className='mb-trigger-item' data-active={isActive} data-index={index} role='option' aria-selected={isActive} onMouseEnter={() => onActiveIndexChange(index)} onMouseDown={(e: React.MouseEvent) => {
           e.preventDefault()
           onPick(item)
         }}>
-        <span className='dsb-trigger-icon'>{item.icon}</span>
-        <span className='dsb-trigger-info'>
-          <span className='dsb-trigger-title'>{item.title}{item.badge ? <span className='dsb-trigger-badge'>{item.badge}</span> : null}</span>
-          {item.subtitle ? <span className='dsb-trigger-sub'>{item.subtitle}</span> : null}
+        <span className='mb-trigger-icon'>{item.icon}</span>
+        <span className='mb-trigger-info'>
+          <span className='mb-trigger-title'>{item.title}{item.badge ? <span className='mb-trigger-badge'>{item.badge}</span> : null}</span>
+          {item.subtitle ? <span className='mb-trigger-sub'>{item.subtitle}</span> : null}
         </span>
       </button>
     })}

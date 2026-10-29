@@ -72,7 +72,7 @@ export function createSessionIndex({
     // that no longer has it.
     void archiveSession(sessionId).catch(() => {})
   }
-  // A group Session DSH can no longer open is set aside; the member's earlier parts in
+  // A group Session the host can no longer open is set aside; the member's earlier parts in
   // the group stay, and its next turn there starts a new Session.
   const retireGroupSession = (room: StoredRoom, botId: string): void => {
     const sessionId = room.sessions?.[botId]

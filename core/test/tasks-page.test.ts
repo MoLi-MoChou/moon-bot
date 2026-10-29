@@ -20,6 +20,8 @@ interface State {
   error: string | null
   refresh: () => void
   stop: (task: Record<string, unknown>) => void
+  withdraw?: (sessionId: string, id: string) => void
+  continueTurn?: ((sessionId: string) => Promise<unknown>) | undefined
 }
 const module = { exports: {} as {
   elapsed: (ms: number) => string
@@ -63,6 +65,92 @@ runInNewContext(bundle.outputFiles[0].text, {
   },
 })
 const { elapsed, doingText, reasonText, holdText, filterTasks, TasksBoard } = module.exports
+
+// useTasks needs a small stateful hook runner so deferred endpoint replies can be
+// resolved in either order without relying on a browser renderer.
+const hookModule = { exports: {} as { useTasks: (taskActions: unknown) => State } }
+const intervals = new Set<{ callback: () => void }>()
+const hookCells: { value?: unknown; ref?: { current: unknown }; deps?: readonly unknown[]; cleanup?: () => void }[] = []
+let hookIndex = 0
+let pendingEffects: (() => void)[] = []
+let stateUpdates = 0
+const depsChanged = (next: readonly unknown[] | undefined, previous: readonly unknown[] | undefined): boolean =>
+  next === undefined || previous === undefined || next.length !== previous.length || next.some((value, index) => !Object.is(value, previous[index]))
+const hookReact = {
+  createElement: (type: unknown, props: unknown, ...children: unknown[]) => ({ type, props: props ?? {}, children: children.flat(Infinity) }),
+  Fragment: 'fragment',
+  useState: (initial: unknown) => {
+    const index = hookIndex++
+    const cell = hookCells[index] ??= { value: typeof initial === 'function' ? (initial as () => unknown)() : initial }
+    return [cell.value, (next: unknown) => {
+      cell.value = typeof next === 'function' ? (next as (value: unknown) => unknown)(cell.value) : next
+      stateUpdates += 1
+    }]
+  },
+  useRef: (initial: unknown) => {
+    const index = hookIndex++
+    const cell = hookCells[index] ??= { ref: { current: initial } }
+    return cell.ref
+  },
+  useEffect: (effect: () => (() => void) | void, deps?: readonly unknown[]) => {
+    const index = hookIndex++
+    const cell = hookCells[index] ??= {}
+    if (depsChanged(deps, cell.deps)) {
+      pendingEffects.push(() => {
+        cell.cleanup?.()
+        cell.deps = deps
+        cell.cleanup = effect() ?? undefined
+      })
+    }
+  },
+}
+runInNewContext(bundle.outputFiles[0].text, {
+  module: hookModule,
+  exports: hookModule.exports,
+  setInterval: (callback: () => void) => {
+    const timer = { callback }
+    intervals.add(timer)
+    return timer
+  },
+  clearInterval: (timer: { callback: () => void }) => { intervals.delete(timer) },
+  require: name => {
+    if (name === 'react') return hookReact
+    if (name === 'react-dom') return {}
+    throw new Error(`no hook platform module ${name}`)
+  },
+})
+const { useTasks } = hookModule.exports
+const mountTasks = (taskActions: unknown) => {
+  hookCells.length = 0
+  intervals.clear()
+  pendingEffects = []
+  hookIndex = 0
+  stateUpdates = 0
+  const instance = {
+    render() {
+      hookIndex = 0
+      pendingEffects = []
+      const state = useTasks(taskActions)
+      for (const run of pendingEffects.splice(0)) run()
+      return state
+    },
+    unmount() {
+      for (const cell of hookCells) {
+        cell.cleanup?.()
+        cell.cleanup = undefined
+      }
+    },
+  }
+  return instance
+}
+const deferred = <T>() => {
+  let resolve!: (value: T | PromiseLike<T>) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((yes, no) => { resolve = yes; reject = no })
+  return { promise, resolve, reject }
+}
+const tick = () => new Promise<void>(resolve => setImmediate(resolve))
+const taskAnswer = (botName: string) => ({ running: [running({ botName })], completed: [], waiting: [] })
 
 // The element tree the fake createElement builds: walk every node for its text and props.
 const elements = (node: unknown): { props: Record<string, unknown>; children?: readonly unknown[] }[] => {
@@ -137,6 +225,22 @@ test('a running row says how many messages wait behind its turn, and who its Sto
   assert.ok(labels.includes('Stop Writer'), `the stop names the Bot: ${labels.join(', ')}`)
 })
 
+test('a running row lists each queued preview and withdraws that one', () => {
+  const withdrawn: string[] = []
+  const tree = TasksBoard({
+    state: rows({
+      answer: { running: [running({ queued: 1, queue: [{ id: 'q1', preview: 'check the logs' }] })], completed: [], waiting: [] },
+      withdraw: (_sessionId, id) => { withdrawn.push(id) },
+    }),
+    onOpen: () => {},
+  })
+  assert.match(textOf(tree), /check the logs/)
+  const button = elements(tree).find(element => element.props['aria-label'] === 'Withdraw check the logs')
+  assert.ok(button !== undefined, 'each queued line can be withdrawn')
+  ;(button.props.onClick as () => void)()
+  assert.deepEqual(withdrawn, ['q1'])
+})
+
 test('a row with nothing queued says nothing about a queue', () => {
   const tree = TasksBoard({ state: rows({ answer: { running: [running()], completed: [], waiting: [] } }), onOpen: () => {} })
   assert.doesNotMatch(textOf(tree), /queued/)
@@ -169,6 +273,47 @@ test('a stop that found nothing says so instead of staying silent', () => {
   assert.ok(notice !== undefined, 'the notice is announced')
   assert.match(textOf(notice.children), /had already finished/)
   assert.equal(propsOf(tree).some(props => props['aria-label'] === 'Stop Writer'), false)
+})
+
+test('a stale refresh response cannot replace a newer answer', async () => {
+  const first = deferred<ReturnType<typeof taskAnswer>>()
+  const second = deferred<ReturnType<typeof taskAnswer>>()
+  const requests = [first, second]
+  const tasks = mountTasks({
+    tasks: () => requests.shift()!.promise,
+    stopTask: async () => ({}),
+    openSession: () => {},
+  })
+  let state = tasks.render()
+  state.refresh()
+  assert.equal(requests.length, 0)
+  second.resolve(taskAnswer('newer'))
+  await tick()
+  state = tasks.render()
+  assert.equal(state.answer?.running[0]?.botName, 'newer')
+  first.resolve(taskAnswer('stale'))
+  await tick()
+  state = tasks.render()
+  assert.equal(state.answer?.running[0]?.botName, 'newer')
+  tasks.unmount()
+})
+
+test('a refresh response after unmount does not update state or timers', async () => {
+  const request = deferred<ReturnType<typeof taskAnswer>>()
+  const tasks = mountTasks({
+    tasks: () => request.promise,
+    stopTask: async () => ({}),
+    openSession: () => {},
+  })
+  const state = tasks.render()
+  assert.equal(state.answer, null)
+  assert.equal(intervals.size, 2)
+  tasks.unmount()
+  assert.equal(intervals.size, 0)
+  request.resolve(taskAnswer('late'))
+  await tick()
+  assert.equal(stateUpdates, 0)
+  assert.equal(tasks.render().answer, null)
 })
 
 test('an empty shelf hides the filters and keeps one calm empty', () => {
@@ -211,4 +356,21 @@ test('filters that match nothing offer a clear path', () => {
   // The Waiting filter hid the running row; filters stay so they can be cleared.
   const labels = propsOf(tree).map(props => props['aria-label']).filter(label => typeof label === 'string')
   assert.ok(labels.includes('Filter by state'))
+})
+
+test('a turn cut off by a restart says so, and Continue resumes that session', async () => {
+  const continued: string[] = []
+  const tree = TasksBoard({
+    state: rows({
+      answer: { running: [], completed: [], waiting: [{ botId: 'b1', botName: 'Writer', for: ['Chief'], hold: 'interrupted', sessionId: 'chat:b1' }] },
+      continueTurn: async (sessionId) => { continued.push(sessionId) },
+    }),
+    onOpen: () => {},
+  })
+  assert.match(textOf(tree), /Cut off by a restart/)
+  const button = elements(tree).find(element => (element.children ?? []).includes('Continue'))
+  assert.ok(button !== undefined, 'the parked turn offers Continue')
+  ;(button.props.onClick as () => void)()
+  await tick()
+  assert.deepEqual(continued, ['chat:b1'])
 })

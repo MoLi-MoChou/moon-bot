@@ -26,12 +26,13 @@ import { canonicalHeadings, cardText, historyEntry, questionReply, readReply, re
 import { handoffPackage, noteText } from './parts-handoff.ts'
 
 export { handoffPackage, noteText }
+import { createContextCompact } from './context-compact.ts'
 import { createPartSwitch } from './parts-switch.ts'
 import { createPartNote } from './parts-note.ts'
 import { createPartPager } from './parts-pager.ts'
-import type { Agent, DshContext } from './dsh-types.js'
+import type { Agent, HostContext } from './host-types.js'
 import type { HostRuntime } from './runtime.js'
-import type { LlmMessageSource } from './dsh-types.js'
+import type { LlmMessageSource } from './host-types.js'
 import type { Lines, SwitchAgent, SwitchJob, SwitchPart, SwitchSession } from './parts-switch-move.ts'
 import type { PartSwitchRuntime } from './parts-switch.ts'
 import type { SwitchState } from './parts-switch-move.ts'
@@ -47,7 +48,7 @@ type EngineMethod = (this: unknown, ...args: readonly unknown[]) => Promise<unkn
 
 export function install(rt: HostRuntime): void {
   const { ctx, config, state } = rt
-  const context: DshContext = ctx
+  const context: HostContext = ctx
 
   const RECENT_TOKENS = config.handoffRecentTokens ?? 16_384
   const RECENT_LINE_MAX = 4_000
@@ -60,7 +61,7 @@ export function install(rt: HostRuntime): void {
   // After a note fails below the hard line the part stays as it is, and tries again
   // only after a wait that grows with each failure in a row.
   const NOTE_COOLDOWN_MS = [60_000, 300_000, 900_000]
-  const ORIGINAL_COMPACT = Symbol.for('ds-bot/compaction')
+  const ORIGINAL_COMPACT = Symbol.for('moon-bot/compaction')
   const STEWARD_MAX_TOKENS = 4_096
   const STEWARD_TIMEOUT_MS = 120_000
   const STEWARD_LINES = 40
@@ -75,7 +76,7 @@ export function install(rt: HostRuntime): void {
     } catch (error) {
       if (!measureWarned) {
         measureWarned = true
-        rt.warn('ds-bot: token measure failed; context sizes are estimated: %s', error)
+        rt.warn('moon-bot: token measure failed; context sizes are estimated: %s', error)
       }
     }
     try {
@@ -165,7 +166,7 @@ export function install(rt: HostRuntime): void {
       delete engine[ORIGINAL_COMPACT]
     }
     adoptedEngines.clear()
-  }, 'ds-bot: Bot compaction')
+  }, 'moon-bot: Bot compaction')
   ctx.on<{ readonly agent: Agent }>('agent/created', ({ agent }) => { adoptCompaction(agent as unknown as SwitchAgent) })
 
   // A Bot's own chat, or its Session in one group, as numbered parts, oldest first;
@@ -296,5 +297,47 @@ export function install(rt: HostRuntime): void {
   // The chat pages earlier parts through its own module; the switch and the rest stay here.
   const { displayItems, earlierPage, chatPage } = createPartPager({ rt, partsOf })
 
-  Object.assign(rt, { clock, partsOf, historyEntry, partLines, noteText, earlierPage, chatPage, displayItems, followFolder: partSwitch.followFolder, heldBack: partSwitch.heldBack, switchJobs: () => partSwitch.switchJobs() })
+  // What the context ring shows when no host publishes session projections: the tokens
+  // this part already holds, against the model's window (or the default window when the
+  // session has not been routed yet). Nothing is stored.
+  // `tokensOf` returns undefined when no meter is installed; it does not then read the
+  // transcript. The ring still can: the same estimate the meter failure path uses.
+  const countSession = (session: SwitchSession): number | undefined => {
+    const measured = tokensOf(session)
+    if (measured !== undefined) return measured
+    try {
+      return estimateTokens(session.deriveMessages().map(message => textOf((message as { readonly content?: unknown }).content)).join('\n'))
+    } catch {
+      return undefined
+    }
+  }
+
+  async function contextStats(sessionId: string): Promise<{ readonly contextPressure: { readonly projectedTokens: number; readonly contextWindow: number } } | undefined> {
+    const agent = await rt.resolveAgent(sessionId).catch(() => undefined)
+    const session = agent?.session
+    if (session === undefined) return undefined
+    const measured = session as unknown as SwitchSession
+    const used = countSession(measured)
+    if (used === undefined || !Number.isFinite(used)) return undefined
+    const lines = await contextLines(measured).catch(() => undefined) ?? linesFor({})
+    return { contextPressure: { projectedTokens: used, contextWindow: lines.window } }
+  }
+
+  // Manual compact uses the idle condense, and refuses instead of switching parts.
+  const compactChat = createContextCompact({
+    readOnly: () => rt.readOnly() !== undefined,
+    running: sessionId => rt.live.get(sessionId)?.turn !== undefined,
+    unread: sessionId => [...(rt.unreadOf?.(sessionId) ?? [])].length > 0,
+    switching: sessionId => partSwitch.switching(sessionId),
+    resolve: async sessionId => {
+      const agent = await rt.resolveAgent(sessionId).catch(() => undefined)
+      return agent as unknown as SwitchAgent | undefined
+    },
+    lines: async agent => await contextLines(agent.session).catch(() => undefined) ?? linesFor({}),
+    prepare: agent => { adoptCompaction(agent) },
+    engine: agent => engineOf(agent) !== undefined,
+    condense: (agent, lines) => condense(agent, lines, { inTurn: false }),
+  })
+
+  Object.assign(rt, { clock, partsOf, historyEntry, partLines, noteText, earlierPage, chatPage, displayItems, followFolder: partSwitch.followFolder, heldBack: partSwitch.heldBack, switchJobs: () => partSwitch.switchJobs(), contextStats, compactChat })
 }

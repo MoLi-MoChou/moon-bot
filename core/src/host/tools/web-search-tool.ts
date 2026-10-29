@@ -1,5 +1,5 @@
 // Standalone web_search for Bots (Researcher and the rest): the same auto provider the
-// old DSH web seam used — native search on the conversation's model route when one is
+// old the host web seam used — native search on the conversation's model route when one is
 // known, else a keyless parse of public Bing / DuckDuckGo results. SenseNova and other
 // custom routes have no native search; the fallback answers without changing model
 // config. Wired into the host tool registry so the standalone service serves it.
@@ -12,7 +12,7 @@ import type { ToolShared } from './shared.ts'
 
 const USER_AGENT = 'moon-bot/0.1.0'
 
-/** Fetches a public results page the way the old DSH web.fetch seam did. */
+/** Fetches a public results page the way the old the host web.fetch seam did. */
 async function webFetch(request: { readonly url: string }, signal?: AbortSignal): Promise<WebPage> {
   const init: RequestInit = {
     redirect: 'follow',
@@ -38,8 +38,8 @@ const formatSources = (sources: readonly Source[]): string => {
 }
 
 export function installWebSearchTool(_rt: HostRuntime, shared: ToolShared): void {
-  // One provider per process: endpoint skip memory stays across calls the way the DSH
-  // plugin kept it. route() is unset here — standalone has no DSH session route — so
+  // One provider per process: endpoint skip memory stays across calls the way the host
+  // plugin kept it. route() is unset here — standalone has no the host session route — so
   // native search reports "no conversation model route" and the keyless fallback runs.
   const provider = createAutoSearchProvider({
     route: () => undefined,

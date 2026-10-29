@@ -4,7 +4,7 @@
 //
 // The maps and the delivery bookkeeping live here; `route.ts` decides where a message
 // goes and what a finished turn answers, and `turns.ts` keeps the public surface.
-import type { AgentSession, AttachmentRef } from '../dsh-types.js'
+import type { AgentSession, AttachmentRef } from '../host-types.js'
 import type { HostRuntime, TurnInfo } from '../runtime.ts'
 import type { FailureDetail, GroupRound, RoomPost, RoomWaiter } from '../groups/types.ts'
 import type { TurnFailure } from './failure.ts'
@@ -17,7 +17,7 @@ export interface JoinedInfo {
 
 /**
  * A turn's trigger as this module reads it. `runtime.ts` keeps the shared fields; a
- * DSH/user message carries the rest, and every one of them is a filter or a record.
+ * the host/user message carries the rest, and every one of them is a filter or a record.
  */
 export interface SourceInfo extends TurnInfo {
   readonly replyTo?: string | undefined
@@ -285,7 +285,7 @@ export function installCore(rt: TurnsRuntime): TurnsCore {
       const raw = entry.texts[entry.shown]
       if (raw === undefined) break
       const text = stripWrittenCalls(raw)
-      if (text !== '') void rt.roomStepText?.(id, info, text, entry.shown === 0)?.catch(error => rt.warn('ds-bot: step text from %s not posted: %s', id, error))
+      if (text !== '') void rt.roomStepText?.(id, info, text, entry.shown === 0)?.catch(error => rt.warn('moon-bot: step text from %s not posted: %s', id, error))
     }
   }
 
@@ -306,7 +306,7 @@ export function installCore(rt: TurnsRuntime): TurnsCore {
       role: 'reply',
       replyTo: source.exchangeId,
       ...(work ? { work } : {}),
-    }).catch(error => rt.warn('ds-bot: reply delivery failed: %s', error))
+    }).catch(error => rt.warn('moon-bot: reply delivery failed: %s', error))
   }
 
   // A group Session is hidden as a whole, so its turns need no marking. A handoff

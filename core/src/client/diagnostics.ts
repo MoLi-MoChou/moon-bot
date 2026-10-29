@@ -50,7 +50,7 @@ export function clientFacts(): Record<string, string> {
   }
 }
 
-// Short words for the provider-neutral failure codes of DSH's LLM layer.
+// Short words for the provider-neutral failure codes of the host's LLM layer.
 const FAILURES: Record<string, string> = {
   AUTH: 'The API key was rejected',
   QUOTA: 'The account is out of quota',

@@ -6,7 +6,7 @@
 //   stream    the reply a Bot is writing: a start, its text as it comes, an end
 import { clearInterval, setInterval, setTimeout } from 'node:timers'
 import { ROUTE } from './constants.ts'
-import type { AgentStatusEvent, AssistantStreamEvent, SessionEvent } from './dsh-types.js'
+import type { AgentStatusEvent, AssistantStreamEvent, SessionEvent } from './host-types.js'
 import type { HostRuntime } from './runtime.js'
 
 export const FEED_ROUTE = `${ROUTE}/feed`
@@ -123,7 +123,7 @@ export function install(rt: HostRuntime): void {
       request.signal.addEventListener('abort', () => leave(controller), { once: true })
       return new Response(body, { status: 200, headers: { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-store' } })
     },
-  }), 'ds-bot: live feed route')
+  }), 'moon-bot: live feed route')
 
   ctx.effect(() => {
     const keepalive = setInterval(() => {
@@ -135,5 +135,5 @@ export function install(rt: HostRuntime): void {
       clearTimeout(liveTimer)
       for (const controller of clients) leave(controller)
     }
-  }, 'ds-bot: live feed')
+  }, 'moon-bot: live feed')
 }

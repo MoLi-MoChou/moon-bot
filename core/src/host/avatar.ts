@@ -56,7 +56,7 @@ interface AvatarReadOptions {
 async function readLocal(path: string, baseDir: string | undefined, isData: AvatarReadOptions['isData']): Promise<string> {
   const full = resolve(baseDir ?? process.cwd(), expandHome(path))
   // Checked and read at the real path, where links lead, so a link cannot reach into
-  // DSH's data, and one changed after the check is not followed.
+  // the host's data, and one changed after the check is not followed.
   let real
   let info
   try {
@@ -96,7 +96,7 @@ function readDataUrl(value: string): string {
 // Returns the data URL for avatar.image, or throws with a line the user can read.
 // `baseDir` is where a relative local path starts, and `isData` says whether a real path
 // lies in data a Bot may not read from. Links are not fetched: the host would reach
-// addresses, such as local services, that dsh's own web fetch refuses.
+// addresses, such as local services, that the host's own web fetch refuses.
 export async function readAvatar(input: unknown, { baseDir, isData }: AvatarReadOptions = {}): Promise<string> {
   const value = typeof input === 'string' ? input.trim() : ''
   if (value === '') throw new Error(`Give an image path or a data URL. ${HINT}`)

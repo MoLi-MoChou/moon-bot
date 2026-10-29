@@ -140,6 +140,13 @@ test('a failed MCP connection redacts the token, goes connecting then error, and
   }
   const { ctx, home, rt } = setup()
   t.after(async () => { await ctx.dispose(); rmSync(home, { recursive: true, force: true, maxRetries: 5 }) })
+  const liveChanged = rt.liveChanged
+  const transitions: string[] = []
+  rt.liveChanged = () => {
+    const state = rt.connectorsView()[0]?.state
+    if (state === 'connecting' || state === 'error') transitions.push(state)
+    liveChanged?.()
+  }
   const token = fresh()
   const result = await call(ctx, 'connector-connect', { id: 'github', token })
   const [github] = result.value
@@ -147,6 +154,7 @@ test('a failed MCP connection redacts the token, goes connecting then error, and
   assert.ok(!github.error.includes(token), github.error)
   assert.match(github.error, /\[secret:GITHUB_TOKEN\]/)
   assert.equal(attempts, 1)
+  assert.deepEqual(transitions, ['connecting', 'error'])
 
   const retry = call(ctx, 'connector-retry', { id: 'github' })
   const deadline = Date.now() + 15_000
@@ -158,6 +166,7 @@ test('a failed MCP connection redacts the token, goes connecting then error, and
   assert.equal(retried.value[0].state, 'error')
   assert.match(retried.value[0].error, /\[secret:GITHUB_TOKEN\]/)
   assert.equal(attempts, 2)
+  assert.deepEqual(transitions, ['connecting', 'error', 'connecting', 'error'])
 })
 
 test('deleting GITHUB_TOKEN on the Secrets page turns the connector off', async (t) => {

@@ -58,6 +58,11 @@ export function openFeed(onEvent: FeedListener): () => void {
             if (parsed !== undefined) onEvent(parsed.event, asRecord(parsed.data))
           }
         }
+        buffer += decoder.decode()
+        if (buffer.length > 0) {
+          const parsed = parseEvent(buffer)
+          if (parsed !== undefined) onEvent(parsed.event, asRecord(parsed.data))
+        }
       } catch {
         // The service restarted or the window is going away; the loop decides.
       }

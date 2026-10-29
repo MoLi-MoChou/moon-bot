@@ -1,5 +1,5 @@
 import { Fragment, createElement as h, useState } from 'react';
-// DSH's drawing helpers for the blocks it renders itself; the standalone product
+// the host's drawing helpers for the blocks it renders itself; the standalone product
 // draws plain versions of the same parts, and canDrawUserMessages stays true.
 const ui = {
   projectUserText: (text: string, ..._rest: readonly unknown[]): string => { void _rest; return text },
@@ -15,7 +15,7 @@ import { dateLocale, t } from './i18n.ts';
 import { clockLabel, messageClock } from './text.ts';
 import { useFold } from './fold.tsx';
 import type { MentionTarget } from '../shared/mentions.ts';
-// One block of a message: text, an attachment, or something DSH draws itself.
+// One block of a message: text, an attachment, or something the host draws itself.
 export interface ContentBlock {
     type?: string;
     text?: string;
@@ -34,7 +34,11 @@ export interface MentionPart {
     };
     label: string;
 }
-export type UserTextPart = TextPart | MentionPart;
+export interface EveryonePart {
+    bots: readonly (MentionTarget & { id: string; name: string })[];
+    label: string;
+}
+export type UserTextPart = TextPart | MentionPart | EveryonePart;
 interface UserMessageCellProps {
     node: {
         kind?: string;
@@ -72,11 +76,11 @@ interface UserRoster {
     } | undefined>;
 }
 // -------------------------------------------------------------------------
-// The user's own messages. DSH draws every "@word" in them as a file reference, and
+// The user's own messages. the host draws every "@word" in them as a file reference, and
 // cuts it at the first space, so "@新 Bot" showed as a file "新". Here the Bot mentions
-// are cut out first, by the rule the group host calls them with; DSH's own drawing
+// are cut out first, by the rule the group host calls them with; the host's own drawing
 // keeps everything else (files, conversation references, skills).
-// DSH releases without the text projection keep their own bubble.
+// the host releases without the text projection keep their own bubble.
 export const canDrawUserMessages = () => typeof ui.projectUserText === 'function';
 export function contentParts(content: unknown): {
     text: string;
@@ -109,26 +113,28 @@ export function mentionableBots(roster: UserRoster, sessionId: string): (Mention
     return roster.byId[sessionId] ? roster.bots : [];
 }
 // Runs of plain text and Bot mentions, in order.
-export function userTextParts(text: string, bots: readonly MentionTarget[], referenceLabels: readonly string[] = []): UserTextPart[] {
+export function userTextParts(text: string, bots: readonly MentionTarget[], referenceLabels: readonly string[] = [], everyoneBots: readonly MentionTarget[] = []): UserTextPart[] {
     const parts: UserTextPart[] = [];
     let cursor = 0;
     for (const span of mentionSpans(text, bots, { references: referenceLabels })) {
-        // An "everyone" span names the group, not a Bot: it stays plain text here.
-        const bot = 'bot' in span ? span.bot : undefined;
-        if (!bot)
-            continue;
         if (span.start > cursor)
             parts.push({ text: text.slice(cursor, span.start) });
-        parts.push({ bot: bot as MentionPart['bot'], label: text.slice(span.start + 1, span.end) });
+        if ('bot' in span)
+            parts.push({ bot: span.bot as MentionPart['bot'], label: text.slice(span.start + 1, span.end) });
+        else if (everyoneBots.length > 0)
+            parts.push({ bots: everyoneBots as EveryonePart['bots'], label: text.slice(span.start + 1, span.end) });
+        else
+            parts.push({ text: text.slice(span.start, span.end) });
         cursor = span.end;
     }
     if (cursor < text.length)
         parts.push({ text: text.slice(cursor) });
     return parts;
 }
-function UserText({ text, bots, referenceLabels, skillNames, references, actions }: {
+function UserText({ text, bots, everyoneBots, referenceLabels, skillNames, references, actions }: {
     text: string;
     bots: readonly MentionTarget[];
+    everyoneBots: readonly MentionTarget[];
     referenceLabels: readonly string[];
     skillNames: readonly string[];
     references: {
@@ -139,8 +145,11 @@ function UserText({ text, bots, referenceLabels, skillNames, references, actions
         openSession: (id: string) => void;
     };
 }) {
-    return userTextParts(text, bots, referenceLabels).map((part, index) => ('bot' in part
-        ? <button key={index} type='button' className='bt-umention' title={`@${part.bot.name}`} onClick={() => actions.openSession(part.bot.id)}><BotMark bot={part.bot} size={16} />{part.label}</button> : <>{ui.projectUserText(part.text, referenceLabels, skillNames, 'skill', references)}</>));
+    return userTextParts(text, bots, referenceLabels, everyoneBots).map((part, index) => ('bot' in part
+        ? <button key={index} type='button' className='bt-umention' title={`@${part.bot.name}`} onClick={() => actions.openSession(part.bot.id)}><BotMark bot={part.bot} size={16} />{part.label}</button>
+        : 'bots' in part
+            ? <span key={index} className='bt-umention bt-everyone-mention' title={t('Every member')}>{part.bots.map(bot => <BotMark key={bot.id} bot={bot} size={16} />)}{part.label}</span>
+            : <span key={index}>{ui.projectUserText(part.text, referenceLabels, skillNames, 'skill', references)}</span>));
 }
 function Attachments({ attachments, renderMessageImages }: {
     attachments: ContentBlock[];
@@ -179,16 +188,20 @@ export function UserMessageCell({ node, sessionId, useRoster, actions, renderMes
     const time = typeof data.time === 'number' && Number.isFinite(data.time) ? data.time : undefined;
     const groupTime = roster.roomsById?.[sessionId] && time !== undefined ? messageClock(time) : undefined;
     const { shown, folded, control } = useFold(text, { markdown: false });
-    const body = h(UserText, { text: shown, bots: mentionableBots(roster, sessionId), referenceLabels, skillNames: data.skillNames ?? [], references, actions });
+    const mentionBots = mentionableBots(roster, sessionId);
+    const room = roster.roomsById[sessionId];
+    const body = h(UserText, { text: shown, bots: mentionBots, everyoneBots: room ? mentionBots : [], referenceLabels, skillNames: data.skillNames ?? [], references, actions });
     return <div className='bt-umsg' data-steering={steering || undefined}><div className='bt-ustack'>{attachments.length > 0 ? <Attachments attachments={attachments} renderMessageImages={renderMessageImages} /> : null}{text !== '' || rest.length > 0 ? <div className='bt-ubody' title={clock(data.time)} data-folded={folded || undefined}>{control ? <div className='bt-fold-body'>{body}</div> : body}{control}{rest.map((block, index) => (ui.JsonBlock ? h(ui.JsonBlock, { key: index, label: t('Content'), payload: block }) : null))}</div> : null}{referenceLabels.length > 0 ? <div className='bt-urefs'>{t('Referenced {labels}', { labels: referenceLabels.join(t(', ')) })}</div> : null}{groupTime && time !== undefined ? <div className='bt-utime' title={clockLabel(time)}>{groupTime}</div> : null}</div>{text === '' ? null : <div className='bt-utools'><CopyButton text={text} /></div>}</div>;
 }
 export const USER_MESSAGE_CSS = `
 .bt-umsg{display:flex;flex-direction:row-reverse;align-items:center;justify-content:flex-start;gap:4px}
-.bt-ustack{min-width:0;max-width:min(calc(var(--dsh-chat-content-width,748px) * .702),82%);display:flex;flex-direction:column;align-items:flex-end;gap:8px}
-.bt-ubody{max-width:100%;box-sizing:border-box;background:var(--bt-user);color:var(--bt-user-ink);border-radius:18px;padding:7px 12px;font-size:var(--dsh-content-font-size,14px);line-height:calc(var(--dsh-content-font-size,14px) + 8px);white-space:pre-wrap;word-break:break-word}
+.bt-ustack{min-width:0;max-width:min(calc(var(--bt-chat-content-width,748px) * .702),82%);display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.bt-ubody{max-width:100%;box-sizing:border-box;background:var(--bt-user);color:var(--bt-user-ink);border-radius:18px;padding:7px 12px;font-size:var(--bt-content-font-size,14px);line-height:calc(var(--bt-content-font-size,14px) + 8px);white-space:pre-wrap;word-break:break-word}
 .bt-ubody a{color:inherit}
 .bt-umention{display:inline-flex;align-items:center;gap:3px;vertical-align:-3px;max-width:100%;padding:0 1px;border:0;background:none;color:inherit;font:inherit;font-weight:600;line-height:inherit;cursor:pointer;border-radius:6px;white-space:nowrap}
 .bt-umention:hover{text-decoration:underline;text-underline-offset:2px}
+.bt-everyone-mention{cursor:default;flex-wrap:wrap}
+.bt-everyone-mention:hover{text-decoration:none}
 .bt-umention>:first-child{flex:none}
 .bt-uattach{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;max-width:100%}
 .bt-ufile{display:inline-flex;align-items:center;gap:10px;box-sizing:border-box;width:240px;min-height:64px;padding:8px 12px;border-radius:18px;border:.5px solid var(--bt-line-2);background:var(--bt-card)}

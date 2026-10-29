@@ -60,7 +60,7 @@ export function createStorage(rt: MemoryRuntime, deps: StorageDeps): MemoryStora
     try {
       return readFileSync(path, 'utf8')
     } catch (error) {
-      if (errorCode(error) !== 'ENOENT') rt.warn('ds-bot: unreadable memory file %s: %s', path, error)
+      if (errorCode(error) !== 'ENOENT') rt.warn('moon-bot: unreadable memory file %s: %s', path, error)
       return ''
     }
   }
@@ -297,7 +297,7 @@ export function createStorage(rt: MemoryRuntime, deps: StorageDeps): MemoryStora
           writeFileSync(`${path}.tmp`, text, 'utf8')
           renameSync(`${path}.tmp`, path)
         } catch (error) {
-          rt.warn('ds-bot: memory snapshot for %s not saved: %s', bot.name, error)
+          rt.warn('moon-bot: memory snapshot for %s not saved: %s', bot.name, error)
         }
       }
     }

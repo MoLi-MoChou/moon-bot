@@ -7,7 +7,7 @@ import { SOURCE_KIND } from './constants.ts'
 import { RESUME_DELAY_MS } from './resume.ts'
 import { textOf } from './text.ts'
 import { FOLDER_RETRY_MS, createPartMove } from './parts-switch-move.ts'
-import type { Disposer } from './dsh-types.js'
+import type { Disposer } from './host-types.js'
 import type {
   Lines, PartMove, PartMoveOptions, PartMoveRuntime, SwitchAgent, SwitchEvent, SwitchJob, SwitchLiveEntry,
   SwitchMessage, SwitchOwner, SwitchSession, SwitchState, SwitchTables,
@@ -52,6 +52,7 @@ export interface PartSwitchOptions extends Omit<PartMoveOptions, 'rt' | 'tables'
 
 export interface PartSwitch {
   heldBack(): Promise<void>; followFolder(botId: string): Promise<void>; switchJobs(): Iterable<SwitchJob>
+  switching(sessionId: string): boolean
   setPartBase(sessionId: string, tokens: number | undefined): void
 }
 
@@ -82,7 +83,7 @@ export function createPartSwitch(options: PartSwitchOptions): PartSwitch {
 
   const grown = (sessionId: string, tokens: number, lines: Lines): boolean => tokens >= (partBase.get(sessionId) ?? 0) + lines.check / 4
 
-  // The plugin's own fiber is disposed (a reload, or DSH closing): every service
+  // The plugin's own fiber is disposed (a reload, or the host closing): every service
   // lookup fails with the same inactive-context error, and logging through rt.warn
   // would fail the same way, so an unloaded failure is noted once at info instead.
   const fiberUid = (): unknown => (ctx.fiber as { readonly uid?: unknown } | undefined)?.uid
@@ -98,8 +99,8 @@ export function createPartSwitch(options: PartSwitchOptions): PartSwitch {
     switches.set(agent.id, job)
     void runSwitch(agent, job)
       .catch(error => {
-        if (unloaded(error)) return noteInfo('ds-bot: plugin unloaded while %s switched parts; input kept in part %s', rt.botOf(job.botId)?.name ?? agent.id, agent.id)
-        rt.warn('ds-bot: %s did not move on to a fresh part: %s', rt.botOf(job.botId)?.name ?? agent.id, error)
+        if (unloaded(error)) return noteInfo('moon-bot: plugin unloaded while %s switched parts; input kept in part %s', rt.botOf(job.botId)?.name ?? agent.id, agent.id)
+        rt.warn('moon-bot: %s did not move on to a fresh part: %s', rt.botOf(job.botId)?.name ?? agent.id, error)
       })
       .finally(async () => {
         switches.delete(agent.id)
@@ -123,7 +124,7 @@ export function createPartSwitch(options: PartSwitchOptions): PartSwitch {
         const noted = [...agent.inbox.nextStep, ...agent.inbox.nextTurn].some(message => textOf(message.content) === PAUSE_NOTE)
         if (resume && !back.some(message => textOf(message.content) === PAUSE_NOTE) && !noted) {
           const carried = job.joined?.length ? { joined: job.joined } : {}
-          // The local DSH shim types a new user message without the id the runtime gives it.
+          // The local the host shim types a new user message without the id the runtime gives it.
           back.unshift(createUserMessage({
             content: [{ type: 'text', text: PAUSE_NOTE }],
             source: job.info ? { ...job.info, ...carried } : { kind: SOURCE_KIND, form: 'relay', role: 'resume', exchangeId: randomUUID(), senderName: 'Moon Bot', ...carried },
@@ -134,8 +135,8 @@ export function createPartSwitch(options: PartSwitchOptions): PartSwitch {
         }).catch((error) => {
           job.kept = true
           try { move.restore(agent, back) } catch {}
-          if (unloaded(error)) return noteInfo('ds-bot: plugin unloaded during the switch of %s; input kept in part %s', agent.id, agent.id)
-          rt.warn('ds-bot: input for %s was not handed on: %s', agent.id, error)
+          if (unloaded(error)) return noteInfo('moon-bot: plugin unloaded during the switch of %s; input kept in part %s', agent.id, agent.id)
+          rt.warn('moon-bot: input for %s was not handed on: %s', agent.id, error)
           // The input is back where it was; the turn that owns it goes on at once.
           try { move.wake(agent) } catch {}
         })
@@ -143,7 +144,7 @@ export function createPartSwitch(options: PartSwitchOptions): PartSwitch {
       })
       // A state write that fails here (full disk, a file another program holds, a lost lock)
       // must not end up as an unhandled rejection, which stops the whole host.
-      .catch(error => rt.warn('ds-bot: the switch of %s did not finish: %s', agent.id, error))
+      .catch(error => rt.warn('moon-bot: the switch of %s did not finish: %s', agent.id, error))
   }
 
   async function runSwitch(agent: SwitchAgent, job: SwitchJob): Promise<void> {
@@ -166,7 +167,7 @@ export function createPartSwitch(options: PartSwitchOptions): PartSwitch {
     if (job.moved) {
       rt.renewMemory(agent.id)
       await ctx.workspaceRegistry.archiveSession(agent.id)
-        .catch(error => rt.warn('ds-bot: earlier part %s not archived: %s', agent.id, error))
+        .catch(error => rt.warn('moon-bot: earlier part %s not archived: %s', agent.id, error))
     }
   }
 
@@ -193,7 +194,7 @@ export function createPartSwitch(options: PartSwitchOptions): PartSwitch {
     const { agent } = payload
     const past = rt.pastOwners.get(agent.id)
     if (past !== undefined && !rt.isBotSession(agent.id)) {
-      await move.forward(past, payload.messages).catch(error => rt.warn('ds-bot: input for %s was not handed on: %s', agent.id, error))
+      await move.forward(past, payload.messages).catch(error => rt.warn('moon-bot: input for %s was not handed on: %s', agent.id, error))
       return { kind: 'reject' }
     }
     if (!rt.isBotSession(agent.id)) return next()
@@ -216,13 +217,13 @@ export function createPartSwitch(options: PartSwitchOptions): PartSwitch {
     return switchBeforeStep(agent, payload, { hard: true })
   }, { prepend: true })
 
-  // DSH 0.2.1 checks a Session's folder as it puts each model request together, before
+  // the host checks a Session's folder as it puts each model request together, before
   // agent/pre-step, and fails the turn when both the folder and the one the Session was
   // made in are gone. The team folder is DS Bot's own, so it is made again; a Bot whose
-  // own folder went away first changes to the folder it would move to, through DSH's
+  // own folder went away first changes to the folder it would move to, through the host's
   // documented way out (`workingDirectory.set`), and the pre-step then moves it to a
-  // fresh part there, as on DSH 0.2.0.
-  // The local DSH context type names only two listener arguments; this event has three.
+  // fresh part there, as on the host.0.
+  // The local the host context type names only two listener arguments; this event has three.
   const onAssemble = ctx.on as unknown as (name: string, listener: (assembly: unknown, context: AssembleContext, next: Next) => unknown, options?: { readonly prepend?: boolean }) => Disposer
   onAssemble('system-prompt/assemble', async (_assembly, context, next) => {
     const agent = context.agent
@@ -238,7 +239,7 @@ export function createPartSwitch(options: PartSwitchOptions): PartSwitch {
     const target = wanted !== undefined && await rt.isFolder(wanted) ? wanted : team
     if (target !== undefined) {
       await folders.set(agent, target, context.signal)
-        .catch(error => rt.warn('ds-bot: %s works in %s, which is gone, and could not change to %s: %s', rt.botOf(place?.botId)?.name ?? agent.id, current, target, error))
+        .catch(error => rt.warn('moon-bot: %s works in %s, which is gone, and could not change to %s: %s', rt.botOf(place?.botId)?.name ?? agent.id, current, target, error))
     }
     return next()
   }, { prepend: true })
@@ -252,7 +253,7 @@ export function createPartSwitch(options: PartSwitchOptions): PartSwitch {
       const agent = await rt.resolveAgent(sessionId)
       if (agent.status === 'idle' && await move.folderMove(agent) !== undefined) startSwitch(agent, { folder: true })
     } catch (error) {
-      rt.warn('ds-bot: %s did not move to its working folder: %s', rt.botOf(botId)?.name ?? botId, error)
+      rt.warn('moon-bot: %s did not move to its working folder: %s', rt.botOf(botId)?.name ?? botId, error)
     }
   }
 
@@ -326,15 +327,15 @@ export function createPartSwitch(options: PartSwitchOptions): PartSwitch {
   }
 
   ctx.effect(() => {
-    const timer = setTimeout(() => void move.heldBack().catch(error => rt.warn('ds-bot: handing on input kept in earlier parts failed: %s', error)), RESUME_DELAY_MS)
+    const timer = setTimeout(() => void move.heldBack().catch(error => rt.warn('moon-bot: handing on input kept in earlier parts failed: %s', error)), RESUME_DELAY_MS)
     timer.unref?.()
     return () => clearTimeout(timer)
-  }, 'ds-bot: hand on input kept in earlier parts')
+  }, 'moon-bot: hand on input kept in earlier parts')
 
   ctx.on<{ readonly agent: SwitchAgent; readonly status?: string | undefined }>('agent/status', ({ agent, status }) => {
     if (status === 'idle' && rt.isBotSession(agent.id)) {
       releaseRescued(agent)
-      void checkContext(agent).catch(error => rt.warn('ds-bot: context check for %s failed: %s', agent.id, error))
+      void checkContext(agent).catch(error => rt.warn('moon-bot: context check for %s failed: %s', agent.id, error))
     }
   })
 
@@ -342,6 +343,7 @@ export function createPartSwitch(options: PartSwitchOptions): PartSwitch {
     heldBack: move.heldBack,
     followFolder,
     switchJobs: () => switches.values(),
+    switching: (sessionId: string): boolean => switches.has(sessionId),
     setPartBase: (sessionId, tokens) => { partBase.set(sessionId, tokens) },
   }
 }

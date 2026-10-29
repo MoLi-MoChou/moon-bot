@@ -24,12 +24,12 @@ interface ConnectorBody {
 type ConnectorEndpoint = (body: ConnectorBody) => Promise<unknown>
 
 // Connectors: outside services every Bot can use. GitHub is the first one. Its tools come
-// from GitHub's MCP server through DSH's own MCP client, mounted on the plugin context,
+// from GitHub's MCP server through the host's own MCP client, mounted on the plugin context,
 // so every Bot and Session gets them as mcp__github__<tool>.
 //
 // The token is the GITHUB_TOKEN secret (secrets.js keeps it, redacts it, and offers it to
 // the shell). It reaches GitHub only in the MCP request headers, built here in memory,
-// never written to the DSH profile. A new token is shared with no Bot's shell: the tools
+// never written to the host profile. A new token is shared with no Bot's shell: the tools
 // do not need it there, and a Bot that reads a planted instruction in an issue could
 // send it anywhere. The Secrets page can still share it. Signing in is `signIn` alone, so a browser login can
 // take its place later without touching the mount.
@@ -49,7 +49,7 @@ export async function signIn(token: string, { api = DEFAULTS.api, fetch: request
   let response
   try {
     response = await request(`${api.replace(/\/$/, '')}/user`, {
-      headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'ds-bot', 'X-GitHub-Api-Version': '2022-11-28' },
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'moon-bot', 'X-GitHub-Api-Version': '2022-11-28' },
       signal: AbortSignal.timeout(CHECK_TIMEOUT_MS),
     })
   } catch {
@@ -69,6 +69,13 @@ export function install(rt: HostRuntime): void {
   // `token` is what the current mount was made with, so a changed secret mounts again.
   let mount: ConnectorMount | null = null
   let status: ConnectorStatus = { state: 'off' }
+  const setStatus = (next: ConnectorStatus): void => {
+    const sameError = status.state === 'error' && next.state === 'error' && status.error === next.error
+    const sameNonError = status.state !== 'error' && next.state === status.state
+    if (sameError || sameNonError) return
+    status = next
+    rt.liveChanged?.()
+  }
   let queue: Promise<unknown> = Promise.resolve()
   let stopped = false
 
@@ -90,19 +97,19 @@ export function install(rt: HostRuntime): void {
     if (!force && mount !== null && mount.token === token) return
     await unmount()
     if (token === undefined) {
-      status = { state: 'off' }
+      setStatus({ state: 'off' })
       return
     }
     if (options === null) {
-      status = { state: 'off' }
+      setStatus({ state: 'off' })
       return
     }
     if (insecure) {
       mount = { token }
-      status = { state: 'error', error: INSECURE }
+      setStatus({ state: 'error', error: INSECURE })
       return
     }
-    status = { state: 'connecting' }
+    setStatus({ state: 'connecting' })
     // GitHub's MCP server becomes one of our connectors: its tools join the tool
     // registry like every connector's, and the policy sees them L3. The token rides
     // the request headers only — never a file, never a Bot's shell.
@@ -115,20 +122,20 @@ export function install(rt: HostRuntime): void {
       })
       mount = { token }
       githubUnmount = unmountGithub
-      status = { state: 'ready' }
+      setStatus({ state: 'ready' })
     } catch (error) {
       githubUnmount?.()
       githubUnmount = undefined
       mount = { token }
       const message = reason(error)
-      status = { state: 'error', error: message }
-      rt.warn('ds-bot: GitHub connector failed: %s', message)
+      setStatus({ state: 'error', error: message })
+      rt.warn('moon-bot: GitHub connector failed: %s', message)
     }
   }
 
   // One change at a time; `force` connects again even when the token is the same.
   const sync = (force = false): Promise<unknown> => {
-    queue = queue.then(() => reconcile(force)).catch((error: unknown) => { rt.warn('ds-bot: connectors: %s', reason(error)) })
+    queue = queue.then(() => reconcile(force)).catch((error: unknown) => { rt.warn('moon-bot: connectors: %s', reason(error)) })
     return queue
   }
 
@@ -193,7 +200,7 @@ export function install(rt: HostRuntime): void {
       stopped = true
       void unmount()
     }
-  }, 'ds-bot: connectors')
+  }, 'moon-bot: connectors')
 
   Object.assign(rt, { connectorsView, connectorEndpoint, secretsChanged: () => { void sync() } })
 }

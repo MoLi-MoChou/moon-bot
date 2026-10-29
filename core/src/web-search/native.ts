@@ -40,12 +40,12 @@ export const AUTH_STYLES: Readonly<Record<AuthStyle, (key: string) => Record<str
   'x-api-key': key => ({ 'x-api-key': key }),
   'api-key': key => ({ 'api-key': key }),
 }
-// One trailing /v1 belongs to the root, as in dsh's DeepSeek adapter and pi-ai's model listing.
+// One trailing /v1 belongs to the root, as in the host's DeepSeek adapter and pi-ai's model listing.
 const messagesRoot = (base: string): string =>
   (new URL(base).pathname.replace(/\/+$/, '').endsWith('/v1') ? trimSlash(base) : `${trimSlash(base)}/v1`)
 
 // Bounds what an endpoint that ignores the search tool can cost, while leaving a thinking model
-// room to reach the search: dsh's own DeepSeek search uses the same cap.
+// room to reach the search: the host's own DeepSeek search uses the same cap.
 const OUTPUT_CAP = 4096
 
 /** The standard search tool of one wire protocol. */

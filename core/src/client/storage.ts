@@ -1,24 +1,26 @@
-// Browser storage keys. Values saved under the plugin's legacy names (dsh-bot-team, dsh-bot)
+// Browser storage keys. Values saved under an older name (ds-bot, dsh-bot, dsh-bot-team)
 // move to the current keys once, so a renamed install keeps its unread marks, reactions,
 // visits, theme, panel width and Bot browser tabs.
 export const STORAGE = {
-  unread: 'ds-bot:unread',
-  reactions: 'ds-bot:reactions',
-  seen: 'ds-bot:seen',
-  prefs: 'ds-bot:prefs',
-  surface: 'ds-bot:surface',
-  agentSessions: 'ds-bot:agent-sessions',
-  browserWidth: 'ds-bot:browser-width',
-  browsers: 'ds-bot.browser.v2',
-  sidebarOrder: 'ds-bot:sidebar-order',
+  unread: 'moon-bot:unread',
+  reactions: 'moon-bot:reactions',
+  seen: 'moon-bot:seen',
+  prefs: 'moon-bot:prefs',
+  surface: 'moon-bot:surface',
+  agentSessions: 'moon-bot:agent-sessions',
+  browserWidth: 'moon-bot:browser-width',
+  browsers: 'moon-bot.browser.v2',
+  sidebarOrder: 'moon-bot:sidebar-order',
 } as const
 
 export type StorageKey = typeof STORAGE[keyof typeof STORAGE]
 
 // Newest legacy name first: when both exist, the more recent value wins.
-const LEGACY_PREFIXES = ['dsh-bot:', 'dsh-bot-team:']
-// The v1 store kept one page per Bot; v2 keeps a tab strip per Bot.
-const LEGACY_BROWSER_KEYS = ['ds-bot.browser.v1', 'dsh-bot.browser.v1']
+const LEGACY_PREFIXES = ['ds-bot:', 'dsh-bot:', 'dsh-bot-team:']
+// The tab strip already under another name, newest first, then the v1 store that kept
+// one page per Bot and has to be turned into tabs.
+const LEGACY_BROWSER_KEYS = ['ds-bot.browser.v2', 'ds-bot.browser.v1', 'dsh-bot.browser.v2', 'dsh-bot.browser.v1']
+const LEGACY_BROWSER_TAB_KEYS = new Set(['ds-bot.browser.v2', 'dsh-bot.browser.v2'])
 // The saved theme only paints the first frame before the team loads; it follows the
 // host's rename of the theme ids.
 const LEGACY_THEMES: Record<string, string> = { mono: 'grok', paper: 'claude', moonlight: 'deepseek' }
@@ -42,6 +44,12 @@ const migrateBrowsers = (storage: Storage): void => {
     try {
       const value = storage.getItem(key)
       if (value === null) continue
+      // A tab strip from a renamed build is already the current shape.
+      if (LEGACY_BROWSER_TAB_KEYS.has(key)) {
+        storage.setItem(STORAGE.browsers, value)
+        for (const earlier of LEGACY_BROWSER_KEYS) storage.removeItem(earlier)
+        return
+      }
       const previous = JSON.parse(value) as unknown
       const pages = previous !== null && typeof previous === 'object' && !Array.isArray(previous)
         ? Object.entries(previous as Record<string, unknown>)

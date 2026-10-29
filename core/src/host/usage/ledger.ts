@@ -143,7 +143,7 @@ interface GroupRow {
 export function sqliteLedger(DatabaseSync: typeof import('node:sqlite').DatabaseSync, path: string): Ledger {
   const db: DatabaseSync = new DatabaseSync(path)
   try {
-    // Desktop and Web may share one DSH home; the other writer holds the lock
+    // Desktop and Web may share one the host home; the other writer holds the lock
     // briefly, and the timeout must be armed before the WAL pragma can block.
     db.exec('PRAGMA busy_timeout = 5000')
     db.exec('PRAGMA journal_mode = WAL')

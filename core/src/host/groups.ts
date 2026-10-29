@@ -10,7 +10,7 @@ import { z } from 'zod'
 import { createUserMessage } from './llm-bits.ts'
 import { SOURCE_KIND, TEXT_KEPT } from './constants.ts'
 import { headOf } from './text.ts'
-import type { Agent } from './dsh-types.js'
+import type { Agent } from './host-types.js'
 import type { ToolContext } from '../engine/registry.ts'
 import type { StoredBot, TurnInfo } from './runtime.ts'
 import { failureLine, failureSay, fileLine, lineText, mentionsIn, transcript } from './groups/notice.ts'
@@ -27,7 +27,7 @@ export type {
 } from './groups/types.ts'
 
 /** The relay's context: the live agent of the group Session, whose inbox the round
- *  drains, rides a ToolContext where DSH provides one (tools/dsh.ts). */
+ *  drains, rides a ToolContext where the host provides one (tools/the host.ts). */
 interface RelayContext extends ToolContext {
   readonly agent?: Agent
 }
@@ -64,7 +64,7 @@ export function install(rt: GroupRuntime): void {
     // Replies the poster waited for go on with the work it posted for.
     const work = post.sub === undefined ? undefined : rt.closeWork?.(post.sub, `Group "${room.name}"`, text)
     await rt.deliver({ toId: post.botId, role: 'report', roomId: room.id, text, ...(work ? { work, replyTo: post.sub } : {}) })
-      .catch(error => rt.warn('ds-bot: group report to %s failed: %s', post.name, error))
+      .catch(error => rt.warn('moon-bot: group report to %s failed: %s', post.name, error))
   }
 
   // The user stops a member's work in this group from the group's details. Messages
@@ -95,7 +95,7 @@ export function install(rt: GroupRuntime): void {
       ? `没能做完：${failureSay(failure, true)}。`
       : `Could not finish: ${failureSay(failure)}.`, {
       late: true, quiet: true, failed: { code, ...(status ? { status } : {}), message },
-    }).catch(error => rt.warn('ds-bot: late group failure from %s failed: %s', member.name, error))
+    }).catch(error => rt.warn('moon-bot: late group failure from %s failed: %s', member.name, error))
   }
   rt.lateRoomFailure = lateRoomFailure
 
@@ -121,6 +121,7 @@ export function install(rt: GroupRuntime): void {
       await rt.load()
       const room = rt.roomOf(context.sessionId)
       if (room === undefined) return JSON.stringify({ error: 'Not a group chat' })
+      if (typeof room.archivedAt === 'number') return JSON.stringify({ error: 'This group chat is archived' })
       ensureRoomLog(room)
       // Everything queued since the last relay is posted in order, so messages that the
       // Session folds into one turn are not lost; the newest one picks the speakers.
@@ -196,7 +197,7 @@ export function install(rt: GroupRuntime): void {
       try {
         await rounds.runRound(room, round, signal, context.agent)
       } catch (error) {
-        rt.warn('ds-bot: group round in %s stopped: %s', room.name, error)
+        rt.warn('moon-bot: group round in %s stopped: %s', room.name, error)
       } finally {
         rt.roomProgress.delete(context.callId)
       }

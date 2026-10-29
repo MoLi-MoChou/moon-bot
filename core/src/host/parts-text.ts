@@ -3,7 +3,7 @@
 import { REPLY_KIND, SOURCE_KIND } from './constants.ts'
 import { textOf } from './text.ts'
 import { validateViewAnswer, viewSummary } from '../shared/views.ts'
-import type { SessionEvent } from './dsh-types.js'
+import type { SessionEvent } from './host-types.js'
 
 interface AskQuestion {
   readonly id?: string

@@ -1,5 +1,5 @@
 import type { DatabaseSync, StatementSync } from 'node:sqlite'
-import type { SessionEvent } from './dsh-types.js'
+import type { SessionEvent } from './host-types.js'
 import type { HostRuntime } from './runtime.js'
 
 /** One line of a Bot's own chat, as the index stores it. */
@@ -126,7 +126,7 @@ export function install(rt: HostRuntime): void {
         ({ DatabaseSync } = await import('node:sqlite'))
         await mkdir(home, { recursive: true })
       } catch (error) {
-        rt.warn('ds-bot: no chat index, read_own_chat scans the logs: %s', error)
+        rt.warn('moon-bot: no chat index, read_own_chat scans the logs: %s', error)
         return null
       }
       // A damaged file is rebuilt from the logs once.
@@ -135,7 +135,7 @@ export function install(rt: HostRuntime): void {
           if (fresh) await unlink(indexPath).catch(() => {})
           return createIndex(new DatabaseSync(indexPath))
         } catch (error) {
-          if (fresh) rt.warn('ds-bot: no chat index, read_own_chat scans the logs: %s', error)
+          if (fresh) rt.warn('moon-bot: no chat index, read_own_chat scans the logs: %s', error)
         }
       }
       return null
@@ -180,7 +180,7 @@ export function install(rt: HostRuntime): void {
     chatIndex?.db.close()
     chatIndex = null
     indexOpening = undefined
-  }, 'ds-bot: chat index')
+  }, 'moon-bot: chat index')
 
   // Adds what a part said since its mark. Reads of one part wait for each other, so no
   // line is added twice.
@@ -248,7 +248,7 @@ export function install(rt: HostRuntime): void {
     if (index === null) return { index, parts: [], hidden: undefined }
     const parts: readonly ChatPart[] = rt.partsOf(botId)
     // A part that cannot be read now is searched as far as it was indexed.
-    for (const part of parts) await catchUp(index, part).catch((error: unknown) => rt.warn('ds-bot: indexing %s failed: %s', part.sessionId, error))
+    for (const part of parts) await catchUp(index, part).catch((error: unknown) => rt.warn('moon-bot: indexing %s failed: %s', part.sessionId, error))
     const markForAsking = askingId === undefined ? undefined : index.mark.get(askingId) as MarkRow | undefined
     const turn = askingId !== undefined && askingId === parts.at(-1)?.sessionId ? markForAsking?.turn : undefined
     return { index, parts, hidden: turn === undefined || turn < 0 ? undefined : { session: askingId, from: turn } }
@@ -334,7 +334,7 @@ export function install(rt: HostRuntime): void {
 
   async function ownChatBrief(member: { readonly id: string; readonly name: string }): Promise<string> {
     let lines: readonly string[] = []
-    try { lines = await latestOwnChat(member.id, { limit: OWN_CHAT_BRIEF }) } catch (error) { rt.warn('ds-bot: brief for %s failed: %s', member.name, error) }
+    try { lines = await latestOwnChat(member.id, { limit: OWN_CHAT_BRIEF }) } catch (error) { rt.warn('moon-bot: brief for %s failed: %s', member.name, error) }
     return [
       'Your own chat with the user so far (latest messages, oldest first; private, so share only what the group needs):',
       lines.length > 0 ? lines.join('\n') : 'Nothing yet.',

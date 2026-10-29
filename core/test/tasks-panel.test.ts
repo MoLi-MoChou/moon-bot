@@ -17,6 +17,7 @@ interface Row {
   readonly sessionId: string
   readonly botName: string
   readonly queued?: number
+  readonly queue?: readonly { readonly id: string; readonly preview: string }[]
   readonly hold?: string
 }
 
@@ -30,6 +31,7 @@ interface Panel {
   tasksView(): Promise<View>
   noteTurn(sessionId: string, event: { readonly type?: string; readonly turn?: unknown; readonly reason?: unknown }): void
   stopTask(sessionId: string): Promise<boolean>
+  removeQueued(sessionId: string, id: string): Promise<boolean>
 }
 
 interface Options {
@@ -39,6 +41,7 @@ interface Options {
   readonly agent?: (sessionId: string) => AgentStub | undefined
   readonly approvals?: readonly { readonly sessionId: string }[]
   readonly waiting?: Record<string, { readonly bots: readonly string[]; readonly rooms: readonly string[]; readonly for: readonly string[] }>
+  readonly parked?: readonly { readonly sessionId: string; readonly botId: string; readonly roomId?: string }[]
   readonly cancels?: { readonly kind: string }[]
 }
 
@@ -54,6 +57,7 @@ function panel(options: Options = {}): Panel {
     workOf: () => undefined,
     workAsker: () => undefined,
     waitingView: () => options.waiting ?? {},
+    parkedTurns: () => options.parked ?? [],
     approvalsView: () => options.approvals ?? [],
     resolveAgent: async (sessionId: string) => {
       const agent = options.agent?.(sessionId)
@@ -87,6 +91,12 @@ test('a queued followup is reported as queued, but a send trigger is not', async
     agent: () => ({ pendingTurns: () => 1 }),
   }).tasksView()
   assert.equal(sent.running[0]?.hold, undefined)
+})
+
+test('a parked restart is waiting with an interrupted hold, and idle rows have no guessed hold', async () => {
+  const parked = await panel({ parked: [{ sessionId: 'chat:b1', botId: 'b1' }] }).tasksView()
+  assert.equal(parked.waiting[0]?.hold, 'interrupted')
+  assert.equal((parked.waiting[0] as { sessionId?: string }).sessionId, 'chat:b1')
 })
 
 test('handoff waiting is explicit and idle rows have no guessed hold', async () => {
@@ -210,4 +220,68 @@ test('a finished row keeps who stopped it: the user or a Main Bot', async () => 
   const view = await rt.tasksView()
   assert.equal(view.completed[0]?.reason, 'hook')
   assert.equal(view.completed[1]?.reason, 'user')
+})
+
+const queuedMessage = (id: string, text: string, source?: Record<string, unknown>) => ({
+  id,
+  content: [{ type: 'text', text }],
+  ...(source === undefined ? {} : { source }),
+})
+
+test('a running turn lists each queued preview, and a turn that has not started lists none', async () => {
+  const view = await panel({
+    work: { b1: { since: 1_000 } },
+    live: { 'chat:b1': { turn: 4 } },
+    agent: () => ({ inbox: { nextTurn: [queuedMessage('a', `${'y'.repeat(130)}\nrest`), queuedMessage('b', 'second'), { content: [{ type: 'text', text: 'no id' }] }] } }),
+  }).tasksView()
+  assert.equal(view.running[0]?.queued, 3)
+  assert.equal(view.running[0]?.queue?.[0]?.id, 'a')
+  assert.equal(view.running[0]?.queue?.[0]?.preview, 'y'.repeat(120))
+  assert.deepEqual(view.running[0]?.queue?.[1], { id: 'b', preview: 'second' })
+  const waitingSend = await panel({
+    work: { b1: { since: 1_000 } },
+    live: { 'chat:b1': { sentAt: 1_000 } },
+    agent: () => ({ inbox: { nextTurn: [queuedMessage('a', 'not yet')] } }),
+  }).tasksView()
+  assert.equal(waitingSend.running[0]?.queue, undefined)
+})
+
+test('removing a queued Bot request tells its sender; a user line and a missing id do not', async () => {
+  const delivered: Record<string, unknown>[] = []
+  const nextTurn = [
+    queuedMessage('user-1', 'hello', { kind: 'user' }),
+    queuedMessage('q1', 'please', { kind: 'bot', role: 'request', senderSessionId: 'b2', exchangeId: 'ex-1' }),
+  ]
+  const rt = panel({
+    live: { 'chat:b1': { turn: 1 } },
+    agent: () => ({
+      inbox: {
+        nextTurn,
+        remove: (id: string) => {
+          const index = nextTurn.findIndex(item => item.id === id)
+          if (index < 0) return false
+          nextTurn.splice(index, 1)
+          return true
+        },
+      },
+    }),
+  })
+  const host = rt as unknown as {
+    deliver: (args: Record<string, unknown>) => Promise<string>
+    warn: (template: string, ...args: readonly unknown[]) => void
+    closeWork: (id: string, name: string, text: string) => string
+  }
+  host.deliver = async (args) => { delivered.push(args); return 'ok' }
+  host.warn = () => {}
+  host.closeWork = () => 'work-1'
+  assert.equal(await rt.removeQueued('chat:b1', 'missing'), false)
+  assert.equal(await rt.removeQueued('chat:b1', 'user-1'), true)
+  assert.equal(delivered.length, 0, 'the user\'s own line is not announced')
+  assert.equal(await rt.removeQueued('chat:b1', 'q1'), true)
+  assert.equal(delivered.length, 1)
+  assert.equal(delivered[0]?.toId, 'b2')
+  assert.equal(delivered[0]?.replyTo, 'ex-1')
+  assert.equal(delivered[0]?.work, 'work-1')
+  assert.match(String(delivered[0]?.text), /withdrew/)
+  assert.equal(await rt.removeQueued('chat:b1', 'q1'), false)
 })

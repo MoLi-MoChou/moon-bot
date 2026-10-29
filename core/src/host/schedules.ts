@@ -1,4 +1,4 @@
-import type { Disposer } from './dsh-types.js'
+import type { Disposer } from './host-types.js'
 import type { HostRuntime } from './runtime.js'
 
 interface ScheduleEntry {
@@ -68,12 +68,12 @@ const bodyText = (body: ScheduleBody, key: string): string | undefined => {
   return typeof value === 'string' ? value : undefined
 }
 
-// Scheduled tasks. DSH's schedule service stores each task with the Session it belongs
+// Scheduled tasks. the host's schedule service stores each task with the Session it belongs
 // to and, when it is due, sends its prompt to that Session as a new message. This
 // module lists the team's tasks for Settings, creates and removes them there, and moves
 // a Bot's tasks along when its chat goes on in a fresh part, so the Bot keeps seeing
 // them. A group chat's task lives on the group's own Session, so the reminder reaches
-// the group like a message from the user (see reminderText). DSH 0.2.0 mounts the service only with its Automation tasks bundle on, so
+// the group like a message from the user (see reminderText). the host.0 mounts the service only with its Automation tasks bundle on, so
 // the service is optional and every endpoint reports whether it is there.
 
 const MAX_TITLE = 120
@@ -81,7 +81,7 @@ const TIME = /^([01]\d|2[0-3]):[0-5]\d$/
 
 const invalid = (message: string): Error => Object.assign(new Error(message), { code: 'bot/invalid' })
 
-// What a group sees of a due reminder: DSH frames it for one Session's model
+// What a group sees of a due reminder: the host frames it for one Session's model
 // ("[SCHEDULE REMINDER]" with JSON fields); the group gets each prompt as one line.
 export function reminderText(text: string): string {
   const prompts: unknown[] = []
@@ -145,7 +145,7 @@ export function install(rt: HostRuntime): void {
   const attach = (sub: ScheduleHost): void => {
     const own = sub.schedule
     service = own ?? null
-    sub.effect(() => () => { if (service === own) service = null }, 'ds-bot: schedule service')
+    sub.effect(() => () => { if (service === own) service = null }, 'moon-bot: schedule service')
   }
   if (typeof ctx.inject === 'function') ctx.inject(['schedule'], sub => attach(sub))
   else {
@@ -209,7 +209,7 @@ export function install(rt: HostRuntime): void {
     try {
       records = await service.list({ sessionId: fromId })
     } catch (error) {
-      rt.warn('ds-bot: tasks of %s not moved: %s', fromId, error instanceof Error ? error.message : error)
+      rt.warn('moon-bot: tasks of %s not moved: %s', fromId, error instanceof Error ? error.message : error)
       return
     }
     for (const record of records) {
@@ -219,7 +219,7 @@ export function install(rt: HostRuntime): void {
         await service.create(toId, request)
         await service.delete({ sessionId: fromId, id: record.id })
       } catch (error) {
-        rt.warn('ds-bot: task %s stayed with the earlier part: %s', record.title, error instanceof Error ? error.message : error)
+        rt.warn('moon-bot: task %s stayed with the earlier part: %s', record.title, error instanceof Error ? error.message : error)
       }
     }
   }

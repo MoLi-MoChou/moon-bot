@@ -13,7 +13,7 @@ import { endEventOf } from '../src/engine/builtin/adapter.ts'
 import { BuiltinRuntime } from '../src/engine/builtin/runtime.ts'
 import type { EngineServices, ResolvedModel } from '../src/engine/builtin/services.ts'
 import { sqliteTranscriptOf } from '../src/engine/builtin/transcript.ts'
-import { callFailureOf, failureCodeOf } from '../src/engine/failure.ts'
+import { callFailureOf, failureCodeOf, failureNeedsUser } from '../src/engine/failure.ts'
 import { openStore } from '../src/store/db.ts'
 
 const unreachable = 'http://127.0.0.1:9/v1'
@@ -122,6 +122,11 @@ test('the failure code is read from what the wire said', () => {
   assert.equal(failureCodeOf('429 rate limited, retry later'), 'RATE_LIMIT')
   assert.equal(failureCodeOf('prompt is too long: maximum context length exceeded'), 'CONTEXT_WINDOW_EXCEEDED')
   assert.equal(failureCodeOf('502 Bad Gateway'), 'SERVER')
+  assert.equal(failureCodeOf('402 payment required, credit balance is too low'), 'QUOTA')
+  assert.equal(failureCodeOf('the model is overloaded'), 'OVERLOADED')
+  assert.equal(failureNeedsUser('QUOTA'), true)
+  assert.equal(failureNeedsUser('OVERLOADED'), false)
+  assert.equal(failureNeedsUser('RATE_LIMIT'), false)
   assert.equal(failureCodeOf('Connection error.'), 'TRANSPORT')
   assert.equal(failureCodeOf('socket hang up'), 'TRANSPORT')
   assert.equal(failureCodeOf('the model wrote something odd'), undefined)

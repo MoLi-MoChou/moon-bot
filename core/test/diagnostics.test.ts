@@ -65,7 +65,7 @@ test('warnings are kept, cleaned, written to the log, and read back after a rest
   const error = Object.assign(new Error(`cannot open ${homedir()}/x with sk-abcdefghij`), { code: 'EACCES' })
   const quiet = t.mock.method(console, 'error', () => {})
   const rt = host(home)
-  rt.warn('ds-bot: state write failed: %s', error)
+  rt.warn('moon-bot: state write failed: %s', error)
   rt.noteFailure({ source: 'turn', text: 'Rate limited', code: 'RATE_LIMIT', status: 429, bot: 'Chief', where: 'own chat' })
   const [first, second] = await rt.diagnostics.entries()
   assert.equal(first.level, 'warn')
@@ -107,7 +107,7 @@ test('warnings send only cleaned text to the logger and stderr', (t) => {
   const quiet = t.mock.method(console, 'error', (...args) => stderr.push(args.join(' ')))
   const rt = host(home, { config: { diagnosticsFile: false } })
   rt.ctx.logger.warn = (...args) => warnings.push(args)
-  rt.warn('ds-bot: warning: %s', error)
+  rt.warn('moon-bot: warning: %s', error)
   quiet.mock.restore()
 
   assert.equal(warnings[0][0], '%s')
@@ -168,7 +168,7 @@ test('a stop waits for the log writes queued before it, and nothing is written a
     syncBuiltinESMExports()
   })
   const rt = host(home)
-  rt.warn('ds-bot: before the stop')
+  rt.warn('moon-bot: before the stop')
   await appending
   let stopped = false
   const stopping = rt.stop().then(() => { stopped = true })
@@ -178,7 +178,7 @@ test('a stop waits for the log writes queued before it, and nothing is written a
   await stopping
   assert.match(readFileSync(log, 'utf8'), /before the stop/)
 
-  rt.warn('ds-bot: after the stop')
+  rt.warn('moon-bot: after the stop')
   await rt.diagnostics.clear()
   // A write queued after the stop would be part of what a second stop waits for.
   await rt.stop()

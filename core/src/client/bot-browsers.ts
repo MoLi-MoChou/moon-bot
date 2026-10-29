@@ -135,7 +135,7 @@ export function createBotBrowsers({ bridge, createSource, storage = globalThis.l
       // job resolves undefined instead of rejecting, so no caller drops one.
       job = create(tabId)
         .catch((error: unknown) => {
-          console.warn('[ds-bot] browser acquire', error)
+          console.warn('[moon-bot] browser acquire', error)
           const failure = error as { message?: unknown }
           publish(tabId, { loading: false, error: String(failure?.message ?? error) })
           return undefined
@@ -163,7 +163,7 @@ export function createBotBrowsers({ bridge, createSource, storage = globalThis.l
     entry.stop()
     entry.element.remove()
     publish(tabId, { live: false, loading: false })
-    await bridge.release(entry.lease).catch(error => console.warn('[ds-bot] browser release', error))
+    await bridge.release(entry.lease).catch(error => console.warn('[moon-bot] browser release', error))
   }
 
   function openTab(botId: string, url?: string): string {

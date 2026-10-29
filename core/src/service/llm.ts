@@ -1,9 +1,9 @@
-// The standalone llm service (plan §阶段 3): what the host modules ask of DSH's adapter
+// The standalone llm service (plan §阶段 3): what the host modules ask of the host's adapter
 // — providers, their models, reasoning info, the configurable directory, endpoint
 // discovery — served from the service's own settings (the `llm-pi-ai` section the
 // providers module writes) and credentials, over a small directory of well-known
 // endpoints. Model discovery asks the endpoint itself, OpenAI- or Anthropic-shaped.
-import type { ConfigurableProvider } from '../host/dsh-types.js'
+import type { ConfigurableProvider } from '../host/host-types.js'
 import { resolveModelSpec } from '../shared/model-catalog.ts'
 import type { FileCredentials } from './credentials.ts'
 import type { FileSettings } from './settings.ts'

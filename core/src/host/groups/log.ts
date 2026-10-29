@@ -7,7 +7,7 @@ import { join } from 'node:path'
 import { createUserMessage } from '../llm-bits.ts'
 import { GROUP_LINE_READ, ROOM_LATE_ROUNDS, ROOM_STEP_GAP_MS, SOURCE_KIND, TEXT_KEPT } from '../constants.ts'
 import { headOf, splitRef } from '../text.ts'
-import type { AttachmentRef } from '../dsh-types.js'
+import type { AttachmentRef } from '../host-types.js'
 import type { StoredBot, TurnInfo } from '../runtime.ts'
 import type { GroupRuntime } from './types.ts'
 import {
@@ -91,7 +91,7 @@ export function installRoomLog(rt: GroupRuntime): RoomLogApi {
         mkdirSync(join(linesDir, roomId), { recursive: true })
         writeFileSync(lineFile(roomId, line.seq), read, 'utf8')
       } catch (error) {
-        rt.warn('ds-bot: group line %s/%s not kept whole: %s', roomId, line.seq, error)
+        rt.warn('moon-bot: group line %s/%s not kept whole: %s', roomId, line.seq, error)
       }
     }
     return { ...line, text: kept, length: text.length }
@@ -147,7 +147,7 @@ export function installRoomLog(rt: GroupRuntime): RoomLogApi {
     const gone = rt.roomOf(room.id) !== room || !room.members.includes(member.id) || rt.botOf(member.id) === undefined
     if (gone || room.sessions?.[member.id] !== undefined) {
       void ctx.workspaceRegistry.archiveSession(id, { stopActivity: true })
-        .catch(error => rt.warn('ds-bot: unused group Session of %s in %s not archived: %s', member.name, room.name, error))
+        .catch(error => rt.warn('moon-bot: unused group Session of %s in %s not archived: %s', member.name, room.name, error))
       return gone ? undefined : groupSessionFor(room, member)
     }
     room.sessions[member.id] = id
@@ -156,10 +156,10 @@ export function installRoomLog(rt: GroupRuntime): RoomLogApi {
     const ref = await rt.desiredModel(member)
     if (ref !== undefined) {
       await rt.selectSessionModel(id, splitRef(ref))
-        .catch(error => rt.warn('ds-bot: model for %s in %s not applied: %s', member.name, room.name, error))
+        .catch(error => rt.warn('moon-bot: model for %s in %s not applied: %s', member.name, room.name, error))
     }
     await rt.applyPermission(member, id, room)
-      .catch(error => rt.warn('ds-bot: permission for %s in %s not applied: %s', member.name, room.name, error))
+      .catch(error => rt.warn('moon-bot: permission for %s in %s not applied: %s', member.name, room.name, error))
     await rt.save()
     await rt.ensureCapabilities(id)
     return { id, brief: await rt.ownChatBrief(member) }
@@ -274,7 +274,7 @@ export function installRoomLog(rt: GroupRuntime): RoomLogApi {
     if (!quiet) room.lateRounds = (room.lateRounds ?? 0) + 1
     await rt.save()
     await postToRoom(room, member, done ? '' : text, { late: true, ...(done ? { done: true } : {}), ...(info.askedBy ? { askedBy: info.askedBy } : {}), ...(quiet ? { quiet: true } : {}) })
-      .catch(error => rt.warn('ds-bot: late group reply from %s failed: %s', member.name, error))
+      .catch(error => rt.warn('moon-bot: late group reply from %s failed: %s', member.name, error))
   }
   rt.lateRoomReply = lateRoomReply
 
@@ -312,7 +312,7 @@ export function installRoomLog(rt: GroupRuntime): RoomLogApi {
   // for and a line that calls a member go at once; lines still held when the turn ends
   // open its result. Per group Session.
   const held = new Map<string, HeldLines>()
-  ctx.effect(() => () => { for (const entry of held.values()) clearTimeout(entry.timer) }, 'ds-bot: group step lines')
+  ctx.effect(() => () => { for (const entry of held.values()) clearTimeout(entry.timer) }, 'moon-bot: group step lines')
   const flushSteps = (sessionId: string): Promise<void> | undefined => {
     const entry = held.get(sessionId)
     if (entry === undefined) return undefined
@@ -333,7 +333,7 @@ export function installRoomLog(rt: GroupRuntime): RoomLogApi {
     entry.info = info
     entry.lines.push(text)
     if ((first && info?.role === 'room') || callsIn(room, member, text) || Date.now() - entry.last >= ROOM_STEP_GAP_MS) return flushSteps(sessionId)
-    entry.timer ??= setTimeout(() => void flushSteps(sessionId)?.catch(error => rt.warn('ds-bot: step lines from %s not posted: %s', member.name, error)), entry.last + ROOM_STEP_GAP_MS - Date.now())
+    entry.timer ??= setTimeout(() => void flushSteps(sessionId)?.catch(error => rt.warn('moon-bot: step lines from %s not posted: %s', member.name, error)), entry.last + ROOM_STEP_GAP_MS - Date.now())
   }
   rt.takeRoomSteps = (sessionId: string): string => {
     const entry = held.get(sessionId)

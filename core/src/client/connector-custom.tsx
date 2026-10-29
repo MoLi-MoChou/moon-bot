@@ -28,16 +28,10 @@ function Field({ label, value, onChange, onBlur, error, hint, placeholder, multi
     multiline?: boolean | undefined;
     disabled?: boolean | undefined;
 }) {
-    return <label className='bt-q-field bt-secret-field'><span className='bt-set-hint'>{label}</span>{h(multiline ? 'textarea' : 'input', {
-        className: error ? 'bt-input bt-input-error' : 'bt-input',
-        value,
-        disabled,
-        placeholder,
-        spellCheck: false,
-        'aria-invalid': error !== undefined,
-        onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onChange(event.target.value),
-        onBlur,
-    })}{hint ? <span className='bt-set-hint'>{hint}</span> : null}{error ? <span className='bt-field-error' role='alert'>{error}</span> : null}</label>;
+    const field = multiline
+        ? <textarea className={error ? 'bt-input bt-input-error' : 'bt-input'} value={value} disabled={disabled} placeholder={placeholder} spellCheck={false} aria-invalid={error !== undefined} onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => onChange(event.target.value)} onBlur={onBlur} />
+        : <input className={error ? 'bt-input bt-input-error' : 'bt-input'} value={value} disabled={disabled} placeholder={placeholder} spellCheck={false} aria-invalid={error !== undefined} onChange={(event: React.ChangeEvent<HTMLInputElement>) => onChange(event.target.value)} onBlur={onBlur} />;
+    return <label className='bt-q-field bt-secret-field'><span className='bt-set-hint'>{label}</span>{field}{hint ? <span className='bt-set-hint'>{hint}</span> : null}{error ? <span className='bt-field-error' role='alert'>{error}</span> : null}</label>;
 }
 
 export function CustomConnectorForm({ initial, market, existing, onClose }: {

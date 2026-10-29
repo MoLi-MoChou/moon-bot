@@ -20,7 +20,7 @@ if (!name || !webPort || !repo || !rendererPort) {
   process.exit(2)
 }
 const ROOT = dirname(dirname(dirname(fileURLToPath(import.meta.url))))
-const HOME = join(ROOT, `.dsh-test-desktop-${name}`)
+const HOME = join(ROOT, `.moon-bot-test-desktop-${name}`)
 const saved = () => JSON.parse(readFileSync(join(HOME, 'bot', 'state.json'), 'utf8'))
 const names = team => Object.values(team.bots).map(bot => bot.name).sort()
 const mainNames = team => team.mainBotIds.map(id => team.bots[id]?.name ?? id)

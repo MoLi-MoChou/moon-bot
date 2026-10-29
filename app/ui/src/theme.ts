@@ -30,8 +30,8 @@ export function applyTheme(prefs: ThemePrefs | undefined): string {
   if (theme !== undefined) {
     painted?.style.remove()
     const style = document.createElement('style')
-    style.dataset.dshBot = 'theme'
-    style.dataset.plugin = 'ds-bot'
+    style.dataset.moonBot = 'theme'
+    style.dataset.plugin = 'moon-bot'
     style.textContent = themeCss(theme, accent)
     document.head.append(style)
     painted = { style, id }
@@ -47,7 +47,7 @@ export function applyTheme(prefs: ThemePrefs | undefined): string {
 /** The system's light or dark mode, which the Bot views read as a body attribute. */
 export function followSystemAppearance(): () => void {
   const dark = matchMedia('(prefers-color-scheme: dark)')
-  const paint = (): void => { document.body.toggleAttribute('data-ds-dark-theme', dark.matches) }
+  const paint = (): void => { document.body.toggleAttribute('data-bt-dark', dark.matches) }
   paint()
   dark.addEventListener('change', paint)
   return () => { dark.removeEventListener('change', paint) }

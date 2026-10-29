@@ -1,7 +1,7 @@
 // The team half of the channel: the state view and its live figures, conversations,
 // files, and every endpoint that changes Bots, groups or the team's Agents.
 import { COLORS, EXTRA_COLORS } from '../constants.ts'
-import type { AttachmentRef } from '../dsh-types.ts'
+import type { AttachmentRef } from '../host-types.ts'
 import type { RpcEndpoint } from '../../shared/rpc.ts'
 import type {
   BotRow,
@@ -33,7 +33,7 @@ export interface LocaleState {
   value: string | undefined
 }
 
-// Models come from DSH, not state.json, so a provider added in Harness settings
+// Models come from the host, not state.json, so a provider added in Harness settings
 // changes the view without a new revision.
 const modelsKeyOf = (rt: ChannelRuntime): string => `${rt.cachedCatalog().map(entry => `${entry.ref}${entry.needsKey ? '!' : ''}${entry.reasoning ? `:${JSON.stringify(entry.reasoning)}` : ''}`).join(',')}|${rt.cachedDefault() ?? ''}`
 
@@ -64,7 +64,7 @@ function createView(rt: ChannelRuntime): () => TeamView {
     exchangeTurns: state.exchangeTurns,
     questions: state.questions,
     views: state.views ?? EMPTY,
-    // The team's DSH Agent (at most one): plain dsh Sessions, not Bots.
+    // The team's Agent (at most one): plain session Sessions, not Bots.
     agents: Object.values(state.agents),
     // Key names and who may use them; values never leave the host.
     secrets: rt.secretsView(),
@@ -210,16 +210,29 @@ export function teamHandlers(rt: ChannelRuntime, locale: LocaleState): ChannelHa
       await rt.load()
       return ok(await rt.chatPage(String(body.botId ?? ''), body.cursor ?? undefined))
     },
-    // DSH's own whole-log figures for the current part of a Bot's chat, the ones its
+    // the host's own whole-log figures for the current part of a Bot's chat, the ones its
     // status bar shows; a window without that bar shows them in the Bot's details.
     'run-stats': async (body) => {
       await rt.load()
       const bot = rt.botOf(String(body.botId ?? ''))
       if (bot === undefined) return fail('Unknown Bot', 'bot/not-found')
       const projections = rt.ctx.get<SessionProjectionsService>('sessionProjections')
-      if (projections === undefined) return ok(null)
-      const agent = await rt.resolveAgent(rt.chatOf(bot.id))
+      const sessionId = rt.chatOf(bot.id)
+      // A host that publishes projections keeps that snapshot. Without one, the ring
+      // still gets this part's own estimate; a session that cannot be measured stays null.
+      if (projections === undefined) return ok(await rt.contextStats?.(sessionId) ?? null)
+      const agent = await rt.resolveAgent(sessionId)
       return ok(projections.snapshot(agent.session, RUN_STATS).values)
+    },
+    // In-place only. A running turn, an unread delivery, or a missing engine comes
+    // back as a sentence; this does not start a new part.
+    'context-compact': async (body) => {
+      await rt.load()
+      const bot = rt.botOf(String(body.botId ?? ''))
+      if (bot === undefined) return fail('Unknown Bot', 'bot/not-found')
+      const answer = await rt.compactChat?.(rt.chatOf(bot.id))
+      if (answer === undefined) return fail('Condensing this chat did not make room.', 'bot/unavailable')
+      return ok(answer)
     },
     usage: async (body) => {
       await rt.load()
@@ -250,7 +263,7 @@ export function teamHandlers(rt: ChannelRuntime, locale: LocaleState): ChannelHa
     'create-room': async (body) => {
       await rt.load()
       const room = await rt.createRoom({ members: Array.isArray(body.members) ? body.members : [], name: body.name, ...(typeof body.admin === 'string' ? { admin: body.admin } : {}) })
-      if (body.greet === true) await rt.greetRoom(room.id).catch(error => rt.warn('ds-bot: greeting in %s failed: %s', room.name, error))
+      if (body.greet === true) await rt.greetRoom(room.id).catch(error => rt.warn('moon-bot: greeting in %s failed: %s', room.name, error))
       return ok(room)
     },
     'update-room': async (body) => {
@@ -318,6 +331,11 @@ export function teamHandlers(rt: ChannelRuntime, locale: LocaleState): ChannelHa
     'delete-room': async (body) => {
       await rt.load()
       await rt.deleteRoom(body.id)
+      return ok(view())
+    },
+    'archive-room': async (body) => {
+      await rt.load()
+      await rt.archiveRoom(body.id, body.archived === true)
       return ok(view())
     },
   }

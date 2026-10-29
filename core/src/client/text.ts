@@ -1,6 +1,7 @@
 // -------------------------------------------------------------------------
 // Text helpers
-import { dateLocale, hostText, t } from './i18n.ts'
+import { hostText, t } from './i18n.ts'
+export { clockLabel, dayLabel, elapsedLabel, messageClock, relativeShort } from './text-time.ts'
 import { mentionSpans } from '../shared/mentions.ts'
 
 export const MENTION_ORIGIN = 'https://bots.local/'
@@ -9,15 +10,25 @@ export interface TextBot { id: string; name: string }
 
 // The Bots a text calls, by the rule the group host reads (shared/mentions.ts). The
 // speaker's own name takes part so that it is never read as a shorter name inside it
-// ("@新 Bot" in "@新 Bot 2"); it then stays plain text.
-export function linkMentions(text: string, bots: readonly TextBot[], selfId?: string): string {
+// ("@新 Bot" in "@新 Bot 2"); it then stays plain text. In a group, an everyone
+// mention keeps its typed label and appends one named internal link per member. Both
+// markdown hosts render those links as that member's mark, so the transcript shows the
+// actual people called without changing the stored text.
+export function linkMentions(text: string, bots: readonly TextBot[], selfId?: string, everyoneBots?: readonly TextBot[]): string {
   if (!text || !text.includes('@')) return text
   let out = ''
   let cursor = 0
-  for (const span of mentionSpans(text, bots) as { start: number; end: number; bot?: TextBot }[]) {
-    if (!span.bot || span.bot.id === selfId) continue
-    out += `${text.slice(cursor, span.start)}[${text.slice(span.start + 1, span.end).replace(/[[\]\\]/g, '\\$&')}](${MENTION_ORIGIN}${span.bot.id})`
-    cursor = span.end
+  for (const span of mentionSpans(text, bots) as { start: number; end: number; bot?: TextBot; all?: true }[]) {
+    if (span.bot && span.bot.id !== selfId) {
+      out += `${text.slice(cursor, span.start)}[${text.slice(span.start + 1, span.end).replace(/[[\]\\]/g, '\\$&')}](${MENTION_ORIGIN}${span.bot.id})`
+      cursor = span.end
+      continue
+    }
+    if (span.all && everyoneBots !== undefined && everyoneBots.length > 0) {
+      const marks = everyoneBots.map(bot => `[${bot.name.replace(/[[\]\\]/g, '\\$&')}](${MENTION_ORIGIN}${bot.id})`).join(' ')
+      out += `${text.slice(cursor, span.start)}${text.slice(span.start, span.end)} (${marks})`
+      cursor = span.end
+    }
   }
   return cursor === 0 ? text : out + text.slice(cursor)
 }
@@ -28,58 +39,13 @@ export function mentionTarget(event: Event): string | null {
   return href === undefined || href === null ? null : href.slice(MENTION_ORIGIN.length)
 }
 
-function clock(ms: number): string {
-  return new Date(ms).toLocaleTimeString(dateLocale(), { hour: 'numeric', minute: '2-digit' })
-}
-const midnight = (value: Date): number => new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime()
-const daysBefore = (date: Date, now: number): number => Math.round((midnight(new Date(now)) - midnight(date)) / 86400000)
-export function dayLabel(ms: number): string {
-  const date = new Date(ms)
-  const today = new Date()
-  const sameDay = date.toDateString() === today.toDateString()
-  return sameDay ? t('Today {time}', { time: clock(ms) }) : `${date.toLocaleDateString(dateLocale(), { weekday: 'short', month: 'short', day: 'numeric' })} ${clock(ms)}`
-}
-
-// The time separator's stamp: "Today 1:12 AM", "Yesterday 9:03 PM", "Thu, Sep 3 4:20 PM".
-export function clockLabel(time: number, now: number = Date.now()): string {
-  const date = new Date(time)
-  const days = daysBefore(date, now)
-  const stamp = clock(time)
-  if (days === 0) return t('Today {time}', { time: stamp })
-  if (days === 1) return t('Yesterday {time}', { time: stamp })
-  const sameYear = date.getFullYear() === new Date(now).getFullYear()
-  return `${date.toLocaleDateString(dateLocale(), { weekday: 'short', month: 'short', day: 'numeric', ...(sameYear ? {} : { year: 'numeric' }) })} ${stamp}`
-}
-
-// A message's own stamp: today only the clock, an earlier day named as a separator does.
-export function messageClock(time: number, now: number = Date.now()): string {
-  return daysBefore(new Date(time), now) === 0 ? clock(time) : clockLabel(time, now)
-}
-
-// A short relative stamp for list rows: "just now", "5 min", "3 h", "2 d", then a date.
-export function relativeShort(ms: number): string {
-  const diff = Math.max(0, Date.now() - ms)
-  if (diff < 60_000) return t('just now')
-  if (diff < 3_600_000) return t('{n} min', { n: Math.floor(diff / 60_000) })
-  if (diff < 86_400_000) return t('{n} h', { n: Math.floor(diff / 3_600_000) })
-  if (diff < 30 * 86_400_000) return t('{n} d', { n: Math.floor(diff / 86_400_000) })
-  return new Date(ms).toLocaleDateString(dateLocale(), { month: 'short', day: 'numeric' })
-}
-
-// A running clock: "8s", "1m 8s", "1h 2m 8s", in every language.
-export function elapsedLabel(ms: number): string {
-  const total = Math.max(0, Math.floor(ms / 1000))
-  const hours = Math.floor(total / 3600)
-  return `${hours > 0 ? `${hours}h ` : ''}${total >= 60 ? `${Math.floor(total / 60) % 60}m ` : ''}${total % 60}s`
-}
-
 interface ContentBlock { type?: string; text?: string }
 export const contentText = (content?: readonly ContentBlock[]): string => (content ?? []).filter(block => block?.type === 'text').map(block => block.text ?? '').join('\n')
 // A name can contain brackets. Generated headers end at the newline; without a
 // newline, a legacy inline header still stops at its first closing bracket.
 export const HEADER = /^\[(Message from|Reply from|Group chat|Group post from|Bot team setup|Handoff · part|Secret card)(?:[^\r\n]*\]\r?\n|[^\]\r\n]*\])/
 export const currentPart = (bot: { sessionId?: string; id?: string }): string => bot.sessionId ?? bot.id ?? ''
-// The prompts in a due scheduled task's message. DSH frames it for the model: one
+// The prompts in a due scheduled task's message. the host frames it for the model: one
 // task as `reminder_prompt_json: "…"`, several as `reminders_json: [{reminder_prompt}]`.
 export function reminderPrompts(text: string): string[] {
   const one = /^reminder_prompt_json: (.*)$/m.exec(text)
@@ -165,7 +131,7 @@ export function toolArgs(root: ToolCallRoot): ToolArguments {
 }
 
 // A relay context is a Bot-to-Bot request, reply or stop notice injected into the
-// model's history. ds-bot's own package sources (kickoff, room, secret, handoff
+// model's history. Moon Bot's own package sources (kickoff, room, secret, handoff
 // parts) are not events in the chat, nor is a request handed back after its line was
 // already shown: deferred, resumed after a restart, or retried after a tool call
 // written as text.
@@ -189,7 +155,7 @@ export const isRelayContext = (data: { source?: RelaySource | null } | undefined
 export interface ChatBlock { kind?: string; text?: string }
 export interface ChatStep { step?: number; time?: number; blocks?: ChatBlock[] }
 
-// 'context' chat nodes never reach the flow on DSH 0.2, so a relay spliced into
+// 'context' chat nodes never reach the flow on the host, so a relay spliced into
 // a running turn would be invisible; the step that answers it renders the line.
 // A relay attaches to the next step that renders a cell: tool-only steps mount
 // nothing (ui-chat gives them no visible node), so `prev` is the previous step
@@ -314,7 +280,7 @@ export interface RunStatsValues {
 }
 export interface RunStat { key: string; text: string; title?: string }
 
-// One Session's figures from DSH's sessionStats, tokenUsage and contextPressure views, as
+// One Session's figures from the host's sessionStats, tokenUsage and contextPressure views, as
 // its status bar counts them: turns, output tokens over decode time, cache reads over
 // every prompt-side token, and the context in use. Figures with nothing to count yet are left out.
 export function runStatsOf(values: RunStatsValues | undefined): RunStat[] {

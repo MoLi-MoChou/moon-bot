@@ -1,5 +1,5 @@
 import type { LlmStreamChunk } from './llm-bits.ts'
-import type { AgentSession, AgentStatusEvent, AttachmentRef, LlmStreamOptions } from './dsh-types.js'
+import type { AgentSession, AgentStatusEvent, AttachmentRef, LlmStreamOptions } from './host-types.js'
 import type { HostRuntime } from './runtime.js'
 
 /** What one image was read as, and by which model. */
@@ -84,7 +84,7 @@ export function install(rt: HostRuntime): void {
   }
 
   // The configured `ocrModel` first, then served models that declare image input, the
-  // DSH default among them first.
+  // the host default among them first.
   async function ocrRoute(): Promise<({ ref: string } & { provider: string; model: string }) | undefined> {
     const models = await rt.catalog()
     const served = new Set(models.map(entry => entry.ref))
@@ -103,7 +103,7 @@ export function install(rt: HostRuntime): void {
     try {
       ocrCache = new Map(Object.entries(JSON.parse(await readFile(ocrPath, 'utf8')) as Record<string, ImageReading>))
     } catch (error) {
-      if ((error as { readonly code?: unknown } | undefined)?.code !== 'ENOENT') rt.warn('ds-bot: unreadable OCR cache %s: %s', ocrPath, error)
+      if ((error as { readonly code?: unknown } | undefined)?.code !== 'ENOENT') rt.warn('moon-bot: unreadable OCR cache %s: %s', ocrPath, error)
       ocrCache = new Map()
     }
   }
@@ -116,7 +116,7 @@ export function install(rt: HostRuntime): void {
       const temp = `${ocrPath}.${process.pid}.tmp`
       await writeFile(temp, snapshot, 'utf8')
       await replaceFile(temp, ocrPath)
-    }).catch(error => rt.warn('ds-bot: OCR cache write failed: %s', error))
+    }).catch(error => rt.warn('moon-bot: OCR cache write failed: %s', error))
   }
 
   // `sessionId` is the Session the reading is for; its usage counts there.
@@ -155,7 +155,7 @@ export function install(rt: HostRuntime): void {
         saveOcr()
         return reading
       }, (error) => {
-        rt.warn('ds-bot: could not read image %s: %s', id, error)
+        rt.warn('moon-bot: could not read image %s: %s', id, error)
         ocrFailed.set(id, { at: Date.now() })
         return null
       }).finally(() => ocrPending.delete(id)))
@@ -237,7 +237,7 @@ export function install(rt: HostRuntime): void {
           agent.session.append?.('image/offload', { targets })
           await ctx.sessions.flush(agent.session)
         } catch (error) {
-          rt.warn('ds-bot: old images for %s not offloaded: %s', agent.id, error)
+          rt.warn('moon-bot: old images for %s not offloaded: %s', agent.id, error)
         }
       })()
     })

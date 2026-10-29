@@ -2,7 +2,7 @@
 
 [English](vision.md) | 中文
 
-本文写 Moon Bot 要做成什么、为什么这样做。功能怎么用，见 [README](../README.zh.md)；已定的具体设计，见 [docs/plans/](plans/)；怎么参与开发，见 [CONTRIBUTING](../CONTRIBUTING.zh.md)。
+本文写 Moon Bot 要做成什么、为什么这样做。功能怎么用，见 [README](../README.md)；已定的具体设计，见 [docs/plans/](plans/)；怎么参与开发，见 [CONTRIBUTING](../CONTRIBUTING.zh.md)。
 
 ## Moon Bot 是什么
 

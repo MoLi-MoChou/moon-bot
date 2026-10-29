@@ -4,9 +4,9 @@
 // through every host module's install().
 //
 // The standalone refactor (docs/plans/2026-10-24-standalone-personal-agent.md) keeps
-// this entry while DSH still hosts it; phase 3's own service loads the same modules.
+// this entry while the host still hosts it; phase 3's own service loads the same modules.
 import { join } from 'node:path'
-import type { DshContext } from './host/dsh-types.js'
+import type { HostContext } from './host/host-types.js'
 import * as diagnostics from './host/diagnostics.ts'
 import * as store from './host/store.ts'
 import * as models from './host/models.ts'
@@ -43,7 +43,7 @@ import * as workspaceFiles from './host/workspace-files.ts'
 
 export { COLORS } from './host/constants.ts'
 
-export const name = 'ds-bot'
+export const name = 'moon-bot'
 export const inject = ['llm', 'tools', 'systemPrompt', 'sessionController', 'sessions', 'sessionTitle', 'workspaceRegistry', 'connection']
 
 // Each module's install(rt) registers its listeners, tools, and effects, and puts on `rt`
@@ -52,17 +52,17 @@ export const inject = ['llm', 'tools', 'systemPrompt', 'sessionController', 'ses
 // usage meters model requests after every listener that rewrites them.
 const MODULES = [diagnostics, store, models, providers, permissions, turns, handoffs, tasksPanel, delivery, roster, folders, agents, prompt, timeContext, tools, chatIndex, groups, approvals, resume, memory, parts, images, secrets, connectors, capabilities, schedules, browser, usage, update, thinking, feed, workspaceFiles, channel]
 
-export function apply(ctx: DshContext, config: Record<string, unknown> = {}): void {
+export function apply(ctx: HostContext, config: Record<string, unknown> = {}): void {
   createRuntime(ctx, config)
 }
 
-export function createRuntime(ctx: DshContext, config: Record<string, unknown> = {}) {
-  const dshHome = folders.dshHomeOf(process.env.DSH_HOME)
-  const home = (config.home as string | undefined) ?? join(dshHome, 'bot')
+export function createRuntime(ctx: HostContext, config: Record<string, unknown> = {}) {
+  const otherAppHome = folders.otherAppHomeOf(process.env.DSH_HOME)
+  const home = (config.home as string | undefined) ?? join(otherAppHome, 'bot')
   const rt = {
     ctx,
     config,
-    dshHome,
+    otherAppHome,
     home,
     statePath: join(home, 'state.json'),
     defaults: {

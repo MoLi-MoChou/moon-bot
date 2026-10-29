@@ -1,6 +1,6 @@
 import { type Ref, createElement as h, useRef, useState } from 'react';
 import { LEAN } from './lean.ts';
-import { FishLogo } from './dsh-primitives.tsx';
+import { FishLogo } from './primitives.tsx';
 import { PlusIcon, PeopleIcon, ArrowUpIcon } from './icons.tsx';
 import { AdminStar, BotMark } from './mark.tsx';
 import { SearchIcon } from './icons.tsx';
@@ -177,7 +177,7 @@ export function NewChat({ mode, roster, actions }: NewChatProps) {
         options.push({ key: 'new', icon: <PlusIcon />, label: t('Create new Bot'), run: createBot });
         if (LEAN.groups)
             options.push({ key: 'group', icon: <PeopleIcon />, label: t('Create group chat'), run: () => { setGroup(true); setCursor(0); inputRef.current?.focus(); } });
-        // A team holds at most one DSH Agent; the entry exists only while there is none.
+        // A team holds at most one Agent; the entry exists only while there is none.
         if (LEAN.dshAgent && (roster.agents ?? []).length === 0 && actions.addAgent !== undefined) {
             options.push({ key: 'agent', icon: h(FishLogo, { size: 16 }), label: t('Add Agent'), run: () => run(async () => { await actions.addAgent?.(); close(); }) });
         }

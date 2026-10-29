@@ -123,11 +123,11 @@ test('a Bot\'s own chat and its group Session lose dsh\'s blocking question tool
   assert.equal(hiddenIn('room-writer').length, 1)
   assert.deepEqual(hiddenIn('plain'), [])
   assert.deepEqual(hiddenIn('elsewhere'), [])
-  // The mask names only that tool, never ds-bot's own ask_user.
+  // The mask names only that tool, never Moon Bot's own ask_user.
   for (const [sessionId, deny] of hidden.filter(([id]) => id !== 'plain')) assert.deepEqual([sessionId, deny], [sessionId, [QUESTION]])
 })
 
-test('ds-bot resolving a Bot\'s Agent again does not hide the tool twice', async (t) => {
+test('resolving a Bot\'s Agent again does not hide the tool twice', async (t) => {
   const { rt, hiddenIn, stop } = await setup()
   t.after(stop)
   await rt.resolveAgent('writer')

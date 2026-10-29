@@ -1,17 +1,17 @@
 import { clearInterval, setInterval } from 'node:timers'
-import type { Agent } from './dsh-types.js'
+import type { Agent } from './host-types.js'
 import type { HostRuntime, StoredAgent } from './runtime.js'
 
-// The DSH Agent: a team's one plain dsh entry, listed beside the Bots but not one of
+// The Agent: a team's one plain session entry, listed beside the Bots but not one of
 // them. Its Sessions are ordinary root Sessions in the DS Bot workspace, so they get
-// the whole dsh conversation surface and none of the team tools.
+// the whole the host conversation surface and none of the team tools.
 import { randomUUID } from 'node:crypto'
 import { AGENT_NAME, AGENT_SESSION_TITLE_MAX, TEAM_TOOLS } from './constants.ts'
 
 export function install(rt: HostRuntime): void {
   const { ctx, state } = rt
 
-  /** @type {Map<string, string>} Session id -> DSH Agent record id. */
+  /** @type {Map<string, string>} Session id -> Agent record id. */
   const sessionIndex = new Map<string, string>()
   // store.js calls this from indexSessions after every adopt and save.
   rt.indexAgents = () => {
@@ -20,14 +20,14 @@ export function install(rt: HostRuntime): void {
       for (const sessionId of agent.sessions ?? []) sessionIndex.set(sessionId, agent.id)
     }
   }
-  // The DSH Agent a Session belongs to; Bot and group Sessions get undefined.
+  // The Agent a Session belongs to; Bot and group Sessions get undefined.
   const agentOf = (sessionId: string): StoredAgent | undefined => {
     const id = sessionIndex.get(sessionId)
     return id === undefined ? undefined : state.agents[id]
   }
 
-  // A DSH Agent Session must not offer the team tools: its agent sees only the
-  // global dsh surface minus this plugin's registrations. A Session whose deny
+  // An Agent Session must not offer the team tools: its agent sees only the
+  // global the host surface minus this plugin's registrations. A Session whose deny
   // has not landed yet (schemas not up, restrict hook missing, a transient
   // throw) stays on the retry list until it sticks or the Session leaves.
   const restricted = new WeakSet<Agent>()
@@ -38,7 +38,7 @@ export function install(rt: HostRuntime): void {
     if (retryTimer !== undefined) clearInterval(retryTimer)
     retryTimer = undefined
   }
-  ctx.effect(() => stopRetry, 'ds-bot: agent tool restrict retry')
+  ctx.effect(() => stopRetry, 'moon-bot: agent tool restrict retry')
   const scheduleRetry = (agent: Agent): void => {
     pendingRestrict.add(agent)
     if (retryTimer === undefined) {
@@ -77,7 +77,7 @@ export function install(rt: HostRuntime): void {
   ctx.on<{ readonly agent: Agent }>('agent/created', ({ agent }) => {
     void rt.load()
       .then(() => restrictTeamTools(agent))
-      .catch(error => rt.warn('ds-bot: tool restrict on agent/created failed: %s', error))
+      .catch(error => rt.warn('moon-bot: tool restrict on agent/created failed: %s', error))
   })
 
   const writeCheck = () => {
@@ -106,8 +106,8 @@ export function install(rt: HostRuntime): void {
     return sessionId
   }
 
-  // A root Session the user opened from a DSH Agent page (the hero's workspace
-  // picker or a fork) is adopted into the same Agent: it keeps dsh's surface and
+  // A root Session the user opened from an Agent page (the hero's workspace
+  // picker or a fork) is adopted into the same Agent: it keeps the host's surface and
   // the team tools stay hidden.
   async function adoptAgentSession(agentId: string, sessionId: string): Promise<string> {
     writeCheck()

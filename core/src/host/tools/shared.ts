@@ -11,7 +11,7 @@ import type {
   InboxMessage,
   ToolExecution,
   ToolParameter,
-} from '../dsh-types.js'
+} from '../host-types.js'
 import type {
   CapabilityItem,
   HostRuntime,
@@ -39,7 +39,7 @@ export const output: ToolOutput = {
 export const GROUP_REF: ToolParameter = { type: 'string', required: true, description: 'Exact group chat name from list_bots' }
 
 export const BLOCKING_QUESTION_TOOL = 'ask_user_question'
-// DS Bot carries no goal across conversation parts, so Bot Sessions do not run DSH goals.
+// DS Bot carries no goal across conversation parts, so Bot Sessions do not run the host goals.
 const GOAL_TOOLS = ['create_goal', 'update_goal', 'get_goal']
 // Moon Bot patch: plus the tools of the features LEAN hides (group chats, schedules).
 export const HIDDEN_TOOLS: readonly string[] = [BLOCKING_QUESTION_TOOL, ...GOAL_TOOLS, ...LEAN_HIDDEN_TOOLS]
@@ -56,7 +56,7 @@ export const AVATAR_PARAM: ToolParameter = {
 }
 export const WORKING_DIRECTORY_TOOL = 'working_directory'
 
-/** A long message that went as a DSH file, as delivery's `attachLong` answers. */
+/** A long message that went as a host file, as delivery's `attachLong` answers. */
 export interface AttachResult {
   readonly text: string
   readonly files: readonly AttachmentRef[]
@@ -79,7 +79,7 @@ export interface ApproveFolderOptions {
   readonly toolName?: string | undefined
 }
 
-/** What approveFolder asks with: a DSH exec that carries the calling agent, or a tool context. */
+/** What approveFolder asks with: a host exec that carries the calling agent, or a tool context. */
 export type ApproveFolderExec = ToolExecution | ToolContext
 
 export interface PostToRoomOptions {

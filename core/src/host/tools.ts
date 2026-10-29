@@ -1,7 +1,7 @@
 // The Bot tool surface: the registration order every module's tools go out in, the tools
 // a Bot Session hides from itself, and the goal refusal. The tools themselves live in
 // `tools/` by area.
-import type { Agent, Disposer, ToolExecution } from './dsh-types.js'
+import type { Agent, Disposer, ToolExecution } from './host-types.js'
 import type { HostRuntime } from './runtime.ts'
 import { ToolRegistry, type ToolEntry } from '../engine/registry.ts'
 import { registerCollectedTool } from './tools/collector.ts'
@@ -71,7 +71,7 @@ export function install(rt: HostRuntime): void {
       owner.restrict({ deny })
       hiddenTools.add(agent)
     } catch (error) {
-      rt.warn('ds-bot: %s stay in the tool list of %s: %s', HIDDEN_TOOLS.join(', '), agent.session?.id, error)
+      rt.warn('moon-bot: %s stay in the tool list of %s: %s', HIDDEN_TOOLS.join(', '), agent.session?.id, error)
     }
   }
 
@@ -79,7 +79,7 @@ export function install(rt: HostRuntime): void {
   installChatTools(rt, shared)
   installWebSearchTool(rt, shared)
 
-  // dsh's own question tool holds the turn open until the user answers, and every
+  // the host's own question tool holds the turn open until the user answers, and every
   // message from another Bot or a group round queues behind it. Bot Sessions ask
   // through ask_user instead, so the tool is taken out of their tool list, as are the
   // goal tools.
@@ -87,8 +87,8 @@ export function install(rt: HostRuntime): void {
     const id = exec.agent?.id
     return id !== undefined && rt.isBotSession(id)
   }
-  // A new Bot, part, or group Session gets its Agent before ds-bot records it, so the
-  // list is only trimmed once ds-bot resolves that Agent again; meanwhile the guard
+  // A new Bot, part, or group Session gets its Agent before the host records it, so the
+  // list is only trimmed once the host resolves that Agent again; meanwhile the guard
   // refuses the question tool in any Bot Session, and a goal made there is blocked.
   ctx.tools.guard((exec: ToolExecution) => (exec.name === BLOCKING_QUESTION_TOOL && botSession(exec)
     ? `Bots cannot use ${BLOCKING_QUESTION_TOOL}. Ask with ask_user in your own chat, or ask in your reply.`
@@ -103,7 +103,7 @@ export function install(rt: HostRuntime): void {
       await rt.load()
       hideBotUnusedTools(agent)
     } catch (error) {
-      rt.warn('ds-bot: hiding %s on agent/created failed: %s', HIDDEN_TOOLS.join(', '), error)
+      rt.warn('moon-bot: hiding %s on agent/created failed: %s', HIDDEN_TOOLS.join(', '), error)
     }
   })
 
@@ -113,7 +113,7 @@ export function install(rt: HostRuntime): void {
   const attachGoals = (sub: GoalHost): void => {
     const own = sub.goals
     goals = own
-    sub.effect(() => () => { if (goals === own) goals = null }, 'ds-bot: goal service')
+    sub.effect(() => () => { if (goals === own) goals = null }, 'moon-bot: goal service')
   }
   if (typeof ctx.inject === 'function') ctx.inject(['goals'], sub => attachGoals(sub as unknown as GoalHost))
   else {
@@ -129,7 +129,7 @@ export function install(rt: HostRuntime): void {
       if (goal?.phase !== 'active') return
       service.block(agent, { id: goal.id, revision: goal.revision }, { code: 'not-supported', message: GOAL_REFUSAL })
     } catch (error) {
-      rt.warn('ds-bot: blocking the goal in %s failed: %s', sessionId, error)
+      rt.warn('moon-bot: blocking the goal in %s failed: %s', sessionId, error)
     }
   }
   ctx.on<{ readonly id?: string } | undefined, GoalEvent>('session/event', (session, event) => {

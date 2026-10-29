@@ -1,6 +1,6 @@
 import type {
   ConfigurableProvider, CredentialsService, SettingsSection, SettingsService,
-} from './dsh-types.js'
+} from './host-types.js'
 import type { HostRuntime } from './runtime.js'
 import { resolveModelSpec } from '../shared/model-catalog.ts'
 
@@ -12,24 +12,24 @@ interface ProviderSeams {
   readonly credentials: CredentialsService
 }
 
-// Model providers and their API keys, for a window that has no DSH Models page of its
-// own. DSH keeps all of it: a provider route in the settings of the adapter that serves
-// it, the route's key in DSH's credential store under the reference the route names.
-// The providers to add are the ones DSH's directory of configurable providers offers.
+// Model providers and their API keys, for a window that has no the host Models page of its
+// own. the host keeps all of it: a provider route in the settings of the adapter that serves
+// it, the route's key in the host's credential store under the reference the route names.
+// The providers to add are the ones the host's directory of configurable providers offers.
 
 const PI_AI = 'llm-pi-ai'
 const ROUTE_ID = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/
-// The wire protocols DSH's pi-ai adapter serves on a route it ships nothing about.
+// The wire protocols the host's pi-ai adapter serves on a route it ships nothing about.
 export const PROTOCOLS = ['openai-completions', 'openai-responses', 'anthropic-messages']
 const MAX_MODELS = 500
 
-// The reference DSH's own Models page derives for a route's key, so a provider added
+// The reference the host's own Models page derives for a route's key, so a provider added
 // here and one added there read the same key.
 export const keyRefFor = (provider: string): string => `${provider.toUpperCase().replace(/[^A-Z0-9]+/g, '_')}_API_KEY`
 
 const invalid = (message: string): Error => Object.assign(new Error(message), { code: 'bot/invalid' })
 
-// What an HTTP header can carry, like DSH's own key check: a pasted `NAME=value` line
+// What an HTTP header can carry, like the host's own key check: a pasted `NAME=value` line
 // or a quoted value would be stored as the key and refused by the provider.
 export function checkKey(value: unknown): string {
   const key = typeof value === 'string' ? value.trim() : ''
@@ -87,7 +87,7 @@ export function install(rt: HostRuntime): void {
   const refOf = (profile: Profile | undefined): string | undefined => (typeof profile?.apiKeyEnv === 'string' && profile.apiKeyEnv !== '' ? profile.apiKeyEnv : undefined)
   const entryOf = (provider: string): ConfigurableProvider | undefined => ctx.llm.listConfigurableProviders().find(entry => entry.provider === provider)
 
-  // Per provider route, the credential its DSH settings name as its API key. A
+  // Per provider route, the credential its the host settings name as its API key. A
   // provider with none authenticates some other way.
   function keyRefs(): Map<string, string> {
     const found = seams()
@@ -114,7 +114,7 @@ export function install(rt: HostRuntime): void {
     return missing
   }
 
-  // The providers set up in DSH, with their models and key state, and the ones DSH
+  // The providers set up in the host, with their models and key state, and the ones the host
   // can add. A provider with no key and no models (DeepSeek's account route before a
   // sign-in) is left out.
   async function providersView(): Promise<Record<string, unknown>> {
@@ -154,7 +154,7 @@ export function install(rt: HostRuntime): void {
         ...(entry.error ? { error: entry.error } : {}),
       })
     }
-    // The ones that come with the setup first, then the added ones as DSH lists them.
+    // The ones that come with the setup first, then the added ones as the host lists them.
     providers.sort((a, b) => Number(a.removable) - Number(b.removable))
     return { available: true, providers, addable, protocols: PROTOCOLS }
   }
@@ -178,8 +178,8 @@ export function install(rt: HostRuntime): void {
     rt.dropCatalog()
   }
 
-  // `provider` from DSH's directory, or a route the user declares (`custom`) for an
-  // endpoint DSH ships nothing about. The route goes in first, then its key, as DSH's
+  // `provider` from the host's directory, or a route the user declares (`custom`) for an
+  // endpoint the host ships nothing about. The route goes in first, then its key, as the host's
   // own Models page does it: a failed key write leaves a provider that asks for one.
   async function addProvider(body: ProviderBody): Promise<Record<string, unknown>> {
     const { settings, credentials } = usable()
@@ -215,7 +215,7 @@ export function install(rt: HostRuntime): void {
     return { ...(name ? { displayName: name } : {}), api, baseURL: checkEndpoint(body.baseURL), models }
   }
 
-  // The models an endpoint (or a provider DSH ships) says it serves. The key typed for
+  // The models an endpoint (or a provider the host ships) says it serves. The key typed for
   // the question goes with it and is not stored.
   async function discoverModels(body: ProviderBody): Promise<readonly Record<string, unknown>[]> {
     usable()

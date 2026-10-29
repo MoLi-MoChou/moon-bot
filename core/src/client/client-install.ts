@@ -1,8 +1,8 @@
 // The painters of the Bot surface: the character marks behind "@" mentions, the shared
-// theme and its DSH tokens, and the hub other plugins register shapes and themes through.
+// theme and its the host tokens, and the hub other plugins register shapes and themes through.
 
 import { DEFAULT_MASK, SHAPES, lookOf, maskOf } from './characters.ts'
-import type { ClientContext, Disposer, DshBotHub, DshBotTask } from './client-ctx.js'
+import type { BotHub, BotTask, ClientContext, Disposer } from './client-ctx.js'
 import type { ClientState } from './client-types.ts'
 import { installStyles } from './design/index.ts'
 import { noteClientError } from './diagnostics.ts'
@@ -14,9 +14,9 @@ import { allThemes, registry, registerShape, registerTheme, resolveThemeId, shel
 const PREFS_KEY = STORAGE.prefs
 
 // Mentions wear each Bot's color and character silhouette (or its photo). A message
-// DSH still draws itself, while it waits to be sent or to join a running turn, shows
+// the host still draws itself, while it waits to be sent or to join a running turn, shows
 // "@Name" as a file reference; one whose label is a whole Bot name wears the Bot's
-// mark there too (a name with a space is cut by DSH, so it stays as DSH draws it).
+// mark there too (a name with a space is cut by the host, so it stays as the host draws it).
 export function installMentions(client: ClientState): Disposer {
   const style = installStyles('', 'mentions')
   let last = ''
@@ -62,7 +62,7 @@ export function installTheme({ ctx, client }: { ctx: ClientContext; client: Clie
     if (theme === undefined) return
     style.textContent = themeCss(theme, accent)
     const release = releaseTokens
-    releaseTokens = ctx.theme.overrideTokens('ds-bot', shellTokens(accent ? { ...theme, light: { ...theme.light, accent }, dark: { ...theme.dark, accent } } : theme))
+    releaseTokens = ctx.theme.overrideTokens('moon-bot', shellTokens(accent ? { ...theme, light: { ...theme.light, accent }, dark: { ...theme.dark, accent } } : theme))
     if (typeof release === 'function') release()
     if (snapshot.ready) {
       try { localStorage.setItem(PREFS_KEY, JSON.stringify({ theme: prefs.theme, accent: prefs.accent, motion: prefs.motion })) } catch { /* storage unavailable */ }
@@ -83,19 +83,19 @@ export function installTheme({ ctx, client }: { ctx: ClientContext; client: Clie
   }
 }
 
-// Other plugins add character shapes and themes through `window.dshBot`, or queue
-// calls on `window.dshBotQueue` before this plugin loads.
+// Other modules add character shapes and themes through `window.moonBot`, or queue
+// calls on `window.moonBotQueue` before this plugin loads.
 export function installRegistry(ctx: ClientContext): Disposer {
   return ctx.effect(() => {
-    const hub: DshBotHub = { registerShape, registerTheme, themes: () => Object.keys(allThemes()), shapes: () => Object.keys(SHAPES) }
-    const queue = window.dshBotQueue
-    const queued: readonly DshBotTask[] = Array.isArray(queue) ? queue : []
-    window.dshBot = hub
-    window.dshBotQueue = { push: (task: DshBotTask) => { try { task(hub) } catch (error) { console.warn('[ds-bot] registration', error); noteClientError('registration', error) } } }
-    for (const task of queued) window.dshBotQueue.push(task)
+    const hub: BotHub = { registerShape, registerTheme, themes: () => Object.keys(allThemes()), shapes: () => Object.keys(SHAPES) }
+    const queue = window.moonBotQueue
+    const queued: readonly BotTask[] = Array.isArray(queue) ? queue : []
+    window.moonBot = hub
+    window.moonBotQueue = { push: (task: BotTask) => { try { task(hub) } catch (error) { console.warn('[moon-bot] registration', error); noteClientError('registration', error) } } }
+    for (const task of queued) window.moonBotQueue.push(task)
     return () => {
-      if (window.dshBot === hub) delete window.dshBot
-      delete window.dshBotQueue
+      if (window.moonBot === hub) delete window.moonBot
+      delete window.moonBotQueue
     }
-  }, 'ds-bot: registry')
+  }, 'moon-bot: registry')
 }

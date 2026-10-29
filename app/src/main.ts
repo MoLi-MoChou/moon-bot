@@ -13,15 +13,16 @@ import electronUpdater from 'electron-updater'
 import { chooseLocations, localeText, programFolder, saveLocations, text } from './first-run.ts'
 import { hostPort } from './host-port.ts'
 import { HostProcess } from './host-process.ts'
+import { profileDirOf } from './profile-dir.ts'
 import { copyData, moveProblem, teamInUse, userDshHome, type MoveProblem } from './move-data.ts'
 import { UPDATE_TEXT, watchReleases, watchUpdates, type UpdateFound, type UpdateWatch } from './updates.ts'
 import { needsNoSandbox } from './sandbox.ts'
 import { CAPTION_HEIGHT, cssColor, micaAvailable, nativeThemeSource } from './window-frame.ts'
 
 const IPC = {
-  caption: 'ds-bot:caption-colors', nativeTheme: 'ds-bot:native-theme', fullscreen: 'ds-bot:fullscreen',
-  dataLocation: 'ds-bot:data-location', moveData: 'ds-bot:move-data', teamWorkspace: 'ds-bot:team-workspace',
-  updateState: 'ds-bot:update-state', updateCheck: 'ds-bot:update-check', updateInstall: 'ds-bot:update-install', updateChanged: 'ds-bot:update-changed',
+  caption: 'moon-bot:caption-colors', nativeTheme: 'moon-bot:native-theme', fullscreen: 'moon-bot:fullscreen',
+  dataLocation: 'moon-bot:data-location', moveData: 'moon-bot:move-data', teamWorkspace: 'moon-bot:team-workspace',
+  updateState: 'moon-bot:update-state', updateCheck: 'moon-bot:update-check', updateInstall: 'moon-bot:update-install', updateChanged: 'moon-bot:update-changed',
 } as const
 const MOVE_PROBLEMS: Readonly<Record<Exclude<MoveProblem, 'dsh'>, 'moveDrive' | 'moveNested' | 'moveWorkspace' | 'inProgram' | 'moveNotEmpty'>> = { drive: 'moveDrive', nested: 'moveNested', workspace: 'moveWorkspace', program: 'inProgram', notEmpty: 'moveNotEmpty' }
 const UPDATE_CHECK_WAIT_MS = 15_000
@@ -31,8 +32,6 @@ const here = dirname(fileURLToPath(import.meta.url))
 // This file ships bundled into dist-main; the source-run Host, the preload script and the
 // window resources stay where the sources are.
 const srcDir = join(here, '..', 'src')
-// The Host works in the profile folder earlier builds kept it in, so the data layout is unchanged.
-const PROFILE = 'ds-bot'
 // Drawn by scripts/icon.mjs. Windows takes the .ico for its several sizes.
 const iconFile = join(here, '..', 'assets', process.platform === 'win32' ? 'icon.ico' : 'icon.png')
 // Windows 11 draws Mica behind the page; mica.css lets it through the sidebar.
@@ -97,7 +96,7 @@ async function start(): Promise<void> {
   const port = await hostPort(join(app.getPath('userData'), 'host-port.json'))
   origin = `http://127.0.0.1:${String(port)}`
   const pnpm = join(app.getAppPath(), 'node_modules', 'pnpm', 'bin', 'pnpm.mjs')
-  const profileDir = join(where.dataDir, 'profiles', PROFILE)
+  const profileDir = profileDirOf(where.dataDir)
   mkdirSync(profileDir, { recursive: true })
   // The Host is Moon Bot's own service: the team data dir is its home, and the workspace
   // rides along as before.
@@ -162,13 +161,13 @@ async function moveData(workspace: string | undefined): Promise<boolean> {
   const { canceled, filePaths } = await dialog.showOpenDialog(owner, { title: t.pickMove, defaultPath: dirname(places.dataDir), properties: ['openDirectory', 'createDirectory', 'promptToCreate'] })
   if (canceled || filePaths[0] === undefined) return false
   const to = resolve(filePaths[0])
-  const dshHome = userDshHome()
+  const otherAppHome = userDshHome()
   // The team workspace can move while a dialog is open; the window tells the latest one.
   const refused = async (): Promise<boolean> => {
     for (const current of new Set([workspace, places.workspace])) {
-      const problem = moveProblem({ from: places.dataDir, to, workspace: current, dshHome, program: app.isPackaged ? programFolder() : undefined })
+      const problem = moveProblem({ from: places.dataDir, to, workspace: current, otherAppHome, program: app.isPackaged ? programFolder() : undefined })
       if (problem === undefined) continue
-      await dialog.showMessageBox(owner, { type: 'warning', title: 'Moon Bot', message: problem === 'dsh' ? t.inDsh(dshHome) : t[MOVE_PROBLEMS[problem]], buttons: ['OK'] })
+      await dialog.showMessageBox(owner, { type: 'warning', title: 'Moon Bot', message: problem === 'dsh' ? t.inDsh(otherAppHome) : t[MOVE_PROBLEMS[problem]], buttons: ['OK'] })
       return true
     }
     return false
@@ -275,7 +274,7 @@ function createWindow(): void {
     width: 1320, height: 860, minWidth: 720, minHeight: 480,
     title: 'Moon Bot', show: false, icon: iconFile,
     backgroundColor: mica ? '#00000000' : dark ? '#1b1b1c' : '#ffffff',
-    // Frameless as in DSH Desktop: the caption buttons overlay the page's band. They keep the
+    // Frameless as in the desktop app: the caption buttons overlay the page's band. They keep the
     // sidebar's colors until the page sends the colors of the surface under them.
     ...(win32 ? {
       titleBarStyle: 'hidden',
@@ -284,7 +283,7 @@ function createWindow(): void {
     } : {}),
     webPreferences: {
       preload: join(srcDir, 'preload.cjs'), contextIsolation: true, sandbox: true,
-      additionalArguments: [`--ds-bot-origin=${origin}`, ...(win32 ? [`--ds-bot-caption=${String(CAPTION_HEIGHT)}`, ...(mica ? ['--ds-bot-mica'] : [])] : [])],
+      additionalArguments: [`--moon-bot-origin=${origin}`, ...(win32 ? [`--moon-bot-caption=${String(CAPTION_HEIGHT)}`, ...(mica ? ['--moon-bot-mica'] : [])] : [])],
     },
   })
   mainWindow.once('ready-to-show', () => { mainWindow?.show() })
@@ -304,7 +303,7 @@ function createWindow(): void {
     contents.on('dom-ready', () => { void contents.insertCSS(css) })
   }
   contents.setWindowOpenHandler(({ url }) => {
-    // DSH's sign-in opens a blank window during the click and sends it to the sign-in page later.
+    // the host's sign-in opens a blank window during the click and sends it to the sign-in page later.
     if (url === 'about:blank') return { action: 'allow', overrideBrowserWindowOptions: { show: false, webPreferences: { sandbox: true } } }
     openOutside(url)
     return { action: 'deny' }

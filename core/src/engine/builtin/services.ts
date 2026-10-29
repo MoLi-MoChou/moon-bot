@@ -70,7 +70,7 @@ export type GateDecision =
   | { readonly kind: 'pending'; readonly approvalId: string; readonly settled: Promise<'allow' | 'deny'> }
 
 /**
- * The tool gate: the permissions/approvals flow moved from DSH's tool execution into
+ * The tool gate: the permissions/approvals flow moved from the host's tool execution into
  * this seam. `check` may suspend (return after its approval resolves); the engine
  * holds the call until it answers.
  */

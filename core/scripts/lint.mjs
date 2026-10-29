@@ -23,7 +23,10 @@ if (result.error) console.error(`lint: ${result.error.message}`)
 
 const gates = spawnSync(process.execPath, [join(plugin, 'scripts', 'check-gates.mjs')], { cwd: plugin, stdio: 'inherit' })
 if (gates.error) console.error(`lint: ${gates.error.message}`)
+const jsx = spawnSync(process.execPath, [join(plugin, 'scripts', 'jsx-debt.mjs')], { cwd: plugin, stdio: 'inherit' })
+if (jsx.error) console.error(`lint: ${jsx.error.message}`)
 
 const oxlintStatus = result.status ?? 1
 const gatesStatus = gates.status ?? 1
-process.exit(oxlintStatus !== 0 ? oxlintStatus : gatesStatus)
+const jsxStatus = jsx.status ?? 1
+process.exit(oxlintStatus !== 0 ? oxlintStatus : gatesStatus !== 0 ? gatesStatus : jsxStatus)

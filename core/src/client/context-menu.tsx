@@ -5,7 +5,7 @@ import { currentPart } from './text.ts';
 import { GearIcon, PinIcon, UnreadIcon, PencilIcon, StarLineIcon, CopyIcon, HideIcon, TrashIcon, DuplicateIcon } from './icons.tsx';
 import { useEscape, useMenuKeys } from './overlay-hooks.ts';
 import { t } from './i18n.ts';
-// The thing a menu was opened on: a Bot or room by id, or a DSH Agent row (whose
+// The thing a menu was opened on: a Bot or room by id, or an Agent row (whose
 // Session menus carry the Agent id beside the Session id).
 export interface ContextMenuTarget {
     kind?: string;
@@ -117,7 +117,7 @@ export function ContextMenu({ menu, roster, actions, leaving = false }: {
     ] as (MenuItem | null)[][]).map(group => group.filter((item): item is MenuItem => item !== null)).filter(group => group.length > 0);
     return <div ref={ref} className='bt-menu' role='menu' aria-label={t('{name} actions', { name: entry.name })} style={place} data-leaving={leaving || undefined}>{groups.map((group, index) => <>{index > 0 ? <div className='bt-menu-sep' role='separator'/> : null}{group.map(([label, Icon, run, danger]) => <button key={label} type='button' role='menuitem' className={danger ? 'bt-danger' : undefined} onClick={() => { actions.closeMenu(); void Promise.resolve(run()).catch(error => actions.reportError(error, 'menu')); }}>{h(Icon)}{label}</button>)}</>)}</div>;
 }
-// Menus for the DSH Agent row and its Sessions; none of the Bot entries apply.
+// Menus for the Agent row and its Sessions; none of the Bot entries apply.
 function AgentMenu({ menu, roster, actions, leaving }: {
     menu: ContextMenuTarget;
     roster: ContextRoster;
@@ -153,5 +153,5 @@ function AgentMenu({ menu, roster, actions, leaving }: {
                 [t('Archive'), TrashIcon, () => actions.archiveAgentSession(agent.id, menu.id), true],
             ],
         ];
-    return <div ref={ref} className='bt-menu' role='menu' aria-label={menu.kind === 'agent' ? 'Agent' : t('Session actions')} style={place} data-leaving={leaving || undefined}>{groups.map((group, index) => <>{index > 0 ? <div className='bt-menu-sep' role='separator'/> : null}{group.map(([label, Icon, run, danger]) => <button key={label} type='button' role='menuitem' className={danger ? 'bt-danger' : undefined} onClick={() => { actions.closeMenu(); void Promise.resolve(run()).catch(error => console.warn('[ds-bot]', error)); }}>{h(Icon)}{label}</button>)}</>)}</div>;
+    return <div ref={ref} className='bt-menu' role='menu' aria-label={menu.kind === 'agent' ? 'Agent' : t('Session actions')} style={place} data-leaving={leaving || undefined}>{groups.map((group, index) => <>{index > 0 ? <div className='bt-menu-sep' role='separator'/> : null}{group.map(([label, Icon, run, danger]) => <button key={label} type='button' role='menuitem' className={danger ? 'bt-danger' : undefined} onClick={() => { actions.closeMenu(); void Promise.resolve(run()).catch(error => console.warn('[moon-bot]', error)); }}>{h(Icon)}{label}</button>)}</>)}</div>;
 }

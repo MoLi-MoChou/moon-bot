@@ -1,5 +1,5 @@
 // Store: the saved team (state.json), its migrations, and the lock that keeps a second
-// dsh host on the same data from writing it. The Session index lives in store-sessions.ts
+// the host host on the same data from writing it. The Session index lives in store-sessions.ts
 // and the lock and file read in store-lock.ts; this file owns the data and its saves.
 import { mkdir, unlink, writeFile } from 'node:fs/promises'
 import { LEGACY_THEMES, MAX_EXCHANGES, ROOM_MODES, TEXT_KEPT } from './constants.ts'
@@ -43,7 +43,7 @@ export function install(rt: HostRuntime): void {
     for (const key of Object.keys(state)) delete (state as unknown as Record<string, unknown>)[key]
     Object.assign(state, JSON.parse(EMPTY) as StoredState, source)
     state.prefs ??= {}
-    // Teams saved before the DSH Agent existed carry no `agents`; corrupt values reset.
+    // Teams saved before the Agent existed carry no `agents`; corrupt values reset.
     if (state.agents === null || typeof state.agents !== 'object' || Array.isArray(state.agents)) state.agents = {}
     let migrated = !hadCapabilities
     if (state.capabilities === null || typeof state.capabilities !== 'object' || Array.isArray(state.capabilities)) {
@@ -165,7 +165,7 @@ export function install(rt: HostRuntime): void {
   const load = (): Promise<void> => loaded ??= (async () => {
     lock.claim()
     const held = lock.holder()
-    if (held !== undefined) warn('ds-bot: %s', lock.readOnly())
+    if (held !== undefined) warn('moon-bot: %s', lock.readOnly())
     const { migrated, stale } = adopt(await lock.readFileState())
     if (held !== undefined) return
     if (migrated && lock.stuck() === undefined) {
@@ -174,7 +174,7 @@ export function install(rt: HostRuntime): void {
       try {
         await save()
       } catch (error) {
-        warn('ds-bot: saving the migrated Bot team failed: %s', error)
+        warn('moon-bot: saving the migrated Bot team failed: %s', error)
       }
     }
     // Not awaited: renaming a session must not hold up the first roster read.
@@ -188,7 +188,7 @@ export function install(rt: HostRuntime): void {
     if (hadHolder) {
       lock.claim()
       if (lock.holder() === undefined) {
-        warn('ds-bot: the other instance has closed; this one now saves the Bot team')
+        warn('moon-bot: the other instance has closed; this one now saves the Bot team')
         lock.markWarned()
         adopt(await lock.readFileState())
         return
@@ -206,7 +206,7 @@ export function install(rt: HostRuntime): void {
         adopt(await lock.readFileState())
         return
       }
-      warn('ds-bot: %s', lock.readOnly())
+      warn('moon-bot: %s', lock.readOnly())
     }
     if ((lock.stuck() !== undefined || lock.holder() !== undefined) && lock.seen() !== undefined) adopt(await lock.readFileState())
   }
@@ -214,7 +214,7 @@ export function install(rt: HostRuntime): void {
   const warnReadOnly = (): boolean => {
     if (!lock.warned()) {
       lock.markWarned()
-      warn('ds-bot: not saving the Bot team: %s', lock.readOnly())
+      warn('moon-bot: not saving the Bot team: %s', lock.readOnly())
     }
     return false
   }
@@ -246,7 +246,7 @@ export function install(rt: HostRuntime): void {
         const ensureLock = (): void => {
           if (lock.broken()) return
           if (!lock.owns()) {
-            const error = Object.assign(new Error('ds-bot lost the state lock to another instance'), { code: 'ELOCKLOST' })
+            const error = Object.assign(new Error('moon-bot lost the state lock to another instance'), { code: 'ELOCKLOST' })
             throw error
           }
         }
@@ -263,7 +263,7 @@ export function install(rt: HostRuntime): void {
     })
     writing = run.catch(() => {})
     return run.catch(error => {
-      warn('ds-bot: state write failed: %s', error)
+      warn('moon-bot: state write failed: %s', error)
       throw error
     })
   }
@@ -271,7 +271,7 @@ export function install(rt: HostRuntime): void {
   ctx.effect(() => () => {
     stopped = true
     return writing.finally(() => lock.release())
-  }, 'ds-bot: state lock')
+  }, 'moon-bot: state lock')
 
   const botOf = (id: string | undefined): StoredBot | undefined => (id === undefined ? undefined : own(state.bots, id))
   const roomOf = (id: string | undefined): StoredRoom | undefined => (id === undefined ? undefined : own(state.rooms, id))

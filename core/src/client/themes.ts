@@ -49,7 +49,7 @@ export interface CustomShape {
 const THEME_KEYS = ['bg', 'sidebar', 'bubble', 'card', 'text', 'user', 'userText', 'accent'] as const
 // Moon Bot: four themes, each light and dark (Moon is the default). Each also sets the DeepSeek Harness
 // tokens (`tokens`, light/dark pairs) and extra CSS (`css`) for corner radii, type and
-// borders, so DSH's settings, OpenUI cards and dialogs follow the theme too.
+// borders, so the host's settings, OpenUI cards and dialogs follow the theme too.
 const SERIF = 'ui-serif,Georgia,Cambria,"Times New Roman","Songti SC","Noto Serif CJK SC",serif'
 const both = <T>(value: T): { light: T; dark: T } => ({ light: value, dark: value })
 const SANS_GROK = '"Inter","SF Pro Text",-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif'
@@ -69,20 +69,20 @@ const THEMES: Record<string, ThemeDefinition> = {
     },
     css: `
 html body[data-bt-theme=moon]{--bt-line:rgba(110,70,200,.10);--bt-line-2:rgba(110,70,200,.18);--bt-hover:rgba(138,99,238,.09);--bt-active:rgba(138,99,238,.17);--bt-tag-bg:rgba(138,99,238,.13);--bt-tag-ink:#5b38c4;--bt-ink-2:rgba(43,33,64,.74);--bt-ink-3:rgba(43,33,64,.66)}
-html body[data-bt-theme=moon][data-ds-dark-theme]{--bt-line:rgba(190,160,255,.12);--bt-line-2:rgba(190,160,255,.2);--bt-hover:rgba(182,157,255,.1);--bt-active:rgba(182,157,255,.2);--bt-tag-bg:rgba(182,157,255,.16);--bt-tag-ink:#cdbbff;--bt-ink-2:rgba(243,238,255,.74);--bt-ink-3:rgba(243,238,255,.6)}
+html body[data-bt-theme=moon][data-bt-dark]{--bt-line:rgba(190,160,255,.12);--bt-line-2:rgba(190,160,255,.2);--bt-hover:rgba(182,157,255,.1);--bt-active:rgba(182,157,255,.2);--bt-tag-bg:rgba(182,157,255,.16);--bt-tag-ink:#cdbbff;--bt-ink-2:rgba(243,238,255,.74);--bt-ink-3:rgba(243,238,255,.6)}
 body[data-bt-theme=moon] [data-conversation-scroll]{background:radial-gradient(1200px 500px at 70% -10%,rgba(160,120,255,.16),transparent 60%),radial-gradient(900px 420px at 0% 110%,rgba(255,170,220,.10),transparent 60%)}
-body[data-bt-theme=moon][data-ds-dark-theme] [data-conversation-scroll]{background:radial-gradient(1100px 520px at 70% -10%,rgba(140,95,255,.20),transparent 60%),radial-gradient(900px 420px at 0% 110%,rgba(220,120,255,.08),transparent 60%)}
+body[data-bt-theme=moon][data-bt-dark] [data-conversation-scroll]{background:radial-gradient(1100px 520px at 70% -10%,rgba(140,95,255,.20),transparent 60%),radial-gradient(900px 420px at 0% 110%,rgba(220,120,255,.08),transparent 60%)}
 body[data-bt-theme=moon] .bt-bubble{border-radius:20px;box-shadow:0 1px 2px rgba(80,50,150,.06),0 6px 18px -10px rgba(110,70,200,.28),inset 0 0 0 1px var(--bt-line)}
-body[data-bt-theme=moon][data-ds-dark-theme] .bt-bubble{box-shadow:inset 0 1px 0 rgba(255,255,255,.05),inset 0 0 0 1px var(--bt-line)}
+body[data-bt-theme=moon][data-bt-dark] .bt-bubble{box-shadow:inset 0 1px 0 rgba(255,255,255,.05),inset 0 0 0 1px var(--bt-line)}
 body[data-bt-theme=moon] .bt-ububble{border-radius:20px;background:linear-gradient(160deg,#8862f0 0%,#744be4 55%,#633ad4 100%);box-shadow:0 8px 20px -10px rgba(122,79,224,.65),inset 0 1px 0 rgba(255,255,255,.35)}
-body[data-bt-theme=moon][data-ds-dark-theme] .bt-ububble{background:linear-gradient(160deg,#9575ff 0%,#7a56e6 60%,#6640d0 100%);box-shadow:0 8px 22px -10px rgba(120,80,240,.7),inset 0 1px 0 rgba(255,255,255,.22)}
+body[data-bt-theme=moon][data-bt-dark] .bt-ububble{background:linear-gradient(160deg,#9575ff 0%,#7a56e6 60%,#6640d0 100%);box-shadow:0 8px 22px -10px rgba(120,80,240,.7),inset 0 1px 0 rgba(255,255,255,.22)}
 body[data-bt-theme=moon] [class*="_card"]:has([data-composer-input]){border-radius:22px;background:var(--bt-card);box-shadow:0 10px 30px -12px rgba(110,70,200,.35),inset 0 0 0 1px var(--bt-line-2)}
 body[data-bt-theme=moon] [class*="_card"]:has([data-composer-input]):focus-within{box-shadow:0 12px 34px -12px rgba(110,70,200,.45),inset 0 0 0 1.5px color-mix(in srgb,var(--bt-accent) 60%,transparent)}
 body[data-bt-theme=moon] :is(.bt-process,.bt-menu,.bt-update-pop,.bt-q){border-radius:18px;box-shadow:0 0 0 .5px var(--bt-line-2),0 16px 40px -14px rgba(90,50,170,.38)}
 body[data-bt-theme=moon] :is(.bt-work-all,.bt-retry){border-radius:999px;border-color:color-mix(in srgb,var(--bt-accent) 35%,var(--bt-line-2))}
 body[data-bt-theme=moon] .bt-pill{box-shadow:0 4px 14px -6px rgba(110,70,200,.35),inset 0 0 0 1px var(--bt-line-2)}
 body[data-bt-theme=moon] .bt-tile[aria-current=page]{background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,.35));box-shadow:0 6px 18px -10px rgba(110,70,200,.45),inset 0 0 0 1px var(--bt-line-2)}
-body[data-bt-theme=moon][data-ds-dark-theme] .bt-tile[aria-current=page]{background:rgba(182,157,255,.14)}
+body[data-bt-theme=moon][data-bt-dark] .bt-tile[aria-current=page]{background:rgba(182,157,255,.14)}
 body[data-bt-theme=moon] [data-composer-input]{caret-color:var(--bt-accent)}
 `,
   },
@@ -97,7 +97,7 @@ body[data-bt-theme=moon] [data-composer-input]{caret-color:var(--bt-accent)}
     },
     css: `
 html body[data-bt-theme=deepseek]{--bt-hover:rgba(77,107,254,.06);--bt-active:rgba(77,107,254,.11);--bt-tag-bg:rgba(77,107,254,.09);--bt-tag-ink:#3550d8}
-html body[data-bt-theme=deepseek][data-ds-dark-theme]{--bt-hover:rgba(107,132,255,.09);--bt-active:rgba(107,132,255,.16);--bt-tag-bg:rgba(107,132,255,.15);--bt-tag-ink:#aebcff}
+html body[data-bt-theme=deepseek][data-bt-dark]{--bt-hover:rgba(107,132,255,.09);--bt-active:rgba(107,132,255,.16);--bt-tag-bg:rgba(107,132,255,.15);--bt-tag-ink:#aebcff}
 body[data-bt-theme=deepseek] :is(.bt-bubble,.bt-ububble){border-radius:12px}
 body[data-bt-theme=deepseek] [class*="_card"]:has([data-composer-input]){border-radius:18px;box-shadow:0 0 0 1px rgba(77,107,254,.18),0 4px 14px -6px rgba(30,50,140,.12)}
 body[data-bt-theme=deepseek] [class*="_card"]:has([data-composer-input]):focus-within{box-shadow:0 0 0 1.5px var(--bt-accent),0 6px 18px -6px rgba(30,50,140,.18)}
@@ -117,8 +117,8 @@ body[data-bt-theme=deepseek] [data-composer-input]{caret-color:var(--bt-accent)}
     },
     css: `
 html body[data-bt-theme=claude]{--bt-hover:rgba(120,90,50,.07);--bt-active:rgba(120,90,50,.13);--bt-tag-bg:rgba(201,100,66,.1);--bt-tag-ink:#964425}
-html body[data-bt-theme=claude][data-ds-dark-theme]{--bt-hover:rgba(240,220,190,.07);--bt-active:rgba(240,220,190,.13);--bt-tag-bg:rgba(217,119,87,.16);--bt-tag-ink:#eba48a}
-body[data-bt-theme=claude] .bt-bubble{background:transparent!important;padding-inline:2px;font-family:${SERIF};font-size:calc(var(--dsh-content-font-size,14px) + 1.5px);line-height:1.7;max-width:min(92%,680px)}
+html body[data-bt-theme=claude][data-bt-dark]{--bt-hover:rgba(240,220,190,.07);--bt-active:rgba(240,220,190,.13);--bt-tag-bg:rgba(217,119,87,.16);--bt-tag-ink:#eba48a}
+body[data-bt-theme=claude] .bt-bubble{background:transparent!important;padding-inline:2px;font-family:${SERIF};font-size:calc(var(--bt-content-font-size,14px) + 1.5px);line-height:1.7;max-width:min(92%,680px)}
 body[data-bt-theme=claude] .bt-ububble{border-radius:12px;padding-inline:14px}
 body[data-bt-theme=claude] [class*="_card"]:has([data-composer-input]){border-radius:18px;box-shadow:0 2px 10px rgba(60,40,20,.06),inset 0 0 0 1px var(--bt-line-2)}
 body[data-bt-theme=claude] [class*="_card"]:has([data-composer-input]):focus-within{box-shadow:0 4px 18px rgba(60,40,20,.1),inset 0 0 0 1px color-mix(in srgb,var(--bt-accent) 45%,var(--bt-line-2))}
@@ -143,12 +143,12 @@ body[data-bt-theme=claude] [data-composer-input]{caret-color:var(--bt-accent)}
     },
     css: `
 html body[data-bt-theme=grok]{--bt-line:rgba(13,13,13,.07);--bt-line-2:rgba(13,13,13,.12);--bt-hover:rgba(0,0,0,.045);--bt-active:rgba(0,0,0,.08);--bt-tag-bg:rgba(0,0,0,.06);--bt-tag-ink:#3a3a3a}
-html body[data-bt-theme=grok][data-ds-dark-theme]{--bt-line:#222;--bt-line-2:#2c2c2c;--bt-hover:#1a1a1a;--bt-active:#262626;--bt-ink-2:#b5b5b0;--bt-ink-3:#8c8c86;--bt-tag-bg:#1e1e1e;--bt-tag-ink:#bdbdb8}
+html body[data-bt-theme=grok][data-bt-dark]{--bt-line:#222;--bt-line-2:#2c2c2c;--bt-hover:#1a1a1a;--bt-active:#262626;--bt-ink-2:#b5b5b0;--bt-ink-3:#8c8c86;--bt-tag-bg:#1e1e1e;--bt-tag-ink:#bdbdb8}
 body[data-bt-theme=grok]{font-family:${SANS_GROK}}
-body[data-bt-theme=grok] .bt-bubble{background:transparent!important;padding-inline:2px;max-width:min(92%,700px);font-size:calc(var(--dsh-content-font-size,14px) + 1px);line-height:1.65}
+body[data-bt-theme=grok] .bt-bubble{background:transparent!important;padding-inline:2px;max-width:min(92%,700px);font-size:calc(var(--bt-content-font-size,14px) + 1px);line-height:1.65}
 body[data-bt-theme=grok] .bt-ububble{border-radius:22px;padding-inline:16px}
 body[data-bt-theme=grok] [class*="_card"]:has([data-composer-input]){border-radius:22px;box-shadow:inset 0 0 0 1px var(--bt-line-2);background:var(--bt-card)}
-body[data-bt-theme=grok][data-ds-dark-theme] [class*="_card"]:has([data-composer-input]){background:#141414}
+body[data-bt-theme=grok][data-bt-dark] [class*="_card"]:has([data-composer-input]){background:#141414}
 body[data-bt-theme=grok] :is(.bt-set-section h3,.bt-drawer-name,.bt-process header strong,.bt-tile-name,.bt-pill-name,.bt-brand-name){font-weight:600;letter-spacing:-.015em}
 body[data-bt-theme=grok] :is(.bt-process,.bt-menu,.bt-update-pop){box-shadow:0 0 0 .5px var(--bt-line-2),0 12px 32px -12px rgba(0,0,0,.25)}
 body[data-bt-theme=grok] :is(.bt-work-all,.bt-retry,.bt-pill,.bt-tile-role){border-radius:999px}
@@ -191,7 +191,7 @@ const darkAccent = (accent: string | undefined): string | undefined => {
 }
 // `html body` outranks the base sheet's `body` rules without !important.
 export const themeCss = (theme: ThemeDefinition, accent?: string): string => `html body{${declarations(themeVars(theme.light, false, accent ?? theme.light.accent))}}
-html body[data-ds-dark-theme]{${declarations(themeVars(theme.dark, true, darkAccent(accent) ?? theme.dark.accent))}}
+html body[data-bt-dark]{${declarations(themeVars(theme.dark, true, darkAccent(accent) ?? theme.dark.accent))}}
 ${theme.css ?? ''}`
 export const shellTokens = ({ light, dark, tokens }: { light: ThemeMode; dark: ThemeMode; tokens?: ThemeTokens }): Record<string, { light: string; dark: string }> => ({
   '--dsw-alias-bg-base': { light: light.bg, dark: dark.bg },
@@ -216,8 +216,8 @@ export const shellTokens = ({ light, dark, tokens }: { light: ThemeMode; dark: T
   '--dsw-alias-label-tertiary': { light: rgba(light.text, 0.66), dark: rgba(dark.text, 0.66) },
 })
 
-// Other plugins add character shapes and themes through `window.dshBot`, or queue
-// calls on `window.dshBotQueue` before this plugin loads. A shape draws only its
+// Other modules add character shapes and themes through `window.moonBot`, or queue
+// calls on `window.moonBotQueue` before this plugin loads. A shape draws only its
 // body; the eyes are cut out where `eyes.at` says, so it gets every state motion free.
 const customThemes: Record<string, ThemeDefinition> = {}
 export const registry = createSource(0)

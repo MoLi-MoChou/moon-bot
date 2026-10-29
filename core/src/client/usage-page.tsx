@@ -111,7 +111,7 @@ export function UsagePage({ roster, actions, focusId }: UsagePageProps): ReactEl
         });
         const ownerAt = focus?.kind === 'owner' ? view.owners.findIndex(owner => owner.key === focus.key) : -1;
         const modelAt = focus?.kind === 'model' ? view.models.findIndex(model => model.key === focus.key) : -1;
-        // The DSH Agent stacks with the Bots; only rooms and outside sessions lump into the rest.
+        // The Agent stacks with the Bots; only rooms and outside sessions lump into the rest.
         const isBot = (at: string | number): boolean => ['bot', 'agent'].includes(view.owners[Number(at)]?.kind ?? '');
         const all = summarize(view, range, undefined, row => (by === 'bot' ? (isBot(row[OWNER]) ? `o${row[OWNER]}` : 'rest') : `m${row[MODEL]}`));
         const keep: (row: UsageRow) => boolean = ownerAt >= 0 ? row => Number(row[OWNER]) === ownerAt : modelAt >= 0 ? row => Number(row[MODEL]) === modelAt : () => true;

@@ -1,12 +1,12 @@
 // The standalone attachments store (plan §阶段 3): files under `<home>/attachments/`,
 // content-addressed, with a small index file naming each. The surface is the one the
 // host modules already speak (saveFile/readFileStream), so long messages, images and
-// file deliveries keep working without DSH's attachment service.
+// file deliveries keep working without the host's attachment service.
 import { createHash } from 'node:crypto'
 import { createReadStream } from 'node:fs'
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import type { AttachmentRef, AttachmentsService } from '../host/dsh-types.js'
+import type { AttachmentRef, AttachmentsService } from '../host/host-types.js'
 
 const INDEX = 'index.json'
 

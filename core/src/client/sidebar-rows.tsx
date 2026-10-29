@@ -1,7 +1,7 @@
 // Sidebar Bot / room / agent rows.
 import { STORAGE } from './storage.ts';
 import { createElement as h, useEffect, useLayoutEffect, useRef } from 'react';
-import { FishLogo } from './dsh-primitives.tsx';
+import { FishLogo } from './primitives.tsx';
 import { isMainOf } from './sources.ts';
 import { currentPart, previewOf, relativeShort } from './text.ts';
 import { PlusIcon, PinMarkIcon } from './icons.tsx';
@@ -101,7 +101,7 @@ export function RoomRow({ room, roster, actions, useSessions, useSessionStatus, 
     const label = [room.name, pinned ? t('Pinned') : '', members.length > 0 ? t('Working') : '', approval ? t('Waiting for your approval') : ''].filter(Boolean).join(', ');
     return <button type='button' className={members.length > 0 ? 'bt-row bt-busy' : 'bt-row'} aria-label={label} aria-current={active ? 'page' : undefined} data-room-id={id} onClick={() => actions.openSession(id)} onContextMenu={(event) => { event.preventDefault(); actions.openMenu({ kind: 'room', id, x: event.clientX, y: event.clientY }); }}><RoomAvatar room={room} roster={roster} size={36} />{pinned && !wide ? <PinMark /> : null}{wide ? <span className='bt-row-body'><span className='bt-row-name'><span className='bt-row-title'>{room.name}</span>{pinned ? <PinMark /> : null}</span>{workingLine ? <span className='bt-row-preview'>{workingLine}</span> : preview ? <span className='bt-row-preview'>{preview}</span> : null}</span> : null}{wide && approval && !active ? <span className='bt-unread bt-unread-wait' aria-hidden/> : wide && unread && !active ? <span className='bt-unread' aria-hidden/> : null}</button>;
 }
-// One expanded DSH Agent Session row: title, relative stamp, rename field, and a
+// One expanded Agent Session row: title, relative stamp, rename field, and a
 // context menu for rename/archive.
 /** One Session of the Agent, as its row draws it. */
 export interface AgentSessionView {
@@ -159,7 +159,7 @@ export function AgentSessionRow({ session, agent, actions, renaming, index }: {
         actions.openMenu({ kind: 'agent-session', id: session.id, agentId: agent.id, x: event.clientX, y: event.clientY });
     }}><span className='bt-agent-sub-title'>{session.title}</span><span className='bt-agent-sub-time'>{session.at > 0 ? relativeShort(session.at) : ''}</span></button>;
 }
-// The DSH Agent row: a plain dsh Session list lives in the Bot workspace, so it
+// The Agent row: a plain session Session list lives in the Bot workspace, so it
 // sits among the Bots with the harness's own whale mark.
 export function AgentRow({ agent, actions, useSessions, useSessionStatus, useUi, wide, marked }: Omit<TSidebarRowProps, 'roster' | 'useSessionRetainInfo' | 'useActivity' | 'useWork'> & {
     readonly agent: TSidebarAgent;

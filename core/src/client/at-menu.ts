@@ -6,8 +6,8 @@
 import { t } from './i18n.ts'
 import { currentPart, relativeShort } from './text.ts'
 
-export const BOTS_SOURCE = 'ds-bot'
-export const CHATS_SOURCE = 'ds-bot-chats'
+export const BOTS_SOURCE = 'moon-bot'
+export const CHATS_SOURCE = 'moon-bot-chats'
 // The words the group host reads as "everyone" (groups.js ROOM_ALL).
 const ROOM_ALL = ['all', 'everyone', '所有人', '全体']
 const OTHER_CHATS_MAX = 8
@@ -110,13 +110,13 @@ export function chatRows(roster: MentionRoster, list: ChatList | undefined, sess
   return [...bots, ...others]
 }
 
-// DSH's canonical session mention: `@[label](dsh-session:<base64url of the JSON id>)`.
+// The canonical session mention: `@[label](moon-bot-session:<base64url of the JSON id>)`.
 // The host turns it into "@label" plus a read-only snapshot of that Session.
 export function sessionMention(sessionId: string, label: string): string {
   let binary = ''
   for (const byte of new TextEncoder().encode(JSON.stringify(sessionId))) binary += String.fromCharCode(byte)
   const payload = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-  return `@[${label.replace(/[\\\]]/g, mark => `\\${mark}`)}](dsh-session:${payload})`
+  return `@[${label.replace(/[\\\]]/g, mark => `\\${mark}`)}](moon-bot-session:${payload})`
 }
 
 // A trigger-menu row of the shell: only the parts a source sets are read.

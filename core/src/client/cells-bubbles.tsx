@@ -1,7 +1,7 @@
 import { createElement as h, useEffect, useRef, useState } from 'react';
 import type { CSSProperties, MouseEvent as ReactMouseEvent, ReactNode, RefObject } from 'react';
 import { createPortal } from 'react-dom';
-import { MarkdownText } from './dsh-primitives.tsx';
+import { MarkdownText } from './primitives.tsx';
 import { inkText } from './inks.ts';
 import { BotMark, colorOf } from './mark.tsx';
 import { t } from './i18n.ts';
@@ -140,6 +140,9 @@ export interface BubblesProps {
     useUi?: StoreHook<CellsUiState> | undefined;
     lead?: ReactNode;
     mentions?: unknown;
+    /** Mention candidates for a group; unlike the full roster this is room-scoped. */
+    mentionBots?: readonly ChatBot[] | undefined;
+    everyoneBots?: readonly ChatBot[] | undefined;
     fold?: FoldLimit | undefined;
     whole?: WholeText | undefined;
 }
@@ -156,6 +159,8 @@ interface BubbleProps {
     sessionId?: string | undefined;
     msgKey?: string | undefined;
     mentions?: unknown;
+    mentionBots?: readonly ChatBot[] | undefined;
+    everyoneBots?: readonly ChatBot[] | undefined;
     fold: FoldLimit;
     picked: readonly string[];
     live?: boolean | undefined;
@@ -188,6 +193,8 @@ interface GroupMessageProps {
     whole?: WholeText | undefined;
     time?: number | undefined;
     duration?: number | undefined;
+    mentionBots?: readonly ChatBot[] | undefined;
+    everyoneBots?: readonly ChatBot[] | undefined;
 }
 // -------------------------------------------------------------------------
 // Chat cells
@@ -199,7 +206,7 @@ export const mdLabels = () => ({ code: { copyLabel: t('Copy'), copiedLabel: t('C
 /** The message bubbles of one turn. A caller passes only what it has: streaming, session
  * and fold props stay optional, as their defaults say.
  */
-export function Bubbles({ texts, roster, selfId, actions, streaming, sessionId, msgKey, useUi, lead, mentions, fold = FOLD_AT, whole }: BubblesProps) {
+export function Bubbles({ texts, roster, selfId, actions, streaming, sessionId, msgKey, useUi, lead, mentions, mentionBots = roster.bots, everyoneBots, fold = FOLD_AT, whole }: BubblesProps) {
     const onClick = (event: ReactMouseEvent): void => {
         const target = mentionTarget(event.nativeEvent);
         if (target === null)
@@ -211,13 +218,13 @@ export function Bubbles({ texts, roster, selfId, actions, streaming, sessionId, 
     const reactions = useUi ? useUi(state => (msgKey ? state.reactions?.[msgKey] ?? null : null)) : null;
     return <div className='bt-astack' data-lead={lead ? '' : undefined} onClickCapture={onClick}>{texts.map((text, index) => {
         const last = index === texts.length - 1;
-        return <Bubble key={index} text={text} index={index} roster={roster} selfId={selfId} actions={actions} sessionId={sessionId} msgKey={msgKey} mentions={mentions} fold={fold} picked={msgKey ? reactions?.[index] ?? [] : []} live={streaming && last} lead={lead && last ? lead : null} whole={last ? whole : undefined} />;
+        return <Bubble key={index} text={text} index={index} roster={roster} selfId={selfId} actions={actions} sessionId={sessionId} msgKey={msgKey} mentions={mentions} mentionBots={mentionBots} everyoneBots={everyoneBots} fold={fold} picked={msgKey ? reactions?.[index] ?? [] : []} live={streaming && last} lead={lead && last ? lead : null} whole={last ? whole : undefined} />;
     })}</div>;
 }
-function Bubble({ text, index, roster, selfId, actions, sessionId, msgKey, mentions, fold, picked, live, lead, whole }: BubbleProps) {
+function Bubble({ text, index, roster, selfId, actions, sessionId, msgKey, mentions, mentionBots = roster.bots, everyoneBots, fold, picked, live, lead, whole }: BubbleProps) {
     const { shown, folded, control } = useFold(text, { limit: fold, ...(whole === undefined ? {} : { whole }), ...(live === undefined ? {} : { live }) });
     const key = msgKey ? `${msgKey}:${index}` : undefined;
-    const body = <MarkdownText text={linkMentions(shown, roster.bots, selfId)} streaming={live} labels={mdLabels()} variant='compact' fileMentions={mentions} />;
+    const body = <MarkdownText text={linkMentions(shown, mentionBots, selfId, everyoneBots)} streaming={live} labels={mdLabels()} variant='compact' fileMentions={mentions} />;
     return <div className='bt-msg'><div className='bt-msg-line'>{lead}<div className='bt-bubble' data-folded={folded || undefined}>{control ? <div className='bt-fold-body'>{body}</div> : body}{control}</div>{live ? null : <MessageTools text={folded ? text : shown} name={(selfId === undefined ? undefined : roster.byId[selfId])?.name ?? t('Bot')} sessionId={sessionId} react={key && msgKey !== undefined ? emoji => actions.toggleReaction(msgKey, index, emoji) : undefined} actions={actions} />}</div>{picked.length && msgKey !== undefined ? <div className='bt-reacts'>{picked.map(emoji => <button key={emoji} type='button' className='bt-react' aria-label={t('Remove reaction {emoji}', { emoji })} onClick={() => actions.toggleReaction(msgKey, index, emoji)}>{emoji}</button>)}</div> : null}</div>;
 }
 const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
@@ -283,9 +290,10 @@ function MessageTools({ text, name, sessionId, react, actions }: MessageToolsPro
 // One Bot message inside a group chat: avatar, name (with its group role), when it ran
 // and how long it took, bubble.
 export function GroupMessage({ bot, text = '', texts = [text], room, roster, actions, msgKey, useUi, whole, time, duration }: GroupMessageProps) {
+    const memberBots = room?.members.map(id => roster.byId[id]).filter((item): item is ChatBot => item !== undefined) ?? roster.bots;
     const lead = <button type='button' className='bt-lead' aria-label={t("Open {name}'s chat", { name: bot.name })} onClick={() => actions.openSession(bot.id)}><BotMark bot={bot} size={22} /></button>;
     const took = duration !== undefined && Number.isFinite(duration) ? elapsedLabel(duration) : undefined;
-    return <div className='bt-group-msg'><span className='bt-group-name' style={{ color: inkText(colorOf(bot)) }}>{bot.name}{room?.admin === bot.id ? <span className='bt-group-role'>{t('Admin')}</span> : null}{time !== undefined && Number.isFinite(time) ? <span className='bt-group-time' title={clockLabel(time)}>{messageClock(time)}</span> : null}{took ? <span className='bt-group-took' title={t('Ran for {duration}', { duration: took })}>{took}</span> : null}</span><Bubbles texts={texts} roster={roster} selfId={bot.id} actions={actions} sessionId={room?.id} msgKey={msgKey} useUi={useUi} lead={lead} whole={whole} /></div>;
+    return <div className='bt-group-msg'><span className='bt-group-name' style={{ color: inkText(colorOf(bot)) }}>{bot.name}{room?.admin === bot.id ? <span className='bt-group-role'>{t('Admin')}</span> : null}{time !== undefined && Number.isFinite(time) ? <span className='bt-group-time' title={clockLabel(time)}>{messageClock(time)}</span> : null}{took ? <span className='bt-group-took' title={t('Ran for {duration}', { duration: took })}>{took}</span> : null}</span><Bubbles texts={texts} roster={roster} selfId={bot.id} actions={actions} sessionId={room?.id} msgKey={msgKey} useUi={useUi} lead={lead} whole={whole} mentionBots={memberBots} everyoneBots={room ? memberBots : undefined} /></div>;
 }
 // A member's messages in a row, as one block under its name: what it says while it
 // works comes one message at a time. A block carries the last message's time and run.

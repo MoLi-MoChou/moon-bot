@@ -45,7 +45,7 @@ export interface VoiceActions {
     send: (sessionId: string, text: string) => Promise<unknown>;
 }
 // Voice chat: listen, send what the user said, read the Bot's answer aloud, listen
-// again. With DSH's Voice Input plugin on, its recognizer hears the user: one
+// again. With the host's Voice Input plugin on, its recognizer hears the user: one
 // recording ends after a pause and is transcribed whole. Otherwise the browser's
 // own speech recognition does. The browser's speech synthesis reads the answer.
 const plainSpeech = (text: string): string => stripHeader(text).replace(/```[\s\S]*?```/g, ' ').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/[*_`#>|~-]+/g, ' ').replace(/\s+/g, ' ').trim();

@@ -17,7 +17,7 @@ test('LocalRunner chooses the Bot runtime and reuses one ACP process per key', a
     emit: () => {},
     catalog: {
       list: () => [{
-        id: 'claude', label: 'Claude', command: 'claude', args: [], key: 'claude', kind: 'acp' as const,
+        id: 'claude', label: 'Claude', command: 'claude', args: [], key: 'claude', kind: 'acp' as const, path: '/usr/local/bin/claude',
       }],
     },
   })
@@ -29,6 +29,14 @@ test('LocalRunner chooses the Bot runtime and reuses one ACP process per key', a
   assert.equal(second, first)
   assert.equal(runner.runtimeFor('fallback-session', { runtimeId: 'missing', engine: { kind: 'acp', command: 'fixture-agent', key: 'fixture' } }).constructor.name, 'AcpRuntime')
   assert.equal(runner.runtimeFor('unknown-session', { runtimeId: 'missing' }), builtin)
+  // A catalog row discovery could not resolve has no path, so the runner does not start it.
+  const unresolved = new LocalRunner({
+    builtin,
+    emit: () => {},
+    catalog: { list: () => [{ id: 'ghost', label: 'Ghost', command: 'ghost', args: [], key: 'ghost', kind: 'acp' as const }] },
+  })
+  assert.equal(unresolved.runtimeFor('ghost-session', { runtimeId: 'ghost' }), builtin)
+  await unresolved.stop()
 
   await runner.stop()
 })

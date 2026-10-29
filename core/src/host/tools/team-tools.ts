@@ -3,7 +3,7 @@
 import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
 import type { ToolContext } from '../../engine/registry.ts'
-import type { ToolExecution } from '../dsh-types.js'
+import type { ToolExecution } from '../host-types.js'
 import type { HostRuntime, StoredBot } from '../runtime.ts'
 import { readAvatar } from '../avatar.ts'
 import { COLORS, EXTRA_COLORS } from '../constants.ts'
@@ -196,7 +196,7 @@ export function installTeamTools(rt: HostRuntime, shared: ToolShared): void {
       if (running.length === 0) shared.refuse(`${target.name} is not running right now, so there is nothing to stop. Use message_bot to reach it.`)
       for (const sessionId of running) {
         const agent = await t.resolveAgent(sessionId)
-        agent.cancel({ kind: 'hook', reason: 'ds-bot/stopped' })
+        agent.cancel({ kind: 'hook', reason: 'moon-bot/stopped' })
       }
       const why = String(args.reason ?? '').trim() || 'Stop what you are doing; the previous turn was ended on purpose. Acknowledge briefly.'
       await t.deliver({ fromId: sender.id, toId: target.id, text: why, role: 'stopped', ...shared.callerRoom(context) })
@@ -232,7 +232,7 @@ export function installTeamTools(rt: HostRuntime, shared: ToolShared): void {
         const workDir = args.work_dir ? await t.cleanWorkDir(args.work_dir) : undefined
         const name = String(args.name ?? '').trim()
         await t.approveFolder(context, { path: workDir, who: { en: `the new Bot ${name}`, zh: `新 Bot ${name} ` }, toolName: 'create_bot' })
-        // Without a named model the new Bot takes its creator's: the DSH default may be
+        // Without a named model the new Bot takes its creator's: the host default may be
         // a provider that has no key, and then the new Bot fails on its first reply.
         const creator = shared.callerBot(context)
         const served = creator?.model ? (await t.catalog()).some(entry => entry.ref === creator.model) : undefined
@@ -297,12 +297,12 @@ export function installTeamTools(rt: HostRuntime, shared: ToolShared): void {
     },
   })
 
-  // DSH's working_directory changes a Session's folder in place, and the next part starts in
+  // the host's working_directory changes a Session's folder in place, and the next part starts in
   // the Bot's working folder again. A Bot that changes to a folder outside its working folder
   // sets its working folder instead, with update_bot's checks, and goes on in a fresh part
   // there; a folder inside it only moves this Session there.
   ctx.on<ToolExecuteEvent, ToolNext>('tools/execute', async (exec, next) => {
-    // Resolved as DSH gets it, untrimmed, so that both mean the same folder.
+    // Resolved as the host gets it, untrimmed, so that both mean the same folder.
     const cd = exec.name === WORKING_DIRECTORY_TOOL && isRecord(exec.arguments) && typeof exec.arguments.cd === 'string' ? exec.arguments.cd : ''
     const session = exec.agent?.session
     if (cd === '' || session === undefined) return next()

@@ -33,7 +33,7 @@ interface AppEngineBridge {
     onChange: (listener: (state: AppEngineState | null) => void) => (() => void) | undefined;
     download: () => Promise<AppEngineState | null>;
 }
-// The plugin's own update state, and DSH's beside it.
+// The plugin's own update state, and the host's beside it.
 export interface AboutUpdate {
     phase?: string;
     available?: boolean;

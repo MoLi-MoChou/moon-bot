@@ -47,7 +47,7 @@ export async function partHandoffLines(deps: PartReadDeps, sessionId: string, { 
     // The latest messages matter most; what could not be read is only noted.
     if (recent.length === 0) throw error
     complete = false
-    warn('ds-bot: reading %s for its handoff stopped early: %s', sessionId, error)
+    warn('moon-bot: reading %s for its handoff stopped early: %s', sessionId, error)
   }
   // `whole`: every message of the part is in `recent`.
   return { recent: recent.reverse(), earlier: earlier.reverse(), unlisted, complete, whole: complete && !full }

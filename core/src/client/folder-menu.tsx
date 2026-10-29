@@ -73,7 +73,7 @@ export function FolderMenu({ value, group = false, team = false, actions, run, o
         }
         setView('list');
         setProblem('');
-        // Projects added in DSH meanwhile show up, so opening asks again.
+        // Projects added in the host meanwhile show up, so opening asks again.
         void Promise.resolve(actions.folders()).then(next => setInfo(next ?? null)).catch(() => setInfo(last => last ?? { team: null, picker: null, folders: [] }));
         open();
     };

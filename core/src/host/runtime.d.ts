@@ -4,7 +4,7 @@
 // `install(rt)`. A module both reads what earlier modules put on `rt` and adds its own
 // functions. This interface holds the slice today's TypeScript modules need; it grows a
 // batch at a time as the rest of `src/host` moves over. Nothing here runs: types only.
-import type { Agent, AttachmentRef, DshContext, SessionEvent } from './dsh-types.js'
+import type { Agent, AttachmentRef, HostContext, SessionEvent } from './host-types.js'
 import type { ToolEntry } from '../engine/registry.ts'
 import type { UsageView, UsageViewOptions } from './usage/view.ts'
 import type { SecretRequest, SecretView } from './secrets/store.ts'
@@ -90,6 +90,7 @@ export interface StoredRoom {
   sessions?: Record<string, string>
   segments?: Record<string, readonly { readonly sessionId: string; readonly endedAt?: number }[]>
   workDir?: string
+  archivedAt?: number
   readonly [key: string]: unknown
 }
 
@@ -177,7 +178,7 @@ export interface ModelEntry {
   reasoning?: ModelReasoning
 }
 
-/** The team's one plain DSH Agent, as `state.json` stores it. */
+/** The team's one plain Agent, as `state.json` stores it. */
 export interface StoredAgent {
   readonly id: string
   readonly name: string
@@ -269,9 +270,9 @@ export interface ApprovalNote {
 }
 
 export interface HostRuntime {
-  readonly ctx: DshContext
+  readonly ctx: HostContext
   readonly config: HostConfig
-  readonly dshHome: string
+  readonly otherAppHome: string
   readonly home: string
   readonly statePath: string
   readonly defaults: HostDefaults
@@ -341,6 +342,8 @@ export interface HostRuntime {
   tasksView?(): Promise<{ readonly running: readonly Readonly<Record<string, unknown>>[]; readonly completed: readonly Readonly<Record<string, unknown>>[]; readonly waiting: readonly { readonly botId: string; readonly botName: string; readonly for: readonly string[] }[] }>
   noteTurn?(sessionId: string, event: { readonly type?: string; readonly reason?: unknown }): void
   stopTask?(sessionId: string): Promise<boolean>
+  /** Drops one queued message that has not started. False when it is already gone. */
+  removeQueued?(sessionId: string, id: string): Promise<boolean>
 
   // --- provided by secrets/install.ts
   loadSecrets(): Promise<unknown>
@@ -398,7 +401,7 @@ export interface HostRuntime {
   // --- provided by capabilities.ts and tools.ts
   ensureCapabilities(sessionId: string): Promise<unknown>
   hideBotUnusedTools(agent: Agent): void
-  /** One tool on both paths at once: the Zod registry entry and its DSH derivation. */
+  /** One tool on both paths at once: the Zod registry entry and its the host derivation. */
   registerTool(entry: ToolEntry): void
   /** The tool registry, for mounts that add tools at run time (capabilities). */
   readonly toolRegistry?: import('../engine/registry.ts').ToolRegistry | undefined

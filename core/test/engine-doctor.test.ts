@@ -111,7 +111,7 @@ const methodsOf = (log: string): string[] => readFileSync(log, 'utf8').trim().sp
 
 test('a scripted agent is checked through session/new and never prompted', async (t) => {
   const root = mkdtempSync(join(tmpdir(), 'engine-doctor-'))
-  t.after(() => rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }))
+  t.after(() => rmSync(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 50 }))
   const cwd = join(root, 'session')
   mkdirSync(cwd)
   const log = join(root, 'methods.log')
@@ -134,7 +134,7 @@ test('a scripted agent is checked through session/new and never prompted', async
 
 test('a refused handshake, a permission ask, and a silent agent stay off the prompt', async (t) => {
   const root = mkdtempSync(join(tmpdir(), 'engine-doctor-'))
-  t.after(() => rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }))
+  t.after(() => rmSync(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 50 }))
   const script = join(root, 'agent.cjs')
   writeFileSync(script, AGENT)
   const run = async (mode: string, timeoutMs: number) => {

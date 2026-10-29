@@ -97,6 +97,9 @@ export async function probeAcp(command: string, args: readonly string[], cwd: st
   } finally {
     clearTimeout(timer)
     transport.dispose()
+    // The doctor answers only once the agent is really gone: it ran in a folder the caller
+    // may remove next, and on Windows a killed child holds that folder for a moment.
+    await transport.exited()
   }
 }
 

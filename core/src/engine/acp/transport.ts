@@ -15,11 +15,18 @@ export interface AcpTransport {
   onClosed(receive: () => void): void
   /** Tear the wire down; safe to call more than once. */
   dispose(): void
+  /**
+   * Resolves once the other end is really gone. `dispose` only asks: on Windows a killed
+   * child keeps its handle for a moment, and something that removes the folder it ran in
+   * (a doctor run, a test) has to wait for that before it can.
+   */
+  exited(): Promise<void>
 }
 
 /** The local agent: a spawned child, its stdio the pipe. */
 export class StdioTransport implements AcpTransport {
   private child: ReturnType<typeof spawn> | undefined
+  private gone: Promise<void> | undefined
   private line: ((line: string) => void) | undefined
   private closed: (() => void) | undefined
   private buffer = ''
@@ -71,8 +78,14 @@ export class StdioTransport implements AcpTransport {
   }
 
   dispose(): void {
+    const child = this.child
     this.child?.kill()
     this.finish()
+    if (child !== undefined && child.exitCode === null && child.signalCode === null) this.gone = new Promise((resolve) => { child.once('close', () => { resolve() }) })
+  }
+
+  exited(): Promise<void> {
+    return this.gone ?? Promise.resolve()
   }
 
   private feed(chunk: string): void {
@@ -162,4 +175,8 @@ export class RelayTransport implements AcpTransport {
     this.opened = false
     this.pipe = undefined
   }
+
+  // A relay connection belongs to the CLI on the other end; there is no child handle
+  // here whose closing we would wait for.
+  async exited(): Promise<void> {}
 }

@@ -36,7 +36,7 @@ machine (window frame, input method, high DPI, install and upgrade); CI cannot s
 
 | Tag | When |
 |---|---|
-| `ghcr.io/moli-mochou/moon-bot:<short sha>` | every push to `main` and every tag |
+| `ghcr.io/zk020106/moon-bot:<short sha>` | every push to `main` and every tag |
 | `:main`, `:latest` | every push to `main` (and a tag made from `main`) |
 | `:vX.Y.Z` | the release tag |
 

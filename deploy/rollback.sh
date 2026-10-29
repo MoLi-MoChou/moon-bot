@@ -21,7 +21,7 @@ env_value() {
 CONTAINER=$(env_value MOON_BOT_CONTAINER)
 CONTAINER=${CONTAINER:-moon-bot}
 REGISTRY=$(env_value MOON_BOT_REGISTRY)
-REGISTRY=${REGISTRY:-ghcr.io/moli-mochou/moon-bot}
+REGISTRY=${REGISTRY:-ghcr.io/zk020106/moon-bot}
 DATA_DIR="$DEPLOY_DIR/data"
 SNAPSHOT_CONFIG=$(env_value MOON_BOT_SNAPSHOT_DIR)
 SNAPSHOT_CONFIG=${SNAPSHOT_CONFIG:-.snapshots}

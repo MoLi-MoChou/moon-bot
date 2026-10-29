@@ -18,7 +18,7 @@
 # written only when it does not exist yet, so a rerun is an upgrade, not a reset.
 set -eu
 REPO="MoLi-MoChou/moon-bot"
-REGISTRY="ghcr.io/moli-mochou/moon-bot"
+REGISTRY="ghcr.io/zk020106/moon-bot"
 TAG="latest"
 PORT="8290"
 DIR=""

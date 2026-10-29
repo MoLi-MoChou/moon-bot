@@ -77,6 +77,13 @@ jobs:
         id: meta
         run: |
           image="ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')"
+          # Every deploy pulls ghcr.io/zk020106/moon-bot. A repository move changes
+          # github.repository, and the workflow would then publish somewhere the servers
+          # never look; say so instead of pushing a package nobody reads.
+          echo "$image" | grep -qx 'ghcr.io/zk020106/moon-bot' || {
+            echo "::error::publishing to $image, but deploy/*.sh pull ghcr.io/zk020106/moon-bot"
+            exit 1
+          }
           short=$(echo '${{ github.sha }}' | cut -c1-7)
           tags="$image:$short"
           if [ '${{ github.ref_type }}' = 'tag' ]; then tags="$tags,$image:${{ github.ref_name }}"; fi

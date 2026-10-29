@@ -25,7 +25,7 @@ env_value() {
 CONTAINER=$(env_value MOON_BOT_CONTAINER)
 CONTAINER=${CONTAINER:-moon-bot}
 REGISTRY=$(env_value MOON_BOT_REGISTRY)
-REGISTRY=${REGISTRY:-ghcr.io/moli-mochou/moon-bot}
+REGISTRY=${REGISTRY:-ghcr.io/zk020106/moon-bot}
 DATA_DIR="$DEPLOY_DIR/data"
 SNAPSHOT_CONFIG=$(env_value MOON_BOT_SNAPSHOT_DIR)
 SNAPSHOT_CONFIG=${SNAPSHOT_CONFIG:-.snapshots}
@@ -156,6 +156,21 @@ elif ! docker pull "$target_image" >/dev/null 2>&1; then
   echo "update: could not pull tag $target; nothing was changed" >&2
   exit 1
 fi
+
+# A tag can exist under another owner's package after a move, and pulling it looks like a
+# successful update while the running code stays old. When the tag names a commit, the
+# image has to say the same commit; a mismatch stops here, before anything is stopped.
+pulled_revision=$(docker image inspect "$target_image" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' 2>/dev/null || true)
+case "$target" in
+  v[0-9]*|latest|main) : ;;                 # a moving tag: its commit is whatever it is now
+  *)
+    if [ -n "$pulled_revision" ] && [ "$pulled_revision" != "$target" ]; then
+      echo "update: $target_image reports revision $pulled_revision, not $target; nothing was changed" >&2
+      echo "update: the package may have moved owners - check MOON_BOT_REGISTRY in .env" >&2
+      exit 1
+    fi
+    ;;
+esac
 
 # Keep the old installation running if any part of the stop-and-snapshot phase fails.
 resume_old() {

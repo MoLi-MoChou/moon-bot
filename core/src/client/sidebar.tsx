@@ -35,7 +35,7 @@ export function TeamSidebar(props: TSidebarProps) {
         const stamps = JSON.parse(updated) as Record<string, number>;
         const entries: TSidebarEntry[] = [
             ...roster.bots.filter(bot => bot.id !== roster.mainBotId).map(bot => ({ kind: 'bot' as const, item: bot, at: (stamps[currentPart(bot)] ?? bot.createdAt) as number })),
-            ...roster.rooms.map(room => ({ kind: 'room' as const, item: room, at: (stamps[room.id] ?? room.createdAt) as number })),
+            ...roster.rooms.filter(room => typeof room.archivedAt !== 'number').map(room => ({ kind: 'room' as const, item: room, at: (stamps[room.id] ?? room.createdAt) as number })),
             // The Agent sorts by its most recent Session, falling back to when it was added.
             ...(roster.agents ?? []).map(agent => ({ kind: 'agent' as const, item: agent, at: (Math.max(0, ...agent.sessions.map(id => stamps[id] ?? 0)) || agent.createdAt) as number })),
         ];
@@ -47,6 +47,7 @@ export function TeamSidebar(props: TSidebarProps) {
     const reorder = (ids: string[]): void => { dragging.current = true; setManual(ids); };
     const dropped = (): void => { saveOrder(shown.map(entry => entry.item.id)); setTimeout(() => { dragging.current = false; }, 0); };
     const main = roster.mainBotId === undefined ? undefined : roster.byId[roster.mainBotId];
+    const archived = roster.rooms.filter(room => typeof room.archivedAt === 'number');
     useListGlide(listRef, wide && !dragging.current, shown.map(entry => entry.item.id).join(','));
     useLandOnMainBot(roster, useSessions, actions);
     // The shell keeps wide content during its collapse fade. Normalize through its
@@ -83,7 +84,7 @@ export function TeamSidebar(props: TSidebarProps) {
             ? <BotRow {...rowProps} bot={entry.item} marked={markedUnread[entry.item.id] === true} />
             : entry.kind === 'room'
                 ? <RoomRow {...rowProps} room={entry.item} marked={markedUnread[entry.item.id] === true} />
-                : <AgentRow {...rowProps} agent={entry.item} marked={markedUnread[entry.item.id] === true} />} />{wide && roster.ready && shown.length === 0 ? <div className='bt-side-empty'><EmptyState compact icon={<PeopleIcon />} title={t('Build your Bot team')} hint={t('Each Bot has its own chat, instructions and memory. Create one, or ask your Main Bot to set one up.')} action={{ icon: <PlusIcon />, label: t('Create Bot'), onClick: () => actions.openNewChat('create') }} /></div> : null}</div>{tasksOpen ? createPortal(<TasksPopover taskActions={actions} onOpenSession={(id) => { setTasksOpen(false); navigate(actions.openSession, id); }} onClose={closeTasks} />, document.body) : null}</div>;
+                : <AgentRow {...rowProps} agent={entry.item} marked={markedUnread[entry.item.id] === true} />} />{wide && roster.ready && shown.length === 0 ? <div className='bt-side-empty'><EmptyState compact icon={<PeopleIcon />} title={t('Build your Bot team')} hint={t('Each Bot has its own chat, instructions and memory. Create one, or ask your Main Bot to set one up.')} action={{ icon: <PlusIcon />, label: t('Create Bot'), onClick: () => actions.openNewChat('create') }} /></div> : null}</div>{wide && archived.length > 0 ? <div className='bt-side-archived'><div className='bt-hint'>{t('Archived')}</div>{archived.map(room => <RoomRow key={room.id} {...rowProps} room={room} marked={markedUnread[room.id] === true} />)}</div> : null}{tasksOpen ? createPortal(<TasksPopover taskActions={actions} onOpenSession={(id) => { setTasksOpen(false); navigate(actions.openSession, id); }} onClose={closeTasks} />, document.body) : null}</div>;
 }
 export function ReorderList({ shown, wide, reorder, dropped, dragging, render }: {
     readonly shown: readonly TSidebarEntry[];
@@ -104,8 +105,8 @@ export function ReorderList({ shown, wide, reorder, dropped, dragging, render }:
         } }}>{render(entry)}</Reorder.Item>)}</Reorder.Group>;
 }
 // The update button at the sidebar's top right: a cloud while a newer DS Bot —
-// or a newer verified DSH — is available, then the install's progress and
-// result. Its card has one row each for the bot and DSH, with their versions,
+// or a newer verified the host — is available, then the install's progress and
+// result. Its card has one row each for the bot and the host, with their versions,
 // the release notes link, and each row's own button.
 export function UpdateButton({ useUpdate, actions }: {
     readonly useUpdate: TSidebarHook<TSidebarUpdate | null>;

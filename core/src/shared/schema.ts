@@ -69,6 +69,8 @@ export const RoomSchema = z.object({
   permission: z.string().optional(),
   pinned: z.boolean().optional(),
   hidden: z.boolean().optional(),
+  /** Set when the group is archived. Absent means it is not. */
+  archivedAt: z.number().optional(),
   /** Each member's hidden group Session, and its earlier parts. */
   sessions: z.record(id, id).optional(),
   segments: z.record(id, z.array(SegmentSchema)).optional(),
@@ -85,7 +87,7 @@ export const ExchangeTurnSchema = z.object({
   time,
   replyTo: id.optional(),
   audience: z.literal('user').optional(),
-  /** Set when the whole text lives in a DSH file instead of state.json. */
+  /** Set when the whole text lives in a host file instead of state.json. */
   length: z.number().int().positive().optional(),
   files: z.array(z.record(z.string(), z.unknown())).optional(),
 })

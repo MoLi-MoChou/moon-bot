@@ -3,7 +3,7 @@
 // group but not delete it. Only a member can be admin.
 import { ROOM_MAX_MEMBERS, ROOM_MODES, ROOM_NAME_MAX, ROOM_NOTICE_MAX } from './constants.ts'
 import { unquote } from './text.ts'
-import type { DshContext } from './dsh-types.js'
+import type { HostContext } from './host-types.js'
 import type { HostRuntime, StoredRoom, StoredState } from './runtime.js'
 
 export interface RoomPatch {
@@ -37,7 +37,7 @@ interface CreateRoomOptions {
 }
 
 interface RosterRoomsOptions {
-  readonly ctx: DshContext
+  readonly ctx: HostContext
   readonly rt: HostRuntime
   readonly state: StoredState
   createSession(title: string, options?: { readonly dir?: string }): Promise<string>
@@ -55,6 +55,7 @@ export interface RosterRooms {
   createRoom(options?: CreateRoomOptions): Promise<StoredRoom>
   updateRoom(id: string, patch: RoomPatch, actorId?: string): Promise<{ readonly room: StoredRoom; readonly changes: readonly string[] }>
   deleteRoom(id: string): Promise<void>
+  archiveRoom(id: string, archived: boolean): Promise<StoredRoom>
 }
 
 export function createRosterRooms({ ctx, rt, state, createSession, holdName, isHeld, saveForDelete }: RosterRoomsOptions): RosterRooms {
@@ -73,7 +74,7 @@ export function createRosterRooms({ ctx, rt, state, createSession, holdName, isH
       const agent = await rt.resolveAgent(room.id)
       await ctx.sessionTitle.rename(agent.session, room.name)
     } catch (error) {
-      rt.warn('ds-bot: group title for %s not updated: %s', room.name, error)
+      rt.warn('moon-bot: group title for %s not updated: %s', room.name, error)
     }
   }
 
@@ -147,7 +148,7 @@ export function createRosterRooms({ ctx, rt, state, createSession, holdName, isH
       delete state.rooms[id]
       void rt.save().catch(() => {})
       await ctx.workspaceRegistry.archiveSession(id)
-        .catch(archiveError => rt.warn('ds-bot: archiving the Session for %s failed: %s', title, archiveError))
+        .catch(archiveError => rt.warn('moon-bot: archiving the Session for %s failed: %s', title, archiveError))
       throw error
     }
   }
@@ -251,6 +252,17 @@ export function createRosterRooms({ ctx, rt, state, createSession, holdName, isH
     return { room, changes }
   }
 
+  // A mark, not a delete: members, log, sessions and memory stay where they are.
+  async function archiveRoom(id: string, archived: boolean): Promise<StoredRoom> {
+    const room = rt.roomOf(id)
+    if (room === undefined) throw new Error('Unknown group chat')
+    if (archived) {
+      if (typeof room.archivedAt !== 'number') room.archivedAt = Date.now()
+    } else if (room.archivedAt !== undefined) delete room.archivedAt
+    await rt.save()
+    return room
+  }
+
   async function deleteRoom(id: string): Promise<void> {
     const room = rt.roomOf(id)
     if (room === undefined) throw new Error('Unknown group chat')
@@ -265,9 +277,9 @@ export function createRosterRooms({ ctx, rt, state, createSession, holdName, isH
     // Armed scheduled tasks refuse a plain archive and would keep delivering into
     // the deleted group; the session-stop that stopActivity runs removes them.
     await ctx.workspaceRegistry.archiveSession(id, { stopActivity: true })
-      .catch(error => rt.warn('ds-bot: group chat %s not archived: %s', room.name, error))
+      .catch(error => rt.warn('moon-bot: group chat %s not archived: %s', room.name, error))
     if (failed !== undefined) throw failed
   }
 
-  return { roomBusy, autoRoomName, cleanRoomName, retitleRoom, followMemberNames, createRoom, updateRoom, deleteRoom }
+  return { roomBusy, autoRoomName, cleanRoomName, retitleRoom, followMemberNames, createRoom, updateRoom, deleteRoom, archiveRoom }
 }

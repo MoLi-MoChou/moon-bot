@@ -27,12 +27,13 @@ export interface TSidebarRoom {
   admin?: string | null
   hidden?: boolean
   pinned?: boolean
+  archivedAt?: number
   preview?: string
   createdAt?: number
   segments?: Record<string, readonly { readonly sessionId: string; readonly endedAt?: number | undefined }[]>
 }
 
-/** A DSH Agent row: its Sessions, newest first. */
+/** An Agent row: its Sessions, newest first. */
 export interface TSidebarAgent {
   readonly id: string
   readonly pinned?: boolean | undefined
@@ -121,18 +122,6 @@ export interface TSidebarUi {
   readonly mode?: string
 }
 
-/** One row of the update button's card. */
-export interface TSidebarUpdateRow {
-  readonly phase?: string
-  readonly available?: boolean
-  readonly verified?: string
-  readonly installed?: string
-  readonly current?: string
-  readonly kind?: string
-  readonly blockedBy?: string
-  readonly error?: string
-}
-
 /** The plugin's update state, as the UpdateButton reads it. */
 export interface TSidebarUpdate {
   readonly phase?: string
@@ -144,7 +133,6 @@ export interface TSidebarUpdate {
   readonly notesUrl?: string
   readonly source?: string
   readonly app?: unknown
-  readonly dsh?: TSidebarUpdateRow
 }
 
 /** What the shell's shortcut catalog offers the settings shortcut. */
@@ -163,6 +151,7 @@ export interface TSidebarActions {
   /** The task popover's reads and stop; the same actions the Settings → Tasks page uses. */
   tasks: TaskActions['tasks']
   stopTask: TaskActions['stopTask']
+  removeQueued: TaskActions['removeQueued']
   openAgent: (id: string) => void
   openAgentSession: (id: string) => void
   newAgentSession: (id: string) => Promise<unknown>

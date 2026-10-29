@@ -99,7 +99,7 @@ export function install(rt: HostRuntime): void {
   const rooms: RosterRooms = createRosterRooms({ ctx, rt, state, createSession, holdName, isHeld, saveForDelete })
   const roles = createRosterRoles({ rt, state })
   const { setMain, setFlags } = roles
-  const { autoRoomName, followMemberNames, retitleRoom, createRoom, updateRoom, deleteRoom, roomBusy } = rooms
+  const { autoRoomName, followMemberNames, retitleRoom, createRoom, updateRoom, deleteRoom, archiveRoom, roomBusy } = rooms
 
   const botNameTaken = (name: string): boolean => rt.findBot(name) !== undefined || isHeld('bot', name)
 
@@ -127,7 +127,7 @@ export function install(rt: HostRuntime): void {
     const cleanAvatarValue = cleanAvatar(avatar)
     const engineSpec = cleanEngine(engine)
     const cleanRuntimeId = typeof runtimeId === 'string' && runtimeId.trim() !== '' ? runtimeId.trim().slice(0, 120) : undefined
-    // The model is fixed at creation, so a later change of the DSH default leaves it alone.
+    // The model is fixed at creation, so a later change of the host default leaves it alone.
     const modelRef = model ? await rt.resolveModel(model) : pickModel ? undefined : await rt.defaultModel()
     // A thinking level needs a model to resolve against; with none it would be dropped
     // silently, so the create fails before a Session is made.
@@ -167,7 +167,7 @@ export function install(rt: HostRuntime): void {
       await rt.save()
       // The greeting runs on the Bot's own model, once its provider is registered.
       void rt.waitForModel(bot)
-        .then(() => rt.applyModel(bot).catch(error => rt.warn('ds-bot: model for %s not applied: %s', cleanName, error)))
+        .then(() => rt.applyModel(bot).catch(error => rt.warn('moon-bot: model for %s not applied: %s', cleanName, error)))
         .then(() => sendKickoff(rt, bot, { text, ...(createdBy === undefined ? {} : { from: createdBy }) }))
       return bot
     } catch (error) {
@@ -179,7 +179,7 @@ export function install(rt: HostRuntime): void {
       // one writes the team without it.
       void rt.save().catch(() => {})
       await ctx.workspaceRegistry.archiveSession(id)
-        .catch(archiveError => rt.warn('ds-bot: archiving the Session for %s failed: %s', cleanName, archiveError))
+        .catch(archiveError => rt.warn('moon-bot: archiving the Session for %s failed: %s', cleanName, archiveError))
       throw error
     }
   }
@@ -326,7 +326,7 @@ export function install(rt: HostRuntime): void {
     // which otherwise stays armed and invisible. Already-archived ids are a no-op.
     for (const part of parts) {
       await ctx.workspaceRegistry.archiveSession(part, { stopActivity: true })
-        .catch(error => rt.warn('ds-bot: Bot %s not archived: %s', bot.name, error))
+        .catch(error => rt.warn('moon-bot: Bot %s not archived: %s', bot.name, error))
     }
     if (failed !== undefined) throw failed
   }
@@ -344,7 +344,7 @@ export function install(rt: HostRuntime): void {
 
   Object.assign(rt, {
     ensureWorkspace, keepTeamFolder, createSession, createBot, duplicateBot, updateBot, setFlags,
-    roomBusy, autoRoomName, retitleRoom, createRoom, updateRoom, deleteRoom,
+    roomBusy, autoRoomName, retitleRoom, createRoom, updateRoom, deleteRoom, archiveRoom,
     setMain, deleteBot, bootstrap, dropKickoff: (botId: string) => dropHeldKickoff(rt, botId),
   })
 }

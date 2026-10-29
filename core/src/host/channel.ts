@@ -4,7 +4,7 @@
 // shared read-only and error handling, and the Fetch route. Endpoint names come from
 // `src/shared/rpc.ts`, so a typo in the handler map fails to compile.
 import type { ChatPage, RpcEndpoint, WorkBot } from '../shared/rpc.ts'
-import type { AttachmentRef } from './dsh-types.ts'
+import type { AttachmentRef } from './host-types.ts'
 import type { ExchangeEntry, HostRuntime, ModelReasoning, StoredAgent, StoredBot, StoredRoom } from './runtime.js'
 import { ROUTE } from './constants.ts'
 import type {
@@ -72,6 +72,10 @@ export interface ChannelRuntime extends HostRuntime {
   browserOpen(value: unknown): Record<string, { readonly url: string; readonly title: string }>
   waitingView?(): Readonly<Record<string, { readonly bots: readonly string[]; readonly rooms: readonly string[]; readonly for: readonly string[] }>>
   turnsView?(): Readonly<Record<string, number>>
+  /** Local context figures for one session, used when no projection service is installed. */
+  contextStats?(sessionId: string): Promise<{ readonly contextPressure: { readonly projectedTokens: number; readonly contextWindow: number } } | undefined>
+  /** Condense the current part in place, or refuse with a sentence the client can show. */
+  compactChat?(sessionId: string): Promise<{ readonly compacted: true } | { readonly compacted: false; readonly reason: string }>
 
   providersView(): Promise<Record<string, unknown>>
   clearProviderKey(provider: string): Promise<void>
@@ -89,6 +93,7 @@ export interface ChannelRuntime extends HostRuntime {
   createRoom(options: CreateRoomOptions): Promise<StoredRoom>
   updateRoom(id: unknown, patch: ChannelBody): Promise<{ readonly room: StoredRoom; readonly changes: readonly string[] }>
   deleteRoom(id: unknown): Promise<void>
+  archiveRoom(id: unknown, archived: boolean): Promise<StoredRoom>
   greetRoom(roomId: string): Promise<void>
 
   folderEndpoint(endpoint: string, body: ChannelBody, signal: AbortSignal): Promise<unknown>
@@ -148,13 +153,13 @@ export interface ChannelRuntime extends HostRuntime {
 const LANGUAGES: Readonly<Record<string, string>> = { zh: 'Chinese (简体中文)', en: 'English' }
 
 // What a host that only reads the team may still answer.
-// Updates change the dsh profile, not the team, so a reading host may run them too.
+// Updates change the host profile, not the team, so a reading host may run them too.
 const READS: ReadonlySet<RpcEndpoint> = new Set<RpcEndpoint>(['state', 'models', 'efforts', 'engines', 'providers', 'provider-models', 'earlier', 'chat', 'run-stats', 'room-progress', 'exchange', 'exchange-text', 'file-text', 'usage', 'schedules', 'memory-view', 'browser-wait', 'browser-result', 'diagnostics', 'diagnostics-log', 'diagnostics-clear', 'update-check', 'update-install', 'repo-stars', 'approval-answer', 'thinking', 'workspace-download', 'workspace-describe'])
 
 export function install(rt: ChannelRuntime): void {
   const { ctx } = rt
 
-  // The DSH interface language of the last browser that asked for the team.
+  // The host interface language of the last browser that asked for the team.
   const locale: LocaleState = { value: undefined }
   rt.uiLanguage = (): string | undefined => {
     if (locale.value === undefined) return undefined
@@ -192,12 +197,12 @@ export function install(rt: ChannelRuntime): void {
       const result = await handle(String(record.endpoint ?? ''), record.payload, request.signal)
       return new Response(JSON.stringify(result), { status: 200, headers: { 'content-type': 'application/json' } })
     },
-  }), 'ds-bot: api route')
+  }), 'moon-bot: api route')
 
   ctx.effect(() => {
     void rt.load()
     return () => {}
-  }, 'ds-bot: load state')
+  }, 'moon-bot: load state')
 }
 
 export { errorCode } from './channel/envelope.ts'

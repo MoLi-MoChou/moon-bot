@@ -158,6 +158,7 @@ export function installChatTools(rt: HostRuntime, shared: ToolShared): void {
       if (self === undefined || sender === undefined) return 'Only Bots on the team can use post_to_group.'
       const { room, error } = shared.pickRoom(args.group, self)
       if (error !== undefined) return error
+      if (typeof room.archivedAt === 'number') return `"${room.name}" is archived, so nothing was posted.`
       // An ordinary member's post calls only the members it names (openingSpeakers).
       const member = !t.isMain(self) && !t.isAdminOf(room, self)
       const info = shared.liveEntry(context.sessionId)?.info

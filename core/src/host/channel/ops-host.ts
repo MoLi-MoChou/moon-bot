@@ -50,7 +50,7 @@ export function hostHandlers(rt: ChannelRuntime): ChannelHandlers {
   const { ctx, state } = rt
 
   return {
-    // Model providers and their keys, for a window without DSH's own Models page.
+    // Model providers and their keys, for a window without the host's own Models page.
     providers: async () => ok(await rt.providersView()),
     'provider-key': async (body) => {
       if (body.value === null) await rt.clearProviderKey(String(body.provider ?? ''))
@@ -126,6 +126,7 @@ export function hostHandlers(rt: ChannelRuntime): ChannelHandlers {
       const text = String(body.text ?? '').trim()
       if (text === '' || typeof body.sessionId !== 'string') return fail('Nothing to send', 'bot/invalid')
       await rt.load()
+      if (typeof rt.roomOf(body.sessionId)?.archivedAt === 'number') return fail('This group chat is archived', 'bot/invalid')
       // A Bot id or an earlier part of its own chat means the current part.
       const past = rt.pastOwners.get(body.sessionId)
       const sessionId = rt.botOf(body.sessionId) ? rt.chatOf(body.sessionId) : past && past.roomId === undefined ? rt.chatOf(past.botId) : body.sessionId

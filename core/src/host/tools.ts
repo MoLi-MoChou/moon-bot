@@ -11,6 +11,7 @@ import {
   type ToolShared,
 } from './tools/shared.ts'
 import { installTeamTools } from './tools/team-tools.ts'
+import { installBotTools } from './tools/bot-tools.ts'
 import { installChatTools } from './tools/chat-tools.ts'
 import { installCapabilityTools } from './tools/capability-tools.ts'
 import { installWebSearchTool } from './tools/web-search-tool.ts'
@@ -76,6 +77,7 @@ export function install(rt: HostRuntime): void {
   }
 
   installTeamTools(rt, shared)
+  installBotTools(rt, shared)
   installChatTools(rt, shared)
   installWebSearchTool(rt, shared)
 

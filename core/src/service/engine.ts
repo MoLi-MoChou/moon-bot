@@ -26,7 +26,9 @@ import { FileAttachments } from './attachments.ts'
 import { ServiceApproval } from './approval.ts'
 import { MemorySync } from './memory-sync.ts'
 import { TaskScheduler } from './scheduler.ts'
-import { PolicyEngine } from '../engine/policy.ts'
+import { PolicyEngine, ruleOf } from '../engine/policy.ts'
+import { gateOfPreset } from '../engine/permission-presets.ts'
+import { PermissionPresets } from './permission-presets.ts'
 import { LocalRunner } from '../engine/runner.ts'
 import { localEngineCatalog } from '../engine/acp/discovery.ts'
 import { detailOfPermission } from '../engine/acp/permission.ts'
@@ -99,10 +101,13 @@ export function wireService(options: WireOptions): WiredService {
   // built with the context's emit, which exists once the constructor has run.
   let emitRequest: (request: unknown, next: unknown) => void = () => {}
   const approval = new ServiceApproval((request, next) => { emitRequest(request, next) })
+  // The permission presets the host asks for: a Bot's or a group's own ceiling, kept per
+  // Session because that is where the host puts it.
+  const presets = new PermissionPresets()
   const context = new ServiceContext({
     services: {
       ...(options.services === undefined ? {} : options.services),
-      attachments, approval, engineCatalog: localEngineCatalog,
+      attachments, approval, engineCatalog: localEngineCatalog, permissionPresets: presets,
     },
     // The providers and models modules read the LLM service through the context; the
     // standalone one (settings + credentials + discovery) is the same instance the
@@ -126,6 +131,23 @@ export function wireService(options: WireOptions): WiredService {
   // The memory mirror: Markdown stays the source of truth; the index syncs lazily.
   const memorySync = new MemorySync(store, join(options.home, 'memory'))
   memorySync.syncAll()
+
+  // One approval, shaped as the gate's pending answer: the card decides, and the engine
+  // holds the call until it does.
+  function askApproval(sessionId: string, tool: string, reason: string): import('../engine/builtin/services.ts').GateDecision {
+    let settled: ((outcome: 'allow' | 'deny') => void) | undefined
+    const settledPromise = new Promise<'allow' | 'deny'>(done => { settled = done })
+    void context.emit('approval/request', {
+      agent: { id: sessionId, session: { id: sessionId } },
+      toolName: tool,
+      reason,
+      signal: undefined,
+    }, () => approval.card().then((outcome: string) => {
+      settled?.(outcome === 'allowed-once' || outcome === 'allowed' ? 'allow' : 'deny')
+      return outcome
+    }))
+    return { kind: 'pending', approvalId: randomUUID(), settled: settledPromise }
+  }
 
   // The prompt as the engine reads it: every registered section in order, the frozen
   // memory section kept apart so the stable prefix stays byte-stable.
@@ -189,23 +211,15 @@ export function wireService(options: WireOptions): WiredService {
     gate: {
       check: async (sessionId, tool): Promise<import('../engine/builtin/services.ts').GateDecision> => {
         const decision = await policy.decide(sessionId, tool)
-        if (decision.kind === 'allow') return { kind: 'allow' }
         if (decision.kind === 'deny') return { kind: 'deny', reason: decision.reason }
-        return new Promise(resolve => {
-          let settled: ((outcome: 'allow' | 'deny') => void) | undefined
-          const settledPromise = new Promise<'allow' | 'deny'>(done => { settled = done })
-          const id = randomUUID()
-          void context.emit('approval/request', {
-            agent: { id: sessionId, session: { id: sessionId } },
-            toolName: tool,
-            reason: decision.reason,
-            signal: undefined,
-          }, () => approval.card().then((outcome: string) => {
-            settled?.(outcome === 'allowed-once' || outcome === 'allowed' ? 'allow' : 'deny')
-            return outcome
-          }))
-          resolve({ kind: 'pending', approvalId: id, settled: settledPromise })
-        })
+        if (decision.kind === 'allow') {
+          // A preset may still hold a call back: it is the Bot's or the group's ceiling, and
+          // the policy's budget only ever lowers what that ceiling already lets run.
+          const rule = ruleOf(tool)
+          if (rule.asksItself === true || gateOfPreset(presets.of(sessionId), rule.level) === 'within') return { kind: 'allow' }
+          return askApproval(sessionId, tool, `This Bot's permission preset asks before ${tool}.`)
+        }
+        return askApproval(sessionId, tool, decision.reason)
       },
     },
     transcript: sqliteTranscriptOf(store.sessions as unknown as Parameters<typeof sqliteTranscriptOf>[0]),

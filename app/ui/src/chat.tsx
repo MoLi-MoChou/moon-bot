@@ -362,7 +362,7 @@ export function Chat({ sessionId, team }: { readonly sessionId: string, readonly
         <div className='dsb-flow' data-chat-flow='' role='feed' aria-label={name} aria-busy={view.loading}>
           {h(ChatRows, { items: view.items, sessionId, roster, actions: cellActions, useUi: cellUi, clock: true })}
           {pending.length > 0 ? <div className='dsb-pending'>
-            {queued > 0 ? <span className='bt-pending-queued' title={t('Waiting for the running turn to finish')}>{t('Queued')}</span> : null}
+            {queued > 0 ? <span className='bt-pending-queued' title={t('Waiting for the running turn to finish')}>{t('{count} queued', { count: queued })}</span> : null}
             {h(ChatRows, { items: pending, sessionId, roster, actions: cellActions, useUi: cellUi })}
           </div> : null}
           {stream !== null && stream.text !== '' ? <Bubbles texts={[stream.text]} roster={roster} selfId={bot?.id} actions={cellActions} streaming sessionId={sessionId} useUi={cellUi} /> : null}

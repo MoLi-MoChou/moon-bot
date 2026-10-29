@@ -27,12 +27,22 @@ const maskSecrets = (text: string): string => KEY_SHAPES.reduce((out, [shape, re
 const CODES: readonly (readonly [RegExp, string])[] = [
   [/\b40[13]\b|unauthori[sz]ed|authentication|invalid[ _-]?(?:api[ _-]?key|x-api-key|token|credential)|incorrect api key|permission denied|forbidden/i, 'AUTH'],
   [/\b429\b|rate.?limit|too many requests/i, 'RATE_LIMIT'],
+  [/insufficient[ _-]?quota|quota exceeded|\b402\b|billing|credit balance|payment required|out of credits/i, 'QUOTA'],
+  [/overloaded|at capacity|too busy/i, 'OVERLOADED'],
   [/\b408\b|timed? ?out|timeout/i, 'TIMEOUT'],
   [/context (?:length|window)|too long|maximum.{0,24}tokens|prompt is too long|overflow/i, 'CONTEXT_WINDOW_EXCEEDED'],
-  [/\b50[0234]\b|internal server error|bad gateway|service unavailable|overloaded/i, 'SERVER'],
+  [/\b50[0234]\b|internal server error|bad gateway|service unavailable/i, 'SERVER'],
   [/\b400\b|invalid_request|bad request|unsupported/i, 'INVALID_REQUEST'],
   [/connection error|fetch failed|econnrefused|econnreset|enotfound|eai_again|etimedout|socket hang up|network|unreachable|offline|closed/i, 'TRANSPORT'],
 ]
+
+// A person has to change something. The rest can be tried again; nothing here retries on its own.
+const USER_HANDLES = new Set(['AUTH', 'QUOTA', 'INVALID_REQUEST', 'NO-MODEL'])
+
+/** True when the next step is the user's, not another attempt. */
+export function failureNeedsUser(code: string | undefined): boolean {
+  return code !== undefined && USER_HANDLES.has(code)
+}
 
 /** The code a failure's own message names, or undefined when it names none. */
 export function failureCodeOf(message: string | undefined): string | undefined {

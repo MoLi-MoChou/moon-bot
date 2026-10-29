@@ -4,6 +4,7 @@
 import type { AgentRuntime } from './runtime.ts'
 import { AcpRuntime } from './acp/runtime.ts'
 import type { PermissionRequestParams } from './acp/permission.ts'
+import { canLaunch } from './health.ts'
 import { localEngineCatalog, type EngineCatalog, type LocalAgent } from './acp/discovery.ts'
 import { StdioTransport, RelayTransport, type RelayPort } from './acp/transport.ts'
 
@@ -60,7 +61,7 @@ export class LocalRunner implements ExecutionRunner {
     }
     const localAgents = this.discovered ?? (this.discovered = this.catalog.list())
     const discovered = typeof bot?.runtimeId === 'string'
-      ? localAgents.find(entry => entry.id === bot.runtimeId && entry.kind === 'acp')
+      ? localAgents.find(entry => entry.id === bot.runtimeId && canLaunch(entry))
       : undefined
     const spec = discovered ?? (configured !== null && typeof configured === 'object' && (configured as { kind?: unknown }).kind === 'acp'
       ? configured as { command?: unknown; args?: readonly string[]; key?: unknown }

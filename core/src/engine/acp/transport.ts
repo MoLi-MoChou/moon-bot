@@ -25,18 +25,26 @@ export class StdioTransport implements AcpTransport {
   private buffer = ''
   private readonly command: string
   private readonly args: readonly string[]
+  private readonly cwd: string | undefined
 
-  constructor(command: string, args: readonly string[] = []) {
+  constructor(command: string, args: readonly string[] = [], options?: { readonly cwd?: string }) {
     this.command = command
     this.args = args
+    this.cwd = options?.cwd
   }
 
   async open(): Promise<void> {
     if (this.child !== undefined) return
-    const child = spawn(this.command, this.args, { stdio: ['pipe', 'pipe', 'pipe'], ...(process.platform === 'win32' ? { shell: true } : {}) })
+    const child = spawn(this.command, this.args, {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      ...(this.cwd === undefined ? {} : { cwd: this.cwd }),
+      ...(process.platform === 'win32' ? { shell: true } : {}),
+    })
     this.child = child
     child.stdout.setEncoding('utf8')
     child.stdout.on('data', (chunk: string) => this.feed(chunk))
+    // Nobody reads stderr. Leaving the pipe unread fills it and stalls the agent.
+    child.stderr?.on('data', () => {})
     // A closed agent is a failed request, not a crash: the runtime ends the turn.
     child.stdin.on('error', () => this.finish())
     child.on('exit', () => this.finish())

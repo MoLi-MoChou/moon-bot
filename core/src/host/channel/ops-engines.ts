@@ -1,6 +1,8 @@
 // The engine half of the channel (plan §四): which runtime runs each Bot's turns — the
 // built-in one, a local ACP agent, or a remote agent that dialed into the relay (2026-10-27
 // remote-agents). The list reads; `engine-set` moves one Bot.
+import { capabilitiesFor } from '../../engine/capabilities.ts'
+import { canLaunch, healthOf } from '../../engine/health.ts'
 import type { ChannelHandler, ChannelHandlers } from './envelope.ts'
 import { fail, ok } from './envelope.ts'
 import type { ChannelRuntime } from '../channel.ts'
@@ -33,11 +35,11 @@ export function engineHandlers(rt: ChannelRuntime): ChannelHandlers {
     engines: async () => {
       await rt.load()
       const catalog = rt.ctx.get<{ list(): readonly { id: string; label: string; command: string; args: readonly string[]; key: string; kind: string; path?: string; version?: string; reason?: string; onDemand?: boolean }[] }>('engineCatalog')
-      const entries = new Map<string, Record<string, unknown>>([['builtin', { id: 'builtin', label: 'Moon Bot built-in', kind: 'builtin', selectable: true }]])
+      const entries = new Map<string, Record<string, unknown>>([['builtin', { id: 'builtin', label: 'Moon Bot built-in', kind: 'builtin', selectable: true, health: 'ready', capabilities: capabilitiesFor('builtin') }]])
       for (const agent of catalog?.list() ?? []) {
         entries.set(agent.id, {
           id: agent.id, label: agent.label, kind: agent.kind, command: agent.command, args: agent.args, key: agent.key,
-          selectable: agent.kind === 'acp', ...(agent.path === undefined ? {} : { path: agent.path }),
+          selectable: canLaunch(agent), health: healthOf(agent), capabilities: capabilitiesFor(agent.kind), ...(agent.path === undefined ? {} : { path: agent.path }),
           ...(agent.version === undefined ? {} : { version: agent.version }), ...(agent.reason === undefined ? {} : { reason: agent.reason }),
           ...(agent.onDemand ? { onDemand: true } : {}),
         })
@@ -45,7 +47,7 @@ export function engineHandlers(rt: ChannelRuntime): ChannelHandlers {
       const registry = rt.ctx.get<RelayAdmin>('relayRegistry')
       if (registry !== undefined) for (const invite of registry.invitesView()) {
         if (invite.revokedAt !== null) continue
-        entries.set(`remote:${invite.agentId}`, { id: `remote:${invite.agentId}`, label: invite.agentId, kind: 'acp-remote', selectable: true, online: invite.online })
+        entries.set(`remote:${invite.agentId}`, { id: `remote:${invite.agentId}`, label: invite.agentId, kind: 'acp-remote', selectable: true, online: invite.online, capabilities: capabilitiesFor('acp-remote') })
       }
       return ok({ engines: [...entries.values()], of: ofMap() })
     },

@@ -66,7 +66,8 @@ const pathOf = (command: string): string | undefined => {
   return lines[0]
 }
 
-const versionOf = (path: string): string | undefined => {
+/** `--version` text, trimmed. Empty output is "no version", not a failure to launch. */
+export function commandVersion(path: string): string | undefined {
   const isWinCmd = process.platform === 'win32' && /\.(?:cmd|bat)$/iu.test(path)
   const result = spawnSync(path, ['--version'], {
     encoding: 'utf8', windowsHide: true, timeout: 3_000,
@@ -77,21 +78,20 @@ const versionOf = (path: string): string | undefined => {
 }
 
 export function discoverLocalAgents(): readonly LocalAgent[] {
-  const localAgents: LocalAgent[] = CANDIDATES.flatMap(candidate => {
+  const localAgents: LocalAgent[] = CANDIDATES.map(candidate => {
     const path = pathOf(candidate.command)
-    if (path === undefined) return []
-    const version = versionOf(path)
-    return [{
+    const version = path === undefined ? undefined : commandVersion(path)
+    return {
       id: candidate.id,
       label: candidate.label,
       command: candidate.command,
       args: candidate.args ?? [],
       key: candidate.id,
       kind: candidate.kind,
-      path,
+      ...(path === undefined ? {} : { path }),
       ...(version === undefined ? {} : { version }),
       ...(candidate.reason === undefined ? {} : { reason: candidate.reason }),
-    }]
+    }
   })
 
   const hasNpx = pathOf('npx') !== undefined

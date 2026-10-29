@@ -1,11 +1,12 @@
 // The host bridge: one engine-backed agent per session, shaped as the agent the host's
 // delivery already knows (followup/steer/cancel, an inbox for resume checks, a running
-// status). What DSH's session runtime did for an inbox push, the engine does here: a
+// status). What the host's session runtime did for an inbox push, the engine does here: a
 // followup opens a turn (queued behind a running one, and counted for the task panel's
 // queue figure), a steer cuts into it. The runtime itself sends every engine event to
 // the session/event fanout, which is the vocabulary the turn router consumes; the
 // bridge only drains the turn, so it must not send them a second time. This is the
 // seam phase 3's service wires for real.
+import { randomUUID } from 'node:crypto'
 import type { EngineEvent } from '../events.ts'
 import type { AgentRuntime, EngineSessionConfig } from '../runtime.ts'
 
@@ -15,14 +16,24 @@ export interface DeliveredMessage {
   readonly source?: Readonly<Record<string, unknown>> | undefined
 }
 
+/** One accepted message that has not started its own turn yet. */
+export interface QueuedTurn {
+  readonly id: string
+  readonly content: DeliveredMessage['content']
+  readonly source?: DeliveredMessage['source']
+}
+
 export interface BridgeAgent {
   readonly session: { readonly id: string, readonly seq?: number }
   /** Every message that was pushed to this session, in order (the audit surface). */
   readonly calls: DeliveredMessage[]
-  /** DSH's inbox shape. Ours stays empty for now: this runtime queues turn slots itself,
-   *  and the three host branches that read the inbox (duplicate requests, resume, groups)
-   *  therefore never see queued input. Giving it a real inbox is its own design task. */
-  readonly inbox: { nextStep: unknown[], nextTurn: unknown[], remove(message: unknown): boolean }
+  /** `nextTurn` is the waiting list itself. `nextStep` stays empty: this engine has one queue. */
+  readonly inbox: {
+    readonly nextStep: readonly QueuedTurn[]
+    readonly nextTurn: readonly QueuedTurn[]
+    remove(id: string): boolean
+    prepend(target: string, message: { readonly id?: string; readonly content?: DeliveredMessage['content']; readonly source?: DeliveredMessage['source'] }): void
+  }
   /** Followups accepted while a turn runs, waiting for their own: the task panel's queue. */
   pendingTurns(): number
   followup(message: DeliveredMessage): void
@@ -54,9 +65,25 @@ export function engineAgentOf(sessionId: string, options: BridgeOptions): Bridge
   // A followup that lands while a turn runs waits for its own turn. The runtime would
   // queue the call itself, but then nothing could say how many wait; keeping them here
   // is the honest count the task panel shows, and a cancel drops them with the turn
-  // (what DSH's inbox did, and what stop_bot's own description promises).
-  const waiting: DeliveredMessage[] = []
+  // (what the host's inbox did, and what stop_bot's own description promises).
+  const waiting: QueuedTurn[] = []
   const runtimeOf = (): AgentRuntime => typeof options.runtime === 'function' ? options.runtime() : options.runtime
+  const exchangeOf = (source: DeliveredMessage['source']): string | undefined => {
+    const id = source?.exchangeId
+    return typeof id === 'string' && id !== '' ? id : undefined
+  }
+  // `waiting` is the only mutable list. A second copy of the same id, or of a request
+  // already queued under the same exchange, is not inserted again.
+  const place = (message: DeliveredMessage & { readonly id?: string }, where: 'front' | 'back'): void => {
+    const given = message.id
+    const item: QueuedTurn = message.source === undefined
+      ? { id: given !== undefined && given !== '' ? given : randomUUID(), content: message.content }
+      : { id: given !== undefined && given !== '' ? given : randomUUID(), content: message.content, source: message.source }
+    const exchangeId = exchangeOf(item.source)
+    if (waiting.some(queued => queued.id === item.id || (exchangeId !== undefined && exchangeOf(queued.source) === exchangeId))) return
+    if (where === 'front') waiting.unshift(item)
+    else waiting.push(item)
+  }
   const start = (message: DeliveredMessage): void => {
     calls.push(message)
     running = true
@@ -88,17 +115,27 @@ export function engineAgentOf(sessionId: string, options: BridgeOptions): Bridge
   // A turn already runs: this message waits for its own. A steer that finds no turn
   // joins the queue too, so it does not jump the messages already waiting.
   const open = (message: DeliveredMessage): void => {
-    if (running) { waiting.push(message); return }
+    if (running) { place(message, 'back'); return }
     start(message)
   }
   return {
     session: { id: sessionId, get seq() { return options.seqOf?.() ?? 0 } },
     calls,
-    inbox: { nextStep: [], nextTurn: [], remove: () => false },
+    inbox: {
+      nextStep: [],
+      get nextTurn() { return waiting },
+      remove: (id: string): boolean => {
+        const index = waiting.findIndex(item => item.id === id)
+        if (index < 0) return false
+        waiting.splice(index, 1)
+        return true
+      },
+      prepend: (_target, message) => { place({ ...message, content: message.content ?? [] }, 'front') },
+    },
     pendingTurns: () => waiting.length,
     followup: open,
     steer: (message) => {
-      // A steer on an idle session starts the turn now (DSH's inbox would run it as
+      // A steer on an idle session starts the turn now (the host's inbox would run it as
       // the next step); on a running one it cuts into that turn.
       void (activeRuntime ?? runtimeOf()).steer(sessionId, { content: message.content as never, source: message.source }).then(joined => {
         if (!joined) open(message)

@@ -47,6 +47,8 @@ export const SOURCE_KIND = 'bot'
 export const HANDOFF_ACK = 'Noted. I have my handoff note and carry on from here.'
 // An answer from a question card, in the shape the host's own late question replies use.
 export const REPLY_KIND = 'user-question-reply'
+/** A message a Bot sent on its own initiative (2026-10-29 proactive-messages). */
+export const PROACTIVE_KIND = 'proactive'
 // the host's snapshot of a referenced conversation, logged right after the user's message
 // that cites it.
 export const REFERENCE_KIND = 'session-reference'

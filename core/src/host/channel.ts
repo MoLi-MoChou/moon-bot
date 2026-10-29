@@ -27,6 +27,7 @@ import { teamHandlers } from './channel/ops-team.ts'
 import { engineHandlers } from './channel/ops-engines.ts'
 import { relayHandlers } from './channel/ops-relay.ts'
 import { taskHandlers } from './channel/ops-tasks.ts'
+import { proactiveHandlers } from './channel/ops-proactive.ts'
 import type { LocaleState } from './channel/ops-team.ts'
 import type { SecretView } from './secrets/store.ts'
 
@@ -166,7 +167,7 @@ export function install(rt: ChannelRuntime): void {
     return LANGUAGES[(locale.value.split('-')[0] ?? '').toLowerCase()] ?? locale.value
   }
 
-  const handlers: ChannelHandlers = { ...teamHandlers(rt, locale), ...hostHandlers(rt), ...engineHandlers(rt), ...relayHandlers(rt), ...taskHandlers(rt) }
+  const handlers: ChannelHandlers = { ...teamHandlers(rt, locale), ...hostHandlers(rt), ...engineHandlers(rt), ...relayHandlers(rt), ...taskHandlers(rt), ...proactiveHandlers(rt) }
 
   const handle = async (endpoint: string, payload: unknown, signal: AbortSignal): Promise<ChannelResult> => {
     try {

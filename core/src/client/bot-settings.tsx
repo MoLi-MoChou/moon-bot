@@ -14,6 +14,7 @@ import { useMemoryCount } from './memory-panel.tsx';
 import { SPRING_SHAPE, SPRING_TAP, spring, useGlide } from './motion.tsx';
 import { t } from './i18n.ts';
 import { BotResetCard, type ResetActions } from './bot-reset.tsx';
+import { ProactiveCard, type ProactiveActions } from './proactive-page.tsx';
 import type { AvatarEditorProps, BotPatch, BotSettingsFormProps, CardProps, CharacterGridProps, InlineTextProps, RowProps, SettingsActions, SettingsBot, SettingsBotEngine, SettingsEngineOption, SettingsRoster, SwitchProps, SwitchRowProps } from './settings-types.ts';
 const capitalize = (word: string): string => word.charAt(0).toUpperCase() + word.slice(1);
 // Uploaded avatars are center-cropped to a small square so state.json stays light.
@@ -264,7 +265,7 @@ export function BotSettingsForm({ bot, roster, actions, run }: BotSettingsFormPr
     isTile ? null : <Card title={t('Sidebar')}>
       <SwitchRow label={t('Pin')} hint={t('Kept above the other chats.')} on={bot.pinned === true} onChange={pinned => run(actions.setFlags(bot.id, { pinned }))} />
       {isMainBot ? null : <SwitchRow label={t('Hide from sidebar')} hint={t('Search still finds it.')} on={bot.hidden === true} onChange={hidden => run(actions.setFlags(bot.id, { hidden }))} />}
-    </Card>}{actions.resetBot === undefined ? null : <BotResetCard bot={bot} actions={actions as unknown as ResetActions} run={run} />}<Card title={t('Manage')}>
+    </Card>}{actions.resetBot === undefined ? null : <BotResetCard bot={bot} actions={actions as unknown as ResetActions} run={run} />}{actions.proactiveList === undefined ? null : <ProactiveCard botId={bot.id} actions={actions as unknown as ProactiveActions} />}<Card title={t('Manage')}>
       <button type='button' className='bt-set-row bt-bs-row' onClick={duplicate}><span className='bt-set-copy'><span className='bt-bs-label'>{t('Duplicate')}</span><span className='bt-set-hint'>{t('A copy with the same job and model, and fresh memory.')}</span></span><span className='bt-chevron'><ChevronRightIcon /></span></button>
       {isMainBot ? null : <button type='button' className='bt-set-row bt-bs-row bt-bs-danger' data-confirm={confirming || undefined} onClick={remove}><span className='bt-set-copy'><span className='bt-bs-label'>{confirming ? t('Delete {name}?', { name: bot.name }) : t('Delete Bot')}</span><span className='bt-set-hint'>{confirming ? t('Click again to delete. Its chats are archived.') : t('Removes the Bot from the team.')}</span></span><span className='bt-chevron'><ChevronRightIcon /></span></button>}
     </Card></div>;
@@ -311,5 +312,32 @@ label.bt-bs-row{cursor:text}
 .bt-reset-confirm{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:0 12px}
 .bt-reset-question{color:var(--bt-ink);font-size:13px}
 .bt-reset-panel>.bt-soft{margin-left:12px}
+.bt-pro-card{padding:2px 12px 12px}
+.bt-pro{display:flex;flex-direction:column;gap:10px}
+.bt-pro-hint{margin:0;color:var(--bt-ink-2);font-size:12px;line-height:1.5}
+.bt-pro-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.bt-pro-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:.5px solid var(--bt-line)}
+.bt-pro-row-copy{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
+.bt-pro-topics{color:var(--bt-ink);font-size:13px}
+.bt-pro-meta{color:var(--bt-ink-2);font-size:11.5px;line-height:1.4}
+.bt-pro-danger{color:var(--bt-danger)}
+.bt-pro-form{display:flex;flex-direction:column;gap:8px;padding:10px 0}
+.bt-pro-inline{display:flex;gap:8px;flex-wrap:wrap}
+.bt-pro-field{display:flex;flex-direction:column;gap:4px;flex:1;min-width:120px}
+.bt-pro-narrow{flex:0 0 auto;min-width:84px}
+.bt-pro-label{color:var(--bt-ink-2);font-size:12px}
+.bt-pro-field input{padding:6px 8px;border-radius:8px;border:.5px solid var(--bt-line);background:var(--bt-surface);color:var(--bt-ink);font-size:13px}
+.bt-pro-error{color:var(--bt-danger);font-size:12px}
+.bt-pro-add{display:inline-flex;align-items:center;gap:4px;align-self:flex-start}
+.bt-pro-review{display:flex;flex-direction:column;gap:8px;margin-top:6px;padding-top:10px;border-top:.5px solid var(--bt-line)}
+.bt-pro-review-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.bt-pro-candidates{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.bt-pro-candidate{display:flex;flex-direction:column;gap:4px;padding:10px;border-radius:10px;background:color-mix(in srgb,var(--bt-ink) 3%,transparent)}
+.bt-pro-candidate-text{margin:0;color:var(--bt-ink);font-size:13px;line-height:1.45}
+.bt-pro-candidate-why{margin:0;color:var(--bt-ink-2);font-size:12px}
+.bt-pro-evidence{margin:0;padding-left:16px;color:var(--bt-ink-2);font-size:11.5px;line-height:1.5}
+.bt-pro-outcome{font-size:11.5px;color:var(--bt-ink-2)}
+.bt-pro-outcome[data-would=send]{color:var(--bt-accent)}
+.bt-pro-outcome[data-would=drop]{color:var(--bt-danger)}
 @media (prefers-reduced-motion:reduce){.bt-switch,.bt-switch-knob{transition:none}.bt-avedit :is(.bt-shapes,.bt-colors,.bt-dropzone){animation:none}}
 `;

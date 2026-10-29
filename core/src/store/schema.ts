@@ -137,12 +137,85 @@ CREATE INDEX deliverables_turn ON deliverables(session_id, turn);
 CREATE INDEX deliverables_age ON deliverables(created_at);
 `
 
+// v6 — proactive messages (2026-10-29 proactive-messages): a user's subscription to a
+// Bot's own messages, and one row per candidate it prepared and what was decided.
+// The decision log is what the de-duplication window reads: both delivered and rejected
+// candidates are kept, so the same thing is not said twice and a rejected subject stays
+// quiet for the window rather than coming back tomorrow.
+const V6 = `
+CREATE TABLE proactive_subscriptions (
+  id TEXT PRIMARY KEY,
+  bot_id TEXT NOT NULL,
+  session_id TEXT NOT NULL,
+  topics TEXT NOT NULL,            -- free text the user wrote: what this is about
+  when_json TEXT NOT NULL,         -- the scheduler's selector, as it stores one
+  daily_cap INTEGER NOT NULL DEFAULT 1,
+  quiet_from TEXT,                 -- 'HH:MM' local, null when the user cleared it
+  quiet_to TEXT,
+  allow_paid_prep INTEGER NOT NULL DEFAULT 0,
+  event_hook TEXT,                 -- 'no-progress' for the one hook v1 has
+  event_minutes INTEGER,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  last_fired_at INTEGER,            -- when the poll last fired it, so the next tick moves on
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX proactive_subscriptions_bot ON proactive_subscriptions(bot_id);
+
+CREATE TABLE proactive_candidates (
+  id TEXT PRIMARY KEY,
+  subscription_id TEXT NOT NULL REFERENCES proactive_subscriptions(id) ON DELETE CASCADE,
+  session_id TEXT NOT NULL,
+  text TEXT NOT NULL,              -- the one sentence the user would read
+  evidence TEXT NOT NULL,          -- JSON array of lines, each naming its source
+  why_care TEXT NOT NULL,
+  ttl TEXT NOT NULL,               -- 'short' or 'long'
+  topic_keys TEXT NOT NULL,        -- JSON array of normalized keywords, for similarity
+  fingerprint TEXT NOT NULL,       -- exact-text hash, the cheap first pass
+  trigger_source TEXT NOT NULL,    -- 'schedule' | 'event' | 'manual' | 'preauth'
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX proactive_candidates_subscription ON proactive_candidates(subscription_id, created_at);
+
+CREATE TABLE proactive_preauth (
+  id TEXT PRIMARY KEY,
+  subscription_id TEXT NOT NULL REFERENCES proactive_subscriptions(id) ON DELETE CASCADE,
+  purpose TEXT NOT NULL,
+  when_json TEXT NOT NULL,         -- the trigger it sits on
+  tools TEXT NOT NULL,             -- JSON array: what it may call
+  prohibitions TEXT NOT NULL,      -- JSON array: what it may never call
+  daily_cap INTEGER NOT NULL DEFAULT 3,
+  respect_quiet_hours INTEGER NOT NULL DEFAULT 1,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX proactive_preauth_subscription ON proactive_preauth(subscription_id);
+
+CREATE TABLE proactive_audit (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  rule_id TEXT NOT NULL,
+  tool TEXT NOT NULL,
+  outcome TEXT NOT NULL,           -- 'acted' | 'waited' | 'proposed'
+  reason TEXT,
+  at INTEGER NOT NULL
+);
+CREATE INDEX proactive_audit_rule ON proactive_audit(rule_id, at);
+
+CREATE TABLE proactive_decisions (
+  candidate_id TEXT PRIMARY KEY REFERENCES proactive_candidates(id) ON DELETE CASCADE,
+  decision TEXT NOT NULL,          -- 'delivered' | 'quiet' | 'dropped' | 'delayed'
+  reason TEXT,
+  decided_at INTEGER NOT NULL
+);
+CREATE INDEX proactive_decisions_age ON proactive_decisions(decided_at);
+`
+
 export const MIGRATIONS: readonly Migration[] = [
   { name: 'v1 standalone store', sql: V1 },
   { name: 'v2 raw kernel messages', sql: V2 },
   { name: 'v3 policy counters', sql: V3 },
   { name: 'v4 relay invites', sql: V4 },
   { name: 'v5 deliverables', sql: V5 },
+  { name: 'v6 proactive messages', sql: V6 },
 ]
 
 /** The type the table modules see: a better-sqlite3 connection. */

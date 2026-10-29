@@ -16,6 +16,7 @@ import { MemoryIndex } from './memory-index.ts'
 import { PolicyCounters } from './policy-counters.ts'
 import { RelayInvites } from './relay.ts'
 import { Deliverables } from './deliverables.ts'
+import { ProactiveRules, ProactiveStore } from './proactive.ts'
 
 export interface Store {
   readonly raw: Database.Database
@@ -25,6 +26,8 @@ export interface Store {
   readonly policy: PolicyCounters
   readonly relayInvites: RelayInvites
   readonly deliverables: Deliverables
+  readonly proactive: ProactiveStore
+  readonly proactiveRules: ProactiveRules
   close(): void
 }
 
@@ -60,6 +63,8 @@ export function openStore(home: string, options: { readonly file?: string; reado
     policy: new PolicyCounters(db),
     relayInvites: new RelayInvites(db),
     deliverables: new Deliverables(db),
+    proactive: new ProactiveStore(db),
+    proactiveRules: new ProactiveRules(db),
     close: () => db.close(),
   }
 }

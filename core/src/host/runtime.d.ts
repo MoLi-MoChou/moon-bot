@@ -378,6 +378,28 @@ export interface HostRuntime {
   capabilitiesStateSaved?(): void
   archiveGroupMemory?(room: StoredRoom): Promise<unknown>
   archiveBotMemory?(botId: string): Promise<unknown>
+  /**
+   * One short model call as that Bot, with the profile fallback memory uses. For work that
+   * needs judgement but not a whole turn: a summary, a prepared suggestion.
+   */
+  smallShot?(botId: string, system: string, text: string): Promise<string>
+  /** Proactive messages (2026-10-29 proactive-messages): the channel's surface. */
+  proactiveStore?(): {
+    readonly subscriptionsOf: (botId: string) => readonly unknown[]
+    readonly addSubscription: (input: Record<string, unknown>) => unknown
+    readonly setEnabled: (id: string, enabled: boolean) => boolean
+    readonly removeSubscription: (id: string) => boolean
+  }
+  proactiveSubscriptionsOf?(botId: string): readonly { readonly id: string, readonly topics: string, readonly dailyCap: number, readonly quietFrom: string | null, readonly quietTo: string | null, readonly enabled: boolean }[]
+  proactiveReview?(botId: string): Promise<unknown>
+  proactiveLocalTime?(): string
+  proactiveSend?(sessionId: string, message: Record<string, unknown>): boolean
+  proactiveRules?(): {
+    readonly rulesForBot: (botId: string) => readonly Record<string, unknown>[]
+    readonly add: (input: Record<string, unknown>) => Record<string, unknown>
+    readonly revoke: (id: string) => boolean
+    readonly auditOf: (ruleId: string) => readonly Record<string, unknown>[]
+  }
   /** Empties a Bot's memory for good (a reset, not a delete). */
   clearBotMemory?(botId: string): Promise<void>
   /** Empties one Session's transcript; the Session row stays. */

@@ -25,11 +25,27 @@ REGISTRY=${REGISTRY:-ghcr.io/moli-mochou/moon-bot}
 DATA_DIR="$DEPLOY_DIR/data"
 SNAPSHOT_CONFIG=$(env_value MOON_BOT_SNAPSHOT_DIR)
 SNAPSHOT_CONFIG=${SNAPSHOT_CONFIG:-.snapshots}
+if [ -L "$SNAPSHOT_CONFIG" ]; then
+  echo "rollback: refusing to use a symlink as the snapshot directory" >&2
+  exit 1
+fi
 if [ "${SNAPSHOT_CONFIG#/}" != "$SNAPSHOT_CONFIG" ]; then
   SNAPSHOT_DIR=$SNAPSHOT_CONFIG
 else
   SNAPSHOT_DIR="$DEPLOY_DIR/$SNAPSHOT_CONFIG"
 fi
+mkdir -p "$SNAPSHOT_DIR"
+SNAPSHOT_DIR=$(CDPATH= cd -P -- "$SNAPSHOT_DIR" && pwd)
+if [ -L "$DATA_DIR" ]; then
+  echo "rollback: refusing to use a symlink as the data directory" >&2
+  exit 1
+fi
+case "$SNAPSHOT_DIR" in
+  "$DATA_DIR"|"$DATA_DIR"/*)
+    echo "rollback: snapshot directory must not be inside data" >&2
+    exit 1
+    ;;
+esac
 
 restore_path=
 case "${1:-}" in
@@ -50,12 +66,15 @@ if [ -n "$restore_path" ]; then
   esac
   [ -d "$snapshot" ] || { echo "rollback: snapshot directory does not exist" >&2; exit 1; }
   [ ! -L "$snapshot" ] || { echo "rollback: refusing a symlink snapshot directory" >&2; exit 1; }
+  snapshot=$(CDPATH= cd -P -- "$snapshot" && pwd)
   case "$snapshot" in
     "$SNAPSHOT_DIR"/snapshot-*) ;;
     *) echo "rollback: snapshot must be inside $SNAPSHOT_DIR" >&2; exit 1 ;;
   esac
   [ -f "$snapshot/data.tar.gz" ] || { echo "rollback: snapshot is missing data.tar.gz" >&2; exit 1; }
+  [ ! -L "$snapshot/data.tar.gz" ] || { echo "rollback: snapshot archive must not be a symlink" >&2; exit 1; }
   [ -f "$snapshot/manifest" ] || { echo "rollback: snapshot is missing manifest" >&2; exit 1; }
+  [ ! -L "$snapshot/manifest" ] || { echo "rollback: snapshot manifest must not be a symlink" >&2; exit 1; }
   previous_tag=$(sed -n 's/^previous_tag=//p' "$snapshot/manifest" | tail -1)
   [ -n "$previous_tag" ] || { echo "rollback: snapshot has no previous tag" >&2; exit 1; }
 else
@@ -113,6 +132,10 @@ restore_snapshot() {
   }
   if find "$staging" -type l -print -quit | grep -q .; then
     echo "rollback: snapshot contains symlinks and was not restored" >&2
+    return 1
+  fi
+  if find "$staging" -type f ! -perm -u=r -print -quit | grep -q .; then
+    echo "rollback: snapshot contains unreadable files and was not restored" >&2
     return 1
   fi
   $COMPOSE down >/dev/null 2>&1 || true

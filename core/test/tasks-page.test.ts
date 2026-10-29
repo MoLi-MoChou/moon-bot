@@ -25,14 +25,31 @@ const module = { exports: {} as {
   elapsed: (ms: number) => string
   doingText: (task: Record<string, unknown>, translate?: (key: string, params?: Record<string, unknown>) => string) => string
   reasonText: (reason: string) => string
-  TasksBoard: (props: { state: State; onOpen: (sessionId: string) => void }) => unknown
+  holdText: (hold: string | undefined) => string | undefined
+  filterTasks: (answer: { running: readonly Record<string, unknown>[]; completed: readonly Record<string, unknown>[]; waiting: readonly Record<string, unknown>[] }, filters: { state: string; botId: string }) => { running: readonly Record<string, unknown>[]; completed: readonly Record<string, unknown>[]; waiting: readonly Record<string, unknown>[] }
+  TasksBoard: (props: { state: State; onOpen: (sessionId: string) => void; initialFilters?: { state: string; botId: string } }) => unknown
 } }
 runInNewContext(bundle.outputFiles[0].text, {
   module, exports: module.exports,
   require: name => {
     const platform = {
       react: {
-        createElement: (type: unknown, props: unknown, ...children: unknown[]) => ({ type, props: props ?? {}, children: children.flat(Infinity) }),
+        createElement: (type: unknown, props: unknown, ...children: unknown[]) => {
+          const node = { type, props: (props ?? {}) as Record<string, unknown>, children: children.flat(Infinity) }
+          // Draw function components so EmptyState titles and actions become text the
+          // assertions can read (the live page does the same through React).
+          if (typeof type === 'function') {
+            try {
+              return (type as (props: Record<string, unknown>) => unknown)({
+                ...node.props,
+                children: node.children.length > 0 ? node.children : node.props.children,
+              })
+            } catch {
+              return node
+            }
+          }
+          return node
+        },
         Fragment: 'fragment',
         useState: (initial: unknown) => [typeof initial === 'function' ? (initial as () => unknown)() : initial, () => {}],
         useEffect: () => {},
@@ -45,7 +62,7 @@ runInNewContext(bundle.outputFiles[0].text, {
     return platform[name] as unknown
   },
 })
-const { elapsed, doingText, reasonText, TasksBoard } = module.exports
+const { elapsed, doingText, reasonText, holdText, filterTasks, TasksBoard } = module.exports
 
 // The element tree the fake createElement builds: walk every node for its text and props.
 const elements = (node: unknown): { props: Record<string, unknown>; children?: readonly unknown[] }[] => {
@@ -73,6 +90,25 @@ const rows = (patch: Partial<State> = {}): State => ({
   ...patch,
 })
 const running = (patch: Record<string, unknown> = {}) => ({ sessionId: 'chat:b1', botId: 'b1', botName: 'Writer', since: 1_000, ...patch })
+
+test('hold copy is omitted when no fact is present', () => {
+  assert.equal(holdText(undefined), undefined)
+  assert.equal(holdText('approval'), 'Waiting for your approval')
+  const tree = TasksBoard({ state: rows({ answer: { running: [running()], completed: [], waiting: [] } }), onOpen: () => {} })
+  assert.doesNotMatch(textOf(tree), /approval|queued|Engine busy/)
+  const labels = propsOf(tree).map(props => props['aria-label']).filter(label => typeof label === 'string')
+  assert.ok(labels.includes('Filter by state'))
+  assert.ok(labels.includes('Filter by Bot'))
+})
+
+test('task filters select a state and Bot without changing the host answer', () => {
+  const answer = { running: [running({ botId: 'b1' }), running({ botId: 'b2' })], waiting: [{ botId: 'b1' }], completed: [{ botId: 'b2' }] }
+  const filtered = filterTasks(answer, { state: 'running', botId: 'b2' })
+  assert.equal(filtered.running.length, 1)
+  assert.equal(filtered.running[0]?.botId, 'b2')
+  assert.equal(filtered.waiting.length, 0)
+  assert.equal(filtered.completed.length, 0)
+})
 
 test('the clocks read as minutes and seconds, then hours', () => {
   assert.equal(elapsed(0), '0:00')
@@ -133,4 +169,46 @@ test('a stop that found nothing says so instead of staying silent', () => {
   assert.ok(notice !== undefined, 'the notice is announced')
   assert.match(textOf(notice.children), /had already finished/)
   assert.equal(propsOf(tree).some(props => props['aria-label'] === 'Stop Writer'), false)
+})
+
+test('an empty shelf hides the filters and keeps one calm empty', () => {
+  const tree = TasksBoard({ state: rows(), onOpen: () => {} })
+  assert.match(textOf(tree), /Nobody is working right now/)
+  assert.match(textOf(tree), /Running turns, waiting handoffs/)
+  const labels = propsOf(tree).map(props => props['aria-label']).filter(label => typeof label === 'string')
+  assert.equal(labels.includes('Filter by state'), false, 'filters stay off an empty shelf')
+  assert.equal(labels.includes('Filter by Bot'), false)
+})
+
+test('a queued hold does not repeat the count pill', () => {
+  const tree = TasksBoard({ state: rows({ answer: { running: [running({ queued: 2, hold: 'queued' })], completed: [], waiting: [] } }), onOpen: () => {} })
+  assert.match(textOf(tree), /2 queued/)
+  // One "queued" from the count pill; no second bare "Queued" hold.
+  assert.equal((textOf(tree).match(/queued/gi) ?? []).length, 1)
+})
+
+test('a waiting row opens that Bot\'s chat', () => {
+  const opened: string[] = []
+  const tree = TasksBoard({
+    state: rows({ answer: { running: [], completed: [], waiting: [{ botId: 'b1', botName: 'Writer', for: ['Chief'], hold: 'handoff' }] } }),
+    onOpen: id => { opened.push(id) },
+  })
+  assert.match(textOf(tree), /Waiting for Chief/)
+  const who = elements(tree).find(element => element.props?.className === 'bt-task-who' && typeof element.props.onClick === 'function')
+  assert.ok(who !== undefined, 'waiting row is a button')
+  ;(who!.props.onClick as () => void)()
+  assert.deepEqual(opened, ['b1'])
+})
+
+test('filters that match nothing offer a clear path', () => {
+  const tree = TasksBoard({
+    state: rows({ answer: { running: [running()], completed: [], waiting: [] } }),
+    onOpen: () => {},
+    initialFilters: { state: 'waiting', botId: 'all' },
+  })
+  assert.match(textOf(tree), /No tasks match these filters/)
+  assert.match(textOf(tree), /Clear filters/)
+  // The Waiting filter hid the running row; filters stay so they can be cleared.
+  const labels = propsOf(tree).map(props => props['aria-label']).filter(label => typeof label === 'string')
+  assert.ok(labels.includes('Filter by state'))
 })

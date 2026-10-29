@@ -350,6 +350,8 @@ export const ZH = {
   'Remote agents': '远程 Agent',
   Tasks: '任务',
   'Nobody is working right now.': '现在没有 Bot 在干活。',
+  'Running turns, waiting handoffs and recently finished work show up here.': '正在跑的回合、在等交接的，以及刚做完的，都会出现在这里。',
+  'No tasks match these filters.': '没有符合这些筛选的任务。',
   'Switching to a new session': '正在换新会话',
   'Running {tool}': '正在跑 {tool}',
   'Running {tool} on {target}': '正在 {target} 上跑 {tool}',

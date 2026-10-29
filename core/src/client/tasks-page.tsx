@@ -1,6 +1,8 @@
 import { Fragment, createElement as h, useEffect, useRef, useState } from 'react';
 import type { TaskHold } from '../shared/rpc.ts';
+import { EmptyState } from './empty-state.tsx';
 import { t } from './i18n.ts';
+import { TasksIcon } from './icons.tsx';
 import { SPRING_SHAPE } from './motion.tsx';
 // Settings → Tasks and the sidebar's task popover (2026-10-28 tasks-panel): who is
 // working right now, for whom, and for how long; what waits in its queue; what finished
@@ -166,11 +168,13 @@ export function useTasks(taskActions: TaskActions): TasksState {
 export interface TasksBoardProps {
     readonly state: TasksState;
     readonly onOpen: (sessionId: string) => void;
+    /** Tests pass a starting filter; the live page and popover leave it unset. */
+    readonly initialFilters?: TaskFilters;
 }
 /** Who is working, who waits, what finished lately — the sections both surfaces draw. */
-export function TasksBoard({ state, onOpen }: TasksBoardProps) {
+export function TasksBoard({ state, onOpen, initialFilters }: TasksBoardProps) {
     const { answer, now, busy, stopped, notice, error, stop } = state;
-    const [filters, setFilters] = useState<TaskFilters>({ state: 'all', botId: 'all' });
+    const [filters, setFilters] = useState<TaskFilters>(initialFilters ?? { state: 'all', botId: 'all' });
     const running = answer?.running ?? [];
     const completed = answer?.completed ?? [];
     const waiting = answer?.waiting ?? [];
@@ -180,22 +184,34 @@ export function TasksBoard({ state, onOpen }: TasksBoardProps) {
     const shownWaiting = filtered.waiting;
     const shownCompleted = filtered.completed;
     const show = (kind: Exclude<TaskStateFilter, 'all'>): boolean => filters.state === 'all' || filters.state === kind;
+    const hasShelf = running.length + waiting.length + completed.length > 0;
+    const filteredActive = filters.state !== 'all' || filters.botId !== 'all';
+    const shownCount = shownRunning.length + shownWaiting.length + shownCompleted.length;
+    const clearFilters = (): void => { setFilters({ state: 'all', botId: 'all' }); };
+    // Filters stay out of an empty shelf (Library pattern). Keep them when a filter is
+    // already active so the user can clear it after every matching row leaves.
+    const showFilters = hasShelf || filteredActive;
     return <>
         {notice !== null ? <div className='bt-tasks-notice' role='status'>{notice}</div> : null}
         {error !== null ? <div className='bt-connector-error' role='alert'>{error}</div> : null}
-        <div className='bt-task-filters'>
+        {showFilters ? <div className='bt-task-filters'>
             <label><span>{t('Filter by state')}</span><select aria-label={t('Filter by state')} value={filters.state} onChange={event => setFilters(current => ({ ...current, state: event.target.value as TaskStateFilter }))}>
                 <option value='all'>{t('All states')}</option><option value='running'>{t('Running')}</option><option value='waiting'>{t('Waiting')}</option><option value='completed'>{t('Recently finished')}</option>
             </select></label>
             <label><span>{t('Filter by Bot')}</span><select aria-label={t('Filter by Bot')} value={filters.botId} onChange={event => setFilters(current => ({ ...current, botId: event.target.value }))}>
                 <option value='all'>{t('All Bots')}</option>{bots.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
             </select></label>
-        </div>
+        </div> : null}
+        {answer === null ? <div className='bt-set-row'><span className='bt-set-hint'>{t('Loading…')}</span></div>
+            : !hasShelf ? <EmptyState icon={<TasksIcon />} title={t('Nobody is working right now.')} hint={t('Running turns, waiting handoffs and recently finished work show up here.')} />
+            : filteredActive && shownCount === 0 ? <EmptyState icon={<TasksIcon />} title={t('No tasks match these filters.')} action={{ label: t('Clear filters'), onClick: clearFilters }} />
+            : <>
         {show('running') ? <section className='bt-set-section'><h3>{t('Running')}</h3><div className='bt-set-card'>
-            {answer === null ? <div className='bt-set-row'><span className='bt-set-hint'>{t('Loading…')}</span></div>
-                : shownRunning.length === 0 ? <div className='bt-set-row'><span className='bt-set-hint'>{t('Nobody is working right now.')}</span></div>
+            {shownRunning.length === 0 ? <div className='bt-set-row'><span className='bt-set-hint'>{t('Nobody is working right now.')}</span></div>
                 : shownRunning.map(task => {
                     const isStopped = stopped.has(turnKey(task));
+                    // The count pill already says how many wait; a second "Queued" hold is noise.
+                    const hold = task.hold === 'queued' ? undefined : task.hold;
                     return <div key={task.sessionId} className='bt-task-row' data-stopped={isStopped || undefined}>
                         <button type='button' className='bt-task-who' onClick={() => onOpen(task.sessionId)}>
                             <span className='bt-task-name'>{task.botName}</span>
@@ -205,7 +221,7 @@ export function TasksBoard({ state, onOpen }: TasksBoardProps) {
                         {task.queued !== undefined && task.queued > 0
                             ? <span className='bt-task-queued' title={t('Messages waiting for the next turn')}>{t('{count} queued', { count: task.queued })}</span>
                             : null}
-                        {holdText(task.hold) !== undefined ? <span className='bt-task-hold'>{holdText(task.hold)}</span> : null}
+                        {holdText(hold) !== undefined ? <span className='bt-task-hold'>{holdText(hold)}</span> : null}
                         <span className='bt-task-clock'>{elapsed(now - task.since)}</span>
                         {isStopped ? <span className='bt-task-state'>{t('Stopped by you')}</span>
                             : <button type='button' className='bt-soft bt-soft-sm bt-task-stop' disabled={busy === task.sessionId}
@@ -216,8 +232,13 @@ export function TasksBoard({ state, onOpen }: TasksBoardProps) {
                 })}
         </div></section> : null}
         {show('waiting') && shownWaiting.length > 0 ? <section className='bt-set-section'><h3>{t('Waiting for another Bot')}</h3><div className='bt-set-card'>
-            {shownWaiting.map(entry => <div key={entry.botId} className='bt-task-row'><span className='bt-task-who'><span className='bt-task-name'>{entry.botName}</span>
-                <span className='bt-task-sub'>{t('Waiting for {names}', { names: entry.for.join(', ') })}</span></span>{holdText(entry.hold) !== undefined ? <span className='bt-task-hold'>{holdText(entry.hold)}</span> : null}</div>)}
+            {shownWaiting.map(entry => <div key={entry.botId} className='bt-task-row'>
+                <button type='button' className='bt-task-who' onClick={() => onOpen(entry.botId)}>
+                    <span className='bt-task-name'>{entry.botName}</span>
+                    <span className='bt-task-sub'>{t('Waiting for {names}', { names: entry.for.join(', ') })}</span>
+                </button>
+                {holdText(entry.hold) !== undefined ? <span className='bt-task-hold'>{holdText(entry.hold)}</span> : null}
+            </div>)}
         </div></section> : null}
         {show('completed') ? <section className='bt-set-section'><h3>{t('Recently finished')}</h3><div className='bt-set-card'>
             {shownCompleted.length === 0 ? <div className='bt-set-row'><span className='bt-set-hint'>{t('Nothing has finished yet.')}</span></div>
@@ -227,6 +248,7 @@ export function TasksBoard({ state, onOpen }: TasksBoardProps) {
                     <span className='bt-task-clock'>{elapsed(task.endedAt - task.startedAt)}</span>
                 </button>)}
         </div></section> : null}
+            </>}
     </>;
 }
 /** Settings → Tasks: the same board as a page. */

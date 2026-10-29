@@ -49,7 +49,7 @@ npx @deepseek-ai/dsh@0.2.1-rc.2 web
 
 **Docker (NAS, Linux server)**
 
-The [`docker/`](docker/) directory builds an image with DSH Web and DS Bot, for a NAS or any always-on machine. CI is configured to publish a prebuilt linux/amd64 image to GHCR. The container is the Bots' sandbox: they get full access to what you mount into it, and nothing else. See [`docker/README.md`](docker/README.md).
+The [`docker/`](docker/) directory builds an image with DSH Web and DS Bot, for a NAS or any always-on machine. CI is configured to publish a prebuilt linux/amd64 image to GHCR. The container is the Bots' sandbox: they get full access to what you mount into it, and nothing else. See `docker/README.md`.
 
 ## Setup
 
@@ -97,7 +97,7 @@ All data stays on your own computer, in `bot/` and `sessions/` in the DSH home f
 
 ## Development
 
-The plugin source is in [`core/`](ds-bot/). For options and internals, see [`core/README.md`](core/README.md). For development, tests and how the team works, see [CONTRIBUTING.md](CONTRIBUTING.md). For changes between versions, see [CHANGELOG.md](CHANGELOG.md).
+The plugin source is in [`core/`](ds-bot/). For options and internals, see [`core/README.md`](../core/README.md). For development, tests and how the team works, see [CONTRIBUTING.md](../CONTRIBUTING.md). For changes between versions, see [CHANGELOG.md](../CHANGELOG.md).
 
 ## Acknowledgments
 

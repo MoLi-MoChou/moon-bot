@@ -28,7 +28,7 @@
 | 层边界（client 不 import host/engine/store/service；host 不 import client；shared 只 import zod） | `core/scripts/check-gates.mjs` |
 | 逻辑文件 ≤ 350 行 | `core/scripts/check-gates.mjs` |
 | 测试文件不 import `.tsx` | `core/scripts/check-gates.mjs` |
-| 不悬空 promise；`dsh-types.js` 只能 `import type`；`.d.ts` 不导出值 | `core/scripts/check-gates.mjs` |
+| 不悬空 promise；`host-types.js` 只能 `import type`；`.d.ts` 不导出值 | `core/scripts/check-gates.mjs` |
 | 颜色/圆角/弹簧不写字面量 | `core/test/style-debt.test.ts` + `core/test/style-debt.json`（只减不增） |
 | `t('…')` 词条都有中文 | `core/test/i18n.test.ts` |
 | `client.js` 与源码一致；bundle 不依赖 jsx runtime | `core/test/client-bundle.test.ts` |
@@ -102,3 +102,18 @@
 ## 变更
 
 - 2026-10-28：定下约定升级（JSX 收窄、门禁分界、审批红线、手机与发布流程、分区文档），同时改写根 `AGENTS.md` 并新增四个分区 `AGENTS.md`。
+
+## 命名：产品名只留在兼容面上
+
+2026-10-29 做过一次全面改名：代码、注释、日志前缀、事件与样式标识、app 窗口壳的类名前缀（`dsb-` → `mb-`）、CSS 变量（`--dsh-*` → `--bt-*`）、属性（`data-ds-dark-theme` → `data-bt-dark`）、IPC 通道与 argv 标志、会话 mention 格式（`dsh-session:` → `moon-bot-session:`），以及类型契约文件名（`dsh-types.d.ts` → `host-types.d.ts`、`DshContext` → `HostContext`）。
+
+仍然保留旧名的地方只有两类，改动它们会破坏已有安装或既有数据：
+
+- **取数兼容**：`DSH_SECRET_` 与 `MOON_BOT_SECRET_` 一起识别；`DSH_HOME`/`~/.dsh` 只作为「另一个应用的数据目录」来避开；`DS_BOT_USER_DSH_HOME` 仍读；`MOCHOU_*`、`DSH_BOT_*` 环境变量仍读。
+- **存量数据**：浏览器存储的旧键位移除（`ds-bot:`、`dsh-bot:`、`dsh-bot-team:` 前缀仍会迁移到 `moon-bot:`）、旧时间快照来源 `ds-bot-time-context`、旧 mention `dsh-session:`、搬数据的标记文件 `.ds-bot-moving`。Electron 的 profile 目录 `profiles/ds-bot` 在首次启动时整体搬到 `profiles/moon-bot`（`app/src/profile-dir.ts`），搬不动就继续用旧目录。
+
+新增代码不要再引入旧名；要动上面两类兼容面，先写设计并说明迁移。
+
+## 变更
+
+- 2026-10-29：加「命名：产品名只留在兼容面上」一节，记下这次改名范围与有意保留的兼容项。

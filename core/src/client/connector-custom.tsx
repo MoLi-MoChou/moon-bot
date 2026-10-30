@@ -7,6 +7,7 @@ import { CheckIcon, PlusIcon } from './icons.tsx';
 import { DefaultConnectorLogo } from './connector-logos.tsx';
 import { healthOf, toolsOf } from './capability-library.ts';
 import type { Capability, CapabilityBot, CapabilityStatus } from './capability-types.ts';
+import { Field } from './kit/index.ts';
 import { blankCustomConnector, commandParts, connectorIdOf, customCapabilityOf, customConnectorErrors, customTestOf, draftFromConnector, type CustomConnectorDraft, type CustomConnectorErrors, type CustomTransport } from './connector-custom.ts';
 
 export interface CustomConnectorActions {
@@ -15,23 +16,6 @@ export interface CustomConnectorActions {
     setBotCapability: (botId: string, name: string, attached: boolean) => Promise<unknown>;
     retryCapability: (name: string) => Promise<unknown>;
     testCapability: (payload: Record<string, unknown>) => Promise<{ readonly tools: readonly string[]; readonly ms: number }>;
-}
-
-function Field({ label, value, onChange, onBlur, error, hint, placeholder, multiline = false, disabled = false }: {
-    label: string;
-    value: string;
-    onChange: (value: string) => void;
-    onBlur?: (() => void) | undefined;
-    error?: string | undefined;
-    hint?: string | undefined;
-    placeholder?: string | undefined;
-    multiline?: boolean | undefined;
-    disabled?: boolean | undefined;
-}) {
-    const field = multiline
-        ? <textarea className={error ? 'bt-input bt-input-error' : 'bt-input'} value={value} disabled={disabled} placeholder={placeholder} spellCheck={false} aria-invalid={error !== undefined} onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => onChange(event.target.value)} onBlur={onBlur} />
-        : <input className={error ? 'bt-input bt-input-error' : 'bt-input'} value={value} disabled={disabled} placeholder={placeholder} spellCheck={false} aria-invalid={error !== undefined} onChange={(event: React.ChangeEvent<HTMLInputElement>) => onChange(event.target.value)} onBlur={onBlur} />;
-    return <label className='bt-q-field bt-secret-field'><span className='bt-set-hint'>{label}</span>{field}{hint ? <span className='bt-set-hint'>{hint}</span> : null}{error ? <span className='bt-field-error' role='alert'>{error}</span> : null}</label>;
 }
 
 export function CustomConnectorForm({ initial, market, existing, onClose }: {
@@ -101,7 +85,7 @@ export function CustomConnectorForm({ initial, market, existing, onClose }: {
                 </div>
             </div>
         </div>
-        <Field label={t('Name')} value={draft.name} disabled={draft.originalName !== undefined} onChange={value => set('name', value)} onBlur={() => touch('name')} error={errorOf('name')} placeholder='my-custom-tool' hint={draft.originalName === undefined && id !== '' && id !== draft.name.trim() ? t('Saved as {name}', { name: id }) : undefined} />
+        <Field layout='compact' label={t('Name')} value={draft.name} disabled={draft.originalName !== undefined} onChange={value => set('name', value)} onBlur={() => touch('name')} error={errorOf('name')} placeholder='my-custom-tool' hint={draft.originalName === undefined && id !== '' && id !== draft.name.trim() ? t('Saved as {name}', { name: id }) : undefined} />
         <label className='bt-q-field bt-secret-field'>
             <span className='bt-set-hint'>{t('Type')}</span>
             <select className='bt-input' value={draft.transport} onChange={event => set('transport', event.target.value as CustomTransport)} aria-label={t('Type')}>
@@ -111,14 +95,14 @@ export function CustomConnectorForm({ initial, market, existing, onClose }: {
             </select>
         </label>
         {draft.transport === 'stdio' ? <>
-            <Field label={t('Command')} value={draft.command} onChange={value => set('command', value)} onBlur={() => touch('command')} error={errorOf('command')} placeholder='npx -y any-mcp-server' />
-            <Field label={t('Arguments (one per line)')} value={draft.argsText} onChange={value => set('argsText', value)} placeholder={t('--flag')} />
-            <Field label={t('Environment (JSON)')} value={draft.envText} onChange={value => set('envText', value)} onBlur={() => touch('envText')} error={errorOf('envText')} multiline />
+            <Field layout='compact' label={t('Command')} value={draft.command} onChange={value => set('command', value)} onBlur={() => touch('command')} error={errorOf('command')} placeholder='npx -y any-mcp-server' />
+            <Field layout='compact' label={t('Arguments (one per line)')} value={draft.argsText} onChange={value => set('argsText', value)} placeholder={t('--flag')} />
+            <Field layout='compact' label={t('Environment (JSON)')} value={draft.envText} onChange={value => set('envText', value)} onBlur={() => touch('envText')} error={errorOf('envText')} multiline />
         </> : <>
-            <Field label={t('URL')} value={draft.url} onChange={value => set('url', value)} onBlur={() => touch('url')} error={errorOf('url')} placeholder={draft.transport === 'sse' ? 'https://mcp.example.com/sse' : 'https://mcp.example.com/mcp'} />
-            <Field label={t('Headers (JSON)')} value={draft.headersText} onChange={value => set('headersText', value)} onBlur={() => touch('headersText')} error={errorOf('headersText')} multiline />
+            <Field layout='compact' label={t('URL')} value={draft.url} onChange={value => set('url', value)} onBlur={() => touch('url')} error={errorOf('url')} placeholder={draft.transport === 'sse' ? 'https://mcp.example.com/sse' : 'https://mcp.example.com/mcp'} />
+            <Field layout='compact' label={t('Headers (JSON)')} value={draft.headersText} onChange={value => set('headersText', value)} onBlur={() => touch('headersText')} error={errorOf('headersText')} multiline />
         </>}
-        <Field label={t('Description')} value={draft.description} onChange={value => set('description', value)} placeholder={t('What this tool does')} />
+        <Field layout='compact' label={t('Description')} value={draft.description} onChange={value => set('description', value)} placeholder={t('What this tool does')} />
         {draft.transport === 'stdio' && draft.command.trim() !== '' ? <span className='bt-set-hint'>{t('Runs {command}. Moon Bot asks before a local command first starts.', { command: commandParts(draft.command).command })}</span> : null}
         {test !== null ? <div className='bt-cap-notice' data-tone={test.ok ? 'ready' : 'error'} role='status'><span>{test.ok ? <span className='bt-cap-ok'><CheckIcon />{test.text}</span> : test.text}</span>{test.ok && test.tools.length > 0 ? <code className='bt-cap-test-tools'>{test.tools.slice(0, 3).join(', ')}{test.tools.length > 3 ? '…' : ''}</code> : null}</div> : null}
         {stale ? <span className='bt-set-hint'>{t('The fields changed since the last test. Test again before saving if you want the result to count.')}</span> : null}

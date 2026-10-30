@@ -6,7 +6,7 @@ import { createElement as h } from 'react';
 import { BotAvatar, RoomAvatar } from './mark.tsx';
 import { isMainOf } from './sources.ts';
 import type { Roster } from './sources.ts';
-import { EmptyState } from './empty-state.tsx';
+import { EmptyState } from './kit/index.ts';
 import { t } from './i18n.ts';
 export interface WelcomeCopy {
     readonly title: string;

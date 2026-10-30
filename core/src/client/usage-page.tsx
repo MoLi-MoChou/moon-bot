@@ -3,7 +3,7 @@ import type { ReactElement } from 'react';
 import { MAIN_LOOK } from './characters.ts';
 import { BotMark } from './mark.tsx';
 import { CalendarIcon } from './icons.tsx';
-import { EmptyState } from './empty-state.tsx';
+import { EmptyState } from './kit/index.ts';
 import { t } from './i18n.ts';
 import { HOUR, MODEL, OWNER, RANGES, hourMs, spanRange, summarize, tokensOf } from './usage-data.ts';
 import type { UsageRow, UsageSum, UsageSummary } from './usage-data.ts';

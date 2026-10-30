@@ -9,7 +9,6 @@ import type { TaskActions } from './tasks-page.tsx'
 import type { FolderMenuActions } from './folder-menu.tsx'
 import type { UsagePageProps } from './usage-page.tsx'
 import type { DiagnosticsReport } from './feedback.tsx'
-import type { ReactNode } from 'react'
 
 // The team records the settings page and its forms read; the rest passes through.
 export interface SettingsEngineOption {
@@ -146,39 +145,15 @@ export interface SettingsActions extends FolderMenuActions, SecretActions, Conne
 }
 export type RunWork = (work: Promise<unknown>) => Promise<boolean>
 
-// Component props shared by the dialog and the Bot settings form.
-export interface InlineTextProps {
-  label: string
-  value?: string | null | undefined
-  placeholder?: string | undefined
-  required?: boolean | undefined
-  maxLength?: number | undefined
-  multiline?: boolean | undefined
-  onSave: (next: string) => unknown
-}
-export interface RowProps {
-  label: ReactNode
-  hint?: ReactNode
-  stack?: boolean | undefined
-  children?: ReactNode
-}
-export interface CardProps {
-  title?: ReactNode
-  children?: ReactNode
-}
-export interface SwitchProps {
-  on: boolean
-  label: string
-  disabled?: boolean | undefined
-  onChange: (on: boolean) => void
-}
-export interface SwitchRowProps {
-  label: string
-  hint?: string | undefined
-  on: boolean
-  disabled?: boolean | undefined
-  onChange: (on: boolean) => void
-}
+// Component props shared by the dialog and the Bot settings form (kit primitives).
+export type {
+  InlineTextProps,
+  RowProps,
+  CardProps,
+  SwitchProps,
+  SwitchRowProps,
+} from './kit/index.ts'
+
 export interface CharacterLook { shape: string; color: string }
 export interface CharacterGridProps {
   look: CharacterLook

@@ -15,6 +15,12 @@
 - `ctx.effect` 和 slot `inject` 注册的副作用要在宿主切表面或卸载时能撤掉（返回 disposer；确实无需清理的才返回 void）；样式用 `installCompiledStyles` 随组装卸。
 - 视图是纯函数式的：同样的 props/快照渲染同样的节点树；DOM、网络、计时都在 effect 或注入面里。测试因此可以直接调用组件函数断言节点。
 
+## Kit（公用原语）
+
+- 可复用、无宿主副作用的 UI 原语放 [`kit/`](kit/)：`EmptyState`、`Field`/`Select`、`Row`/`Card`/`Switch`/`SwitchRow`/`InlineText`。从 [`kit/index.ts`](kit/index.ts) **具名**导入；禁止 `export *`。
+- kit **不得** import `host`/`engine`/`store`/`service`，也不得碰 `api.ts`、`sources`、actions；只依赖 React、同层的 `motion`/token 类工具。Feature 页编排状态与副作用，再把细回调传给 kit。
+- 第二个消费方且无副作用时再升 kit；usage 图表的 `Row` 等单域语义不同的组件留在 feature。不要在 `app/ui` 再实现一套 Field/Row/Card/EmptyState。
+
 ## JSX 与组件
 
 - 内建标签（`div`/`span`/`button`…）一律 JSX；`h('tag')` 只允许在写不了 JSX 的地方（纯 `.ts` 文件，或 props 要整体展开的动态对象），并就地注释原因。

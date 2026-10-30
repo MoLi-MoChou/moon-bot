@@ -9,8 +9,7 @@
 import { createElement as h, useEffect, useState } from 'react';
 import { t } from './i18n.ts';
 import { ClockIcon } from './icons.tsx';
-import { EmptyState } from './empty-state.tsx';
-import { Card } from './bot-settings.tsx';
+import { Card, EmptyState } from './kit/index.ts';
 
 export interface PreAuthRule {
   readonly id: string;

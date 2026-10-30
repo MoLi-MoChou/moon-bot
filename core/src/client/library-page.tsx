@@ -4,7 +4,7 @@
 import { createElement as h, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { call } from './api.ts';
-import { EmptyState } from './empty-state.tsx';
+import { EmptyState } from './kit/index.ts';
 import { FileKindIcon, LibraryIcon, ReplyIcon } from './icons.tsx';
 import { FilePreview, KIND_LABELS, fileKind, timeBucket } from './deliver-cards.tsx';
 import type { LibraryItem } from './deliver-cards.tsx';

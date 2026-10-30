@@ -5,93 +5,50 @@ import type { HostRuntime } from '../runtime.js'
 import { foldCalls } from './fold.ts'
 import { SLOT_MS } from './ledger.ts'
 import type { Ledger, OwnerRecord } from './ledger.ts'
-
-const PAGE_MESSAGES = 400
-const PAGE_TIMEOUT_MS = 20_000
-const SCAN_TIMEOUT_MS = 180_000
-const SCAN_PARALLEL = 4
-// A view waits this long for a scan, then answers with what it has.
-const VIEW_WAIT_MS = 6_000
-const RESCAN_AFTER_MS = 5_000
-// An ended part still gets a few events (a title, a late reply) just after it ends.
-const SEAL_AFTER_MS = 60_000
-
-/** One owner the Usage page lists. */
-export type UsageOwner =
-  | { readonly key: string; readonly kind: 'other' }
-  | { readonly key: string; readonly kind: 'room' | 'agent' | 'bot'; readonly id: string; readonly name: string; readonly deleted?: boolean | undefined }
-
-/** One model the Usage page lists. */
-export interface UsageModel { readonly key: string; readonly provider: string; readonly model: string; readonly name: string; readonly providerName?: string | undefined }
-
-/** [hour, owner, model, kind, input, cacheRead, cacheWrite, output, calls] */
-export type UsageRow = [string, number, number, number, number, number, number, number, number]
-
-export interface UsageView {
-  readonly owners: readonly UsageOwner[]
-  readonly models: readonly UsageModel[]
-  readonly kinds: readonly string[]
-  readonly rows: readonly UsageRow[]
-  readonly now: string
-  readonly scanning: boolean
-}
-
-export interface UsageViewOptions { readonly timeZone?: string | undefined }
-
-export interface UsageViewer {
-  view(options?: UsageViewOptions): Promise<UsageView>
-  /** The Sessions the last scan listed, for the journal's parent-chain lookup. */
-  sessions(): readonly SessionListEntry[]
-}
-
-export interface ViewerDeps {
-  readonly rt: HostRuntime
-  openLedger(): Promise<Ledger>
-}
-
-/** Every hour bucket in one time zone, as `YYYY-MM-DD HH`. */
-function hourKeys(timeZone: string | undefined): (time: number) => string {
-  const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23' }
-  let format: Intl.DateTimeFormat
-  try {
-    format = new Intl.DateTimeFormat('en-CA', timeZone === undefined ? options : { ...options, timeZone })
-  } catch {
-    format = new Intl.DateTimeFormat('en-CA', options)
-  }
-  const cache = new Map<number, string>()
-  return (time) => {
-    const slot = Math.floor(time / SLOT_MS)
-    let key = cache.get(slot)
-    if (key === undefined) {
-      const part = new Map(format.formatToParts(new Date(slot * SLOT_MS)).map(({ type, value }): [string, string] => [type, value]))
-      key = `${part.get('year')}-${part.get('month')}-${part.get('day')} ${part.get('hour')}`
-      cache.set(slot, key)
-    }
-    return key
-  }
-}
-
-async function eachLimited<T>(items: readonly T[], limit: number, work: (item: T) => Promise<void>): Promise<void> {
-  let next = 0
-  const lane = async (): Promise<void> => {
-    while (next < items.length) {
-      const item = items[next]
-      if (item === undefined) break
-      next += 1
-      await work(item)
-    }
-  }
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, lane))
-}
+import type {
+  UsageOwner,
+  UsageModel,
+  UsageRow,
+  UsageView,
+  UsageViewOptions,
+  UsageViewer,
+  ViewerDeps,
+} from './view-helpers.ts'
+import {
+  PAGE_MESSAGES,
+  PAGE_TIMEOUT_MS,
+  SCAN_TIMEOUT_MS,
+  SCAN_PARALLEL,
+  VIEW_WAIT_MS,
+  RESCAN_AFTER_MS,
+  SEAL_AFTER_MS,
+  hourKeys,
+  eachLimited,
+  addressOf,
+} from './view-helpers.ts'
+export type {
+  UsageOwner,
+  UsageModel,
+  UsageRow,
+  UsageView,
+  UsageViewOptions,
+  UsageViewer,
+  ViewerDeps,
+} from './view-helpers.ts'
 
 // Who each Session's calls belong to, from the team as it is now. Sessions forked or
 // spawned under one belong to the same owner, and a parent the team has lost
 // (a deleted Bot) still passes its journaled owner down the chain.
-export function liveOwners(rt: HostRuntime, listed: readonly SessionListEntry[] | undefined, stored: ReadonlyMap<string, OwnerRecord> | undefined): Map<string, OwnerRecord> {
+export function liveOwners(
+  rt: HostRuntime,
+  listed: readonly SessionListEntry[] | undefined,
+  stored: ReadonlyMap<string, OwnerRecord> | undefined,
+): Map<string, OwnerRecord> {
   const owners = new Map<string, OwnerRecord>()
   const botOwner = (botId: string, name: string): OwnerRecord => ({ owner: botId, name })
   for (const bot of Object.values(rt.state.bots)) {
-    for (const sessionId of [bot.id, rt.chatOf(bot.id), ...(bot.segments ?? []).map(segment => segment.sessionId)]) owners.set(sessionId, botOwner(bot.id, bot.name))
+    for (const sessionId of [bot.id, rt.chatOf(bot.id), ...(bot.segments ?? []).map(segment => segment.sessionId)])
+      owners.set(sessionId, botOwner(bot.id, bot.name))
   }
   for (const room of Object.values(rt.state.rooms)) {
     owners.set(room.id, { owner: `room:${room.id}`, name: room.name })
@@ -108,7 +65,8 @@ export function liveOwners(rt: HostRuntime, listed: readonly SessionListEntry[] 
   }
   const parents = new Map<string, string>()
   for (const item of listed ?? []) {
-    if (item.parentSessionId !== undefined && item.parentSessionId !== '') parents.set(item.sessionId, item.parentSessionId)
+    if (item.parentSessionId !== undefined && item.parentSessionId !== '')
+      parents.set(item.sessionId, item.parentSessionId)
   }
   for (const sessionId of parents.keys()) {
     let root = sessionId
@@ -126,19 +84,15 @@ export function liveOwners(rt: HostRuntime, listed: readonly SessionListEntry[] 
 
 // Sessions that speak inside a group chat, from the rooms as they are now.
 export function inGroup(rt: HostRuntime): Set<string> {
-  return new Set(Object.values(rt.state.rooms).flatMap(room => [
-    ...Object.values(room.sessions ?? {}),
-    ...Object.values(room.segments ?? {}).flat().map(segment => segment.sessionId),
-  ]))
+  return new Set(
+    Object.values(rt.state.rooms).flatMap(room => [
+      ...Object.values(room.sessions ?? {}),
+      ...Object.values(room.segments ?? {})
+        .flat()
+        .map(segment => segment.sessionId),
+    ]),
+  )
 }
-
-// the host reads a subagent Session only through its parent's address; the parent
-// need not exist any more. One with no parent on record cannot be read.
-const addressOf = (item: SessionListEntry): SessionAddress | undefined => (item.origin !== 'subagent'
-  ? { kind: 'session', sessionId: item.sessionId }
-  : item.parentSessionId === undefined
-    ? undefined
-    : { kind: 'subagent', parentSessionId: item.parentSessionId, childSessionId: item.sessionId, mode: 'unknown' })
 
 export function createViewer({ rt, openLedger }: ViewerDeps): UsageViewer {
   const { ctx } = rt
@@ -148,30 +102,43 @@ export function createViewer({ rt, openLedger }: ViewerDeps): UsageViewer {
   // Sessions that already failed to read, so each one warns once, not every scan.
   const unreadable = new Set<string>()
 
-  async function scanSession(ledger: Ledger, address: SessionAddress, asOfSeq: number | undefined, sealable: boolean, signal: AbortSignal): Promise<void> {
+  async function scanSession(
+    ledger: Ledger,
+    address: SessionAddress,
+    asOfSeq: number | undefined,
+    sealable: boolean,
+    signal: AbortSignal,
+  ): Promise<void> {
     const sessionId = address.kind === 'session' ? address.sessionId : address.childSessionId
     const mark = ledger.mark(sessionId)
     if (mark?.sealed === true) return
     let through: number | undefined = asOfSeq
     if (through === undefined) {
-      const projections: SessionProjections | null | undefined = await ctx.sessionController.projections({ sessionId }, signal)
+      const projections: SessionProjections | null | undefined = await ctx.sessionController.projections(
+        { sessionId },
+        signal,
+      )
       if (projections === null || projections === undefined) return
       through = projections.asOfSeq
     }
     const from = mark?.through ?? -1
     if (typeof through !== 'number' || !Number.isSafeInteger(through) || through <= from) {
-      if (mark !== undefined && sealable) ledger.commit(sessionId, { rows: [], reset: false, mark: { ...mark, sealed: true } })
+      if (mark !== undefined && sealable)
+        ledger.commit(sessionId, { rows: [], reset: false, mark: { ...mark, sealed: true } })
       return
     }
     const events: SessionEvent[] = []
     let beforeSeq: number | undefined
-    for (let reached = false; !reached;) {
-      const page = await ctx.sessionController.page({
-        address,
-        throughSeq: through,
-        ...(beforeSeq === undefined ? {} : { beforeSeq }),
-        maxMessages: PAGE_MESSAGES,
-      }, AbortSignal.any([signal, AbortSignal.timeout(PAGE_TIMEOUT_MS)]))
+    for (let reached = false; !reached; ) {
+      const page = await ctx.sessionController.page(
+        {
+          address,
+          throughSeq: through,
+          ...(beforeSeq === undefined ? {} : { beforeSeq }),
+          maxMessages: PAGE_MESSAGES,
+        },
+        AbortSignal.any([signal, AbortSignal.timeout(PAGE_TIMEOUT_MS)]),
+      )
       const got = page.records.map(record => record.event)
       for (let index = got.length - 1; index >= 0; index -= 1) {
         const event = got[index]
@@ -187,7 +154,8 @@ export function createViewer({ rt, openLedger }: ViewerDeps): UsageViewer {
     }
     events.reverse()
     const first = events[0]
-    if (first !== undefined && first.seq !== from + 1) throw new Error(`the history of ${sessionId} came back with a gap`)
+    if (first !== undefined && first.seq !== from + 1)
+      throw new Error(`the history of ${sessionId} came back with a gap`)
     const fold = foldCalls(events, mark?.fold)
     ledger.commit(sessionId, {
       rows: fold.rows.map(row => ({ ...row, key: `${sessionId}#${row.key}`, session: sessionId, kind: 'turn' })),
@@ -214,29 +182,40 @@ export function createViewer({ rt, openLedger }: ViewerDeps): UsageViewer {
       const owners = liveOwners(rt, listed, stored)
       for (const [sessionId, owner] of owners) {
         const before = stored.get(sessionId)
-        if (owner.name !== '' && (before?.owner !== owner.owner || before?.name !== owner.name)) ledger.setOwner(sessionId, owner)
+        if (owner.name !== '' && (before?.owner !== owner.owner || before?.name !== owner.name))
+          ledger.setOwner(sessionId, owner)
       }
       // Group membership vanishes with the room, but a call that happened in a
       // group chat must stay one, so the kind is remembered like the owner is.
       const storedKinds = ledger.kinds()
-      for (const sessionId of inGroup(rt)) if (storedKinds.get(sessionId) !== 'group') ledger.setKind(sessionId, 'group')
+      for (const sessionId of inGroup(rt))
+        if (storedKinds.get(sessionId) !== 'group') ledger.setKind(sessionId, 'group')
       const ended = new Set<string>()
       const longAgo = Date.now() - SEAL_AFTER_MS
-      for (const bot of Object.values(rt.state.bots)) for (const segment of bot.segments ?? []) if (segment.endedAt !== undefined && segment.endedAt < longAgo) ended.add(segment.sessionId)
+      for (const bot of Object.values(rt.state.bots))
+        for (const segment of bot.segments ?? [])
+          if (segment.endedAt !== undefined && segment.endedAt < longAgo) ended.add(segment.sessionId)
       for (const room of Object.values(rt.state.rooms)) {
-        for (const segments of Object.values(room.segments ?? {})) for (const segment of segments) if (segment.endedAt !== undefined && segment.endedAt < longAgo) ended.add(segment.sessionId)
+        for (const segments of Object.values(room.segments ?? {}))
+          for (const segment of segments)
+            if (segment.endedAt !== undefined && segment.endedAt < longAgo) ended.add(segment.sessionId)
       }
       // A listing row's projections are hints, not cursors. Only a 'sequenced'
       // block shares the Session log's sequence space; a 'cached' block carries
       // the persisted cache's own watermark, so it must not cut a page. The
       // Session's exact cursor is read below when no hint is usable.
-      const listedCursor = (item: SessionListEntry): number | undefined => (item.projections?.kind === 'sequenced' ? item.projections.asOfSeq : undefined)
+      const listedCursor = (item: SessionListEntry): number | undefined =>
+        item.projections?.kind === 'sequenced' ? item.projections.asOfSeq : undefined
       const targets = new Map<string, number | undefined>()
       for (const item of listed) if (item.blank !== true) targets.set(item.sessionId, listedCursor(item))
       for (const sessionId of owners.keys()) if (!targets.has(sessionId)) targets.set(sessionId, undefined)
-      const addresses = new Map<string, SessionAddress | undefined>(listed.map((item): [string, SessionAddress | undefined] => [item.sessionId, addressOf(item)]))
+      const addresses = new Map<string, SessionAddress | undefined>(
+        listed.map((item): [string, SessionAddress | undefined] => [item.sessionId, addressOf(item)]),
+      )
       await eachLimited([...targets], SCAN_PARALLEL, async ([sessionId, asOfSeq]) => {
-        const address: SessionAddress | undefined = addresses.has(sessionId) ? addresses.get(sessionId) : { kind: 'session', sessionId }
+        const address: SessionAddress | undefined = addresses.has(sessionId)
+          ? addresses.get(sessionId)
+          : { kind: 'session', sessionId }
         if (address === undefined) return
         try {
           await scanSession(ledger, address, asOfSeq, ended.has(sessionId), signal)
@@ -259,7 +238,12 @@ export function createViewer({ rt, openLedger }: ViewerDeps): UsageViewer {
   async function view(options: UsageViewOptions = {}): Promise<UsageView> {
     const job = scan().catch(error => rt.warn('moon-bot: usage scan failed: %s', error))
     let timer: ReturnType<typeof setTimeout> | undefined
-    await Promise.race([job, new Promise<void>((resolve) => { timer = setTimeout(resolve, VIEW_WAIT_MS) })])
+    await Promise.race([
+      job,
+      new Promise<void>(resolve => {
+        timer = setTimeout(resolve, VIEW_WAIT_MS)
+      }),
+    ])
     clearTimeout(timer)
     const ledger = await openLedger()
     const stored = ledger.owners()
@@ -303,7 +287,13 @@ export function createViewer({ rt, openLedger }: ViewerDeps): UsageViewer {
       const index = models.length
       modelIndex.set(key, index)
       const entry = catalog.find(item => item.ref === key)
-      models.push({ key, provider, model, name: entry?.name ?? model, ...(entry?.providerName ? { providerName: entry.providerName } : {}) })
+      models.push({
+        key,
+        provider,
+        model,
+        name: entry?.name ?? model,
+        ...(entry?.providerName ? { providerName: entry.providerName } : {}),
+      })
       return index
     }
     const kinds: string[] = []
@@ -320,8 +310,18 @@ export function createViewer({ rt, openLedger }: ViewerDeps): UsageViewer {
     const buckets = new Map<string, UsageRow>()
     const storedKinds = ledger.kinds()
     for (const group of ledger.groups()) {
-      const kind = group.kind === 'turn' ? (groupSessions.has(group.session) || storedKinds.get(group.session) === 'group' ? 'group' : 'chat') : group.kind
-      const row: [string, number, number, number] = [hourOf(group.slot * SLOT_MS), ownerOf(group.session), modelOf(group.provider, group.model), kindOf(kind)]
+      const kind =
+        group.kind === 'turn'
+          ? groupSessions.has(group.session) || storedKinds.get(group.session) === 'group'
+            ? 'group'
+            : 'chat'
+          : group.kind
+      const row: [string, number, number, number] = [
+        hourOf(group.slot * SLOT_MS),
+        ownerOf(group.session),
+        modelOf(group.provider, group.model),
+        kindOf(kind),
+      ]
       const id = row.join('\n')
       const bucket: UsageRow = buckets.get(id) ?? [row[0], row[1], row[2], row[3], 0, 0, 0, 0, 0]
       bucket[4] += group.input

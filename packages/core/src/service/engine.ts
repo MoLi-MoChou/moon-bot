@@ -16,10 +16,8 @@ import { engineAgentOf } from '../engine/builtin/bridge.ts'
 import type { EngineServices, PromptSource, ResolvedModel } from '../engine/builtin/services.ts'
 import type { EngineEvent } from '../engine/events.ts'
 import { splitRef } from '../host/text.ts'
-import { HIDDEN_TOOLS } from '../host/tools/shared.ts'
-import { LEAN_HIDDEN_TOOLS } from 'moon-bot-contracts'
 import { resolveModelSpec } from 'moon-bot-contracts'
-import { openStore, type Store } from '../store/db.ts'
+import { openStore } from '../store/db.ts'
 import { ServiceContext } from './context.ts'
 import { historyPageOf } from './history-page.ts'
 import type { HostRuntime } from '../host/runtime.js'
@@ -31,67 +29,19 @@ import { FileAttachments } from './attachments.ts'
 import { ServiceApproval } from './approval.ts'
 import { MemorySync } from './memory-sync.ts'
 import { TaskScheduler } from './scheduler.ts'
-import { PolicyEngine, ruleOf } from '../engine/policy.ts'; import { gateOfPreset } from '../engine/permission-presets.ts'
-import { PermissionPresets } from './permission-presets.ts'; import { LocalRunner } from '../engine/runner.ts'
-import { localEngineCatalog } from '../engine/acp/discovery.ts'; import { detailOfPermission } from '../engine/acp/permission.ts'; import { RelayRegistry } from './relay.ts'
-import { collectDeliverables } from '../host/deliverables.ts'; import type { StandaloneLlm } from './llm.ts'
+import { PolicyEngine, ruleOf } from '../engine/policy.ts'
+import { gateOfPreset } from '../engine/permission-presets.ts'
+import { PermissionPresets } from './permission-presets.ts'
+import { LocalRunner } from '../engine/runner.ts'
+import { localEngineCatalog } from '../engine/acp/discovery.ts'
+import { detailOfPermission } from '../engine/acp/permission.ts'
+import { RelayRegistry } from './relay.ts'
+import { collectDeliverables } from '../host/deliverables.ts'
 /** The host runtime's own shape, as the wiring reads it. */
-interface Runtime {
-  botOf(id: string | undefined): { model?: string, appliedModel?: string, effort?: string, appliedEffort?: string, engine?: unknown, runtimeId?: string } | undefined
-  selfOf(sessionId: string): string | undefined
-  toolRegistry: { names(): readonly string[], definitions(names?: readonly string[]): readonly unknown[] }
-  /** Where a Bot works, as the folders module resolves it; the deliverables scan needs it. */
-  workDirOf?(input: { readonly botId?: string | undefined, readonly roomId?: string | undefined }): string | undefined
-  groupOwners?: Map<string, { readonly roomId?: string | undefined }>
-}
+import { EXCLUDED_TOOLS, surfacedMemories } from './engine-helpers.ts'
+import type { Runtime, WiredService, WireOptions } from './engine-helpers.ts'
+export type { Runtime, WiredService, WireOptions } from './engine-helpers.ts'
 
-export interface WiredService {
-  readonly context: ServiceContext
-  readonly runtime: Runtime
-  readonly store: Store
-  readonly engine: BuiltinRuntime
-  /** The remote-agent relay: live connections the runner and the route share. */
-  readonly relay: RelayRegistry
-  agentOf(sessionId: string): unknown
-  emitEvent(sessionId: string, event: EngineEvent): void
-  close(): Promise<void>
-}
-
-export interface WireOptions {
-  readonly home: string
-  readonly llm: StandaloneLlm
-  readonly services?: Readonly<Record<string, unknown>>
-}
-
-const EXCLUDED_TOOLS = new Set<string>([...HIDDEN_TOOLS, ...LEAN_HIDDEN_TOOLS])
-
-/** The memory scopes a session may read: its Bot's own, the team's, and its group's. */
-const memoryScopesOf = (runtime: Runtime, sessionId: string): readonly string[] => {
-  const botId = runtime.selfOf(sessionId)
-  if (botId === undefined) return ['team']
-  const groups = (runtime as unknown as { groupOwners: Map<string, { roomId: string }> }).groupOwners
-  const past = (runtime as unknown as { pastOwners: Map<string, { roomId?: string }> }).pastOwners
-  const roomId = groups.get(sessionId)?.roomId ?? past.get(sessionId)?.roomId
-  return [`bot:${botId}`, 'team', ...(roomId !== undefined ? [`group:${roomId}`] : [])]
-}
-
-/** What the index surfaces for this turn's words: ranked, bounded, prose-only. */
-const surfacedMemories = (runtime: Runtime, store: Store, sync: MemorySync, sessionId: string, query: string | undefined): readonly string[] => {
-  // Words of real length only: a question made of grammar words ("what is the…")
-  // surfaces nothing, while a term that names the subject does.
-  const terms = (query ?? '').replace(/[[\]{}()#>*`|]/g, ' ').split(/\s+/).filter(term => term.length >= 4)
-  if (terms.length === 0) return []
-  try {
-    sync.syncChanged(memoryScopesOf(runtime, sessionId))
-    return store.memory.search(memoryScopesOf(runtime, sessionId), terms.join(' '), 4)
-      .filter(({ row }) => row.text.trim() !== '')
-      .map(({ row }) => row.text.length > 200 ? `${row.text.slice(0, 200)}…` : row.text)
-  } catch {
-    return []
-  }
-}
-
-/** Wires the host runtime, the store, the engine and the bridge for one team home. */
 export function wireService(options: WireOptions): WiredService {
   // The attachments store serves the host's file surfaces; a caller's own service of
   // the same name still wins.
@@ -99,21 +49,28 @@ export function wireService(options: WireOptions): WiredService {
   // The approval bridge answers through the same ctx.get as every other service: it is
   // built with the context's emit, which exists once the constructor has run.
   let emitRequest: (request: unknown, next: unknown) => void = () => {}
-  const approval = new ServiceApproval((request, next) => { emitRequest(request, next) })
+  const approval = new ServiceApproval((request, next) => {
+    emitRequest(request, next)
+  })
   // The permission presets the host asks for: a Bot's or a group's own ceiling, kept per
   // Session because that is where the host puts it.
   const presets = new PermissionPresets()
   const context = new ServiceContext({
     services: {
       ...(options.services === undefined ? {} : options.services),
-      attachments, approval, engineCatalog: localEngineCatalog, permissionPresets: presets,
+      attachments,
+      approval,
+      engineCatalog: localEngineCatalog,
+      permissionPresets: presets,
     },
     // The providers and models modules read the LLM service through the context; the
     // standalone one (settings + credentials + discovery) is the same instance the
     // engine's adapters resolve through.
     llm: options.llm,
   })
-  emitRequest = (request, next) => { context.emit('approval/request', request, next) }
+  emitRequest = (request, next) => {
+    context.emit('approval/request', request, next)
+  }
   const runtime = createRuntime(context as unknown as HostContext, { home: options.home }) as unknown as Runtime
   const store = openStore(options.home)
   // The relay over the store's invites; the channel ops and the WebSocket route share
@@ -125,13 +82,17 @@ export function wireService(options: WireOptions): WiredService {
     // Resetting a Bot (docs/plans/2026-10-29-reset-bot.md): emptying a transcript keeps the
     // Session row, and a fresh part archives the old one through the workspace registry the
     // same way a context switch does.
-    clearSessionHistory: (sessionId: string): void => { store.sessions.clearMessages(sessionId) },
+    clearSessionHistory: (sessionId: string): void => {
+      store.sessions.clearMessages(sessionId)
+    },
     // A reset restarts a conversation by emptying the transcript it reads next turn. The
     // Session row and the Bot's place in its groups stay, so nothing else has to be
     // rewired; an earlier part that was archived before this reset is untouched.
-    startFreshPart: async (sessionId: string): Promise<void> => { store.sessions.clearMessages(sessionId) },
+    startFreshPart: async (sessionId: string): Promise<void> => {
+      store.sessions.clearMessages(sessionId)
+    },
     deliverablesOf: (sessionId: string, turn: number) => store.deliverables.forTurn(sessionId, turn).map(row => ({ name: row.name, path: row.path, size: row.size, createdAt: row.createdAt })),
-    libraryOf: (options: { since?: number, limit?: number }) => store.deliverables.list(options).map(row => ({ sessionId: row.sessionId, turn: row.turn, ownerId: row.ownerId, name: row.name, path: row.path, size: row.size, createdAt: row.createdAt })),
+    libraryOf: (options: { since?: number; limit?: number }) => store.deliverables.list(options).map(row => ({ sessionId: row.sessionId, turn: row.turn, ownerId: row.ownerId, name: row.name, path: row.path, size: row.size, createdAt: row.createdAt })),
   })
   // The policy engine over the store's ledger.
   const policy = new PolicyEngine({ countersOf: async (sessionId, level, spend) => store.policy.spend(sessionId, level, spend) })
@@ -143,16 +104,23 @@ export function wireService(options: WireOptions): WiredService {
   // holds the call until it does.
   function askApproval(sessionId: string, tool: string, reason: string): import('../engine/builtin/services.ts').GateDecision {
     let settled: ((outcome: 'allow' | 'deny') => void) | undefined
-    const settledPromise = new Promise<'allow' | 'deny'>(done => { settled = done })
-    void context.emit('approval/request', {
-      agent: { id: sessionId, session: { id: sessionId } },
-      toolName: tool,
-      reason,
-      signal: undefined,
-    }, () => approval.card().then((outcome: string) => {
-      settled?.(outcome === 'allowed-once' || outcome === 'allowed' ? 'allow' : 'deny')
-      return outcome
-    }))
+    const settledPromise = new Promise<'allow' | 'deny'>(done => {
+      settled = done
+    })
+    void context.emit(
+      'approval/request',
+      {
+        agent: { id: sessionId, session: { id: sessionId } },
+        toolName: tool,
+        reason,
+        signal: undefined,
+      },
+      () =>
+        approval.card().then((outcome: string) => {
+          settled?.(outcome === 'allowed-once' || outcome === 'allowed' ? 'allow' : 'deny')
+          return outcome
+        }),
+    )
     return { kind: 'pending', approvalId: randomUUID(), settled: settledPromise }
   }
 
@@ -160,15 +128,17 @@ export function wireService(options: WireOptions): WiredService {
   // memory section kept apart so the stable prefix stays byte-stable.
   const sections = (): readonly PromptSection[] => context.sectionsInOrder() as readonly PromptSection[]
   const prompt: PromptSource = {
-    base: async sessionId => sections()
-      .filter(section => section.name !== 'bot-memory')
-      .map(section => section.text({ agent: { id: sessionId } }))
-      .filter(text => text !== '')
-      .join('\n\n'),
-    frozen: async sessionId => sections()
-      .filter(section => section.name === 'bot-memory')
-      .map(section => section.text({ agent: { id: sessionId } }))
-      .join('\n\n'),
+    base: async sessionId =>
+      sections()
+        .filter(section => section.name !== 'bot-memory')
+        .map(section => section.text({ agent: { id: sessionId } }))
+        .filter(text => text !== '')
+        .join('\n\n'),
+    frozen: async sessionId =>
+      sections()
+        .filter(section => section.name === 'bot-memory')
+        .map(section => section.text({ agent: { id: sessionId } }))
+        .join('\n\n'),
     // The dynamic segment rides after the frozen one, per request, so the stable
     // prefix never moves: the clock, plus what the memory index surfaces for this
     // turn's own words (plan §阶段 4's proactive recall), kept small.
@@ -182,7 +152,11 @@ export function wireService(options: WireOptions): WiredService {
     },
   }
 
-  const toolsFor = (): readonly string[] => offeredTools(runtime.toolRegistry.names().filter(name => !EXCLUDED_TOOLS.has(name)), BUILTIN_CAPABILITIES)
+  const toolsFor = (): readonly string[] =>
+    offeredTools(
+      runtime.toolRegistry.names().filter(name => !EXCLUDED_TOOLS.has(name)),
+      BUILTIN_CAPABILITIES,
+    )
   const services: EngineServices = {
     models: {
       resolve: async (sessionId, config): Promise<ResolvedModel | undefined> => {
@@ -199,9 +173,11 @@ export function wireService(options: WireOptions): WiredService {
         const contextWindow = matched?.contextWindow ?? spec.contextWindow
         const maxTokens = matched?.maxTokens ?? spec.maxTokens
         const input = matched?.input ?? (spec.inputModalities ? [...spec.inputModalities] : undefined)
-        const reasoning = matched?.reasoning ?? spec.reasoning ?? (effort !== undefined)
+        const reasoning = matched?.reasoning ?? spec.reasoning ?? effort !== undefined
         return {
-          id: split.model, baseUrl: route.baseUrl, api: route.api,
+          id: split.model,
+          baseUrl: route.baseUrl,
+          api: route.api,
           ...(route.apiKey !== undefined ? { apiKey: route.apiKey } : {}),
           ...(effort !== undefined ? { effort } : {}),
           ...(contextWindow !== undefined ? { contextWindow } : {}),
@@ -259,11 +235,13 @@ export function wireService(options: WireOptions): WiredService {
     if (root === undefined || root === '') return
     const turn = typeof (event as { turn?: unknown }).turn === 'number' ? (event as { turn: number }).turn : null
     const until = Date.now()
-    void collectDeliverables(root, { since, until }).then(({ files }) => {
-      if (files.length === 0) return
-      store.deliverables.add(sessionId, turn, files)
-      if (roomId !== undefined && roomId !== sessionId) store.deliverables.add(roomId, turn, files)
-    }).catch(() => undefined)
+    void collectDeliverables(root, { since, until })
+      .then(({ files }) => {
+        if (files.length === 0) return
+        store.deliverables.add(sessionId, turn, files)
+        if (roomId !== undefined && roomId !== sessionId) store.deliverables.add(roomId, turn, files)
+      })
+      .catch(() => undefined)
   }
   const emitEvent = (sessionId: string, event: EngineEvent): void => {
     // The session/event envelope: a type plus its data, as the host runtime delivered it.
@@ -284,14 +262,21 @@ export function wireService(options: WireOptions): WiredService {
       const tool = params.toolCall?.kind ?? params.toolCall?.title ?? 'command'
       const detail = detailOfPermission(params.toolCall)
       return new Promise<string>(resolve => {
-        const emitted = context.emit('approval/request', {
-          agent: { id: sessionId, session: { id: sessionId } },
-          toolName: tool,
-          callId: params.toolCall?.toolCallId,
-          reason: detail.text ?? tool,
-          detail,
-        }, () => approval.card())
-        void Promise.resolve(emitted).then((outcome: unknown) => resolve(typeof outcome === 'string' ? outcome : 'cancelled'), () => resolve('cancelled'))
+        const emitted = context.emit(
+          'approval/request',
+          {
+            agent: { id: sessionId, session: { id: sessionId } },
+            toolName: tool,
+            callId: params.toolCall?.toolCallId,
+            reason: detail.text ?? tool,
+            detail,
+          },
+          () => approval.card(),
+        )
+        void Promise.resolve(emitted).then(
+          (outcome: unknown) => resolve(typeof outcome === 'string' ? outcome : 'cancelled'),
+          () => resolve('cancelled'),
+        )
       })
     },
   })
@@ -302,17 +287,21 @@ export function wireService(options: WireOptions): WiredService {
     if (agent === undefined) {
       store.sessions.upsertSession({ id: sessionId, kind: 'bot', ownerId: runtime.selfOf(sessionId) ?? sessionId })
       // The part pager reads the agent session's seq as "the next one"; the store knows.
-      agents.set(sessionId, agent = engineAgentOf(sessionId, {
-        runtime: () => runtimeOf(sessionId),
-        emitEvent,
-        seqOf: () => store.sessions.countMessages(sessionId) + 1,
-        configOf: id => {
-          const botId = runtime.selfOf(id), roomId = runtime.groupOwners?.get(id)?.roomId
-          const cwd = runtime.workDirOf?.({ ...(botId ? { botId } : {}), ...(roomId ? { roomId } : {}) })
-          const bot = runtime.botOf(botId)
-          return { ...(cwd ? { cwd } : {}), ...(bot?.appliedModel ?? bot?.model ? { model: bot.appliedModel ?? bot.model } : {}) }
-        },
-      }))
+      agents.set(
+        sessionId,
+        (agent = engineAgentOf(sessionId, {
+          runtime: () => runtimeOf(sessionId),
+          emitEvent,
+          seqOf: () => store.sessions.countMessages(sessionId) + 1,
+          configOf: id => {
+            const botId = runtime.selfOf(id),
+              roomId = runtime.groupOwners?.get(id)?.roomId
+            const cwd = runtime.workDirOf?.({ ...(botId ? { botId } : {}), ...(roomId ? { roomId } : {}) })
+            const bot = runtime.botOf(botId)
+            return { ...(cwd ? { cwd } : {}), ...((bot?.appliedModel ?? bot?.model) ? { model: bot.appliedModel ?? bot.model } : {}) }
+          },
+        })),
+      )
     }
     return agent
   }
@@ -338,7 +327,13 @@ export function wireService(options: WireOptions): WiredService {
   context.effect(() => installProactive(runtime as unknown as HostRuntime, store, agentOf), 'moon-bot: proactive poll')
 
   return {
-    context, runtime, store, engine, relay, agentOf, emitEvent,
+    context,
+    runtime,
+    store,
+    engine,
+    relay,
+    agentOf,
+    emitEvent,
     close: async () => {
       await engine.stop()
       await runner.stop()

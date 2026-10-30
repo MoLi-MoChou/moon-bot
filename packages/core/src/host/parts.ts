@@ -38,6 +38,7 @@ import type { PartSwitchRuntime } from './parts-switch.ts'
 import type { SwitchState } from './parts-switch-move.ts'
 import type { PartEngine, PartLine } from './parts-note-types.js'
 import type { CompactionEngine, PartEntry, RelayNext, RelayRequest } from './parts-types.js'
+import { partLimits, createTokensOf } from './parts-helpers.ts'
 
 export { createPartSwitch }
 
@@ -50,41 +51,8 @@ export function install(rt: HostRuntime): void {
   const { ctx, config, state } = rt
   const context: HostContext = ctx
 
-  const RECENT_TOKENS = config.handoffRecentTokens ?? 16_384
-  const RECENT_LINE_MAX = 4_000
-  const LIST_TOKENS = config.handoffListTokens ?? 4_096
-  const LIST_LINE_MAX = 400
-  const HANDOFF_READ_MS = 60_000
-  const NOTE_MAX_TOKENS = 8_192
-  const NOTE_TIMEOUT_MS = 600_000
-  const NOTE_ATTEMPTS = 2
-  // After a note fails below the hard line the part stays as it is, and tries again
-  // only after a wait that grows with each failure in a row.
-  const NOTE_COOLDOWN_MS = [60_000, 300_000, 900_000]
-  const ORIGINAL_COMPACT = Symbol.for('moon-bot/compaction')
-  const STEWARD_MAX_TOKENS = 4_096
-  const STEWARD_TIMEOUT_MS = 120_000
-  const STEWARD_LINES = 40
-
-  // A broken provider adapter must not crash every turn; estimate from the
-  // derived messages instead, with one warning.
-  let measureWarned = false
-  interface TokenMeter { measure(session: SwitchSession): { readonly totalTokens?: number } }
-  const tokensOf = (session: SwitchSession): number | undefined => {
-    try {
-      return (context.get('tokenMeter') as TokenMeter | undefined)?.measure(session).totalTokens
-    } catch (error) {
-      if (!measureWarned) {
-        measureWarned = true
-        rt.warn('moon-bot: token measure failed; context sizes are estimated: %s', error)
-      }
-    }
-    try {
-      return estimateTokens(session.deriveMessages().map(message => textOf((message as { readonly content?: unknown }).content)).join('\n'))
-    } catch {
-      return undefined
-    }
-  }
+  const { RECENT_TOKENS, RECENT_LINE_MAX, LIST_TOKENS, LIST_LINE_MAX, HANDOFF_READ_MS, NOTE_MAX_TOKENS, NOTE_TIMEOUT_MS, NOTE_ATTEMPTS, NOTE_COOLDOWN_MS, ORIGINAL_COMPACT, STEWARD_MAX_TOKENS, STEWARD_TIMEOUT_MS, STEWARD_LINES } = partLimits(config)
+  const tokensOf = createTokensOf(rt, context)
   const clock = createClock(config.timeZone)
 
   // Lines for the model the Session last routed to; undefined while it has not
@@ -106,14 +74,12 @@ export function install(rt: HostRuntime): void {
   const adoptedEngines = new Set<CompactionEngine>()
   // Sessions DS Bot itself is condensing right now.
   const condensing = new Set<string>()
-  const refuseCompaction = (): Promise<never> => Promise.reject(new Error(
-    'A Bot conversation makes room on its own, and read_own_chat searches all of it.'))
+  const refuseCompaction = (): Promise<never> => Promise.reject(new Error('A Bot conversation makes room on its own, and read_own_chat searches all of it.'))
   const isBotTarget = (target: unknown): boolean => {
     const id = (target as { readonly session?: { readonly id?: string | undefined } | undefined } | undefined)?.session?.id
     return id !== undefined && (rt.selfOf(id) !== undefined || rt.roomOf(id) !== undefined)
   }
-  const ownedByBot = (target: unknown): boolean =>
-    isBotTarget(target) && !condensing.has((target as { readonly session: { readonly id: string } }).session.id)
+  const ownedByBot = (target: unknown): boolean => isBotTarget(target) && !condensing.has((target as { readonly session: { readonly id: string } }).session.id)
   // The engine that serves this agent, when DS Bot can condense through it.
   const engineOf = (agent: SwitchAgent): PartEngine | undefined => {
     const presets = context.get('agentPresets') as { serviceFor?(agent: SwitchAgent, name: string): unknown } | undefined
@@ -130,13 +96,13 @@ export function install(rt: HostRuntime): void {
   function adoptEngine(engine: CompactionEngine | undefined): void {
     // The mark lives on the engine itself, so two lookups of one engine adopt it once.
     if (engine === undefined || engine[ORIGINAL_COMPACT] !== undefined || typeof engine.compactIfNeeded !== 'function') return
-    const original = engine[ORIGINAL_COMPACT] = {
+    const original = (engine[ORIGINAL_COMPACT] = {
       compactIfNeeded: engine.compactIfNeeded,
       compactNow: engine.compactNow,
       compactRegion: engine.compactRegion,
       // compaction-basic's one customization hook; it runs for every summary.
       ...(typeof engine.summarize === 'function' ? { summarize: engine.summarize } : {}),
-    }
+    })
     engine.compactIfNeeded = function compactOutsideBots(this: unknown, target: unknown, trigger: string, signal?: AbortSignal): Promise<unknown> {
       if (ownedByBot(target)) return Promise.resolve(null)
       return (original.compactIfNeeded as EngineMethod).call(this, target, trigger, signal)
@@ -157,17 +123,22 @@ export function install(rt: HostRuntime): void {
     }
     adoptedEngines.add(engine)
   }
-  ctx.effect(() => () => {
-    for (const engine of adoptedEngines) {
-      for (const [key, method] of Object.entries((engine[ORIGINAL_COMPACT] ?? {}) as Record<string, unknown>)) {
-        delete engine[key]
-        if (engine[key] !== method) engine[key] = method
+  ctx.effect(
+    () => () => {
+      for (const engine of adoptedEngines) {
+        for (const [key, method] of Object.entries((engine[ORIGINAL_COMPACT] ?? {}) as Record<string, unknown>)) {
+          delete engine[key]
+          if (engine[key] !== method) engine[key] = method
+        }
+        delete engine[ORIGINAL_COMPACT]
       }
-      delete engine[ORIGINAL_COMPACT]
-    }
-    adoptedEngines.clear()
-  }, 'moon-bot: Bot compaction')
-  ctx.on<{ readonly agent: Agent }>('agent/created', ({ agent }) => { adoptCompaction(agent as unknown as SwitchAgent) })
+      adoptedEngines.clear()
+    },
+    'moon-bot: Bot compaction',
+  )
+  ctx.on<{ readonly agent: Agent }>('agent/created', ({ agent }) => {
+    adoptCompaction(agent as unknown as SwitchAgent)
+  })
 
   // A Bot's own chat, or its Session in one group, as numbered parts, oldest first;
   // the last one is current.
@@ -219,11 +190,16 @@ export function install(rt: HostRuntime): void {
     partLines,
     setPartBase: (sessionId, tokens) => partSwitch.setPartBase(sessionId, tokens),
     limits: {
-      recentTokens: RECENT_TOKENS, recentLineMax: RECENT_LINE_MAX,
-      listTokens: LIST_TOKENS, listLineMax: LIST_LINE_MAX,
-      handoffReadMs: HANDOFF_READ_MS, noteMaxTokens: NOTE_MAX_TOKENS,
-      noteTimeoutMs: NOTE_TIMEOUT_MS, noteAttempts: NOTE_ATTEMPTS,
-      stewardMaxTokens: STEWARD_MAX_TOKENS, stewardTimeoutMs: STEWARD_TIMEOUT_MS,
+      recentTokens: RECENT_TOKENS,
+      recentLineMax: RECENT_LINE_MAX,
+      listTokens: LIST_TOKENS,
+      listLineMax: LIST_LINE_MAX,
+      handoffReadMs: HANDOFF_READ_MS,
+      noteMaxTokens: NOTE_MAX_TOKENS,
+      noteTimeoutMs: NOTE_TIMEOUT_MS,
+      noteAttempts: NOTE_ATTEMPTS,
+      stewardMaxTokens: STEWARD_MAX_TOKENS,
+      stewardTimeoutMs: STEWARD_TIMEOUT_MS,
       stewardLines: STEWARD_LINES,
     },
   })
@@ -281,7 +257,10 @@ export function install(rt: HostRuntime): void {
     let since = 0
     for (let at = messages.length - 1; at >= 0; at -= 1) {
       const role = messages[at]?.role
-      if (role === 'assistant' || role === 'tool') { since = at + 1; break }
+      if (role === 'assistant' || role === 'tool') {
+        since = at + 1
+        break
+      }
     }
     const opened = messages.slice(since).filter(message => message.role === 'user' && (message.source?.kind === 'user' || message.source?.kind === SOURCE_KIND))
     const bare = opened.length > 0 && opened.every(message => message.source?.kind === SOURCE_KIND && message.source.handoff === true && message.source.resume !== true)
@@ -306,7 +285,12 @@ export function install(rt: HostRuntime): void {
     const measured = tokensOf(session)
     if (measured !== undefined) return measured
     try {
-      return estimateTokens(session.deriveMessages().map(message => textOf((message as { readonly content?: unknown }).content)).join('\n'))
+      return estimateTokens(
+        session
+          .deriveMessages()
+          .map(message => textOf((message as { readonly content?: unknown }).content))
+          .join('\n'),
+      )
     } catch {
       return undefined
     }
@@ -319,7 +303,7 @@ export function install(rt: HostRuntime): void {
     const measured = session as unknown as SwitchSession
     const used = countSession(measured)
     if (used === undefined || !Number.isFinite(used)) return undefined
-    const lines = await contextLines(measured).catch(() => undefined) ?? linesFor({})
+    const lines = (await contextLines(measured).catch(() => undefined)) ?? linesFor({})
     return { contextPressure: { projectedTokens: used, contextWindow: lines.window } }
   }
 
@@ -333,8 +317,10 @@ export function install(rt: HostRuntime): void {
       const agent = await rt.resolveAgent(sessionId).catch(() => undefined)
       return agent as unknown as SwitchAgent | undefined
     },
-    lines: async agent => await contextLines(agent.session).catch(() => undefined) ?? linesFor({}),
-    prepare: agent => { adoptCompaction(agent) },
+    lines: async agent => (await contextLines(agent.session).catch(() => undefined)) ?? linesFor({}),
+    prepare: agent => {
+      adoptCompaction(agent)
+    },
     engine: agent => engineOf(agent) !== undefined,
     condense: (agent, lines) => condense(agent, lines, { inTurn: false }),
   })

@@ -120,7 +120,7 @@ test('mounting and unmounting compiled styles twice leaves no extra nodes', asyn
 })
 
 test('the chat-room rule is installed through installStyles, so it is owned too', () => {
-  const pane = readFileSync(new URL('../src/client/browser-pane-chrome.tsx', import.meta.url), 'utf8')
+  const pane = readFileSync(new URL('../src/client/browser-pane-chrome-kit.tsx', import.meta.url), 'utf8')
   assert.match(pane, /installStyles\(.*'chat-room'/)
   assert.equal(pane.includes("dataset.moonBot = 'chat-room'"), false)
 })

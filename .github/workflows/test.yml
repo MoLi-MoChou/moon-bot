@@ -29,31 +29,39 @@ jobs:
         working-directory: core
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.18.3
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
-      # One root lockfile for both workspaces: install at the root, run in the workspace.
-      - run: npm ci --no-fund --no-audit
+          cache: pnpm
+      # One root pnpm lockfile for the workspace: install at the root, run in the package.
+      - run: pnpm install --frozen-lockfile
         working-directory: .
-      - run: npm test
-      - run: npm run typecheck
-      - run: npm run lint
-      - run: npm run eval
+      - run: pnpm test
+      - run: pnpm run typecheck
+      - run: pnpm run lint
+      - run: pnpm run eval
 
   package:
     name: Connect package
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.18.3
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - run: npm ci --no-fund --no-audit
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
         working-directory: .
       # The tarball a publish would upload, installed and run: the checkout hides the
       # failure this catches (types under node_modules). No agent CLI exists here, which
       # is the case the doctor check has to survive.
-      - run: npm run verify:package -w moon-bot-connect
+      - run: pnpm --filter moon-bot-connect run verify:package
 
   scan:
     name: Leak scan
@@ -78,16 +86,20 @@ jobs:
         working-directory: app
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.18.3
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      # One root lockfile: install at the root, run in the workspace. The test composes
+          cache: pnpm
+      # One root pnpm lockfile: install at the root, run in the package. The test composes
       # the profile and starts no window, so it needs no Electron binary.
-      - run: npm ci --no-fund --no-audit
+      - run: pnpm install --frozen-lockfile
         working-directory: .
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
-      - run: npm test
+      - run: pnpm test
 
   app-package:
     name: Desktop app package (Windows)
@@ -101,13 +113,17 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.18.3
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - run: npm ci --no-fund --no-audit
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
         working-directory: .
-      - run: npm run build -w moon-bot
-      - run: npm run dist
+      - run: pnpm --filter moon-bot run build
+      - run: pnpm run dist
       - name: Check the packaged app
         run: node scripts/check-packed.mjs
       # The runner is a fresh machine, so the installer may run here. It must install for the

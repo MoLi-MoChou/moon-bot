@@ -1,17 +1,25 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 import { test } from 'node:test'
+import { fileURLToPath } from 'node:url'
 
-// npm installs the peers that the DSH packages ask for, but electron-builder packs only the
-// dependencies it finds through `dependencies` and `optionalDependencies`. A package that npm
-// installed only as a peer would be left out of the installer, and the Host would not boot.
-// The lockfile is the repository root's (npm workspaces); the whole tree is one install.
+const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
+
+// electron-builder packs only what it finds through `dependencies` /
+// `optionalDependencies`. Under npm, a package installed solely as a peer could
+// be missing from the installer. pnpm's default `autoInstallPeers: true` pulls
+// peers into the lock graph instead; keep that setting and refuse a leftover
+// package-lock.json so the repo stays on one package manager.
 test('every package that the app runs on is a dependency, not only a peer', () => {
-  const lock = JSON.parse(readFileSync(new URL('../../package-lock.json', import.meta.url), 'utf8'))
-  const peerOnly = Object.entries(lock.packages)
-    .filter(([path, entry]) => path !== '' && entry.peer && !entry.dev && !entry.devOptional)
-    .map(([path, entry]) => `${path.replace(/^.*node_modules\//u, '')}@${entry.version}`)
-  assert.deepEqual(peerOnly, [], `add these to "dependencies" in app/package.json: ${peerOnly.join(' ')}`)
+  assert.equal(existsSync(join(root, 'package-lock.json')), false, 'remove package-lock.json; use pnpm-lock.yaml')
+  const lock = readFileSync(join(root, 'pnpm-lock.yaml'), 'utf8')
+  assert.match(lock, /^lockfileVersion:\s*'9\.0'/m)
+  assert.match(lock, /^ {2}autoInstallPeers:\s*true$/m)
+  // app importer lists moon-bot-core as a real dependency (workspace link).
+  const appBlock = lock.split(/\n {2}(?=\S)/).find(block => block.startsWith('app:\n') || block.startsWith('app:\r\n'))
+  assert.ok(appBlock, 'pnpm-lock.yaml must list the app importer')
+  assert.match(appBlock, /^ {4}dependencies:\n(?: {6}.+\n)*? {6}moon-bot-core:\n {8}specifier: workspace:\*/m)
 })
 
 // A release is tagged with the version of ds-bot, and the installed apps compare their own

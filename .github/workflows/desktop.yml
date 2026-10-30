@@ -29,18 +29,22 @@ jobs:
         working-directory: app
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.18.3
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+          cache: pnpm
       - name: Check the tag matches app/package.json
         if: startsWith(github.ref, 'refs/tags/v')
         run: test "v$(node -p "require('./package.json').version")" = "$GITHUB_REF_NAME"
-      # One root lockfile for both workspaces: install at the root, run in the workspace.
-      - run: npm ci --no-fund --no-audit
+      # One root pnpm lockfile for the workspace: install at the root, run in the package.
+      - run: pnpm install --frozen-lockfile
         working-directory: .
       # The app's unit tests run on Linux (as in DS Bot's test.yml); one file-lock test expects POSIX.
-      - run: npm run build -w moon-bot
-      - run: npm run dist -- --win
+      - run: pnpm --filter moon-bot run build
+      - run: pnpm run dist -- --win
       - name: Check the packaged app
         run: node scripts/check-packed.mjs
       - name: Size report (unpacked app, installer)
@@ -77,15 +81,19 @@ jobs:
         working-directory: app
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.18.3
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      # One root lockfile for both workspaces: install at the root, run in the workspace.
-      - run: npm ci --no-fund --no-audit
+          cache: pnpm
+      # One root pnpm lockfile for the workspace: install at the root, run in the package.
+      - run: pnpm install --frozen-lockfile
         working-directory: .
-      - run: npm test
-      - run: npm run build -w moon-bot
-      - run: npm run dist -- --linux AppImage
+      - run: pnpm test
+      - run: pnpm --filter moon-bot run build
+      - run: pnpm run dist -- --linux AppImage
       - name: Check the packaged app
         run: xvfb-run -a node scripts/check-packed.mjs dist-pack/linux-unpacked/moon-bot
       - name: Size report (unpacked app, AppImage)

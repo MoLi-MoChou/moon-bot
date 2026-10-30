@@ -4,7 +4,7 @@
 
 ## 这个项目是什么
 
-Moon Bot 是一支长期存在的 Bot 小队，跑在自己的运行时上，不安装 DeepSeek Harness。仓库是三个 npm workspace：
+Moon Bot 是一支长期存在的 Bot 小队，跑在自己的运行时上，不安装 DeepSeek Harness。仓库是三个 pnpm workspace 包（见根 `pnpm-workspace.yaml`；过渡期仍用 `core/` / `app/` / `connect/` 目录名）：
 
 - `core/`（`moon-bot-core`）：产品本体，TypeScript。`src/host/` 是 host 服务（roster 与 store、工具、回合与投递、群聊、对话分段、记忆、定时、能力、`api/bot` 通道）；`src/engine/` 是 `AgentRuntime` 接缝和两个实现（内置 pi kernel、ACP 适配器）；`src/store/` 是 SQLite 存储；`src/service/` 是 Fastify 服务和它的装配；`src/client/` 是 React 界面；`src/web-search/` 是 `auto` 搜索提供方。
 - `app/`（`moon-bot`）：Windows、Linux、macOS 的桌面应用，TypeScript。窗口加载 Moon Bot 自己起的服务地址；主进程经 esbuild 打包。
@@ -25,25 +25,27 @@ Moon Bot 是一支长期存在的 Bot 小队，跑在自己的运行时上，不
 1. **运行时必须是我们自己的。** Bot 功能走 host 服务和 `AgentRuntime` 接缝；kernel 留在接缝后面（内置引擎或 ACP 适配器），host 代码永远不直接调用它。`@deepseek-ai` 已从 `core/`、`app/` 的依赖里移除，不要加回来；`core/src/host/host-types.d.ts` 只是历史接缝留下的**类型**声明（只能 `import type`），`app/src/move-data.ts` 只把 `DSH_HOME`/`~/.dsh` 当作「别的应用的数据目录」来避开，都不是运行时依赖。
 2. **不要密钥。** 永远不要写、打印或提交 API key、token、cookie 或数据目录里的密钥。测试用 mock 模型（[`core/dev/mock-llm.ts`](core/dev/mock-llm.ts)），不需要 key。
 3. **只用原创材料。** 不要从别的产品或网站复制代码、文字、图标、logo 或图形。只有与 Apache-2.0 兼容的许可证是例外：写明出处，并把它的 notice 加进 `NOTICE`。
-4. **`client.js` 和 `dist/` 是生成物，不提交。** 根 `postinstall` 在安装时构建它们；改 `core/src/` 后运行 `npm run build`（或 `cd core && npm run build`）。永不手改产物，永不提交产物（`core/client.js`、`core/dist/`、`app/ui/dist/`、`app/dist-main/` 都在 `.gitignore` 里）。
+4. **`client.js` 和 `dist/` 是生成物，不提交。** 根 `postinstall` 在安装时构建它们；改 `core/src/` 后运行 `pnpm run build`（或 `cd core && pnpm run build`）。永不手改产物，永不提交产物（`core/client.js`、`core/dist/`、`app/ui/dist/`、`app/dist-main/` 都在 `.gitignore` 里）。
 5. **不要碰用户自己的数据。** 应用把团队放在它自己的数据目录（`~/.moon-bot`）；测试把数据放在临时目录并删掉。永远不要把测试指向真实安装的数据。
 
 ## 命令
 
-三个 workspace 共用根 `package-lock.json`：在根装一次（`npm ci`），然后按包运行脚本（在包目录里，或用 `-w`，例如 `npm test -w moon-bot-core`）。Node 22.18+ 直接跑 `.ts` 源码（原生类型剥离）；生成物（`core/client.js`、`core/dist/`）由安装时的 postinstall 和 `npm run build` 构建，不提交。根 `allowScripts` 列出了允许运行安装脚本的包（SQLite 预编译、esbuild 的二进制），npm 11.5+ 默认拦下其他包。
+三个 workspace 共用根 `pnpm-lock.yaml`（**不要**再提交 `package-lock.json`）：在根装一次（`pnpm install` / CI 用 `pnpm install --frozen-lockfile`），然后按包运行脚本（在包目录里，或用 `--filter`，例如 `pnpm --filter moon-bot-core test`）。Node 22.18+ 直接跑 `.ts` 源码（原生类型剥离）；生成物（`core/client.js`、`core/dist/`）由安装时的 postinstall 和 `pnpm run build` 构建，不提交。根 `package.json` 的 `pnpm.onlyBuiltDependencies` 列出允许跑安装脚本的包（SQLite 预编译、esbuild 等）。
+
+**两个「pnpm」不要混：** 仓库包管理器是根 `packageManager` 字段里的 pnpm（当前 `pnpm@10.18.3`）。`app` 依赖里的 `pnpm@11.7.0` 是**打进桌面端、给插件装依赖的 CLI 二进制**，不是本仓的包管理器；改仓库脚本/CI 时不要去动它的版本语义，web 镜像构建仍会删掉 `app/node_modules/pnpm`。
 
 ```sh
-npm ci                                 # 安装三个 workspace，然后构建 client.js 和 dist/
-npm run build                          # 源码改动后重建产物
-npm test                               # 单元测试（含一个断言 client.js 与源码一致）
-npm run test:related -w moon-bot-core  # 只跑碰得到改动的测试；迭代用，完成定义仍是三件套
-npm run typecheck                      # tsc --noEmit，strict
-npm run lint                           # oxlint + 架构/行数/floating-promise 门禁
-npm run eval                           # 五项能力的评测集
-npm run web -w moon-bot                # 网页版：密码页 + 服务，默认 http://127.0.0.1:8290
+pnpm install                           # 安装三个 workspace，然后构建 client.js 和 dist/
+pnpm run build                         # 源码改动后重建产物
+pnpm test                              # 单元测试（含一个断言 client.js 与源码一致）
+pnpm --filter moon-bot-core run test:related  # 只跑碰得到改动的测试；迭代用，完成定义仍是三件套
+pnpm run typecheck                     # tsc --noEmit，strict
+pnpm run lint                          # oxlint + 架构/行数/floating-promise 门禁
+pnpm run eval                          # 五项能力的评测集
+pnpm --filter moon-bot run web         # 网页版：密码页 + 服务，默认 http://127.0.0.1:8290
 ```
 
-改动完成的定义是 `npm test`、`npm run typecheck`、`npm run lint` 全绿；CI 在 `.github/workflows/test.yml` 上对每个 PR 跑这三件，另跑 `npm run eval` 和泄漏扫描。`core/dev/bench.sh` 起 mock 模型 + 构建后的服务，是开发用的实例，不是用户安装后的启动方式；每个 bench 用空闲端口，用完停掉自己起的所有 bench 和进程。
+改动完成的定义是 `pnpm test`、`pnpm run typecheck`、`pnpm run lint` 全绿；CI 在 `.github/workflows/test.yml` 上对每个 PR 跑这三件，另跑 `pnpm run eval` 和泄漏扫描。`core/dev/bench.sh` 起 mock 模型 + 构建后的服务，是开发用的实例，不是用户安装后的启动方式；每个 bench 用空闲端口，用完停掉自己起的所有 bench 和进程。
 
 ## 分支、PR 与 issue
 
@@ -83,7 +85,7 @@ npm run web -w moon-bot                # 网页版：密码页 + 服务，默认
 
 ## 验证
 
-一条改动算完成，只有 `npm test`、`npm run typecheck`、`npm run lint` 三件套全绿。CI 另跑 `npm run eval`（五项能力，用脚本化端点，离线）和 `scripts/scan.mjs`（泄漏扫描）；本地默认不跑这两项，但泄漏扫描的规则要记在心里。
+一条改动算完成，只有 `pnpm test`、`pnpm run typecheck`、`pnpm run lint` 三件套全绿。CI 另跑 `pnpm run eval`（五项能力，用脚本化端点，离线）和 `scripts/scan.mjs`（泄漏扫描）；本地默认不跑这两项，但泄漏扫描的规则要记在心里。
 
 - **默认离线。** [`core/dev/mock-llm.ts`](core/dev/mock-llm.ts) 是脚本化的 mock 模型，不需要 key；测试和测试台的数据都在临时目录里，跑完删掉。
 - **界面一律在 dev 实例上验证。** 用 [`core/dev/bench.sh`](core/dev/bench.sh) 起 mock 模型 + 本机服务（`core/dev/bench.sh <name> <web-port> <mock-port> reset|start|stop`；它不是安装包），在浏览器/窗口里真实操作；改完源码先按需构建再刷新页面。

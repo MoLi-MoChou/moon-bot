@@ -98,17 +98,22 @@ export function createActions({ ctx, client, after, partFor, show, atMenu }: Cli
     // The full-pane overlays sit above the conversation, so opening one must dismiss them
     // or the click appears to do nothing.
     isAgentSession: id => client.isAgentSessionId(id),
-    openSession: (id) => {
+    openSession: id => {
       // An Agent Session id lands on the plain surface, not the Bot skin.
-      if (client.isAgentSessionId(id)) { actions.openAgentSession(id); return }
-      ui.set(state => (state.newChat || state.exchange || state.menu || state.palette ? { ...state, newChat: null, exchange: null, menu: null, palette: null } : state))
+      if (client.isAgentSessionId(id)) {
+        actions.openAgentSession(id)
+        return
+      }
+      ui.set(state =>
+        state.newChat || state.exchange || state.menu || state.palette ? { ...state, newChat: null, exchange: null, menu: null, palette: null } : state,
+      )
       client.setPlain(false)
       const target = partFor(id)
       show(target)
     },
     // The conversation replacements withdraw for a plain Session; set the surface
     // before the navigation so the Bot skin never flashes.
-    openAgentSession: (sessionId) => {
+    openAgentSession: sessionId => {
       ui.set(state => ({ ...state, newChat: null, exchange: null, menu: null, palette: null, details: null, view: 'details', renaming: false, tab: null }))
       client.setPlain(true)
       show(sessionId)
@@ -119,7 +124,7 @@ export function createActions({ ctx, client, after, partFor, show, atMenu }: Cli
       if (first !== undefined) actions.openAgentSession(first)
       return agent
     },
-    openAgent: (agentId) => {
+    openAgent: agentId => {
       const agent = roster.getSnapshot().agentsById[agentId]
       if (agent === undefined) return
       const list = ctx.sessions.list.getSnapshot()
@@ -128,7 +133,7 @@ export function createActions({ ctx, client, after, partFor, show, atMenu }: Cli
       if (first === undefined) return actions.newAgentSession(agentId)
       actions.openAgentSession(first)
     },
-    newAgentSession: async (agentId) => {
+    newAgentSession: async agentId => {
       const agent = roster.getSnapshot().agentsById[agentId]
       if (agent === undefined) return undefined
       const list = ctx.sessions.list.getSnapshot()
@@ -158,7 +163,7 @@ export function createActions({ ctx, client, after, partFor, show, atMenu }: Cli
     endAgentRename: () => ui.set(state => (state.renameAgent ? { ...state, renameAgent: null } : state)),
     // Removing the Agent archives every Session it owns; one of them may fill the
     // main view, and it must not stay there wearing the Bot surface afterwards.
-    removeAgent: async (agentId) => {
+    removeAgent: async agentId => {
       const owned = client.agentSessions(agentId)
       const result = await after(call('remove-agent', { agentId }))
       const main = client.mainView()
@@ -177,15 +182,31 @@ export function createActions({ ctx, client, after, partFor, show, atMenu }: Cli
       const target = bot && last && currentPart(bot) !== last.sessionId ? currentPart(bot) : partFor(id)
       show(target)
     },
-    selectPanel: (id) => { ctx.layout.selectPanel(id) },
-    toggleSidebar: () => { ctx.layout.toggleSidebar() },
+    selectPanel: id => {
+      ctx.layout.selectPanel(id)
+    },
+    toggleSidebar: () => {
+      ctx.layout.toggleSidebar()
+    },
     // Agent mode hands the surface back to the shell; everything open on the Bot
     // surface closes first so nothing stale reopens on the way back.
-    setSurface: (mode) => {
+    setSurface: mode => {
       if (mode !== 'bot' && mode !== 'agent') return
       if (surface.getSnapshot().mode === mode) return
       if (mode === 'agent') {
-        ui.set(state => ({ ...state, details: null, view: 'details', settings: null, palette: null, newChat: null, menu: null, voice: null, exchange: null, memory: null, toast: null }))
+        ui.set(state => ({
+          ...state,
+          details: null,
+          view: 'details',
+          settings: null,
+          palette: null,
+          newChat: null,
+          menu: null,
+          voice: null,
+          exchange: null,
+          memory: null,
+          toast: null,
+        }))
       }
       writeMode(mode)
       surface.set(state => ({ ...state, mode }))
@@ -211,7 +232,7 @@ export function createActions({ ctx, client, after, partFor, show, atMenu }: Cli
       }
     },
     markUnread: id => client.writeUnread(id, true),
-    beginVisit: (id) => {
+    beginVisit: id => {
       // A conversation a Bot started, never opened here, is unread from its start.
       const snapshot = roster.getSnapshot()
       const made = snapshot.byId[id] ?? snapshot.roomsById[id]
@@ -219,9 +240,9 @@ export function createActions({ ctx, client, after, partFor, show, atMenu }: Cli
       const seen = client.seenAt()[client.seenKey(id)] ?? (made?.createdBy && typeof createdAt === 'number' && Number.isFinite(createdAt) ? createdAt : null)
       ui.set(state => ({ ...state, visits: { ...state.visits, [id]: { seen, entered: Date.now() } } }))
     },
-    endVisit: (id) => {
+    endVisit: id => {
       client.leaveVisits([id])
-      ui.set((state) => {
+      ui.set(state => {
         if (!(id in (state.visits ?? {}))) return state
         const visits = { ...state.visits }
         delete visits[id]
@@ -245,7 +266,9 @@ export function createActions({ ctx, client, after, partFor, show, atMenu }: Cli
     // Whether AccountLauncher holds the shell's settings seat; FooterAccount steps aside if so.
     signInEntry: () => ctx.slots.entries?.('settings.models.sign-in')?.[0] ?? null,
     canSignIn: () => Boolean(actions.signInEntry()),
-    signIn: () => { ui.set(state => ({ ...state, signIn: (state.signIn ?? 0) + 1 })) },
+    signIn: () => {
+      ui.set(state => ({ ...state, signIn: (state.signIn ?? 0) + 1 }))
+    },
     closeSignIn: () => ui.set(state => ({ ...state, signIn: null })),
     accountT: () => ctx.get('locale').bind('settings.account'),
     // The Voice Input plugin's speech Remote; absent while that plugin is off.
@@ -266,7 +289,7 @@ export function createActions({ ctx, client, after, partFor, show, atMenu }: Cli
     },
     // The app's panel installs whatever its updater found by now, so it opens only
     // while that is still the verified version.
-    openAppUpdates: async (verified) => {
+    openAppUpdates: async verified => {
       const app = await appUpdates?.status?.()
       if (app) update.set(previous => ({ ...previous, app }))
       if (sameVersion(app?.version, verified)) await appUpdates?.open()

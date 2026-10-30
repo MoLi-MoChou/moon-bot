@@ -21,7 +21,9 @@ export interface ThemeMode {
   userText: string
   accent: string
 }
-export interface ThemeTokens { readonly [name: string]: { readonly light: string; readonly dark: string } }
+export interface ThemeTokens {
+  readonly [name: string]: { readonly light: string; readonly dark: string }
+}
 export interface ThemeDefinition {
   readonly label?: string
   readonly light: ThemeMode
@@ -65,7 +67,10 @@ const THEMES: Record<string, ThemeDefinition> = {
     light: { bg: '#f8f5ff', sidebar: '#efe7ff', bubble: '#ffffff', card: '#ffffff', text: '#2b2140', user: '#744be4', userText: '#ffffff', accent: '#744be4' },
     dark: { bg: '#130f1f', sidebar: '#1b1530', bubble: '#251d3d', card: '#211a36', text: '#f3eeff', user: '#7a56e6', userText: '#ffffff', accent: '#b69dff' },
     tokens: {
-      '--dsw-radius-sm': both('10px'), '--dsw-radius-md': both('14px'), '--dsw-radius-lg': both('18px'), '--dsw-radius-xl': both('24px'),
+      '--dsw-radius-sm': both('10px'),
+      '--dsw-radius-md': both('14px'),
+      '--dsw-radius-lg': both('18px'),
+      '--dsw-radius-xl': both('24px'),
     },
     css: `
 html body[data-bt-theme=moon]{--bt-line:rgba(110,70,200,.10);--bt-line-2:rgba(110,70,200,.18);--bt-hover:rgba(138,99,238,.09);--bt-active:rgba(138,99,238,.17);--bt-tag-bg:rgba(138,99,238,.13);--bt-tag-ink:#5b38c4;--bt-ink-2:rgba(43,33,64,.74);--bt-ink-3:rgba(43,33,64,.66)}
@@ -93,7 +98,10 @@ body[data-bt-theme=moon] [data-composer-input]{caret-color:var(--bt-accent)}
     light: { bg: '#ffffff', sidebar: '#f9fbff', bubble: '#f3f4f6', card: '#ffffff', text: '#1a1d24', user: '#e3ebff', userText: '#1b2f7a', accent: '#3d5af1' },
     dark: { bg: '#1b1c20', sidebar: '#212327', bubble: '#2a2c31', card: '#24262b', text: '#eef0f4', user: '#2b3a6b', userText: '#e6ecff', accent: '#6b84ff' },
     tokens: {
-      '--dsw-radius-sm': both('6px'), '--dsw-radius-md': both('10px'), '--dsw-radius-lg': both('14px'), '--dsw-radius-xl': both('18px'),
+      '--dsw-radius-sm': both('6px'),
+      '--dsw-radius-md': both('10px'),
+      '--dsw-radius-lg': both('14px'),
+      '--dsw-radius-xl': both('18px'),
     },
     css: `
 html body[data-bt-theme=deepseek]{--bt-hover:rgba(77,107,254,.06);--bt-active:rgba(77,107,254,.11);--bt-tag-bg:rgba(77,107,254,.09);--bt-tag-ink:#3550d8}
@@ -113,7 +121,10 @@ body[data-bt-theme=deepseek] [data-composer-input]{caret-color:var(--bt-accent)}
     light: { bg: '#faf9f5', sidebar: '#f0ede3', bubble: '#f0eee6', card: '#ffffff', text: '#1f1e1b', user: '#e9e4d6', userText: '#1f1e1b', accent: '#b55232' },
     dark: { bg: '#262624', sidebar: '#1d1c1a', bubble: '#30302e', card: '#2f2e2b', text: '#f3f0e8', user: '#3b3a35', userText: '#f3f0e8', accent: '#d97757' },
     tokens: {
-      '--dsw-radius-sm': both('6px'), '--dsw-radius-md': both('9px'), '--dsw-radius-lg': both('12px'), '--dsw-radius-xl': both('18px'),
+      '--dsw-radius-sm': both('6px'),
+      '--dsw-radius-md': both('9px'),
+      '--dsw-radius-lg': both('12px'),
+      '--dsw-radius-xl': both('18px'),
     },
     css: `
 html body[data-bt-theme=claude]{--bt-hover:rgba(120,90,50,.07);--bt-active:rgba(120,90,50,.13);--bt-tag-bg:rgba(201,100,66,.1);--bt-tag-ink:#964425}
@@ -138,7 +149,10 @@ body[data-bt-theme=claude] [data-composer-input]{caret-color:var(--bt-accent)}
     light: { bg: '#ffffff', sidebar: '#ffffff', bubble: '#f4f4f4', card: '#ffffff', text: '#0d0d0d', user: '#f1f1f1', userText: '#0d0d0d', accent: '#0d0d0d' },
     dark: { bg: '#000000', sidebar: '#0a0a0a', bubble: '#161616', card: '#141414', text: '#f5f5f2', user: '#1f1f1f', userText: '#f5f5f2', accent: '#f5f5f2' },
     tokens: {
-      '--dsw-radius-sm': both('10px'), '--dsw-radius-md': both('16px'), '--dsw-radius-lg': both('22px'), '--dsw-radius-xl': both('28px'),
+      '--dsw-radius-sm': both('10px'),
+      '--dsw-radius-md': both('16px'),
+      '--dsw-radius-lg': both('22px'),
+      '--dsw-radius-xl': both('28px'),
       '--dsw-shadow-lv3': both('none'),
     },
     css: `
@@ -170,30 +184,53 @@ const accentInk = (accent: string): string => ((luminance(accent) + 0.05) ** 2 >
 const rgba = (hex: string, alpha: number): string => `rgba(${[1, 3, 5].map(index => parseInt(hex.slice(index, index + 2), 16)).join(',')},${alpha})`
 function themeVars(mode: ThemeMode, dark: boolean, accent: string = mode.accent): Record<string, string> {
   return {
-    '--bt-ink': mode.text, '--bt-ink-2': rgba(mode.text, dark ? 0.74 : 0.72), '--bt-ink-3': rgba(mode.text, dark ? 0.64 : 0.64),
-    '--bt-bubble': mode.bubble, '--bt-sidebar': mode.sidebar, '--bt-main': mode.bg, '--bt-card': mode.card,
-    '--bt-line': rgba(mode.text, 0.08), '--bt-line-2': rgba(mode.text, 0.15),
+    '--bt-ink': mode.text,
+    '--bt-ink-2': rgba(mode.text, dark ? 0.74 : 0.72),
+    '--bt-ink-3': rgba(mode.text, dark ? 0.64 : 0.64),
+    '--bt-bubble': mode.bubble,
+    '--bt-sidebar': mode.sidebar,
+    '--bt-main': mode.bg,
+    '--bt-card': mode.card,
+    '--bt-line': rgba(mode.text, 0.08),
+    '--bt-line-2': rgba(mode.text, 0.15),
     '--bt-hover': dark ? 'rgba(160,160,160,.12)' : 'rgba(119,119,119,.09)',
     '--bt-active': dark ? 'rgba(160,160,160,.2)' : 'rgba(119,119,119,.17)',
-    '--bt-accent': accent, '--bt-accent-ink': accentInk(accent),
-    '--bt-user': mode.user, '--bt-user-ink': mode.userText,
-    '--bt-tag-bg': rgba(mode.text, dark ? 0.09 : 0.06), '--bt-tag-ink': rgba(mode.text, dark ? 0.72 : 0.68),
+    '--bt-accent': accent,
+    '--bt-accent-ink': accentInk(accent),
+    '--bt-user': mode.user,
+    '--bt-user-ink': mode.userText,
+    '--bt-tag-bg': rgba(mode.text, dark ? 0.09 : 0.06),
+    '--bt-tag-ink': rgba(mode.text, dark ? 0.72 : 0.68),
   }
 }
-const declarations = (vars: Record<string, string>): string => Object.entries(vars).map(([name, value]) => `${name}:${value}`).join(';')
+const declarations = (vars: Record<string, string>): string =>
+  Object.entries(vars)
+    .map(([name, value]) => `${name}:${value}`)
+    .join(';')
 // A preset accent is saved as its light value; in dark mode it takes the preset's dark
 // value, as Bot names do, so Charcoal does not vanish on a dark background. A custom
 // accent is the same in both modes. A preset is matched the way Settings marks it.
 const darkAccent = (accent: string | undefined): string | undefined => {
   if (accent === undefined) return undefined
   const ink = ACCENT_INKS.find(id => INKS[id]?.[0] === accent)
-  return ink === undefined ? accent : INKS[ink]?.[1] ?? accent
+  return ink === undefined ? accent : (INKS[ink]?.[1] ?? accent)
 }
 // `html body` outranks the base sheet's `body` rules without !important.
-export const themeCss = (theme: ThemeDefinition, accent?: string): string => `html body{${declarations(themeVars(theme.light, false, accent ?? theme.light.accent))}}
+export const themeCss = (
+  theme: ThemeDefinition,
+  accent?: string,
+): string => `html body{${declarations(themeVars(theme.light, false, accent ?? theme.light.accent))}}
 html body[data-bt-dark]{${declarations(themeVars(theme.dark, true, darkAccent(accent) ?? theme.dark.accent))}}
 ${theme.css ?? ''}`
-export const shellTokens = ({ light, dark, tokens }: { light: ThemeMode; dark: ThemeMode; tokens?: ThemeTokens }): Record<string, { light: string; dark: string }> => ({
+export const shellTokens = ({
+  light,
+  dark,
+  tokens,
+}: {
+  light: ThemeMode
+  dark: ThemeMode
+  tokens?: ThemeTokens
+}): Record<string, { light: string; dark: string }> => ({
   '--dsw-alias-bg-base': { light: light.bg, dark: dark.bg },
   '--dsw-alias-bg-layer-1': { light: light.card, dark: dark.card },
   '--dsw-alias-bg-layer-2': { light: light.bubble, dark: dark.bubble },

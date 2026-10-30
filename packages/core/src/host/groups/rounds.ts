@@ -22,9 +22,7 @@ import type { GroupRuntime } from './types.ts'
 import { textOf } from '../text.ts'
 import { isPass, lostSession, mentionsIn, stripOwnName } from './notice.ts'
 import { openingSpeakersOf } from './speakers.ts'
-import type {
-  FailureDetail, GroupRoom, GroupRound, GroupSlot, MemberSession, ReadyRoom, RoomPost, RoomTurnResult, RoomWaiter,
-} from './types.ts'
+import type { FailureDetail, GroupRoom, GroupRound, GroupSlot, MemberSession, ReadyRoom, RoomPost, RoomTurnResult, RoomWaiter } from './types.ts'
 import type { RoomLogApi } from './log.ts'
 
 interface RelayOptions {
@@ -34,9 +32,15 @@ interface RelayOptions {
   readonly tools?: readonly { readonly name: string }[] | undefined
 }
 
-interface RelayMessage { readonly role?: string | undefined; readonly source?: { readonly kind?: unknown; readonly role?: unknown } | undefined }
+interface RelayMessage {
+  readonly role?: string | undefined
+  readonly source?: { readonly kind?: unknown; readonly role?: unknown } | undefined
+}
 
-interface RelayChunk { readonly type: string; readonly [key: string]: unknown }
+interface RelayChunk {
+  readonly type: string
+  readonly [key: string]: unknown
+}
 
 const ROOM_EXTRA_TURNS = 4
 const ROOM_ADMIN_EXTRA_TURNS = 4
@@ -80,7 +84,7 @@ export function installRounds(rt: GroupRuntime, log: RoomLogApi): RoundsApi {
     // transcript watermark only after delivery succeeds; a failed delivery must be
     // replayed to the member's next session.
     const busy = rt.live.get(sessionId)?.turn !== undefined
-    const done = new Promise<RoomTurnResult>((resolve) => {
+    const done = new Promise<RoomTurnResult>(resolve => {
       let timer: ReturnType<typeof setTimeout> | undefined
       let grace: ReturnType<typeof setTimeout> | undefined
       const finish = (value: RoomTurnResult): void => {
@@ -93,7 +97,9 @@ export function installRounds(rt: GroupRuntime, log: RoomLogApi): RoundsApi {
         clearTimeout(timer)
         timer = setTimeout(() => finish({ missed: true }), ROOM_REPLY_TIMEOUT_MS)
       }
-      const work = (): void => { grace ??= setTimeout(() => finish({ working: true }), ROOM_WORK_GRACE_MS) }
+      const work = (): void => {
+        grace ??= setTimeout(() => finish({ working: true }), ROOM_WORK_GRACE_MS)
+      }
       const say = (raw: string): void => {
         const step = stripOwnName(member.name, raw)
         if (isPass(step)) return
@@ -134,16 +140,19 @@ export function installRounds(rt: GroupRuntime, log: RoomLogApi): RoundsApi {
   // waiter is also found by the member and group that Session now speaks for.
   const waitersOf = (sessionId: string): RoomWaiter[] => {
     const owner = rt.groupOwners.get(sessionId)
-    return [...rt.roomWaiters.values()].filter(waiter => waiter.sessionId === sessionId
-      || (owner !== undefined && waiter.botId === owner.botId && waiter.roomId === owner.roomId))
+    return [...rt.roomWaiters.values()].filter(waiter => waiter.sessionId === sessionId || (owner !== undefined && waiter.botId === owner.botId && waiter.roomId === owner.roomId))
   }
-  rt.touchRoomTurn = (sessionId: string): void => { for (const waiter of waitersOf(sessionId)) waiter.touch() }
+  rt.touchRoomTurn = (sessionId: string): void => {
+    for (const waiter of waitersOf(sessionId)) waiter.touch()
+  }
   rt.failRoomTurn = (sessionId: string, failure: FailureDetail): boolean => {
     const waiters = waitersOf(sessionId)
     for (const waiter of waiters) waiter.fail(failure)
     return waiters.length > 0
   }
-  rt.yieldRoomTurn = (sessionId: string): void => { for (const waiter of waitersOf(sessionId)) waiter.approval() }
+  rt.yieldRoomTurn = (sessionId: string): void => {
+    for (const waiter of waitersOf(sessionId)) waiter.approval()
+  }
   // The team's own tools are quick; any other tool is the start of work.
   const QUICK_TOOLS = new Set(TEAM_TOOLS)
   rt.workRoomTurn = (sessionId: string, tool: string): void => {
@@ -159,7 +168,7 @@ export function installRounds(rt: GroupRuntime, log: RoomLogApi): RoundsApi {
     for (const peer of callees) {
       if ((turns.get(peer.id) ?? 0) >= cap) continue
       const waiting = round.slots.findIndex((other, at) => at > index && other.id === peer.id && other.status === 'waiting')
-      const called: GroupSlot = waiting === -1 ? { id: peer.id, name: peer.name, status: 'waiting' } : round.slots.splice(waiting, 1)[0] ?? { id: peer.id, name: peer.name, status: 'waiting' }
+      const called: GroupSlot = waiting === -1 ? { id: peer.id, name: peer.name, status: 'waiting' } : (round.slots.splice(waiting, 1)[0] ?? { id: peer.id, name: peer.name, status: 'waiting' })
       called.note = note
       if (by === undefined) delete called.by
       else called.by = by
@@ -172,17 +181,18 @@ export function installRounds(rt: GroupRuntime, log: RoomLogApi): RoundsApi {
   // the composer whether it queued or steered them. Images and chat references are
   // only read when the Session takes the message itself, so a message with either
   // stays for the next round, and so does everything after it in that list.
-  const waitingLines = (agent: Agent | undefined): { readonly id: string; readonly text: string }[] => ['nextStep', 'nextTurn'].flatMap((list) => {
-    const lines: { readonly id: string; readonly text: string }[] = []
-    for (const message of agent?.inbox?.[list as 'nextStep' | 'nextTurn'] ?? []) {
-      if (message.source?.kind !== 'user') continue
-      const content: readonly unknown[] = Array.isArray(message.content) ? message.content : []
-      const text = textOf(content)
-      if (text === '' || content.some(block => !isTextBlock(block)) || (text.includes('moon-bot-session:') || text.includes('dsh-session:'))) break
-      lines.push({ id: message.id, text })
-    }
-    return lines
-  })
+  const waitingLines = (agent: Agent | undefined): { readonly id: string; readonly text: string }[] =>
+    ['nextStep', 'nextTurn'].flatMap(list => {
+      const lines: { readonly id: string; readonly text: string }[] = []
+      for (const message of agent?.inbox?.[list as 'nextStep' | 'nextTurn'] ?? []) {
+        if (message.source?.kind !== 'user') continue
+        const content: readonly unknown[] = Array.isArray(message.content) ? message.content : []
+        const text = textOf(content)
+        if (text === '' || content.some(block => !isTextBlock(block)) || text.includes('moon-bot-session:') || text.includes('dsh-session:')) break
+        lines.push({ id: message.id, text })
+      }
+      return lines
+    })
 
   // Messages the user sent while this round is running post into the log before the
   // next speaker, so everyone still to speak sees them. The members the message's own
@@ -310,10 +320,9 @@ export function installRounds(rt: GroupRuntime, log: RoomLogApi): RoundsApi {
       // Plugins append context as user-role messages (time, attachments), so only a
       // message from the user, a scheduled task, or a Bot's post after the last model or
       // tool step starts a relay.
-      const opens = (message: RelayMessage): boolean => message.role === 'user'
-        && (message.source?.kind === 'user' || message.source?.kind === 'schedule' || (message.source?.kind === SOURCE_KIND && (message.source.role === 'post' || message.source.role === 'kickoff')))
-      const latest = [...options.messages].reverse()
-        .find(message => message.role === 'assistant' || message.role === 'tool' || opens(message))
+      const opens = (message: RelayMessage): boolean =>
+        message.role === 'user' && (message.source?.kind === 'user' || message.source?.kind === 'schedule' || (message.source?.kind === SOURCE_KIND && (message.source.role === 'post' || message.source.role === 'kickoff')))
+      const latest = [...options.messages].reverse().find(message => message.role === 'assistant' || message.role === 'tool' || opens(message))
       if (latest?.role !== 'user') {
         yield { type: 'finish', reason: { kind: 'stop' } }
         return
@@ -322,9 +331,8 @@ export function installRounds(rt: GroupRuntime, log: RoomLogApi): RoundsApi {
       const declared = new Set((options.tools ?? []).map(tool => tool.name))
       // Only for a group made under the PTC preset, which can call nothing but run_code;
       // new group Sessions get the standard preset.
-      const [name, args]: readonly [string, string] = declared.has('run_code') && !declared.has('group_relay')
-        ? ['run_code', JSON.stringify({ description: 'Relay the group chat to its Bots', code: 'return await tools.group_relay({})', timeoutMs: 600_000 })]
-        : ['group_relay', '{}']
+      const [name, args]: readonly [string, string] =
+        declared.has('run_code') && !declared.has('group_relay') ? ['run_code', JSON.stringify({ description: 'Relay the group chat to its Bots', code: 'return await tools.group_relay({})', timeoutMs: 600_000 })] : ['group_relay', '{}']
       yield { type: 'block-start', index: 0, blockType: 'tool-call' }
       yield { type: 'tool-call-delta', index: 0, id, name, argumentsDelta: args }
       yield { type: 'block-end', index: 0, block: { type: 'tool-call', id, name, arguments: args } }

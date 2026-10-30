@@ -28,16 +28,11 @@
       "!**/tsconfig*.json",
       "!**/*.tsbuildinfo",
       "!**/vendor/**",
-      "!packages/contracts/src/rpc.ts",
       "!packages/contracts/src/views/validate.ts",
       "!packages/core/src/client/bot-browsers.ts",
       "!packages/core/src/client/browser-pane-chrome.tsx",
-      "!packages/core/src/client/browser-pane.tsx",
       "!packages/core/src/client/characters.ts",
-      "!packages/core/src/client/client-actions.ts",
       "!packages/core/src/client/client-boot.ts",
-      "!packages/core/src/client/connector-market.tsx",
-      "!packages/core/src/client/deliver-cards.tsx",
       "!packages/core/src/client/files-panel.ts",
       "!packages/core/src/client/index.ts",
       "!packages/core/src/client/member-status.tsx",
@@ -49,43 +44,26 @@
       "!packages/core/src/client/sidebar-rows.tsx",
       "!packages/core/src/client/tasks-page.tsx",
       "!packages/core/src/client/text.ts",
-      "!packages/core/src/client/themes.ts",
       "!packages/core/src/client/usage-charts.tsx",
-      "!packages/core/src/client/usage-page.tsx",
       "!packages/core/src/client/voice.tsx",
       "!packages/core/src/client/widget-cell.tsx",
-      "!packages/core/src/client/work-process.tsx",
       "!packages/core/src/engine/acp/runtime.ts",
-      "!packages/core/src/host/browser.ts",
       "!packages/core/src/host/capabilities-mount.ts",
-      "!packages/core/src/host/capabilities.ts",
-      "!packages/core/src/host/channel/ops-team.ts",
       "!packages/core/src/host/chat-index.ts",
-      "!packages/core/src/host/diagnostics.ts",
       "!packages/core/src/host/groups.ts",
       "!packages/core/src/host/groups/log.ts",
-      "!packages/core/src/host/groups/rounds.ts",
       "!packages/core/src/host/memory.ts",
       "!packages/core/src/host/memory/news.ts",
-      "!packages/core/src/host/memory/prompt.ts",
       "!packages/core/src/host/memory/recall.ts",
       "!packages/core/src/host/memory/storage.ts",
       "!packages/core/src/host/parts-switch-move.ts",
       "!packages/core/src/host/parts-switch.ts",
       "!packages/core/src/host/parts.ts",
-      "!packages/core/src/host/providers.ts",
-      "!packages/core/src/host/roster-rooms.ts",
       "!packages/core/src/host/roster.ts",
-      "!packages/core/src/host/secrets/install.ts",
-      "!packages/core/src/host/store.ts",
       "!packages/core/src/host/tasks-panel.ts",
-      "!packages/core/src/host/tools/chat-tools.ts",
-      "!packages/core/src/host/tools/shared.ts",
       "!packages/core/src/host/turns/delivery.ts",
-      "!packages/core/src/host/turns/route.ts",
       "!packages/core/src/host/usage/view.ts",
       "!packages/core/src/service/engine.ts",
-      "!packages/core/src/service/llm.ts",
       "!packages/core/src/store/proactive.ts",
       "!packages/core/src/web-search/provider.ts"
     ]
@@ -121,5 +99,139 @@
     "formatter": {
       "trailingCommas": "none"
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["packages/contracts/src/rpc.ts"],
+      "formatter": {
+        "lineWidth": 200
+      }
+    },
+    {
+      "includes": ["packages/core/src/client/browser-pane.tsx"],
+      "formatter": {
+        "lineWidth": 180
+      }
+    },
+    {
+      "includes": ["packages/core/src/client/client-actions.ts"],
+      "formatter": {
+        "lineWidth": 160
+      }
+    },
+    {
+      "includes": ["packages/core/src/client/connector-market.tsx"],
+      "formatter": {
+        "lineWidth": 160
+      }
+    },
+    {
+      "includes": ["packages/core/src/client/deliver-cards.tsx"],
+      "formatter": {
+        "lineWidth": 160
+      }
+    },
+    {
+      "includes": ["packages/core/src/client/themes.ts"],
+      "formatter": {
+        "lineWidth": 160
+      }
+    },
+    {
+      "includes": ["packages/core/src/client/usage-page.tsx"],
+      "formatter": {
+        "lineWidth": 160
+      }
+    },
+    {
+      "includes": ["packages/core/src/client/work-process.tsx"],
+      "formatter": {
+        "lineWidth": 160
+      }
+    },
+    {
+      "includes": ["packages/core/src/host/browser.ts"],
+      "formatter": {
+        "lineWidth": 160
+      }
+    },
+    {
+      "includes": ["packages/core/src/host/capabilities.ts"],
+      "formatter": {
+        "lineWidth": 200
+      }
+    },
+    {
+      "includes": ["packages/core/src/host/channel/ops-team.ts"],
+      "formatter": {
+        "lineWidth": 280
+      }
+    },
+    {
+      "includes": ["packages/core/src/host/diagnostics.ts"],
+      "formatter": {
+        "lineWidth": 160
+      }
+    },
+    {
+      "includes": ["packages/core/src/host/groups/rounds.ts"],
+      "formatter": {
+        "lineWidth": 240
+      }
+    },
+    {
+      "includes": ["packages/core/src/host/memory/prompt.ts"],
+      "formatter": {
+        "lineWidth": 160
+      }
+    },
+    {
+      "includes": ["packages/core/src/host/providers.ts"],
+      "formatter": {
+        "lineWidth": 160
+      }
+    },
+    {
+      "includes": ["packages/core/src/host/roster-rooms.ts"],
+      "formatter": {
+        "lineWidth": 160
+      }
+    },
+    {
+      "includes": ["packages/core/src/host/secrets/install.ts"],
+      "formatter": {
+        "lineWidth": 200
+      }
+    },
+    {
+      "includes": ["packages/core/src/host/store.ts"],
+      "formatter": {
+        "lineWidth": 180
+      }
+    },
+    {
+      "includes": ["packages/core/src/host/tools/chat-tools.ts"],
+      "formatter": {
+        "lineWidth": 240
+      }
+    },
+    {
+      "includes": ["packages/core/src/host/tools/shared.ts"],
+      "formatter": {
+        "lineWidth": 240
+      }
+    },
+    {
+      "includes": ["packages/core/src/host/turns/route.ts"],
+      "formatter": {
+        "lineWidth": 240
+      }
+    },
+    {
+      "includes": ["packages/core/src/service/llm.ts"],
+      "formatter": {
+        "lineWidth": 160
+      }
+    }
+  ]
 }

@@ -5,24 +5,8 @@ import { z } from 'zod'
 import type { ToolContext } from '../../engine/registry.ts'
 import type { Disposer, HostContext, LlmStreamOptions } from '../host-types.js'
 import type { HostRuntime } from '../runtime.js'
-import {
-  SECRET_NAME,
-  canUse,
-  envName,
-  LEGACY_ENV_PREFIX,
-  normalizeName,
-  redactDeep,
-  redactor,
-  type Redact,
-  type SecretScope,
-} from './redact.ts'
-import {
-  createSecretStore,
-  type SecretBody,
-  type SecretNote,
-  type SecretRecord,
-  type SecretStore,
-} from './store.ts'
+import { SECRET_NAME, canUse, envName, LEGACY_ENV_PREFIX, normalizeName, redactDeep, redactor, type Redact, type SecretScope } from './redact.ts'
+import { createSecretStore, type SecretBody, type SecretNote, type SecretRecord, type SecretStore } from './store.ts'
 
 type SecretEndpoint = (body: SecretBody) => Promise<unknown>
 
@@ -106,8 +90,8 @@ export function install(rt: HostRuntime): void {
       const record: SecretRecord = {
         name,
         value,
-        purpose: typeof body.purpose === 'string' && body.purpose.trim() !== '' ? body.purpose.trim().slice(0, 300) : existing?.purpose ?? '',
-        scope: body.scope !== undefined ? store.cleanScope(body.scope) : existing?.scope ?? 'all',
+        purpose: typeof body.purpose === 'string' && body.purpose.trim() !== '' ? body.purpose.trim().slice(0, 300) : (existing?.purpose ?? ''),
+        scope: body.scope !== undefined ? store.cleanScope(body.scope) : (existing?.scope ?? 'all'),
         requestedBy: existing?.requestedBy ?? null,
         createdAt: existing?.createdAt ?? now,
         updatedAt: now,
@@ -134,7 +118,10 @@ export function install(rt: HostRuntime): void {
       const { botId, request } = store.pendingRequest(body.requestId)
       store.settle(request, 'canceled')
       await rt.save()
-      await store.tell(botId, `The user canceled your request for ${request.name}. Do not ask for it again unless the user brings it up; carry on without it, or tell the user what you cannot do without it.`)
+      await store.tell(
+        botId,
+        `The user canceled your request for ${request.name}. Do not ask for it again unless the user brings it up; carry on without it, or tell the user what you cannot do without it.`,
+      )
       return true
     },
     async 'secret-update'(body: SecretBody): Promise<unknown> {
@@ -171,7 +158,8 @@ export function install(rt: HostRuntime): void {
 
   rt.registerTool({
     name: 'request_secret',
-    description: 'Ask the user for a key, token, or password through a secure card in your own chat. The user types it into the card; you never see the value. It reaches your shell as an environment variable. When the key is already saved for you, this only tells you its variable. Showing a card ends your turn; a note arrives when the user saves or cancels.',
+    description:
+      'Ask the user for a key, token, or password through a secure card in your own chat. The user types it into the card; you never see the value. It reaches your shell as an environment variable. When the key is already saved for you, this only tells you its variable. Showing a card ends your turn; a note arrives when the user saves or cancels.',
     parameters: {
       name: { type: 'string', required: true, description: 'Key name in capitals, digits, and underscores, e.g. GITHUB_TOKEN' },
       purpose: { type: 'string', required: true, description: 'One short line for the user: what you need it for' },
@@ -204,7 +192,9 @@ export function install(rt: HostRuntime): void {
         ...(context.callId !== '' ? { callId: context.callId } : {}),
         sessionId: id,
         name,
-        purpose: String(args.purpose ?? '').trim().slice(0, 300),
+        purpose: String(args.purpose ?? '')
+          .trim()
+          .slice(0, 300),
         kind: secret !== undefined ? 'allow' : 'fill',
         status: 'pending',
         askedAt: now,
@@ -231,7 +221,12 @@ export function install(rt: HostRuntime): void {
       if (store.secrets.size === 0) return 'No keys are saved yet. Ask for one with request_secret.'
       return [
         'Saved keys (values are never shown):',
-        ...store.secretsView().map(secret => `- ${secret.name}${secret.purpose ? ` — ${secret.purpose}` : ''} — for ${store.scopeText(secret.scope)} — ${canUse(store.secrets.get(secret.name), self) ? `you may use it as $${envName(secret.name)}` : 'you may not use it; ask with request_secret'}`),
+        ...store
+          .secretsView()
+          .map(
+            secret =>
+              `- ${secret.name}${secret.purpose ? ` — ${secret.purpose}` : ''} — for ${store.scopeText(secret.scope)} — ${canUse(store.secrets.get(secret.name), self) ? `you may use it as $${envName(secret.name)}` : 'you may not use it; ask with request_secret'}`,
+          ),
       ].join('\n')
     },
   })
@@ -316,15 +311,18 @@ export function install(rt: HostRuntime): void {
       }
     }
     refreshEnv()
-    sub.effect(() => () => {
-      unregister?.()
-      unregister = null
-      declared = ''
-      refreshEnv = () => {}
-    }, 'moon-bot: secrets shell env')
+    sub.effect(
+      () => () => {
+        unregister?.()
+        unregister = null
+        declared = ''
+        refreshEnv = () => {}
+      },
+      'moon-bot: secrets shell env',
+    )
   }
   if (typeof ctx.inject === 'function') {
-    ctx.inject(['shellEnv'], (sub) => {
+    ctx.inject(['shellEnv'], sub => {
       const shellEnv = (sub as HostContext & { readonly shellEnv: ShellEnvService }).shellEnv
       attachShellEnv({ shellEnv, effect: (execute, label) => sub.effect(execute, label) })
     })
@@ -335,7 +333,9 @@ export function install(rt: HostRuntime): void {
 
   ctx.effect(() => {
     void store.load()
-    return () => { store.dispose() }
+    return () => {
+      store.dispose()
+    }
   }, 'moon-bot: load secrets')
 
   Object.assign(rt, {

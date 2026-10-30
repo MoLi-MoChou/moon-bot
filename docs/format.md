@@ -39,9 +39,18 @@ Client modules split and formatted (ignores removed):
 - `cells-turns.tsx` → `cells-turns-types`, `cells-turns-cells`, `cells-turns-tree`
 - `cells-bubbles.tsx` → `cells-bubbles-types`, `cells-bubbles-ui`, `cells-bubbles-group`
 
+### Cleared in batch 3 (stacked on batch 2)
+
+Files that stay ≤350 after Biome format with a per-file `lineWidth` override (still formatted, ignore removed):
+
+- contracts: `rpc.ts` (w200)
+- client: `browser-pane.tsx`, `client-actions.ts`, `connector-market.tsx`, `deliver-cards.tsx`, `themes.ts`, `usage-page.tsx`, `work-process.tsx`
+- host: `browser.ts`, `capabilities.ts`, `channel/ops-team.ts`, `diagnostics.ts`, `groups/rounds.ts`, `memory/prompt.ts`, `providers.ts`, `roster-rooms.ts`, `secrets/install.ts`, `store.ts`, `tools/chat-tools.ts`, `tools/shared.ts`, `turns/route.ts`
+- service: `llm.ts`
+
 ### Follow-up (still ignored until split)
 
-Remaining `packages/**/src` paths listed as `!…` in `biome.json` (host memory/parts/groups/roster, usage-*, browser-pane*, tasks-page, memory-panel, widget-cell, connector-market, sidebar-rows, themes/text/characters, client-boot/actions, index, service/engine/llm, store/proactive, web-search, acp/runtime, etc.). Split by responsibility the same way, remove each ignore, run `pnpm run format` on the new files, keep ≤350.
+Remaining `packages/**/src` ignores (~38): denser modules that still exceed 350 even at wide lineWidth — `memory-panel`, `widget-cell`, `usage-charts`, `sidebar-rows`, `cells` leftovers none, host `memory`/`parts`/`groups`/`roster`, `client-boot`/`index`, `engine`, `validate`, etc. Split by responsibility, remove each ignore, keep ≤350 after format.
 
 ## Scripts
 

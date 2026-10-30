@@ -4,17 +4,7 @@ import { COLORS, EXTRA_COLORS } from '../constants.ts'
 import { resetBot as reset, resetFrom } from '../bot-reset.ts'
 import type { AttachmentRef } from '../host-types.ts'
 import type { RpcEndpoint } from 'moon-bot-contracts'
-import type {
-  BotRow,
-  ChannelBody,
-  ChannelHandler,
-  ChannelHandlers,
-  MessageText,
-  RoomRow,
-  SessionProjectionsService,
-  TeamLive,
-  TeamView,
-} from './envelope.ts'
+import type { BotRow, ChannelBody, ChannelHandler, ChannelHandlers, MessageText, RoomRow, SessionProjectionsService, TeamLive, TeamView } from './envelope.ts'
 import type { ChannelRuntime } from '../channel.ts'
 import { fail, invalid, ok, recordOf } from './envelope.ts'
 
@@ -36,7 +26,11 @@ export interface LocaleState {
 
 // Models come from the host, not state.json, so a provider added in Harness settings
 // changes the view without a new revision.
-const modelsKeyOf = (rt: ChannelRuntime): string => `${rt.cachedCatalog().map(entry => `${entry.ref}${entry.needsKey ? '!' : ''}${entry.reasoning ? `:${JSON.stringify(entry.reasoning)}` : ''}`).join(',')}|${rt.cachedDefault() ?? ''}`
+const modelsKeyOf = (rt: ChannelRuntime): string =>
+  `${rt
+    .cachedCatalog()
+    .map(entry => `${entry.ref}${entry.needsKey ? '!' : ''}${entry.reasoning ? `:${JSON.stringify(entry.reasoning)}` : ''}`)
+    .join(',')}|${rt.cachedDefault() ?? ''}`
 
 /** The state view: what changes only with a new revision. */
 function createView(rt: ChannelRuntime): () => TeamView {
@@ -49,15 +43,22 @@ function createView(rt: ChannelRuntime): () => TeamView {
     mainBotIds: state.mainBotIds,
     // `sessionId` is the Bot's current own-chat part; `parts` its earlier ones.
     // `waiting`: the Bot holds its greeting until the user picks its model.
-    bots: Object.values(state.bots).map(({ segments, kickoff, ...bot }): BotRow => ({
-      ...bot,
-      sessionId: rt.chatOf(bot.id),
-      parts: (segments ?? []).map(segment => segment.sessionId),
-      ...(kickoff ? { waiting: true } : {}),
-    })),
+    bots: Object.values(state.bots).map(
+      ({ segments, kickoff, ...bot }): BotRow => ({
+        ...bot,
+        sessionId: rt.chatOf(bot.id),
+        parts: (segments ?? []).map(segment => segment.sessionId),
+        ...(kickoff ? { waiting: true } : {}),
+      }),
+    ),
     // `parts`: the members' hidden group Sessions and their earlier segments, for usage.
     rooms: Object.values(state.rooms).map(({ log, seen, lateRounds, sessions, segments, ...room }): RoomRow => {
-      const parts = [...Object.values(sessions ?? {}), ...Object.values(segments ?? {}).flat().map(segment => segment.sessionId)]
+      const parts = [
+        ...Object.values(sessions ?? {}),
+        ...Object.values(segments ?? {})
+          .flat()
+          .map(segment => segment.sessionId),
+      ]
       const lines = (log ?? []) as readonly RoomLine[]
       const last = lines.filter(line => line.kind === undefined).at(-1)
       return { ...room, parts, ...(last ? { preview: last.who === 'User' ? last.text : `${last.who}：${last.text}` } : {}) }
@@ -102,7 +103,7 @@ function createLive(rt: ChannelRuntime): () => TeamLive {
 /** The preference setters, shared by `set-prefs`. */
 function createSetPrefs(rt: ChannelRuntime): (body: ChannelBody) => Promise<unknown> {
   const { state } = rt
-  return async (body) => {
+  return async body => {
     if (body.theme !== undefined) {
       if (typeof body.theme !== 'string' || !/^[a-z][\w-]{0,31}$/.test(body.theme)) throw invalid('Unknown theme')
       state.prefs.theme = body.theme
@@ -130,7 +131,7 @@ export function teamHandlers(rt: ChannelRuntime, locale: LocaleState): ChannelHa
   const modelsKey = (): string => modelsKeyOf(rt)
 
   const handlers: Partial<Record<RpcEndpoint, ChannelHandler>> = {
-    state: async (body) => {
+    state: async body => {
       if (typeof body.locale === 'string' && /^[a-z]{2,3}(-[\w-]+)?$/i.test(body.locale)) locale.value = body.locale
       const readOnly = rt.readOnly()
       if (readOnly === undefined) await rt.bootstrap()
@@ -143,12 +144,12 @@ export function teamHandlers(rt: ChannelRuntime, locale: LocaleState): ChannelHa
       await rt.catalog({ fresh: true })
       return ok({ modelsKey: modelsKey() })
     },
-    efforts: async (body) => ok(await rt.reasoningOf(String(body.ref ?? '')) ?? { efforts: [] }),
+    efforts: async body => ok((await rt.reasoningOf(String(body.ref ?? ''))) ?? { efforts: [] }),
     // The engines list and engine-set live in ops-engines.ts (local ACP and remote agents).
     // here picks their invites up through the same registry.
     // A Turn's exact thinking time, from the timed stream in its events; `ms`
     // omitted when the stream carries no reasoning records.
-    thinking: async (body) => {
+    thinking: async body => {
       const sessionId = String(body.sessionId ?? '')
       const turn = Number(body.turn)
       if (!Number.isFinite(turn) || rt.selfOf(sessionId) === undefined) return ok(null)
@@ -156,64 +157,64 @@ export function teamHandlers(rt: ChannelRuntime, locale: LocaleState): ChannelHa
       const ms = await rt.thinkingOf(sessionId, turn)
       return ok(ms === undefined ? {} : { ms })
     },
-    'duplicate-bot': async (body) => {
+    'duplicate-bot': async body => {
       await rt.load()
       return ok(await rt.duplicateBot(body.id))
     },
-    'set-prefs': async (body) => {
+    'set-prefs': async body => {
       await rt.load()
       await setPrefs(body)
       return ok(state.prefs)
     },
-    exchange: async (body) => {
+    exchange: async body => {
       await rt.load()
       const pair = new Set<unknown>([body.a, body.b])
       return ok(state.exchanges.filter(entry => pair.has(entry.from) && pair.has(entry.to)))
     },
-    'exchange-text': async (body) => {
+    'exchange-text': async body => {
       await rt.load()
       const entry = state.exchanges.find(item => item.id === body.id)
       if (entry === undefined) return fail('This message is no longer kept', 'bot/stale')
       return ok(await rt.exchangeText(entry))
     },
     // A long Bot post's file (attachLong), for the group chat's "Show all".
-    'file-text': async (body) => {
+    'file-text': async body => {
       const file = recordOf(body.file)
       if (file === undefined || typeof file.attachmentId !== 'string') return fail('No file named', 'bot/invalid')
       const read: MessageText | undefined = await rt.fileText(body.file as AttachmentRef)
       return read === undefined ? fail('This file cannot be read here', 'bot/unavailable') : ok(read)
     },
     // Moon Bot: the workspace file panel's Download and its card for files it cannot preview.
-    'workspace-download': async (body) => {
+    'workspace-download': async body => {
       await rt.load()
       return ok(await rt.workspaceDownload(body.path))
     },
     // The files a turn left behind (2026-10-28 files-and-library): the chat's cards and
     // the library page. Reads only — the scan at turn end is what writes.
-    'turn-files': async (body) => {
+    'turn-files': async body => {
       const files = rt.deliverablesOf?.(String(body.sessionId ?? ''), Number(body.turn)) ?? []
       return ok({ files })
     },
-    'library': async (body) => {
+    library: async body => {
       const since = typeof body.since === 'number' ? body.since : undefined
       const limit = typeof body.limit === 'number' ? body.limit : undefined
       return ok({ items: rt.libraryOf?.({ ...(since !== undefined ? { since } : {}), ...(limit !== undefined ? { limit } : {}) }) ?? [] })
     },
-    'workspace-describe': async (body) => {
+    'workspace-describe': async body => {
       await rt.load()
       return ok(await rt.workspaceDescribe(body.path))
     },
-    earlier: async (body) => {
+    earlier: async body => {
       await rt.load()
       return ok(await rt.earlierPage(String(body.sessionId ?? ''), body.cursor ?? undefined))
     },
-    chat: async (body) => {
+    chat: async body => {
       await rt.load()
       return ok(await rt.chatPage(String(body.botId ?? ''), body.cursor ?? undefined))
     },
     // the host's own whole-log figures for the current part of a Bot's chat, the ones its
     // status bar shows; a window without that bar shows them in the Bot's details.
-    'run-stats': async (body) => {
+    'run-stats': async body => {
       await rt.load()
       const bot = rt.botOf(String(body.botId ?? ''))
       if (bot === undefined) return fail('Unknown Bot', 'bot/not-found')
@@ -221,13 +222,13 @@ export function teamHandlers(rt: ChannelRuntime, locale: LocaleState): ChannelHa
       const sessionId = rt.chatOf(bot.id)
       // A host that publishes projections keeps that snapshot. Without one, the ring
       // still gets this part's own estimate; a session that cannot be measured stays null.
-      if (projections === undefined) return ok(await rt.contextStats?.(sessionId) ?? null)
+      if (projections === undefined) return ok((await rt.contextStats?.(sessionId)) ?? null)
       const agent = await rt.resolveAgent(sessionId)
       return ok(projections.snapshot(agent.session, RUN_STATS).values)
     },
     // In-place only. A running turn, an unread delivery, or a missing engine comes
     // back as a sentence; this does not start a new part.
-    'context-compact': async (body) => {
+    'context-compact': async body => {
       await rt.load()
       const bot = rt.botOf(String(body.botId ?? ''))
       if (bot === undefined) return fail('Unknown Bot', 'bot/not-found')
@@ -235,26 +236,26 @@ export function teamHandlers(rt: ChannelRuntime, locale: LocaleState): ChannelHa
       if (answer === undefined) return fail('Condensing this chat did not make room.', 'bot/unavailable')
       return ok(answer)
     },
-    usage: async (body) => {
+    usage: async body => {
       await rt.load()
       return ok(await rt.usageView({ timeZone: typeof body.timeZone === 'string' ? body.timeZone.slice(0, 64) : undefined }))
     },
-    'room-progress': async (body) => ok([...rt.roomProgress.entries()].filter(([, entry]) => entry.roomId === body.roomId).map(([callId, entry]) => ({ callId, replies: entry.replies, speaking: entry.speaking ?? null }))),
-    'create-bot': async (body) => {
+    'room-progress': async body => ok([...rt.roomProgress.entries()].filter(([, entry]) => entry.roomId === body.roomId).map(([callId, entry]) => ({ callId, replies: entry.replies, speaking: entry.speaking ?? null }))),
+    'create-bot': async body => {
       await rt.bootstrap()
       return ok(await rt.createBot({ name: body.name, role: body.role, color: body.color, instructions: body.instructions, brief: body.brief, avatar: body.avatar, model: body.model, effort: body.effort, workDir: body.workDir, engine: body.engine, runtimeId: body.runtimeId }))
     },
-    'update-bot': async (body) => {
+    'update-bot': async body => {
       await rt.load()
       return ok(await rt.updateBot(body.id, body))
     },
-    'delete-bot': async (body) => {
+    'delete-bot': async body => {
       await rt.load()
       await rt.deleteBot(body.id)
       return ok(view())
     },
-    'reset-bot': async (body) => ok(await reset(rt, String(body.id ?? ''), resetFrom(body))),
-    'set-main': async (body) => {
+    'reset-bot': async body => ok(await reset(rt, String(body.id ?? ''), resetFrom(body))),
+    'set-main': async body => {
       await rt.load()
       await rt.setMain(body.id, body.main !== false, {
         primary: body.primary === true,
@@ -262,13 +263,13 @@ export function teamHandlers(rt: ChannelRuntime, locale: LocaleState): ChannelHa
       })
       return ok(view())
     },
-    'create-room': async (body) => {
+    'create-room': async body => {
       await rt.load()
       const room = await rt.createRoom({ members: Array.isArray(body.members) ? body.members : [], name: body.name, ...(typeof body.admin === 'string' ? { admin: body.admin } : {}) })
       if (body.greet === true) await rt.greetRoom(room.id).catch(error => rt.warn('moon-bot: greeting in %s failed: %s', room.name, error))
       return ok(room)
     },
-    'update-room': async (body) => {
+    'update-room': async body => {
       await rt.load()
       const { room, changes } = await rt.updateRoom(body.id, {
         name: body.name,
@@ -295,7 +296,7 @@ export function teamHandlers(rt: ChannelRuntime, locale: LocaleState): ChannelHa
       await rt.load()
       return ok(await rt.folderEndpoint('folder-list', body, signal))
     },
-    'team-workspace': async (body) => {
+    'team-workspace': async body => {
       await rt.load()
       return ok({ team: await rt.setTeamWorkspace(String(body.path ?? '')) })
     },
@@ -303,39 +304,39 @@ export function teamHandlers(rt: ChannelRuntime, locale: LocaleState): ChannelHa
       await rt.load()
       return ok(await rt.addAgent())
     },
-    'agent-session': async (body) => {
+    'agent-session': async body => {
       await rt.load()
       return ok({ sessionId: await rt.createAgentSession(body.agentId, body.workspaceId) })
     },
-    'agent-adopt': async (body) => {
+    'agent-adopt': async body => {
       await rt.load()
       return ok({ sessionId: await rt.adoptAgentSession(body.agentId, body.sessionId) })
     },
-    'agent-archive': async (body) => {
+    'agent-archive': async body => {
       await rt.load()
       await rt.archiveAgentSession(body.agentId, body.sessionId)
       return ok(true)
     },
-    'agent-rename': async (body) => {
+    'agent-rename': async body => {
       await rt.load()
       await rt.renameAgentSession(body.agentId, body.sessionId, body.title)
       return ok(true)
     },
-    'remove-agent': async (body) => {
+    'remove-agent': async body => {
       await rt.load()
       await rt.removeAgent(body.agentId)
       return ok(view())
     },
-    'set-flags': async (body) => {
+    'set-flags': async body => {
       await rt.load()
       return ok(await rt.setFlags(body.id, body))
     },
-    'delete-room': async (body) => {
+    'delete-room': async body => {
       await rt.load()
       await rt.deleteRoom(body.id)
       return ok(view())
     },
-    'archive-room': async (body) => {
+    'archive-room': async body => {
       await rt.load()
       await rt.archiveRoom(body.id, body.archived === true)
       return ok(view())

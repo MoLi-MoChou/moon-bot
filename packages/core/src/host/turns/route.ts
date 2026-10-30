@@ -104,8 +104,7 @@ export function installRoute(rt: TurnsRuntime, core: TurnsCore): void {
         // Bot relay that lands inside it may claim: the first message of a turn
         // still claims it as today, a later one only joins it.
         const opened = entry.opened === true
-        if (entry.turn !== undefined && !bare(source)
-          && (source?.kind === 'user' || source?.kind === REPLY_KIND || source?.kind === 'schedule' || source?.kind === PROACTIVE_KIND || source?.kind === SOURCE_KIND)) {
+        if (entry.turn !== undefined && !bare(source) && (source?.kind === 'user' || source?.kind === REPLY_KIND || source?.kind === 'schedule' || source?.kind === PROACTIVE_KIND || source?.kind === SOURCE_KIND)) {
           entry.opened = true
         }
         if (entry.turn !== undefined && (source?.kind === 'user' || source?.kind === REPLY_KIND || source?.kind === PROACTIVE_KIND || source?.kind === SOURCE_KIND)) {
@@ -152,9 +151,7 @@ export function installRoute(rt: TurnsRuntime, core: TurnsCore): void {
             // A result for other work than this turn's informs it, and comes back in a
             // turn of its own once this one ends, which goes on with that work.
             entry.later = [...(entry.later ?? []), { info: source, text: textOf(data?.content).replace(/^\[(?:[^\r\n]*\]\r?\n|[^\]\r\n]*\])/, '') }]
-          } else if (expectsReply(source) && !answersUser(source)
-            && source.exchangeId !== entry.info?.exchangeId
-            && !(entry.joined ?? []).some(joined => joined.info.exchangeId === source.exchangeId)) {
+          } else if (expectsReply(source) && !answersUser(source) && source.exchangeId !== entry.info?.exchangeId && !(entry.joined ?? []).some(joined => joined.info.exchangeId === source.exchangeId)) {
             // A request that lands inside a running turn steers that work but is
             // answered in a hidden turn of its own once the work is done, so the
             // sender never gets the turn's text. A failed-switch resume message
@@ -234,17 +231,19 @@ export function installRoute(rt: TurnsRuntime, core: TurnsCore): void {
         const later = entry.later ?? []
         entry.later = []
         for (const result of later) {
-          void rt.deliver({
-            fromId: result.info.senderSessionId,
-            toId: selfId(id),
-            text: result.text,
-            role: result.info.role ?? '',
-            exchangeId: result.info.exchangeId,
-            replyTo: result.info.replyTo,
-            work: result.info.work,
-            ...(result.info.roomId ? { roomId: result.info.roomId } : {}),
-            deferred: true,
-          }).catch(error => rt.warn('moon-bot: handing back a result failed: %s', error))
+          void rt
+            .deliver({
+              fromId: result.info.senderSessionId,
+              toId: selfId(id),
+              text: result.text,
+              role: result.info.role ?? '',
+              exchangeId: result.info.exchangeId,
+              replyTo: result.info.replyTo,
+              work: result.info.work,
+              ...(result.info.roomId ? { roomId: result.info.roomId } : {}),
+              deferred: true,
+            })
+            .catch(error => rt.warn('moon-bot: handing back a result failed: %s', error))
         }
         const reason = data?.reason
         // A turn cut off drops what waited behind it (the engine's queue goes with the
@@ -253,7 +252,7 @@ export function installRoute(rt: TurnsRuntime, core: TurnsCore): void {
         if (reason?.kind === 'aborted' || reason?.kind === 'disposed') entry.sentAt = undefined
         const failure = reason?.kind === 'error' && !switched ? turnFailure(reason.error) : undefined
         if (failure !== undefined) core.noteTurnFailure(id, failure)
-        const held = rt.groupOwners.has(id) ? rt.takeRoomSteps?.(id) ?? '' : ''
+        const held = rt.groupOwners.has(id) ? (rt.takeRoomSteps?.(id) ?? '') : ''
         if (switched) break
         // A model that writes its tool call as text ends the turn as if it were done,
         // though nothing ran. It gets one more turn on the same trigger, so a waiting
@@ -295,7 +294,8 @@ export function installRoute(rt: TurnsRuntime, core: TurnsCore): void {
           const text = rt.answerText?.(work, reply, name)
           if (text === undefined) return answer(source, reply)
           if (text.length <= MESSAGE_INLINE_MAX) return core.tellSender(id, asker, text)
-          void rt.attachLong(text, `Answer from ${name}.txt`)
+          void rt
+            .attachLong(text, `Answer from ${name}.txt`)
             .then(long => core.tellSender(id, asker, text, long))
             .catch(error => rt.warn('moon-bot: answer from %s not sent: %s', name, error))
         }
@@ -315,8 +315,9 @@ export function installRoute(rt: TurnsRuntime, core: TurnsCore): void {
         } else if (!retry && core.speaksInGroup(id, info)) {
           // A turn that failed before it took any input (the host can turn it down before its first step) never names its call, so the call waiting on this Session fails.
           const inRound = failure !== undefined && info === undefined && rt.failRoomTurn?.(id, failure) === true
-          if (failure !== undefined) { if (!inRound) void rt.lateRoomFailure?.(id, info ?? {}, failure) }
-          else if (reason?.kind !== 'aborted') void rt.lateRoomReply?.(id, info ?? {}, groupReply(), { shown })
+          if (failure !== undefined) {
+            if (!inRound) void rt.lateRoomFailure?.(id, info ?? {}, failure)
+          } else if (reason?.kind !== 'aborted') void rt.lateRoomReply?.(id, info ?? {}, groupReply(), { shown })
         } else if (!retry && info !== undefined) {
           finish(info, replyText())
         }
@@ -327,16 +328,18 @@ export function installRoute(rt: TurnsRuntime, core: TurnsCore): void {
             answer(request.info, '')
             continue
           }
-          void rt.deliver({
-            fromId: request.info.senderSessionId,
-            toId: selfId(id),
-            sessionId: id,
-            text: request.text,
-            role: 'request',
-            exchangeId: request.info.exchangeId,
-            ...(request.info.senderRoomId ? { fromRoomId: request.info.senderRoomId } : {}),
-            deferred: true,
-          }).catch(error => rt.warn('moon-bot: deferred request delivery failed: %s', error))
+          void rt
+            .deliver({
+              fromId: request.info.senderSessionId,
+              toId: selfId(id),
+              sessionId: id,
+              text: request.text,
+              role: 'request',
+              exchangeId: request.info.exchangeId,
+              ...(request.info.senderRoomId ? { fromRoomId: request.info.senderRoomId } : {}),
+              deferred: true,
+            })
+            .catch(error => rt.warn('moon-bot: deferred request delivery failed: %s', error))
         }
         break
       }

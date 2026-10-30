@@ -8,7 +8,7 @@ import { BlockAssembler, type LlmStreamChunk } from './llm-bits.ts'
 import { splitRef } from './text.ts'
 import type { ToolContext } from '../engine/registry.ts'
 import type { StoredBot, StoredRoom } from './runtime.ts'
-import type { BotShot, MemoryBody, MemoryNewsService, MemoryRuntime, MemoryStorage, UsageTag } from './memory-types.ts'
+import type { BotShot, MemoryBody, MemoryNewsService, MemoryRuntime, MemoryStorage, NoteNews, UsageTag } from './memory-types.ts'
 import { MEMORY_LIMITS, cleanEntry, cleanTopic, errorMessage } from './memory/records.ts'
 import { createStorage } from './memory/storage.ts'
 import { createNews } from './memory/news.ts'
@@ -126,7 +126,7 @@ export function install(rt: MemoryRuntime): void {
   // panel. The getter keeps the bindings available before they are assigned; the
   // review listeners go last so install order stays tools before background work.
   let news: MemoryNewsService | undefined
-  const storage: MemoryStorage = createStorage(rt, { reviewOn, noteNews: (scope, actor, op, line) => news?.noteNews(scope, actor, op, line) })
+  const storage: MemoryStorage = createStorage(rt, { reviewOn, noteNews: ((scope, actor, op, line) => news?.noteNews(scope, actor, op, line)) as NoteNews })
   const recall = createRecall({ rt, storage, botShot })
 
   ctx.effect(

@@ -9,26 +9,10 @@ import { replaceFile } from '../files.ts'
 import { unquote } from '../text.ts'
 import type { StoredBot, StoredRoom } from '../runtime.ts'
 import type { MemoryActor, MemoryFile, MemoryScope, TaggedEntry } from './records.ts'
-import type {
-  AddEntryInput, ChangeResult, MemoryRuntime, MemoryStorage, NoteNews, RemoveEntryInput, ReplaceEntryInput,
-  ScopeChoice,
-} from '../memory-types.ts'
-import {
-  DENIED, EMPTY_MAIN, GONE, HEADING, MAIN, MEMORY_LIMITS, NO_MATCH, addLink, errorCode, formatEntry,
-  insertEntry, joinLines, looksSecret, matchEntries, parseMemory, removeLink, squash,
-} from './records.ts'
+import type { AddEntryInput, ChangeResult, MemoryRuntime, MemoryStorage, RemoveEntryInput, ReplaceEntryInput, ScopeChoice } from '../memory-types.ts'
+import { DENIED, EMPTY_MAIN, GONE, HEADING, MAIN, MEMORY_LIMITS, NO_MATCH, addLink, errorCode, formatEntry, insertEntry, joinLines, looksSecret, matchEntries, parseMemory, removeLink, squash } from './records.ts'
 import { GROUP_HEADING, memorySection, teamRule } from './prompt.ts'
-
-export interface StorageDeps {
-  readonly reviewOn: boolean
-  readonly noteNews: NoteNews
-}
-
-export interface ActorFields {
-  readonly actor: string
-  readonly actorName: string
-  readonly auto?: boolean | undefined
-}
+import type { StorageDeps, ActorFields } from './storage-types.ts'
 
 /** Read/write one memory scope, and say who may do it. */
 export function createStorage(rt: MemoryRuntime, deps: StorageDeps): MemoryStorage {
@@ -47,8 +31,7 @@ export function createStorage(rt: MemoryRuntime, deps: StorageDeps): MemoryStora
   const scopeKey = (scope: MemoryScope): string => (scope.kind === 'team' ? 'team' : scope.kind === 'group' ? `group:${scope.roomId}` : `bot:${scope.botId}`)
   // The group a Session speaks in, an earlier part of it included: none for a Bot's
   // own chat. Writes check membership again, so a member that has left writes nothing.
-  const roomIdOf = (sessionId: string | undefined): string | undefined =>
-    (sessionId === undefined ? undefined : rt.groupOwners.get(sessionId)?.roomId ?? rt.pastOwners.get(sessionId)?.roomId)
+  const roomIdOf = (sessionId: string | undefined): string | undefined => (sessionId === undefined ? undefined : (rt.groupOwners.get(sessionId)?.roomId ?? rt.pastOwners.get(sessionId)?.roomId))
   // The Bot whose model keeps a group's memory: its admin, else its first member.
   const keeperOf = (room: StoredRoom): StoredBot | undefined => {
     const admin = rt.botOf(room.admin ?? undefined)
@@ -66,7 +49,10 @@ export function createStorage(rt: MemoryRuntime, deps: StorageDeps): MemoryStora
   }
   const topicNames = (scope: MemoryScope): string[] => {
     try {
-      return readdirSync(dirOf(scope)).filter(name => name.endsWith('.md') && name !== MAIN).map(name => name.slice(0, -3)).sort()
+      return readdirSync(dirOf(scope))
+        .filter(name => name.endsWith('.md') && name !== MAIN)
+        .map(name => name.slice(0, -3))
+        .sort()
     } catch {
       return []
     }
@@ -145,7 +131,7 @@ export function createStorage(rt: MemoryRuntime, deps: StorageDeps): MemoryStora
   function writeDenied(scope: MemoryScope, botId: string): string | undefined {
     if (scope.kind === 'team') return writesTeam(botId) ? undefined : 'Only Main Bots and group admins write the team memory. Tell a Main Bot with message_bot what the team should know.'
     if (scope.kind === 'group') return (rt.roomOf(scope.roomId)?.members ?? []).includes(botId) ? undefined : 'Only the members of a group chat write its memory.'
-    if (scope.botId !== botId && !rt.isMain(botId)) return 'Only a Main Bot can change another Bot\'s memory. Use message_bot to tell that Bot instead.'
+    if (scope.botId !== botId && !rt.isMain(botId)) return "Only a Main Bot can change another Bot's memory. Use message_bot to tell that Bot instead."
     return undefined
   }
   const labelOf = (scope: MemoryScope, botId: string): string => (scope.kind === 'team' ? 'the team memory' : scope.kind === 'group' ? 'the group memory' : scope.botId === botId ? 'your memory' : `${rt.botOf(scope.botId)?.name ?? 'that Bot'}'s memory`)
@@ -166,9 +152,11 @@ export function createStorage(rt: MemoryRuntime, deps: StorageDeps): MemoryStora
     const limit = limitOf(file)
     // A file already past its size (edited by hand) may still shrink.
     if (next.length <= limit || next.length <= file.content.length) return
-    throw new Error(file.topic === undefined
-      ? `${capital(label)}'s MEMORY.md would have ${next.length} of its ${limit} characters. Make room first: move details into a topic (remember with topic, then forget them here), merge entries with replace, or forget what no longer matters.`
-      : `The topic [[${file.topic}]] in ${label} would have ${next.length} of its ${limit} characters. Put the rest in another topic, or forget old entries.`)
+    throw new Error(
+      file.topic === undefined
+        ? `${capital(label)}'s MEMORY.md would have ${next.length} of its ${limit} characters. Make room first: move details into a topic (remember with topic, then forget them here), merge entries with replace, or forget what no longer matters.`
+        : `The topic [[${file.topic}]] in ${label} would have ${next.length} of its ${limit} characters. Put the rest in another topic, or forget old entries.`,
+    )
   }
   const capital = (text: string): string => (text[0] ?? '').toUpperCase() + text.slice(1)
   const sizeNote = (file: MemoryFile, size: number): string => `${file.file}: ${size} of ${limitOf(file)} characters`
@@ -214,7 +202,13 @@ export function createStorage(rt: MemoryRuntime, deps: StorageDeps): MemoryStora
     const found = matchEntries(allEntries(pool), wanted)
     const shown = String(wanted ?? '').slice(0, 80)
     if (found.length === 0) throw missing(`No entry in ${label}${topic ? ` (topic [[${topic}]])` : ''} matches "${shown}". recall shows what is saved.`)
-    if (found.length > 1) throw missing(`"${shown}" matches ${found.length} entries in ${label}; quote more of the one you mean:\n${found.slice(0, 8).map(entry => `- ${entry.text} (${fileName(entry.file)})`).join('\n')}`)
+    if (found.length > 1)
+      throw missing(
+        `"${shown}" matches ${found.length} entries in ${label}; quote more of the one you mean:\n${found
+          .slice(0, 8)
+          .map(entry => `- ${entry.text} (${fileName(entry.file)})`)
+          .join('\n')}`,
+      )
     const only = found[0]
     if (only === undefined) throw missing(`No entry in ${label} matches "${shown}".`)
     return only
@@ -248,7 +242,9 @@ export function createStorage(rt: MemoryRuntime, deps: StorageDeps): MemoryStora
       // A topic left with nothing but its title goes, and so does its link.
       const empty = old.file.topic !== undefined && lines.every(line => line.trim() === '' || HEADING.test(line))
       if (empty && old.file.topic !== undefined) {
-        await unlink(old.file.path).catch(error => { if (errorCode(error) !== 'ENOENT') throw error })
+        await unlink(old.file.path).catch(error => {
+          if (errorCode(error) !== 'ENOENT') throw error
+        })
         const main = mainOf(files)
         if (main.links.includes(old.file.topic)) await writeText(main.path, joinLines(removeLink(main.lines, old.file.topic)))
       } else {
@@ -286,11 +282,16 @@ export function createStorage(rt: MemoryRuntime, deps: StorageDeps): MemoryStora
     const path = snapshotPath(sessionId)
     let text = existsSync(path) ? readText(path) : ''
     if (text === '' || !holds(text)) {
-      text = memorySection(bot, {
-        own: ownScope(bot.id),
-        team: TEAM,
-        ...(roomId === undefined ? {} : { group: groupScope(roomId) }),
-      }, sectionSource, deps.reviewOn)
+      text = memorySection(
+        bot,
+        {
+          own: ownScope(bot.id),
+          team: TEAM,
+          ...(roomId === undefined ? {} : { group: groupScope(roomId) }),
+        },
+        sectionSource,
+        deps.reviewOn,
+      )
       if (rt.readOnly() === undefined) {
         try {
           mkdirSync(dirname(path), { recursive: true })
@@ -308,13 +309,42 @@ export function createStorage(rt: MemoryRuntime, deps: StorageDeps): MemoryStora
   function renewMemory(sessionId: string | undefined): void {
     if (sessionId === undefined) return
     frozen.delete(sessionId)
-    try { unlinkSync(snapshotPath(sessionId)) } catch { /* none saved */ }
+    try {
+      unlinkSync(snapshotPath(sessionId))
+    } catch {
+      /* none saved */
+    }
   }
 
   return {
-    root, TEAM, ownScope, groupScope, dirOf, scopeKey, safeId, roomIdOf, keeperOf,
-    loadScope, allEntries, limitOf, fileName, sizeNote, today, writeText, journal, enqueue: queued,
-    addEntry, replaceEntry, removeEntry, writesTeam, namedScope, writeDenied, labelOf, secretEntry,
-    entryProblem, sectionFor, renewMemory,
+    root,
+    TEAM,
+    ownScope,
+    groupScope,
+    dirOf,
+    scopeKey,
+    safeId,
+    roomIdOf,
+    keeperOf,
+    loadScope,
+    allEntries,
+    limitOf,
+    fileName,
+    sizeNote,
+    today,
+    writeText,
+    journal,
+    enqueue: queued,
+    addEntry,
+    replaceEntry,
+    removeEntry,
+    writesTeam,
+    namedScope,
+    writeDenied,
+    labelOf,
+    secretEntry,
+    entryProblem,
+    sectionFor,
+    renewMemory,
   }
 }

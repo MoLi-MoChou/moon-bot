@@ -5,13 +5,26 @@ import { join } from 'node:path'
 import { test } from 'node:test'
 import { probeAcp } from '../src/engine/acp/doctor.ts'
 import { commandVersion } from '../src/engine/acp/discovery.ts'
-import { DoctorStepError, examine, formatDoctor, type DoctorProbe, type DoctorSubject, type HandshakeFacts } from '../src/engine/doctor.ts'
+import {
+  DoctorStepError,
+  examine,
+  formatDoctor,
+  type DoctorProbe,
+  type DoctorSubject,
+  type HandshakeFacts,
+} from '../src/engine/doctor.ts'
 
-const quiet = (): { probe: DoctorProbe, called: () => boolean } => {
+const quiet = (): { probe: DoctorProbe; called: () => boolean } => {
   let used = false
   const probe: DoctorProbe = {
-    readVersion: async () => { used = true; return 'should-not-run' },
-    handshake: async () => { used = true; return { methods: [] } },
+    readVersion: async () => {
+      used = true
+      return 'should-not-run'
+    },
+    handshake: async () => {
+      used = true
+      return { methods: [] }
+    },
   }
   return { probe, called: () => used }
 }
@@ -26,11 +39,17 @@ test('doctor does not start a process for engines it must not launch', async () 
   assert.equal(missing.ok, false)
   assert.equal(missing.steps[0]?.detail, 'not installed')
   assert.equal(missing.steps[2]?.status, 'skipped')
-  const unsupported = await examine({ id: 'codex', kind: 'unsupported', path: '/usr/bin/codex', reason: 'not ACP' }, probe, { cwd: '' })
+  const unsupported = await examine(
+    { id: 'codex', kind: 'unsupported', path: '/usr/bin/codex', reason: 'not ACP' },
+    probe,
+    { cwd: '' },
+  )
   assert.equal(unsupported.steps[0]?.detail, 'not ACP')
   const remote = await examine({ id: 'remote:laptop', kind: 'acp-remote' }, probe, { cwd: '' })
   assert.equal(remote.steps[0]?.detail, 'remote agents are not launched here')
-  const onDemand = await examine({ id: 'ondemand:claude', kind: 'acp', onDemand: true, version: '@scope/pkg' }, probe, { cwd: '' })
+  const onDemand = await examine({ id: 'ondemand:claude', kind: 'acp', onDemand: true, version: '@scope/pkg' }, probe, {
+    cwd: '',
+  })
   assert.equal(onDemand.ok, false)
   assert.equal(onDemand.steps[1]?.detail, '@scope/pkg')
   assert.equal(onDemand.steps[2]?.detail, 'doctor does not download packages')
@@ -39,9 +58,16 @@ test('doctor does not start a process for engines it must not launch', async () 
 
 test('a missing version does not skip the handshake, and a prompt fails the session', async () => {
   let versions = 0
-  const facts: HandshakeFacts = { methods: ['initialize', 'initialized', 'session/new'], sessionId: 's1', agent: 'fixture 1' }
+  const facts: HandshakeFacts = {
+    methods: ['initialize', 'initialized', 'session/new'],
+    sessionId: 's1',
+    agent: 'fixture 1',
+  }
   const probe: DoctorProbe = {
-    readVersion: async () => { versions += 1; return undefined },
+    readVersion: async () => {
+      versions += 1
+      return undefined
+    },
     handshake: async () => facts,
   }
   const subject: DoctorSubject = { id: 'opencode', kind: 'acp', path: '/usr/bin/opencode', command: 'opencode' }
@@ -54,10 +80,14 @@ test('a missing version does not skip the handshake, and a prompt fails the sess
   assert.equal(known.ok, true)
   assert.equal(known.steps.find(step => step.name === 'handshake')?.detail, 'fixture 1')
   assert.equal(versions, 1)
-  const prompted = await examine(subject, {
-    readVersion: async () => '1',
-    handshake: async () => ({ methods: ['initialize', 'session/prompt'], sessionId: 's1' }),
-  }, { cwd: '/tmp/session' })
+  const prompted = await examine(
+    subject,
+    {
+      readVersion: async () => '1',
+      handshake: async () => ({ methods: ['initialize', 'session/prompt'], sessionId: 's1' }),
+    },
+    { cwd: '/tmp/session' },
+  )
   assert.equal(prompted.steps.find(step => step.name === 'session')?.detail, 'doctor must not send a prompt')
   assert.match(formatDoctor(prompted), /session\tfail\tdoctor must not send a prompt/)
 })
@@ -65,15 +95,25 @@ test('a missing version does not skip the handshake, and a prompt fails the sess
 test('handshake and session failures stay on their own steps', async () => {
   const probe: DoctorProbe = {
     readVersion: async () => '1',
-    handshake: async () => { throw new DoctorStepError('session', 'no session id') },
+    handshake: async () => {
+      throw new DoctorStepError('session', 'no session id')
+    },
   }
-  const session = await examine({ id: 'opencode', kind: 'acp', path: '/bin/opencode', version: '1' }, probe, { cwd: '' })
+  const session = await examine({ id: 'opencode', kind: 'acp', path: '/bin/opencode', version: '1' }, probe, {
+    cwd: '',
+  })
   assert.equal(session.steps.find(step => step.name === 'handshake')?.status, 'ok')
   assert.equal(session.steps.find(step => step.name === 'session')?.detail, 'no session id')
-  const handshake = await examine({ id: 'opencode', kind: 'acp', path: '/bin/opencode', version: '1' }, {
-    readVersion: async () => '1',
-    handshake: async () => { throw new Error('no handshake') },
-  }, { cwd: '' })
+  const handshake = await examine(
+    { id: 'opencode', kind: 'acp', path: '/bin/opencode', version: '1' },
+    {
+      readVersion: async () => '1',
+      handshake: async () => {
+        throw new Error('no handshake')
+      },
+    },
+    { cwd: '' },
+  )
   assert.equal(handshake.steps.find(step => step.name === 'handshake')?.detail, 'no handshake')
   assert.equal(handshake.steps.find(step => step.name === 'session')?.status, 'skipped')
 })
@@ -104,12 +144,18 @@ process.stdin.on('data', (chunk) => {
 })
 `
 
-const methodsOf = (log: string): string[] => readFileSync(log, 'utf8').trim().split('\n').filter(Boolean).map(line => {
-  const message = JSON.parse(line) as { method?: string }
-  return typeof message.method === 'string' ? message.method : ''
-}).filter(method => method !== '')
+const methodsOf = (log: string): string[] =>
+  readFileSync(log, 'utf8')
+    .trim()
+    .split('\n')
+    .filter(Boolean)
+    .map(line => {
+      const message = JSON.parse(line) as { method?: string }
+      return typeof message.method === 'string' ? message.method : ''
+    })
+    .filter(method => method !== '')
 
-test('a scripted agent is checked through session/new and never prompted', async (t) => {
+test('a scripted agent is checked through session/new and never prompted', async t => {
   const root = mkdtempSync(join(tmpdir(), 'engine-doctor-'))
   t.after(() => rmSync(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 50 }))
   const cwd = join(root, 'session')
@@ -118,12 +164,21 @@ test('a scripted agent is checked through session/new and never prompted', async
   const script = join(root, 'agent.cjs')
   writeFileSync(script, AGENT)
   const subject: DoctorSubject = {
-    id: 'fixture', kind: 'acp', command: process.execPath, args: [script, log, 'ok'], path: process.execPath, version: 'fixture-1',
+    id: 'fixture',
+    kind: 'acp',
+    command: process.execPath,
+    args: [script, log, 'ok'],
+    path: process.execPath,
+    version: 'fixture-1',
   }
-  const result = await examine(subject, {
-    readVersion: async () => 'unused',
-    handshake: (command, args, dir, timeoutMs) => probeAcp(command, args, dir, timeoutMs),
-  }, { cwd })
+  const result = await examine(
+    subject,
+    {
+      readVersion: async () => 'unused',
+      handshake: (command, args, dir, timeoutMs) => probeAcp(command, args, dir, timeoutMs),
+    },
+    { cwd },
+  )
   assert.equal(result.ok, true)
   assert.equal(result.steps.find(step => step.name === 'handshake')?.detail, 'fixture 1')
   assert.equal(result.steps.find(step => step.name === 'session')?.detail, 'session-1')
@@ -132,7 +187,7 @@ test('a scripted agent is checked through session/new and never prompted', async
   assert.deepEqual(readdirSync(cwd), [])
 })
 
-test('a refused handshake, a permission ask, and a silent agent stay off the prompt', async (t) => {
+test('a refused handshake, a permission ask, and a silent agent stay off the prompt', async t => {
   const root = mkdtempSync(join(tmpdir(), 'engine-doctor-'))
   t.after(() => rmSync(root, { recursive: true, force: true, maxRetries: 20, retryDelay: 50 }))
   const script = join(root, 'agent.cjs')
@@ -140,12 +195,21 @@ test('a refused handshake, a permission ask, and a silent agent stay off the pro
   const run = async (mode: string, timeoutMs: number) => {
     const log = join(root, `${mode}.log`)
     writeFileSync(log, '')
-    const result = await examine({
-      id: mode, kind: 'acp', command: process.execPath, args: [script, log, mode], path: process.execPath, version: 'fixture-1',
-    }, {
-      readVersion: async () => 'unused',
-      handshake: (command, args, dir, timeout) => probeAcp(command, args, dir, timeout),
-    }, { cwd: root, timeoutMs })
+    const result = await examine(
+      {
+        id: mode,
+        kind: 'acp',
+        command: process.execPath,
+        args: [script, log, mode],
+        path: process.execPath,
+        version: 'fixture-1',
+      },
+      {
+        readVersion: async () => 'unused',
+        handshake: (command, args, dir, timeout) => probeAcp(command, args, dir, timeout),
+      },
+      { cwd: root, timeoutMs },
+    )
     return { result, log: readFileSync(log, 'utf8') }
   }
   const refused = await run('refuse', 2_000)

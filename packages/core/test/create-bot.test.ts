@@ -16,9 +16,18 @@ test('the form starts on the DSH default model, else the first served one', () =
 
 test('the payload carries the look, the chosen model, and the brief', () => {
   const look = { shape: 'star', color: 'blue' }
-  assert.deepEqual(createPayload({ name: 'A', look, model: 'cloud/qwen-max' }), { name: 'A', color: 'blue', avatar: { shape: 'star' }, model: 'cloud/qwen-max' })
-  assert.deepEqual(createPayload({ name: 'A', look, model: '', brief: 'hi', image: 'data:image/png;base64,AA' }),
-    { name: 'A', color: 'blue', avatar: { shape: 'star', image: 'data:image/png;base64,AA' }, brief: 'hi' })
+  assert.deepEqual(createPayload({ name: 'A', look, model: 'cloud/qwen-max' }), {
+    name: 'A',
+    color: 'blue',
+    avatar: { shape: 'star' },
+    model: 'cloud/qwen-max',
+  })
+  assert.deepEqual(createPayload({ name: 'A', look, model: '', brief: 'hi', image: 'data:image/png;base64,AA' }), {
+    name: 'A',
+    color: 'blue',
+    avatar: { shape: 'star', image: 'data:image/png;base64,AA' },
+    brief: 'hi',
+  })
 })
 
 test('the suggested name skips taken names', () => {

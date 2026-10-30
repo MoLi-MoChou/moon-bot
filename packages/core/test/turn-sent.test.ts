@@ -15,7 +15,13 @@ const seed = () => ({
   version: 1,
   mainBotIds: ['a'],
   bots: { a: { id: 'a', name: 'Chief', role: 'Boss', sessionId: 'a', model: 'custom/mock-1', createdAt: 1 } },
-  rooms: {}, agents: {}, exchanges: [], exchangeTurns: {}, questions: {}, prefs: {}, revision: 0,
+  rooms: {},
+  agents: {},
+  exchanges: [],
+  exchangeTurns: {},
+  questions: {},
+  prefs: {},
+  revision: 0,
 })
 
 interface TestRuntime {
@@ -34,10 +40,23 @@ function start(t: { after: (fn: () => void) => void }, prompt: () => Promise<voi
   const ctx = fakeContext()
   Object.assign(ctx, {
     llm: { listProviders: () => [], listModels: async () => [], resolveModelInfo: async () => ({}) },
-    workspaceRegistry: { get: () => undefined, resolveByPath: async () => undefined, create: async (path: string) => ({ id: 'w1', path }), archiveSession: async () => {} },
+    workspaceRegistry: {
+      get: () => undefined,
+      resolveByPath: async () => undefined,
+      create: async (path: string) => ({ id: 'w1', path }),
+      archiveSession: async () => {},
+    },
     sessionController: {
       create: async () => ({ sessionId: 's1' }),
-      resolveAgent: async (sessionId: string) => ({ agent: { session: { id: sessionId }, followup() {}, steer() {}, cancel() {}, inbox: { nextStep: [], nextTurn: [], remove: () => false } } }),
+      resolveAgent: async (sessionId: string) => ({
+        agent: {
+          session: { id: sessionId },
+          followup() {},
+          steer() {},
+          cancel() {},
+          inbox: { nextStep: [], nextTurn: [], remove: () => false },
+        },
+      }),
       selectModel: async () => {},
       prompt,
     },
@@ -64,12 +83,16 @@ function start(t: { after: (fn: () => void) => void }, prompt: () => Promise<voi
   }
   const call = async (endpoint: string, payload: Record<string, unknown>): Promise<Record<string, unknown>> => {
     assert.ok(route !== undefined, 'the channel route is installed')
-    return (await route.fetch(new Request('http://localhost/api/bot', { method: 'POST', body: JSON.stringify({ endpoint, payload }) }))).json()
+    return (
+      await route.fetch(
+        new Request('http://localhost/api/bot', { method: 'POST', body: JSON.stringify({ endpoint, payload }) }),
+      )
+    ).json()
   }
   return { rt, ctx, call, emit, home }
 }
 
-test('a send marks the Bot working at once, and the turn takes the mark over', async (t) => {
+test('a send marks the Bot working at once, and the turn takes the mark over', async t => {
   // The engine never starts a turn here: only the accepted message moves the view.
   const { rt, call, emit } = start(t, async () => {})
   const notices: number[] = []
@@ -92,17 +115,22 @@ test('a send marks the Bot working at once, and the turn takes the mark over', a
   assert.deepEqual(rt.turnsView(), {})
 })
 
-test('a send the engine turned away is not left looking like work', async (t) => {
-  const { rt, call } = start(t, async () => { throw new Error('the session is gone') })
+test('a send the engine turned away is not left looking like work', async t => {
+  const { rt, call } = start(t, async () => {
+    throw new Error('the session is gone')
+  })
   const sent = await call('send', { sessionId: 'a', text: 'start the launch' })
   assert.notEqual(sent.ok, true)
   assert.deepEqual(rt.workView(), {})
 })
 
-test('a failed turn ends the work like a finished one', async (t) => {
+test('a failed turn ends the work like a finished one', async t => {
   const { rt, call, emit } = start(t, async () => {})
   await call('send', { sessionId: 'a', text: 'start the launch' })
   emit('a', 'turn/start', { turn: 1 })
-  emit('a', 'turn/end', { turn: 1, reason: { kind: 'error', error: { code: 'TRANSPORT', message: 'Connection error.' } } })
+  emit('a', 'turn/end', {
+    turn: 1,
+    reason: { kind: 'error', error: { code: 'TRANSPORT', message: 'Connection error.' } },
+  })
   assert.deepEqual(rt.workView(), {})
 })

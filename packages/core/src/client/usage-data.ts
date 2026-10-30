@@ -7,8 +7,15 @@ export const MODEL = 2
 export const KIND = 3
 
 export type UsageRow = readonly [
-  hour: string, owner: string, model: string, kind: string,
-  input: number, cacheRead: number, cacheWrite: number, output: number, calls: number,
+  hour: string,
+  owner: string,
+  model: string,
+  kind: string,
+  input: number,
+  cacheRead: number,
+  cacheWrite: number,
+  output: number,
+  calls: number,
 ]
 
 export type UsageUnit = 'hour' | 'day' | 'week' | 'month'
@@ -70,7 +77,13 @@ export const RANGES: readonly UsageRange[] = [
 
 // Hour keys are wall-clock times in the browser's zone. Reading them as UTC keeps every
 // calendar step exact, whatever the zone's daylight saving does.
-export const hourMs = (key: string): number => Date.UTC(Number(key.slice(0, 4)), Number(key.slice(5, 7)) - 1, Number(key.slice(8, 10)), Number(key.slice(11, 13)) || 0)
+export const hourMs = (key: string): number =>
+  Date.UTC(
+    Number(key.slice(0, 4)),
+    Number(key.slice(5, 7)) - 1,
+    Number(key.slice(8, 10)),
+    Number(key.slice(11, 13)) || 0,
+  )
 export const dayKey = (ms: number): string => new Date(ms).toISOString().slice(0, 10)
 const hourKey = (ms: number): string => new Date(ms).toISOString().slice(0, 13).replace('T', ' ')
 // Weeks start on Monday.
@@ -84,7 +97,8 @@ export function spanRange(from: string, to: string): UsageRange {
   const unit: UsageUnit = days <= 2 ? 'hour' : days <= 62 ? 'day' : days <= 182 ? 'week' : 'month'
   const range: UsageRange = { id: 'custom', unit, from, to, days, count: 0, stride: 1 }
   const count = spanBuckets(range).length
-  const stride = unit === 'hour' ? 6 : [1, 2, 3, 5, 7, 10, 14].find(step => count / step <= 12) ?? Math.ceil(count / 12)
+  const stride =
+    unit === 'hour' ? 6 : ([1, 2, 3, 5, 7, 10, 14].find(step => count / step <= 12) ?? Math.ceil(count / 12))
   return { ...range, count, stride }
 }
 
@@ -96,7 +110,8 @@ function spanBuckets(range: UsageRange): UsageBucket[] {
   const buckets: UsageBucket[] = []
   if (range.unit === 'hour' || range.unit === 'day') {
     const step = range.unit === 'hour' ? HOUR_MS : DAY_MS
-    for (let start = first; start < end; start += step) buckets.push({ start, end: start + step, key: range.unit === 'hour' ? hourKey(start) : dayKey(start) })
+    for (let start = first; start < end; start += step)
+      buckets.push({ start, end: start + step, key: range.unit === 'hour' ? hourKey(start) : dayKey(start) })
   } else if (range.unit === 'week') {
     for (let monday = mondayOf(first); monday < end; monday += 7 * DAY_MS) {
       buckets.push({ start: Math.max(monday, first), end: Math.min(monday + 7 * DAY_MS, end), key: dayKey(monday) })
@@ -105,7 +120,11 @@ function spanBuckets(range: UsageRange): UsageBucket[] {
     const year = new Date(first).getUTCFullYear()
     for (let month = new Date(first).getUTCMonth(); Date.UTC(year, month, 1) < end; month += 1) {
       const start = Date.UTC(year, month, 1)
-      buckets.push({ start: Math.max(start, first), end: Math.min(Date.UTC(year, month + 1, 1), end), key: dayKey(start).slice(0, 7) })
+      buckets.push({
+        start: Math.max(start, first),
+        end: Math.min(Date.UTC(year, month + 1, 1), end),
+        key: dayKey(start).slice(0, 7),
+      })
     }
   }
   return buckets
@@ -122,11 +141,21 @@ export interface UsageSpan {
 // for the range itself, `before` for the same span just before it.
 export function spanOf(range: UsageRange, now: string): UsageSpan {
   if (range.from !== undefined) {
-    return { buckets: spanBuckets(range), from: `${range.from} 00`, to: `${range.to ?? ''} 23`, before: hourKey(hourMs(range.from) - (range.days ?? 0) * DAY_MS) }
+    return {
+      buckets: spanBuckets(range),
+      from: `${range.from} 00`,
+      to: `${range.to ?? ''} 23`,
+      before: hourKey(hourMs(range.from) - (range.days ?? 0) * DAY_MS),
+    }
   }
   const buckets = bucketsOf(range, now)
-  const start = buckets[range.count] ?? buckets[buckets.length - 1] as UsageBucket
-  return { buckets: buckets.slice(range.count), from: hourKey(start.start), to: now, before: hourKey(buckets[0]?.start ?? start.start) }
+  const start = buckets[range.count] ?? (buckets[buckets.length - 1] as UsageBucket)
+  return {
+    buckets: buckets.slice(range.count),
+    from: hourKey(start.start),
+    to: now,
+    before: hourKey(buckets[0]?.start ?? start.start),
+  }
 }
 
 // The range's buckets, oldest first, after as many before them for the comparison.
@@ -140,7 +169,10 @@ export function bucketsOf(range: UsageRange, now: string): UsageBucket[] {
     else if (range.unit === 'day') start = today - back * DAY_MS
     else if (range.unit === 'week') start = mondayOf(today) - back * 7 * DAY_MS
     else start = Date.UTC(new Date(end).getUTCFullYear(), new Date(end).getUTCMonth() - back, 1)
-    buckets.push({ start, key: range.unit === 'hour' ? hourKey(start) : range.unit === 'month' ? dayKey(start).slice(0, 7) : dayKey(start) })
+    buckets.push({
+      start,
+      key: range.unit === 'hour' ? hourKey(start) : range.unit === 'month' ? dayKey(start).slice(0, 7) : dayKey(start),
+    })
   }
   return buckets
 }
@@ -183,8 +215,19 @@ export function summarize(
     }
     return week
   }
-  const current: UsageBucketSum[] = buckets.map(bucket => ({ ...bucket, sum: blank(), stacks: new Map<string, number>() }))
-  const result: UsageSummary = { buckets: current, total: blank(), previous: 0, owners: new Map(), models: new Map(), kinds: new Map() }
+  const current: UsageBucketSum[] = buckets.map(bucket => ({
+    ...bucket,
+    sum: blank(),
+    stacks: new Map<string, number>(),
+  }))
+  const result: UsageSummary = {
+    buckets: current,
+    total: blank(),
+    previous: 0,
+    owners: new Map(),
+    models: new Map(),
+    kinds: new Map(),
+  }
   for (const row of view.rows) {
     const hour = row[HOUR]
     if (hour < before || hour > to || !keep(row)) continue
@@ -210,7 +253,11 @@ function trimmed(value: number): string {
   const text = value >= 100 ? value.toFixed(0) : value >= 10 ? value.toFixed(1) : value.toFixed(2)
   return text.includes('.') ? text.replace(/\.?0+$/, '') : text
 }
-const UNITS: readonly (readonly [number, string])[] = [[1e9, 'B'], [1e6, 'M'], [1e3, 'K']]
+const UNITS: readonly (readonly [number, string])[] = [
+  [1e9, 'B'],
+  [1e6, 'M'],
+  [1e3, 'K'],
+]
 // 999,999 reads 1M, not 1000K.
 export function compact(count: number): string {
   for (const [size, unit] of UNITS) {

@@ -38,7 +38,11 @@ async function relink(source: string, path: string, roots: readonly string[], to
   const folder = (await stat(source).catch((): undefined => undefined))?.isDirectory() === true
   const windows = process.platform === 'win32'
   const inside = root === undefined ? written : join(to, relative(root, target))
-  await symlink(direct && !isAbsolute(text) && !(windows && folder) ? text : inside, path, folder ? (windows ? 'junction' : 'dir') : 'file')
+  await symlink(
+    direct && !isAbsolute(text) && !(windows && folder) ? text : inside,
+    path,
+    folder ? (windows ? 'junction' : 'dir') : 'file',
+  )
 }
 
 export interface CopyTreeOptions {
@@ -58,7 +62,11 @@ export interface CopyTreeOptions {
  *   copy will end up, when `into` is a staging folder that takes that name later
  * @returns the relative paths that were skipped
  */
-export async function copyTree(from: string, into: string, { force = true, skip = false, leave = () => false, as = into, signal }: CopyTreeOptions = {}): Promise<string[]> {
+export async function copyTree(
+  from: string,
+  into: string,
+  { force = true, skip = false, leave = () => false, as = into, signal }: CopyTreeOptions = {},
+): Promise<string[]> {
   // The folder can itself be a link; its contents are what is copied.
   const origin = real(from)
   const links: string[] = []
@@ -71,7 +79,10 @@ export async function copyTree(from: string, into: string, { force = true, skip 
       const path = relative(origin, source)
       if (path !== '' && leave(path)) return false
       if (path === '') return true
-      const info = await lstat(source).catch((error: unknown): Stats | undefined => { if (!skip) throw error; return undefined })
+      const info = await lstat(source).catch((error: unknown): Stats | undefined => {
+        if (!skip) throw error
+        return undefined
+      })
       if (info === undefined) skipped.push(path)
       else if (info.isSymbolicLink()) links.push(path)
       return info?.isSymbolicLink() === false
@@ -81,7 +92,14 @@ export async function copyTree(from: string, into: string, { force = true, skip 
   for (const path of links) {
     signal?.throwIfAborted()
     const at = join(into, path)
-    if (!force && await lstat(at).then(() => true, () => false)) continue
+    if (
+      !force &&
+      (await lstat(at).then(
+        () => true,
+        () => false,
+      ))
+    )
+      continue
     await relink(join(origin, path), at, roots, resolve(as)).catch((error: unknown) => {
       if (!skip) throw error
       skipped.push(path)

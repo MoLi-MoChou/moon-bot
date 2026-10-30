@@ -61,4 +61,4 @@ export const DELIVER_CSS = `
 .bt-fpreview{width:calc(100vw - 16px);height:calc(100vh - 24px);border-radius:12px}
 }
 @media (prefers-reduced-motion:reduce){.bt-dcard,.bt-fpreview-layer{animation:none;transition:none}}
-`;
+`

@@ -19,7 +19,13 @@ export const MODEL_PRESETS: readonly ModelPreset[] = [
   { id: 'deepseek-v4', name: 'DeepSeek V4', context: 128000, maxTokens: 8192 },
   { id: 'deepseek-v4-pro', name: 'DeepSeek V4 Pro', context: 128000, maxTokens: 8192 },
   { id: 'deepseek-v4-flash', name: 'DeepSeek V4 Flash', context: 128000, maxTokens: 8192 },
-  { id: 'deepseek-v4-flash-vision-exp', name: 'DeepSeek V4 Flash Vision', context: 128000, maxTokens: 8192, vision: true },
+  {
+    id: 'deepseek-v4-flash-vision-exp',
+    name: 'DeepSeek V4 Flash Vision',
+    context: 128000,
+    maxTokens: 8192,
+    vision: true,
+  },
 
   // OpenAI
   { id: 'gpt-4o', name: 'GPT-4o', context: 128000, maxTokens: 16384, vision: true },
@@ -35,13 +41,27 @@ export const MODEL_PRESETS: readonly ModelPreset[] = [
   { id: 'gpt-4.5-preview', name: 'GPT-4.5 Preview', context: 128000, maxTokens: 16384, vision: true },
 
   // Anthropic Claude
-  { id: 'claude-3-7-sonnet', name: 'Claude 3.7 Sonnet', context: 200000, maxTokens: 64000, vision: true, reasoning: true },
+  {
+    id: 'claude-3-7-sonnet',
+    name: 'Claude 3.7 Sonnet',
+    context: 200000,
+    maxTokens: 64000,
+    vision: true,
+    reasoning: true,
+  },
   { id: 'claude-3-5-sonnet', name: 'Claude 3.5 Sonnet', context: 200000, maxTokens: 8192, vision: true },
   { id: 'claude-3-5-haiku', name: 'Claude 3.5 Haiku', context: 200000, maxTokens: 8192 },
   { id: 'claude-3-opus', name: 'Claude 3 Opus', context: 200000, maxTokens: 4096, vision: true },
   { id: 'claude-3-sonnet', name: 'Claude 3 Sonnet', context: 200000, maxTokens: 4096, vision: true },
   { id: 'claude-3-haiku', name: 'Claude 3 Haiku', context: 200000, maxTokens: 4096, vision: true },
-  { id: 'claude-sonnet-4-5', name: 'Claude Sonnet 4.5', context: 200000, maxTokens: 16384, vision: true, reasoning: true },
+  {
+    id: 'claude-sonnet-4-5',
+    name: 'Claude Sonnet 4.5',
+    context: 200000,
+    maxTokens: 16384,
+    vision: true,
+    reasoning: true,
+  },
   { id: 'claude-opus-4-1', name: 'Claude Opus 4.1', context: 200000, maxTokens: 16384, vision: true, reasoning: true },
   { id: 'claude-2.1', name: 'Claude 2.1', context: 200000, maxTokens: 4096 },
   { id: 'claude-2.0', name: 'Claude 2.0', context: 100000, maxTokens: 4096 },
@@ -50,7 +70,14 @@ export const MODEL_PRESETS: readonly ModelPreset[] = [
   // Google Gemini
   { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', context: 1048576, maxTokens: 8192, vision: true },
   { id: 'gemini-2.0-flash-lite', name: 'Gemini 2.0 Flash Lite', context: 1048576, maxTokens: 8192, vision: true },
-  { id: 'gemini-2.0-flash-thinking-exp', name: 'Gemini 2.0 Flash Thinking', context: 1048576, maxTokens: 65536, vision: true, reasoning: true },
+  {
+    id: 'gemini-2.0-flash-thinking-exp',
+    name: 'Gemini 2.0 Flash Thinking',
+    context: 1048576,
+    maxTokens: 65536,
+    vision: true,
+    reasoning: true,
+  },
   { id: 'gemini-2.0-pro-exp', name: 'Gemini 2.0 Pro', context: 2097152, maxTokens: 8192, vision: true },
   { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', context: 2097152, maxTokens: 8192, vision: true },
   { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', context: 1048576, maxTokens: 8192, vision: true },

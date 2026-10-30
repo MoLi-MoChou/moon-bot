@@ -55,12 +55,17 @@ export interface BrowserReadRequest {
   id: string
   botId: string
 }
-export type BrowserReadAnswer =
-  | { id: string; ok: true; page: BrowserRead }
-  | { id: string; ok: false; error: string }
+export type BrowserReadAnswer = { id: string; ok: true; page: BrowserRead } | { id: string; ok: false; error: string }
 
-export interface SavedTab { id: string; url: string; title: string }
-export interface SavedBot { tabs: SavedTab[]; active: string | null }
+export interface SavedTab {
+  id: string
+  url: string
+  title: string
+}
+export interface SavedBot {
+  tabs: SavedTab[]
+  active: string | null
+}
 export type SavedBots = Record<string, SavedBot>
 
 export interface GuestEntry {
@@ -106,4 +111,3 @@ export interface BotBrowsers {
   retain(botIds: readonly string[]): Promise<unknown>
   dispose(): void
 }
-

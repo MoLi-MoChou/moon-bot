@@ -8,22 +8,48 @@ import { build } from 'esbuild'
 // DOM. The component's hooks are called directly, so they only need inert stubs.
 const bundle = await build({
   entryPoints: [fileURLToPath(new URL('../src/client/mention-chips.tsx', import.meta.url))],
-  bundle: true, format: 'cjs', platform: 'node', write: false,
+  bundle: true,
+  format: 'cjs',
+  platform: 'node',
+  write: false,
   external: ['react'],
 })
-const module = { exports: {} as {
-  mentionChips: (text: string, bots: readonly { id: string, name: string, ink?: string }[], options?: { everyone?: boolean }) => { start: number, end: number, kind: string, name: string, ink?: string }[]
-  chipSegments: (text: string, chips: readonly unknown[]) => ({ kind: 'text', text: string } | { kind: 'chip', chip: { name: string } })[]
-  deleteMentionBefore: (text: string, caret: number, chips: readonly unknown[]) => { text: string, caret: number } | null
-  MentionMirror: (props: { field: { current: null }, text: string, chips: readonly unknown[], composing?: boolean }) => { type: unknown, props: Record<string, unknown>, children: unknown[] }
-  MENTION_CHIPS_CSS: string
-} }
+const module = {
+  exports: {} as {
+    mentionChips: (
+      text: string,
+      bots: readonly { id: string; name: string; ink?: string }[],
+      options?: { everyone?: boolean },
+    ) => { start: number; end: number; kind: string; name: string; ink?: string }[]
+    chipSegments: (
+      text: string,
+      chips: readonly unknown[],
+    ) => ({ kind: 'text'; text: string } | { kind: 'chip'; chip: { name: string } })[]
+    deleteMentionBefore: (
+      text: string,
+      caret: number,
+      chips: readonly unknown[],
+    ) => { text: string; caret: number } | null
+    MentionMirror: (props: {
+      field: { current: null }
+      text: string
+      chips: readonly unknown[]
+      composing?: boolean
+    }) => { type: unknown; props: Record<string, unknown>; children: unknown[] }
+    MENTION_CHIPS_CSS: string
+  },
+}
 runInNewContext(bundle.outputFiles[0].text, {
-  module, exports: module.exports,
+  module,
+  exports: module.exports,
   require: (name: string) => {
     if (name !== 'react') throw new Error(`no platform module ${name}`)
     return {
-      createElement: (type: unknown, props: unknown, ...children: unknown[]) => ({ type, props: props ?? {}, children: children.flat(Infinity) }),
+      createElement: (type: unknown, props: unknown, ...children: unknown[]) => ({
+        type,
+        props: props ?? {},
+        children: children.flat(Infinity),
+      }),
       Fragment: Symbol.for('react.fragment'),
       useRef: (initial: unknown) => ({ current: initial ?? null }),
       useLayoutEffect: () => {},
@@ -48,20 +74,27 @@ function textOf(node: unknown): string {
   if (node === null || typeof node !== 'object') return ''
   return ((node as { children?: unknown[] }).children ?? []).map(textOf).join('')
 }
-function spansOf(tree: unknown): { kind: unknown, text: string, props: Record<string, unknown> }[] {
+function spansOf(tree: unknown): { kind: unknown; text: string; props: Record<string, unknown> }[] {
   if (tree === null || typeof tree !== 'object') return []
-  const node = tree as { type: unknown, props?: Record<string, unknown>, children?: unknown[] }
-  const here = node.props?.className === 'bt-mention-chip' ? [{ kind: node.props['data-kind'], text: textOf(node), props: node.props }] : []
+  const node = tree as { type: unknown; props?: Record<string, unknown>; children?: unknown[] }
+  const here =
+    node.props?.className === 'bt-mention-chip'
+      ? [{ kind: node.props['data-kind'], text: textOf(node), props: node.props }]
+      : []
   return [...here, ...(node.children ?? []).flatMap(spansOf)]
 }
 
 test('a known name after "@" is a chip, case-insensitively and with spaces in the name', () => {
-  assert.equal(shown(chipsOf('ask @Chief now')), shown([
-    { start: 4, end: 10, kind: 'bot', name: 'Chief', ink: 'var(--bt-ink-lilac)' },
-  ]))
+  assert.equal(
+    shown(chipsOf('ask @Chief now')),
+    shown([{ start: 4, end: 10, kind: 'bot', name: 'Chief', ink: 'var(--bt-ink-lilac)' }]),
+  )
   // The chip paints the text exactly as typed; only the match is case-insensitive.
   assert.equal(shown(chipsOf('@chief').map(chip => chip.name)), shown(['chief']))
-  assert.equal(shown(chipsOf('ping @New Bot 2')), shown([{ start: 5, end: 13, kind: 'bot', name: 'New Bot', ink: 'var(--bt-ink-sky)' }]))
+  assert.equal(
+    shown(chipsOf('ping @New Bot 2')),
+    shown([{ start: 5, end: 13, kind: 'bot', name: 'New Bot', ink: 'var(--bt-ink-sky)' }]),
+  )
   assert.equal(shown(chipsOf('hi @New')), shown([]))
 })
 
@@ -74,7 +107,10 @@ test('an address, a longer word, code and links keep plain text', () => {
 })
 
 test('"everyone" is a group call, and only in a group', () => {
-  assert.equal(shown(chipsOf('@everyone', { everyone: true }).map(chip => [chip.kind, chip.name])), shown([['everyone', 'everyone']]))
+  assert.equal(
+    shown(chipsOf('@everyone', { everyone: true }).map(chip => [chip.kind, chip.name])),
+    shown([['everyone', 'everyone']]),
+  )
   assert.equal(shown(chipsOf('@所有人', { everyone: true }).map(chip => chip.kind)), shown(['everyone']))
   assert.equal(shown(chipsOf('@everyone')), shown([]))
 })
@@ -83,8 +119,14 @@ test('segments split the text into plain runs and chips, and rejoin to the same 
   const text = 'Hello @Chief, ask @Poet and @New Bot: thanks'
   const chips = chipsOf(text)
   const segments = chipSegments(text, chips)
-  assert.equal(segments.map(segment => (segment.kind === 'chip' ? `[@${segment.chip.name}]` : segment.text)).join(''), 'Hello [@Chief], ask [@Poet] and [@New Bot]: thanks')
-  assert.equal(segments.some(segment => segment.kind === 'text' && segment.text === ': thanks'), true)
+  assert.equal(
+    segments.map(segment => (segment.kind === 'chip' ? `[@${segment.chip.name}]` : segment.text)).join(''),
+    'Hello [@Chief], ask [@Poet] and [@New Bot]: thanks',
+  )
+  assert.equal(
+    segments.some(segment => segment.kind === 'text' && segment.text === ': thanks'),
+    true,
+  )
   assert.equal(shown(chipSegments('', [])), shown([]))
   assert.equal(shown(chipSegments('plain', [])), shown([{ kind: 'text', text: 'plain' }]))
 })
@@ -112,10 +154,20 @@ test('the mirror paints every mention as a chip and keeps the plain text', () =>
   assert.equal(tree.props['aria-hidden'], 'true')
   assert.equal(tree.props.className, 'bt-mention-mirror')
   assert.equal(tree.props['data-composing'], undefined)
-  assert.equal(shown(spansOf(tree).map(span => [span.kind, span.text])), shown([['bot', '@Chief'], ['bot', '@Poet']]))
+  assert.equal(
+    shown(spansOf(tree).map(span => [span.kind, span.text])),
+    shown([
+      ['bot', '@Chief'],
+      ['bot', '@Poet'],
+    ]),
+  )
   assert.notEqual(spansOf(tree)[0]?.props['style'], undefined)
   assert.equal(textOf(tree), 'Hi @Chief and @Poet')
-  const group = MentionMirror({ field: { current: null }, text: '@everyone', chips: chipsOf('@everyone', { everyone: true }) })
+  const group = MentionMirror({
+    field: { current: null },
+    text: '@everyone',
+    chips: chipsOf('@everyone', { everyone: true }),
+  })
   assert.equal(shown(spansOf(group).map(span => span.kind)), shown(['everyone']))
   // While an IME composes, the textarea owns the text and the mirror steps aside.
   const composing = MentionMirror({ field: { current: null }, text: 'hi', chips: [], composing: true })

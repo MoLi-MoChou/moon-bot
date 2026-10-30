@@ -10,19 +10,39 @@ const bundle = await build({
     contents: `export { OFF_BOTTOM_PX, isOffBottom, scrollToBottom, followBottom } from './header.tsx'\nexport { stackChatItems } from './cells.ts'`,
     resolveDir: fileURLToPath(new URL('../src/client', import.meta.url)),
   },
-  bundle: true, format: 'cjs', platform: 'node', write: false,
+  bundle: true,
+  format: 'cjs',
+  platform: 'node',
+  write: false,
   external: ['react', 'react-dom'],
 })
-const mod = { exports: {} as {
-  OFF_BOTTOM_PX: number
-  isOffBottom: (scroller: { scrollHeight: number, scrollTop: number, clientHeight: number } | null) => boolean
-  scrollToBottom: (scroller: { scrollHeight: number, querySelector: (sel: string) => { click: () => void } | null, scrollTo: (opts: { top: number, behavior: string }) => void }) => void
-  followBottom: (scroller: { scrollHeight: number, scrollTop: number, clientHeight: number, scrollTo: (opts: unknown) => void }, wasPinned: boolean) => boolean
-  stackChatItems: (items: unknown[]) => { kind: string, texts: string[] }[]
-} }
+const mod = {
+  exports: {} as {
+    OFF_BOTTOM_PX: number
+    isOffBottom: (scroller: { scrollHeight: number; scrollTop: number; clientHeight: number } | null) => boolean
+    scrollToBottom: (scroller: {
+      scrollHeight: number
+      querySelector: (sel: string) => { click: () => void } | null
+      scrollTo: (opts: { top: number; behavior: string }) => void
+    }) => void
+    followBottom: (
+      scroller: { scrollHeight: number; scrollTop: number; clientHeight: number; scrollTo: (opts: unknown) => void },
+      wasPinned: boolean,
+    ) => boolean
+    stackChatItems: (items: unknown[]) => { kind: string; texts: string[] }[]
+  },
+}
 runInNewContext(bundle.outputFiles[0].text, {
-  module: mod, exports: mod.exports, Object, Array, Number, URL, URLSearchParams, setTimeout, clearTimeout,
-  require: (name) => {
+  module: mod,
+  exports: mod.exports,
+  Object,
+  Array,
+  Number,
+  URL,
+  URLSearchParams,
+  setTimeout,
+  clearTimeout,
+  require: name => {
     const platform = {
       react: {
         createElement: (type, props, ...children) => ({ type, props: props ?? {}, children: children.flat(Infinity) }),
@@ -58,8 +78,17 @@ test('scrollToBottom smoothly scrolls to the bottom and triggers host slot butto
   let scrolled = null
   const scroller = {
     scrollHeight: 18400,
-    querySelector: sel => (sel.includes('_toBottomSlot') ? { click: () => { clicked += 1 } } : null),
-    scrollTo: (opts) => { scrolled = opts },
+    querySelector: sel =>
+      sel.includes('_toBottomSlot')
+        ? {
+            click: () => {
+              clicked += 1
+            },
+          }
+        : null,
+    scrollTo: opts => {
+      scrolled = opts
+    },
   }
   scrollToBottom(scroller)
   assert.equal(clicked, 1)
@@ -73,7 +102,9 @@ test('followBottom keeps the view pinned at bottom only when already at bottom',
     scrollHeight: 15000,
     scrollTop: 14000,
     clientHeight: 800,
-    scrollTo: (opts) => { scrolled = opts },
+    scrollTo: opts => {
+      scrolled = opts
+    },
   }
   // When user is scrolled up (wasPinned = false), new messages must not yank scroll position
   assert.equal(followBottom(scroller, false), false)

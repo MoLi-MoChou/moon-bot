@@ -16,11 +16,40 @@ const TEAM = {
   revision: 1,
   whaleStored: true,
   bots: {
-    m1: { id: 'm1', sessionId: 'm1', name: 'Chief', role: 'Lead', model: 'deepseek/v4', instructions: '', createdAt: 1, capabilities: [] },
-    b2: { id: 'b2', sessionId: 'b2', name: 'Writer', role: 'Write', model: 'deepseek/v4', instructions: '', createdAt: 2, capabilities: [] },
+    m1: {
+      id: 'm1',
+      sessionId: 'm1',
+      name: 'Chief',
+      role: 'Lead',
+      model: 'deepseek/v4',
+      instructions: '',
+      createdAt: 1,
+      capabilities: [],
+    },
+    b2: {
+      id: 'b2',
+      sessionId: 'b2',
+      name: 'Writer',
+      role: 'Write',
+      model: 'deepseek/v4',
+      instructions: '',
+      createdAt: 2,
+      capabilities: [],
+    },
   },
   rooms: {
-    r1: { id: 'r1', name: 'Launch', named: true, members: ['m1', 'b2'], admin: 'm1', mode: 'everyone', notice: '', sessions: { b2: 'g2' }, seq: 0, log: [] },
+    r1: {
+      id: 'r1',
+      name: 'Launch',
+      named: true,
+      members: ['m1', 'b2'],
+      admin: 'm1',
+      mode: 'everyone',
+      notice: '',
+      sessions: { b2: 'g2' },
+      seq: 0,
+      log: [],
+    },
   },
   agents: {},
   capabilities: { items: {} },
@@ -36,10 +65,19 @@ const TEAM = {
 function scheduleService() {
   return {
     tasks: [],
-    async create(sessionId, request) { this.tasks.push({ sessionId, request }); return { id: `s${this.tasks.length}` } },
-    async list() { return [] },
-    async catalog() { return [] },
-    async delete() { return { deleted: false } },
+    async create(sessionId, request) {
+      this.tasks.push({ sessionId, request })
+      return { id: `s${this.tasks.length}` }
+    },
+    async list() {
+      return []
+    },
+    async catalog() {
+      return []
+    },
+    async delete() {
+      return { deleted: false }
+    },
   }
 }
 
@@ -57,18 +95,34 @@ function start() {
       create: async () => ({ sessionId: 'fresh' }),
       resolveAgent: async sessionId => ({ agent: { session: { id: sessionId, seq: 1 }, followup() {} } }),
       selectModel: async () => {},
-      prompt: async () => { throw new Error('no such session') },
+      prompt: async () => {
+        throw new Error('no such session')
+      },
     },
     sessionTitle: { rename: async () => {} },
     sessions: { flush: async () => {} },
-    workspaceRegistry: { get: () => undefined, resolveByPath: async () => undefined, create: async path => ({ id: 'w1', path }), archiveSession: async () => {} },
+    workspaceRegistry: {
+      get: () => undefined,
+      resolveByPath: async () => undefined,
+      create: async path => ({ id: 'w1', path }),
+      archiveSession: async () => {},
+    },
   })
   const register = ctx.connection.fetch.register
-  ctx.connection.fetch.register = (route) => { ctx.route = route; return register(route) }
+  ctx.connection.fetch.register = route => {
+    ctx.route = route
+    return register(route)
+  }
   apply(ctx, { home })
-  const call = async (endpoint, payload?) => (await ctx.route.fetch(new Request('http://localhost/api/bot', {
-    method: 'POST', body: JSON.stringify({ endpoint, payload }),
-  }))).json()
+  const call = async (endpoint, payload?) =>
+    (
+      await ctx.route.fetch(
+        new Request('http://localhost/api/bot', {
+          method: 'POST',
+          body: JSON.stringify({ endpoint, payload }),
+        }),
+      )
+    ).json()
   const tool = (name, args, sessionId) => ctx.registeredTools.get(name).execute(args, { agent: { id: sessionId } })
   const state = () => readFileSync(join(home, 'state.json'), 'utf8')
   const stop = async () => {
@@ -109,7 +163,7 @@ const ENDPOINTS: [string, (id: string) => Record<string, unknown>][] = [
   ['remove-agent', id => ({ agentId: id })],
 ]
 
-test('api endpoints answer an inherited name like any unknown id and never write through it', async (t) => {
+test('api endpoints answer an inherited name like any unknown id and never write through it', async t => {
   const { call, state, stop } = start()
   t.after(stop)
   const prototypeNames = Object.getOwnPropertyNames(Object.prototype)
@@ -131,7 +185,7 @@ test('api endpoints answer an inherited name like any unknown id and never write
   assert.equal(state(), before)
 })
 
-test('tools answer an inherited Bot name like any unknown name', async (t) => {
+test('tools answer an inherited Bot name like any unknown name', async t => {
   const { tool, state, stop } = start()
   t.after(stop)
   const prototypeNames = Object.getOwnPropertyNames(Object.prototype)
@@ -139,7 +193,10 @@ test('tools answer an inherited Bot name like any unknown name', async (t) => {
   for (const id of BAD) {
     assert.equal(await tool('message_bot', { to: id, message: 'hi' }, 'm1'), `No Bot named ${id}. Team: Chief, Writer`)
     assert.equal(await tool('update_bot', { bot: id, role: 'x' }, 'm1'), `No Bot named ${id}.`)
-    assert.match(await tool('create_group', { members: [id, 'Writer'] }, 'm1'), new RegExp(`^No Bot named ${id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`))
+    assert.match(
+      await tool('create_group', { members: [id, 'Writer'] }, 'm1'),
+      new RegExp(`^No Bot named ${id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`),
+    )
     // Asking as a Bot named like this finds no caller either.
     assert.equal(await tool('update_bot', { name: 'King' }, id), 'Only Bots on the team can use update_bot.')
   }
@@ -147,7 +204,7 @@ test('tools answer an inherited Bot name like any unknown name', async (t) => {
   assert.equal(state(), before)
 })
 
-test('a capability may be called constructor, and inherited names read as missing', async (t) => {
+test('a capability may be called constructor, and inherited names read as missing', async t => {
   const { call, stop } = start()
   t.after(stop)
   const prototypeNames = Object.getOwnPropertyNames(Object.prototype)

@@ -18,10 +18,17 @@ if (!existsSync(bin)) {
   console.error('lint: oxlint is missing - run pnpm install at the repo root')
   process.exit(2)
 }
-const result = spawnSync(process.execPath, [bin, '-c', '.oxlintrc.json', ...process.argv.slice(2), 'index.js', 'web-search.js', 'src', 'dev', 'scripts', 'test'], { cwd: plugin, stdio: 'inherit' })
+const result = spawnSync(
+  process.execPath,
+  [bin, '-c', '.oxlintrc.json', ...process.argv.slice(2), 'index.js', 'web-search.js', 'src', 'dev', 'scripts', 'test'],
+  { cwd: plugin, stdio: 'inherit' },
+)
 if (result.error) console.error(`lint: ${result.error.message}`)
 
-const gates = spawnSync(process.execPath, [join(plugin, 'scripts', 'check-gates.mjs')], { cwd: plugin, stdio: 'inherit' })
+const gates = spawnSync(process.execPath, [join(plugin, 'scripts', 'check-gates.mjs')], {
+  cwd: plugin,
+  stdio: 'inherit',
+})
 if (gates.error) console.error(`lint: ${gates.error.message}`)
 const jsx = spawnSync(process.execPath, [join(plugin, 'scripts', 'jsx-debt.mjs')], { cwd: plugin, stdio: 'inherit' })
 if (jsx.error) console.error(`lint: ${jsx.error.message}`)

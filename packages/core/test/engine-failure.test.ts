@@ -26,7 +26,10 @@ const errorServer = async (status: number, body: string) => {
   })
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
   const port = (server.address() as { port: number }).port
-  return { url: `http://127.0.0.1:${port}/v1`, close: () => new Promise<void>(resolve => server.close(() => resolve())) }
+  return {
+    url: `http://127.0.0.1:${port}/v1`,
+    close: () => new Promise<void>(resolve => server.close(() => resolve())),
+  }
 }
 
 // The engine over a store, with a model source the test decides.
@@ -44,7 +47,10 @@ function engineOver(store: ReturnType<typeof openStore>, resolve: () => Resolved
   return { engine, events }
 }
 
-const input: TurnInput = { sessionId: 's1', message: { content: [{ type: 'text', text: 'hello' }], source: { kind: 'user' } } }
+const input: TurnInput = {
+  sessionId: 's1',
+  message: { content: [{ type: 'text', text: 'hello' }], source: { kind: 'user' } },
+}
 
 const runTurn = async (engine: BuiltinRuntime): Promise<EngineEvent[]> => {
   const collected: EngineEvent[] = []
@@ -59,12 +65,13 @@ const reasonOf = (events: readonly EngineEvent[]) => {
 }
 
 // The rows a failed turn left: the user's own line and the failure's system row.
-const rowsOf = (store: ReturnType<typeof openStore>) => store.sessions.page('s1', 10).map(row => ({
-  role: row.role,
-  turn: row.turn,
-  text: row.content.map(block => (block.type === 'text' ? block.text : '')).join(''),
-  kind: (row.source as { kind?: string } | null)?.kind,
-}))
+const rowsOf = (store: ReturnType<typeof openStore>) =>
+  store.sessions.page('s1', 10).map(row => ({
+    role: row.role,
+    turn: row.turn,
+    text: row.content.map(block => (block.type === 'text' ? block.text : '')).join(''),
+    kind: (row.source as { kind?: string } | null)?.kind,
+  }))
 
 const withStore = (t: { after: (fn: () => void) => void }) => {
   const home = mkdtempSync(join(tmpdir(), 'ds-bot-failure-'))
@@ -75,14 +82,22 @@ const withStore = (t: { after: (fn: () => void) => void }) => {
   return store
 }
 
-test('a refused key ends the turn with AUTH and leaves the chat the key-free reason', async (t) => {
+test('a refused key ends the turn with AUTH and leaves the chat the key-free reason', async t => {
   const server = await errorServer(401, JSON.stringify({ error: { message: 'invalid api key sk-live-abcdef123456' } }))
   t.after(() => void server.close())
   const store = withStore(t)
-  const { engine, events } = engineOver(store, () => ({ id: 'mock-1', baseUrl: server.url, api: 'openai-completions', apiKey: 'sk-test-abcdef123456' }))
+  const { engine, events } = engineOver(store, () => ({
+    id: 'mock-1',
+    baseUrl: server.url,
+    api: 'openai-completions',
+    apiKey: 'sk-test-abcdef123456',
+  }))
 
   const collected = await runTurn(engine)
-  assert.deepEqual(events.map(event => event.type), collected.map(event => event.type))
+  assert.deepEqual(
+    events.map(event => event.type),
+    collected.map(event => event.type),
+  )
   const reason = reasonOf(collected)
   assert.equal(reason?.kind, 'error')
   assert.equal(reason?.kind === 'error' ? reason.error.code : undefined, 'AUTH')
@@ -91,21 +106,40 @@ test('a refused key ends the turn with AUTH and leaves the chat the key-free rea
 
   // The user's line and the failure's line are both in the transcript, in that order.
   // pi also keeps its failed assistant step; the failure's own line comes last.
-  assert.deepEqual(rowsOf(store).map(row => [row.role, row.kind]), [['user', 'user'], ['assistant', undefined], ['system', 'turn-error']])
+  assert.deepEqual(
+    rowsOf(store).map(row => [row.role, row.kind]),
+    [
+      ['user', 'user'],
+      ['assistant', undefined],
+      ['system', 'turn-error'],
+    ],
+  )
   const failure = store.sessions.page('s1', 10).at(-1)?.source as { kind?: string; code?: string } | null
   assert.equal(failure?.code, 'AUTH')
 })
 
-test('an endpoint that cannot be reached is TRANSPORT, and says so', async (t) => {
+test('an endpoint that cannot be reached is TRANSPORT, and says so', async t => {
   const store = withStore(t)
-  const { engine } = engineOver(store, () => ({ id: 'mock-1', baseUrl: unreachable, api: 'openai-completions', apiKey: 'sk-test' }))
+  const { engine } = engineOver(store, () => ({
+    id: 'mock-1',
+    baseUrl: unreachable,
+    api: 'openai-completions',
+    apiKey: 'sk-test',
+  }))
   const reason = reasonOf(await runTurn(engine))
   assert.equal(reason?.kind, 'error')
   assert.equal(reason?.kind === 'error' ? reason.error.code : undefined, 'TRANSPORT')
-  assert.deepEqual(rowsOf(store).map(row => [row.role, row.kind]), [['user', 'user'], ['assistant', undefined], ['system', 'turn-error']])
+  assert.deepEqual(
+    rowsOf(store).map(row => [row.role, row.kind]),
+    [
+      ['user', 'user'],
+      ['assistant', undefined],
+      ['system', 'turn-error'],
+    ],
+  )
 })
 
-test('a Bot with no model ends in NO-MODEL, and its message is still in the chat', async (t) => {
+test('a Bot with no model ends in NO-MODEL, and its message is still in the chat', async t => {
   const store = withStore(t)
   const { engine } = engineOver(store, () => undefined)
   const reason = reasonOf(await runTurn(engine))
@@ -131,11 +165,18 @@ test('the failure code is read from what the wire said', () => {
   assert.equal(failureCodeOf('socket hang up'), 'TRANSPORT')
   assert.equal(failureCodeOf('the model wrote something odd'), undefined)
   // A thrown error keeps a code it already has, and the message is masked.
-  assert.deepEqual(callFailureOf({ code: 'SESSION', message: 'its conversation could not open' }), { code: 'SESSION', message: 'its conversation could not open' })
+  assert.deepEqual(callFailureOf({ code: 'SESSION', message: 'its conversation could not open' }), {
+    code: 'SESSION',
+    message: 'its conversation could not open',
+  })
   assert.deepEqual(callFailureOf('bad key sk-live-abcdef123456'), { code: 'UNKNOWN', message: 'bad key sk-[hidden]' })
 })
 
 test('the end event carries the code the chat reads', () => {
   const end = endEventOf(3, { stopReason: 'error', errorMessage: '429 too many requests' })
-  assert.deepEqual(end, { type: 'turn/end', turn: 3, reason: { kind: 'error', error: { code: 'RATE_LIMIT', message: '429 too many requests' } } })
+  assert.deepEqual(end, {
+    type: 'turn/end',
+    turn: 3,
+    reason: { kind: 'error', error: { code: 'RATE_LIMIT', message: '429 too many requests' } },
+  })
 })

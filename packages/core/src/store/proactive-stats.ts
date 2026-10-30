@@ -23,8 +23,14 @@ export function statsSince(db: SqliteDatabase, since: number): ProactiveStats {
   }
   return {
     prepared: count('SELECT COUNT(*) AS n FROM proactive_candidates WHERE created_at >= ?', true),
-    delivered: count("SELECT COUNT(*) AS n FROM proactive_decisions WHERE decision = 'delivered' AND decided_at >= ?", true),
-    rejected: count("SELECT COUNT(*) AS n FROM proactive_decisions WHERE decision = 'dropped' AND decided_at >= ?", true),
+    delivered: count(
+      "SELECT COUNT(*) AS n FROM proactive_decisions WHERE decision = 'delivered' AND decided_at >= ?",
+      true,
+    ),
+    rejected: count(
+      "SELECT COUNT(*) AS n FROM proactive_decisions WHERE decision = 'dropped' AND decided_at >= ?",
+      true,
+    ),
     disabled: count('SELECT COUNT(*) AS n FROM proactive_subscriptions WHERE enabled = 0', false),
   }
 }

@@ -14,24 +14,37 @@ const { JSDOM } = await import('jsdom')
 // fixtures retain refs across commits and run their layout effects after each render.
 const { outputFiles } = await build({
   stdin: {
-    contents: "export { SHELL_CSS } from './src/client/design/index.ts'\nexport { SIDEBAR_CSS, TeamSidebar } from './src/client/sidebar.tsx'",
+    contents:
+      "export { SHELL_CSS } from './src/client/design/index.ts'\nexport { SIDEBAR_CSS, TeamSidebar } from './src/client/sidebar.tsx'",
     resolveDir: PLUGIN,
   },
-  bundle: true, format: 'cjs', platform: 'browser', write: false, logLevel: 'silent',
+  bundle: true,
+  format: 'cjs',
+  platform: 'browser',
+  write: false,
+  logLevel: 'silent',
   external: ['react', 'react-dom'],
 })
 let renderRefs
 let refIndex = 0
 let layoutEffects
 const react = {
-  createElement: (type, props, ...children) => ({ type, props: { ...props, children } }), Fragment: Symbol('Fragment'),
-  useEffect() {}, useLayoutEffect: effect => layoutEffects?.push(effect), useState: initial => [typeof initial === 'function' ? initial() : initial, () => {}],
-  useMemo: make => make(), useRef: current => renderRefs ? renderRefs[refIndex++] ??= { current } : { current }, useId: () => 'id',
+  createElement: (type, props, ...children) => ({ type, props: { ...props, children } }),
+  Fragment: Symbol('Fragment'),
+  useEffect() {},
+  useLayoutEffect: effect => layoutEffects?.push(effect),
+  useState: initial => [typeof initial === 'function' ? initial() : initial, () => {}],
+  useMemo: make => make(),
+  useRef: current => (renderRefs ? (renderRefs[refIndex++] ??= { current }) : { current }),
+  useId: () => 'id',
 }
-const module = { exports: {} as { SHELL_CSS: string, SIDEBAR_CSS: string, TeamSidebar: (props: Record<string, unknown>) => unknown } }
+const module = {
+  exports: {} as { SHELL_CSS: string; SIDEBAR_CSS: string; TeamSidebar: (props: Record<string, unknown>) => unknown },
+}
 const viewport = { innerWidth: 1280 }
 runInNewContext(outputFiles[0].text, {
-  module, exports: module.exports,
+  module,
+  exports: module.exports,
   require: name => (name === 'react' ? react : {}),
   window: viewport,
 })
@@ -45,15 +58,35 @@ function navigationSidebar(wide, { shell = true } = {}) {
   const room = { id: 'room', name: 'Team', members: [], createdAt: 2 }
   const agent = { id: 'agent', sessions: ['session'], createdAt: 3 }
   const roster = { bots: [bot], rooms: [room], agents: [agent], byId: { writer: bot }, ready: true }
-  const actions = Object.fromEntries(['openSession', 'openAgent', 'openAgentSession', 'newAgentSession'].map(name => [name, id => { calls.push([name, id]); return id }])) as Record<string, (...args: unknown[]) => unknown>
-  actions.toggleSidebar = () => { collapsed = !collapsed; calls.push(['toggleSidebar']) }
+  const actions = Object.fromEntries(
+    ['openSession', 'openAgent', 'openAgentSession', 'newAgentSession'].map(name => [
+      name,
+      id => {
+        calls.push([name, id])
+        return id
+      },
+    ]),
+  ) as Record<string, (...args: unknown[]) => unknown>
+  actions.toggleSidebar = () => {
+    collapsed = !collapsed
+    calls.push(['toggleSidebar'])
+  }
   const rows = []
-  const walk = (node) => {
-    if (Array.isArray(node)) { node.forEach(walk); return }
+  const walk = node => {
+    if (Array.isArray(node)) {
+      node.forEach(walk)
+      return
+    }
     if (!node || typeof node !== 'object') return
-    if (['BotRow', 'RoomRow', 'AgentRow'].includes(node.type?.name)) { rows.push(node); return }
+    if (['BotRow', 'RoomRow', 'AgentRow'].includes(node.type?.name)) {
+      rows.push(node)
+      return
+    }
     // The list wraps its rows in ReorderList; the fixture renders it to reach them.
-    if (typeof node.type === 'function') { walk(node.type(node.props)); return }
+    if (typeof node.type === 'function') {
+      walk(node.type(node.props))
+      return
+    }
     walk(node.props?.children)
   }
   const render = (nextWide = shell ? wide : !collapsed) => {
@@ -65,10 +98,20 @@ function navigationSidebar(wide, { shell = true } = {}) {
     refIndex = 0
     layoutEffects = []
     const tree = TeamSidebar({
-      wide, actions,
-      ...(shell ? { expandSidebar: () => { if (committedCollapsed) actions.toggleSidebar() } } : {}),
-      useRoster: pick => pick(roster), useUi: pick => pick({ unread: {} }), useRegistry: pick => pick({}),
-      useSessions: pick => pick({ ids: [], byId: {} }), useUpdate: () => ({}),
+      wide,
+      actions,
+      ...(shell
+        ? {
+            expandSidebar: () => {
+              if (committedCollapsed) actions.toggleSidebar()
+            },
+          }
+        : {}),
+      useRoster: pick => pick(roster),
+      useUi: pick => pick({ unread: {} }),
+      useRegistry: pick => pick({}),
+      useSessions: pick => pick({ ids: [], byId: {} }),
+      useUpdate: () => ({}),
     })
     renderRefs = undefined
     const effects = layoutEffects
@@ -78,7 +121,15 @@ function navigationSidebar(wide, { shell = true } = {}) {
     walk(tree)
   }
   render()
-  return { calls, rows, actions, render, get collapsed() { return collapsed } }
+  return {
+    calls,
+    rows,
+    actions,
+    render,
+    get collapsed() {
+      return collapsed
+    },
+  }
 }
 
 for (const width of [390, 1023, 1024, 1280]) {
@@ -88,7 +139,8 @@ for (const width of [390, 1023, 1024, 1280]) {
       const initial = navigationSidebar(wide)
       assert.equal(initial.rows.length, 3)
       for (const [index, row] of initial.rows.entries()) {
-        const names = row.type.name === 'AgentRow' ? ['openAgent', 'openAgentSession', 'newAgentSession'] : ['openSession']
+        const names =
+          row.type.name === 'AgentRow' ? ['openAgent', 'openAgentSession', 'newAgentSession'] : ['openSession']
         for (const name of names) {
           const { rows, calls } = navigationSidebar(wide)
           assert.equal(rows[index].props.actions[name]('selected'), 'selected')
@@ -176,7 +228,7 @@ test('preparing sidebar navigation leaves actions elsewhere unchanged', () => {
 function rulesOf(css) {
   const text = css.replace(/\/\*[\s\S]*?\*\//g, '')
   const rules = []
-  for (let at = 0; ;) {
+  for (let at = 0; ; ) {
     const open = text.indexOf('{', at)
     if (open === -1) return rules
     let end = open + 1
@@ -207,7 +259,7 @@ function shell({ platform, collapsed }) {
       </div>
     </div></body></html>`
   const { document } = new JSDOM(html).window
-  const hidden = (node) => {
+  const hidden = node => {
     for (let at = node; at && at.nodeType === 1; at = at.parentElement) {
       if (hiding.some(rule => at.matches(rule.selector))) return true
     }
@@ -239,8 +291,11 @@ test('an open sidebar has a button that collapses it; the rail leaves that to th
   const roster = { bots: [], rooms: [], agents: [], byId: {}, ready: true }
   const props = wide => ({
     wide,
-    useRoster: pick => pick(roster), useUi: pick => pick({ unread: {} }), useRegistry: pick => pick({}),
-    useSessions: pick => pick({ ids: [], byId: {} }), useUpdate: () => ({}),
+    useRoster: pick => pick(roster),
+    useUi: pick => pick({ unread: {} }),
+    useRegistry: pick => pick({}),
+    useSessions: pick => pick({ ids: [], byId: {} }),
+    useUpdate: () => ({}),
     actions: { toggleSidebar: () => calls.push('toggle') },
   })
   const find = (node, match) => {
@@ -261,7 +316,10 @@ test('the logo row takes no room in an open sidebar under a Windows title bar', 
   const row = document.querySelector('.x_logoRow')
   const flat = rules.filter(rule => row.matches(rule.selector) && /height:0!important/.test(rule.body))
   assert.equal(flat.length, 1)
-  assert.equal(shell({ platform: 'windows', collapsed: true }).document.querySelector('.x_logoRow').matches(flat[0].selector), false)
+  assert.equal(
+    shell({ platform: 'windows', collapsed: true }).document.querySelector('.x_logoRow').matches(flat[0].selector),
+    false,
+  )
 })
 
 // The shell hides the footer of a collapsed sidebar under a Windows title bar, whose width
@@ -270,7 +328,10 @@ test('the team view lays out the shell footer but never decides whether it shows
   const { document } = shell({ platform: 'windows', collapsed: true })
   const foot = document.querySelector('.x_footArea')
   const deciding = rules.filter(rule => foot.matches(rule.selector) && /(^|;)display:/.test(rule.body))
-  assert.deepEqual(deciding.map(rule => rule.selector), [])
+  assert.deepEqual(
+    deciding.map(rule => rule.selector),
+    [],
+  )
 })
 
 // 公开#164: the footer's grid gives other plugins' entries rows of their own; it holds

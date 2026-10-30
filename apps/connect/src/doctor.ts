@@ -36,7 +36,7 @@ const relayCheck = async (url: string, deps: DoctorDeps): Promise<{ ok: boolean;
   }
   const socketBox: { current: SocketLike | undefined } = { current: undefined }
   const timeoutMs = deps.timeoutMs ?? 10_000
-  return await new Promise((resolve) => {
+  return await new Promise(resolve => {
     let settled = false
     const finish = (result: { ok: boolean; text: string }): void => {
       if (settled) return
@@ -45,25 +45,39 @@ const relayCheck = async (url: string, deps: DoctorDeps): Promise<{ ok: boolean;
       socketBox.current?.close()
       resolve(result)
     }
-    const timer = setTimeout(() => finish({ ok: false, text: `no answer within ${Math.round(timeoutMs / 1000)}s; check the address and the firewall` }), timeoutMs)
+    const timer = setTimeout(
+      () =>
+        finish({
+          ok: false,
+          text: `no answer within ${Math.round(timeoutMs / 1000)}s; check the address and the firewall`,
+        }),
+      timeoutMs,
+    )
     try {
-      const socket = deps.connect?.(url, socketBox) ?? (new (globalThis as unknown as { WebSocket: new (url: string) => SocketLike }).WebSocket(url))
+      const socket =
+        deps.connect?.(url, socketBox) ??
+        new (globalThis as unknown as { WebSocket: new (url: string) => SocketLike }).WebSocket(url)
       socketBox.current = socket
       socket.onopen = () => finish({ ok: true, text: 'relay accepted the invite' })
-      socket.onerror = () => finish({ ok: false, text: 'could not reach the relay; check the URL, https/wss, and the proxy' })
-      socket.onclose = (event) => {
+      socket.onerror = () =>
+        finish({ ok: false, text: 'could not reach the relay; check the URL, https/wss, and the proxy' })
+      socket.onclose = event => {
         const code = event?.code ?? 0
         finish({
           ok: false,
-          text: code === 4401
-            ? 'the relay rejected this invite (unknown or revoked); ask a Main Bot for a new one'
-            : code === 4403
-              ? 'this invite was revoked; ask a Main Bot for a new one'
-              : `the relay closed the connection (code ${code})`,
+          text:
+            code === 4401
+              ? 'the relay rejected this invite (unknown or revoked); ask a Main Bot for a new one'
+              : code === 4403
+                ? 'this invite was revoked; ask a Main Bot for a new one'
+                : `the relay closed the connection (code ${code})`,
         })
       }
     } catch (error) {
-      finish({ ok: false, text: `the relay URL is not usable: ${error instanceof Error ? error.message : String(error)}` })
+      finish({
+        ok: false,
+        text: `the relay URL is not usable: ${error instanceof Error ? error.message : String(error)}`,
+      })
     }
   })
 }
@@ -77,12 +91,21 @@ export async function doctor(options: DoctorOptions, deps: DoctorDeps): Promise<
 
   const [major, minor] = deps.nodeVersion.split('.').map(Number) as [number, number]
   const nodeOk = major > MIN_NODE[0] || (major === MIN_NODE[0] && minor >= MIN_NODE[1])
-  say(nodeOk, 'node', `v${deps.nodeVersion}${nodeOk ? '' : ' — need 22.18 or newer (the CLI runs TypeScript directly)'}`)
+  say(
+    nodeOk,
+    'node',
+    `v${deps.nodeVersion}${nodeOk ? '' : ' — need 22.18 or newer (the CLI runs TypeScript directly)'}`,
+  )
   if (!nodeOk) failures += 1
 
   const agents = deps.agents ?? findAgents()
   const pick = pickAgent(agents)
-  if (pick.ok) say(true, 'agent', `${pick.agent.label} at ${pick.agent.path}${pick.agent.version === undefined ? '' : ` (${pick.agent.version})`}`)
+  if (pick.ok)
+    say(
+      true,
+      'agent',
+      `${pick.agent.label} at ${pick.agent.path}${pick.agent.version === undefined ? '' : ` (${pick.agent.version})`}`,
+    )
   else {
     say(false, 'agent', pickFailureMessage(pick.found))
     failures += 1

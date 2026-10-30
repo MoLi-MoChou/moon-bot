@@ -23,9 +23,7 @@ When you are unsure, DROP. A missed message costs nothing; a pointless one costs
 
 Answer exactly INTERRUPT or DROP, and one short reason after a colon. Example: "DROP: only restates yesterday's plan."`
 
-export type JudgeVerdict =
-  | { readonly kind: 'send' }
-  | { readonly kind: 'drop'; readonly reason: string }
+export type JudgeVerdict = { readonly kind: 'send' } | { readonly kind: 'drop'; readonly reason: string }
 
 /** Reads the one-word answer, treating anything unclear as a drop. */
 export function parseJudgeAnswer(raw: string): JudgeVerdict {
@@ -39,7 +37,9 @@ export function parseJudgeAnswer(raw: string): JudgeVerdict {
 }
 
 /** The question, with the candidate and the evidence it rests on. */
-export function judgePrompt(candidate: Pick<ScreenCandidate, 'text'> & { readonly evidence: readonly string[], readonly whyCare: string }): string {
+export function judgePrompt(
+  candidate: Pick<ScreenCandidate, 'text'> & { readonly evidence: readonly string[]; readonly whyCare: string },
+): string {
   return [
     '## The message it would send',
     candidate.text,
@@ -48,18 +48,20 @@ export function judgePrompt(candidate: Pick<ScreenCandidate, 'text'> & { readonl
     candidate.whyCare === '' ? '(it did not say)' : candidate.whyCare,
     '',
     '## The evidence',
-    ...(candidate.evidence.length === 0 ? ['(none — this alone is a DROP)'] : candidate.evidence.map(line => `- ${line}`)),
+    ...(candidate.evidence.length === 0
+      ? ['(none — this alone is a DROP)']
+      : candidate.evidence.map(line => `- ${line}`)),
   ].join('\n')
 }
 
-export type JudgeAsk = (request: { readonly system: string, readonly prompt: string }) => Promise<string>
+export type JudgeAsk = (request: { readonly system: string; readonly prompt: string }) => Promise<string>
 
 /**
  * Runs the soft judgement. A failed or unreadable answer drops the candidate: a message the
  * Bot could not justify is one the user should not receive.
  */
 export async function judge(
-  candidate: Pick<ScreenCandidate, 'text'> & { readonly evidence: readonly string[], readonly whyCare: string },
+  candidate: Pick<ScreenCandidate, 'text'> & { readonly evidence: readonly string[]; readonly whyCare: string },
   ask: JudgeAsk,
 ): Promise<JudgeVerdict> {
   // No evidence is already a drop, before spending a request on it.

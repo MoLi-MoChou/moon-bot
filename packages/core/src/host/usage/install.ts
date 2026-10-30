@@ -31,7 +31,7 @@ interface RecordedCall {
 }
 
 const messageOf = (error: unknown): unknown =>
-  (typeof error === 'object' && error !== null ? (error as { readonly message?: unknown }).message : undefined)
+  typeof error === 'object' && error !== null ? (error as { readonly message?: unknown }).message : undefined
 
 export function install(rt: HostRuntime): void {
   const { ctx, home } = rt
@@ -43,10 +43,10 @@ export function install(rt: HostRuntime): void {
   const early: LedgerCall[] = []
   function openLedger(): Promise<Ledger> {
     if (ledger !== undefined) return Promise.resolve(ledger)
-    const job: Promise<Ledger> = opening ??= (async (): Promise<Ledger> => {
+    const job: Promise<Ledger> = (opening ??= (async (): Promise<Ledger> => {
       let DatabaseSync: typeof import('node:sqlite').DatabaseSync
       try {
-        ({ DatabaseSync } = await import('node:sqlite'))
+        ;({ DatabaseSync } = await import('node:sqlite'))
         await mkdir(home, { recursive: true })
       } catch (error) {
         rt.warn('moon-bot: usage is kept in memory only: %s', error)
@@ -55,7 +55,8 @@ export function install(rt: HostRuntime): void {
       // Only proven damage warrants a rebuild: Desktop and Web share this file,
       // and a busy lock must never read as corruption, or the other writer's
       // ledger would be deleted under it.
-      const damaged = (error: unknown): boolean => /malformed|not a database|corrupt/i.test(String(messageOf(error) ?? error))
+      const damaged = (error: unknown): boolean =>
+        /malformed|not a database|corrupt/i.test(String(messageOf(error) ?? error))
       for (const fresh of [false, true]) {
         try {
           if (fresh) await unlink(path).catch(() => {})
@@ -68,7 +69,7 @@ export function install(rt: HostRuntime): void {
         }
       }
       return memoryLedger()
-    })().then((opened) => {
+    })().then(opened => {
       // The plugin may have been disposed while the file opened.
       if (opening !== job) {
         opened.close()
@@ -77,14 +78,17 @@ export function install(rt: HostRuntime): void {
       for (const row of early.splice(0)) opened.add(row)
       ledger = opened
       return opened
-    })
+    }))
     return job
   }
-  ctx.effect(() => () => {
-    ledger?.close()
-    ledger = undefined
-    opening = undefined
-  }, 'moon-bot: usage ledger')
+  ctx.effect(
+    () => () => {
+      ledger?.close()
+      ledger = undefined
+      opening = undefined
+    },
+    'moon-bot: usage ledger',
+  )
 
   const viewer = createViewer({ rt, openLedger })
 
@@ -133,16 +137,32 @@ export function install(rt: HostRuntime): void {
     if (typeof sessionId !== 'string' || sessionId === '') return
     void (async () => {
       await rt.load()
-      const book = ledger ?? await openLedger().catch(() => undefined)
+      const book = ledger ?? (await openLedger().catch(() => undefined))
       if (book === undefined) return
-      try { journal(book, sessionId) } catch (error) { rt.warn('moon-bot: usage could not journal %s: %s', sessionId, error) }
+      try {
+        journal(book, sessionId)
+      } catch (error) {
+        rt.warn('moon-bot: usage could not journal %s: %s', sessionId, error)
+      }
     })()
   }
   function record({ sessionId, kind, provider, model, usage }: RecordedCall): void {
     noteSession(sessionId ?? '')
-    const row: LedgerCall = { key: `live:${randomUUID()}`, session: sessionId ?? '', time: Date.now(), provider: provider ?? '', model: model ?? '', kind, ...tokensOf(usage) }
+    const row: LedgerCall = {
+      key: `live:${randomUUID()}`,
+      session: sessionId ?? '',
+      time: Date.now(),
+      provider: provider ?? '',
+      model: model ?? '',
+      kind,
+      ...tokensOf(usage),
+    }
     if (ledger !== undefined) {
-      try { ledger.add(row) } catch (error) { rt.warn('moon-bot: usage could not record a call: %s', error) }
+      try {
+        ledger.add(row)
+      } catch (error) {
+        rt.warn('moon-bot: usage could not record a call: %s', error)
+      }
       return
     }
     early.push(row)
@@ -173,7 +193,14 @@ export function install(rt: HostRuntime): void {
           yield chunk
         }
       } finally {
-        if (usage !== undefined) record({ sessionId: tag?.sessionId ?? options.sessionId, kind: tag?.kind ?? options.purpose ?? 'other', provider: options.provider, model: options.model, usage })
+        if (usage !== undefined)
+          record({
+            sessionId: tag?.sessionId ?? options.sessionId,
+            kind: tag?.kind ?? options.purpose ?? 'other',
+            provider: options.provider,
+            model: options.model,
+            usage,
+          })
       }
     })()
   })

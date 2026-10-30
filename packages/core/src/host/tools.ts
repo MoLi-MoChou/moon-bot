@@ -6,10 +6,7 @@ import type { HostRuntime } from './runtime.ts'
 import { ToolRegistry, type ToolEntry } from '../engine/registry.ts'
 import { registerCollectedTool } from './tools/collector.ts'
 import { LEAN_HIDDEN_TOOLS } from 'moon-bot-contracts'
-import {
-  BLOCKING_QUESTION_TOOL, GOAL_REFUSAL, HIDDEN_TOOLS, createShared,
-  type ToolShared,
-} from './tools/shared.ts'
+import { BLOCKING_QUESTION_TOOL, GOAL_REFUSAL, HIDDEN_TOOLS, createShared, type ToolShared } from './tools/shared.ts'
 import { installTeamTools } from './tools/team-tools.ts'
 import { installBotTools } from './tools/bot-tools.ts'
 import { installChatTools } from './tools/chat-tools.ts'
@@ -27,7 +24,11 @@ interface Goal {
 
 interface GoalService {
   get(agent: Agent): Goal | undefined
-  block(agent: Agent, ref: { readonly id: string; readonly revision: number }, reason: { readonly code: string; readonly message: string }): void
+  block(
+    agent: Agent,
+    ref: { readonly id: string; readonly revision: number },
+    reason: { readonly code: string; readonly message: string },
+  ): void
 }
 
 /** A context that carries the goal service: the host injects it, or the runtime keeps its own. */
@@ -92,13 +93,17 @@ export function install(rt: HostRuntime): void {
   // A new Bot, part, or group Session gets its Agent before the host records it, so the
   // list is only trimmed once the host resolves that Agent again; meanwhile the guard
   // refuses the question tool in any Bot Session, and a goal made there is blocked.
-  ctx.tools.guard((exec: ToolExecution) => (exec.name === BLOCKING_QUESTION_TOOL && botSession(exec)
-    ? `Bots cannot use ${BLOCKING_QUESTION_TOOL}. Ask with ask_user in your own chat, or ask in your reply.`
-    : undefined))
+  ctx.tools.guard((exec: ToolExecution) =>
+    exec.name === BLOCKING_QUESTION_TOOL && botSession(exec)
+      ? `Bots cannot use ${BLOCKING_QUESTION_TOOL}. Ask with ask_user in your own chat, or ask in your reply.`
+      : undefined,
+  )
   // Moon Bot patch: until the list is trimmed, the hidden features' tools refuse too.
-  ctx.tools.guard((exec: ToolExecution) => (LEAN_HIDDEN_TOOLS.includes(exec.name ?? '') && botSession(exec)
-    ? 'This app does not offer group chats or scheduled tasks. Do the work in this chat instead.'
-    : undefined))
+  ctx.tools.guard((exec: ToolExecution) =>
+    LEAN_HIDDEN_TOOLS.includes(exec.name ?? '') && botSession(exec)
+      ? 'This app does not offer group chats or scheduled tasks. Do the work in this chat instead.'
+      : undefined,
+  )
   // Creation waits for this listener, so the Agent's first step already lacks the tool.
   ctx.on<{ readonly agent: Agent }>('agent/created', async ({ agent }) => {
     try {
@@ -115,7 +120,12 @@ export function install(rt: HostRuntime): void {
   const attachGoals = (sub: GoalHost): void => {
     const own = sub.goals
     goals = own
-    sub.effect(() => () => { if (goals === own) goals = null }, 'moon-bot: goal service')
+    sub.effect(
+      () => () => {
+        if (goals === own) goals = null
+      },
+      'moon-bot: goal service',
+    )
   }
   if (typeof ctx.inject === 'function') ctx.inject(['goals'], sub => attachGoals(sub as unknown as GoalHost))
   else {

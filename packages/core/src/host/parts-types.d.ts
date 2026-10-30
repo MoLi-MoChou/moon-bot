@@ -93,13 +93,15 @@ export interface ChatPage extends PartPage {
 export interface RelayMessage {
   readonly role?: string | undefined
   readonly content?: unknown
-  readonly source?: {
-    readonly kind?: unknown
-    readonly handoff?: unknown
-    readonly resume?: unknown
-    readonly deferred?: unknown
-    readonly role?: unknown
-  } | undefined
+  readonly source?:
+    | {
+        readonly kind?: unknown
+        readonly handoff?: unknown
+        readonly resume?: unknown
+        readonly deferred?: unknown
+        readonly role?: unknown
+      }
+    | undefined
 }
 
 export interface RelayRequest {

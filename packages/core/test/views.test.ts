@@ -1,19 +1,56 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { checkShownView, normalizeView, validateView, validateViewAnswer, VIEW_BYTE_LIMIT, viewBytes, viewSummary } from 'moon-bot-contracts'
+import {
+  checkShownView,
+  normalizeView,
+  validateView,
+  validateViewAnswer,
+  VIEW_BYTE_LIMIT,
+  viewBytes,
+  viewSummary,
+} from 'moon-bot-contracts'
 
 const text = (value = 'hello') => ({ type: 'text', text: value })
 const metric = (label = '进度', value: string | number = '70%') => ({ type: 'metric', label, value })
-const options = (id = 'pick', extra = {}) => ({ type: 'options', id, options: [{ label: 'A' }, { label: 'B' }, { label: 'C', description: 'third' }], ...extra })
+const options = (id = 'pick', extra = {}) => ({
+  type: 'options',
+  id,
+  options: [{ label: 'A' }, { label: 'B' }, { label: 'C', description: 'third' }],
+  ...extra,
+})
 const confirm = (id = 'go') => ({ type: 'confirm', id, confirmLabel: 'Ship', cancelLabel: 'Wait' })
-const form = (id = 'ask') => ({ type: 'form', id, submitLabel: 'Send', fields: [{ id: 'name', label: 'Name', placeholder: 'Ada' }, { id: 'note', label: 'Note' }] })
+const form = (id = 'ask') => ({
+  type: 'form',
+  id,
+  submitLabel: 'Send',
+  fields: [
+    { id: 'name', label: 'Name', placeholder: 'Ada' },
+    { id: 'note', label: 'Note' },
+  ],
+})
 const progress = () => ({ type: 'progress', label: 'Load', percent: 40 })
-const table = () => ({ type: 'table', columns: [{ key: 'name', label: 'Name' }, { key: 'n', label: 'N' }], rows: [['Ada', 2], ['Bea', true]] })
+const table = () => ({
+  type: 'table',
+  columns: [
+    { key: 'name', label: 'Name' },
+    { key: 'n', label: 'N' },
+  ],
+  rows: [
+    ['Ada', 2],
+    ['Bea', true],
+  ],
+})
 const stack = (...children) => ({ type: 'stack', children })
 // The check as the rejection tests read it: the error, or undefined when the view passed.
-const invalid = (view: unknown): string | undefined => { const checked = validateView(view); return checked.ok === false ? checked.error : undefined }
+const invalid = (view: unknown): string | undefined => {
+  const checked = validateView(view)
+  return checked.ok === false ? checked.error : undefined
+}
 // The same read for answer checks.
-const invalidAnswer = (...args: Parameters<typeof validateViewAnswer>): string | undefined => { const checked = validateViewAnswer(...args); return 'error' in checked ? checked.error : undefined }
+const invalidAnswer = (...args: Parameters<typeof validateViewAnswer>): string | undefined => {
+  const checked = validateViewAnswer(...args)
+  return 'error' in checked ? checked.error : undefined
+}
 
 test('validateView accepts every component and reports whether the card can be submitted', () => {
   for (const view of [text(), metric(), table(), progress()]) {
@@ -24,8 +61,11 @@ test('validateView accepts every component and reports whether the card can be s
   }
   const card = stack(text(), metric('进度', 70), table(), options(), confirm('ship'), form(), progress())
   assert.deepEqual(validateView(card), { ok: true, interactive: true })
-  assert.equal(validateView(metric('ok', '1', )).ok, true)
-  assert.deepEqual(validateView({ type: 'metric', label: 'n', value: 70, tone: 'good' }), { ok: true, interactive: false })
+  assert.equal(validateView(metric('ok', '1')).ok, true)
+  assert.deepEqual(validateView({ type: 'metric', label: 'n', value: 70, tone: 'good' }), {
+    ok: true,
+    interactive: false,
+  })
   assert.deepEqual(validateView({ type: 'form', id: 'empty', fields: [] }), { ok: true, interactive: true })
   assert.equal(validateView({ type: 'progress', percent: 0 }).ok, true)
   assert.equal(validateView({ type: 'progress', percent: 100 }).ok, true)
@@ -33,14 +73,27 @@ test('validateView accepts every component and reports whether the card can be s
 
 test('normalizeView unwraps XML-style arrays and coerces numeric strings', () => {
   // Providers may serialize nested arrays as { item: [...] } and numbers as strings.
-  const wrapped = { type: 'stack', children: { item: [text(), { type: 'options', id: 'env', options: { item: [{ label: 'staging' }, { label: 'prod' }] } }] } }
+  const wrapped = {
+    type: 'stack',
+    children: {
+      item: [text(), { type: 'options', id: 'env', options: { item: [{ label: 'staging' }, { label: 'prod' }] } }],
+    },
+  }
   const unwrapped = normalizeView(wrapped) as { children: { options?: unknown }[] }
   assert.ok(Array.isArray(unwrapped.children), 'children unwraps to an array')
   assert.ok(Array.isArray(unwrapped.children[1].options), 'nested options unwrap to an array')
   assert.deepEqual(validateView(unwrapped), { ok: true, interactive: true })
   // Numeric strings land only on the numeric fields, never on labels or text.
-  assert.deepEqual(normalizeView({ type: 'progress', label: '70', percent: '70' }), { type: 'progress', label: '70', percent: 70 })
-  assert.deepEqual(normalizeView({ type: 'metric', label: '70', value: '70' }), { type: 'metric', label: '70', value: 70 })
+  assert.deepEqual(normalizeView({ type: 'progress', label: '70', percent: '70' }), {
+    type: 'progress',
+    label: '70',
+    percent: 70,
+  })
+  assert.deepEqual(normalizeView({ type: 'metric', label: '70', value: '70' }), {
+    type: 'metric',
+    label: '70',
+    value: 70,
+  })
   assert.deepEqual(normalizeView(text('70')), text('70'), 'text stays a string')
   assert.deepEqual(normalizeView(metric('进度', '70%')), metric('进度', '70%'), 'non-numeric string stays a string')
   // Input is not mutated.
@@ -53,12 +106,18 @@ test('normalizeView unwraps XML-style arrays and coerces numeric strings', () =>
 
 test('validateView rejects an unknown component with the path and the catalog', () => {
   const view = stack(text(), metric(), { type: 'chart', data: [1] })
-  assert.equal(invalid(view), 'view.children[2].type: unknown component "chart"; allowed: stack, text, metric, table, options, confirm, form, progress')
+  assert.equal(
+    invalid(view),
+    'view.children[2].type: unknown component "chart"; allowed: stack, text, metric, table, options, confirm, form, progress',
+  )
   assert.equal(invalid(null), 'view: expected a component object')
   assert.equal(invalid([]), 'view: expected a component object')
   assert.match(invalid({ type: 'text' }), /view\.text: expected a string/)
   assert.match(invalid({ type: 'text', text: 'hi', style: 'red' }), /unknown property "style"; allowed: text/)
-  assert.match(invalid({ type: 'metric', label: 'n', value: '1', tone: 'nope' }), /unknown tone "nope"; allowed: good, warn, bad/)
+  assert.match(
+    invalid({ type: 'metric', label: 'n', value: '1', tone: 'nope' }),
+    /unknown tone "nope"; allowed: good, warn, bad/,
+  )
   assert.match(invalid({ type: 'stack' }), /expected an array of 1 to 16 components/)
   assert.match(invalid({ type: 'stack', children: [] }), /expected 1 to 16 children; got 0/)
   assert.match(invalid({ type: 'text', text: 'x'.repeat(2001) }), /2001 characters exceeds the limit of 2000/)
@@ -67,22 +126,43 @@ test('validateView rejects an unknown component with the path and the catalog', 
 })
 
 test('validateView enforces table, options, form, depth, node, and id limits', () => {
-  const wide = { type: 'table', columns: Array.from({ length: 9 }, (_, index) => ({ key: `c${index}`, label: `C${index}` })), rows: [] }
+  const wide = {
+    type: 'table',
+    columns: Array.from({ length: 9 }, (_, index) => ({ key: `c${index}`, label: `C${index}` })),
+    rows: [],
+  }
   assert.match(invalid(wide), /9 columns exceeds the limit of 8/)
   const tall = { type: 'table', columns: [{ key: 'a', label: 'A' }], rows: Array.from({ length: 51 }, () => ['x']) }
   assert.match(invalid(tall), /51 rows exceeds the limit of 50/)
   const cell = { type: 'table', columns: [{ key: 'a', label: 'A' }], rows: [['x'.repeat(201)]] }
   assert.match(invalid(cell), /view\.rows\[0\]\[0\]: 201 characters exceeds the limit of 200/)
-  assert.match(invalid({ type: 'table', columns: [{ key: 'a', label: 'A' }], rows: ['nope'] }), /view\.rows\[0\]: expected an array of cells/)
+  assert.match(
+    invalid({ type: 'table', columns: [{ key: 'a', label: 'A' }], rows: ['nope'] }),
+    /view\.rows\[0\]: expected an array of cells/,
+  )
 
   const tooMany = options('pick', { options: Array.from({ length: 9 }, (_, index) => ({ label: `o${index}` })) })
   assert.match(invalid(tooMany), /expected 1 to 8 options; got 9/)
   assert.match(invalid(options('pick', { options: [] })), /expected 1 to 8 options; got 0/)
   assert.match(invalid(options('pick', { options: [{ label: 'A' }, { label: 'A' }] })), /duplicate label "A"/)
 
-  const fields = { type: 'form', id: 'ask', fields: Array.from({ length: 7 }, (_, index) => ({ id: `f${index}`, label: `F${index}` })) }
+  const fields = {
+    type: 'form',
+    id: 'ask',
+    fields: Array.from({ length: 7 }, (_, index) => ({ id: `f${index}`, label: `F${index}` })),
+  }
   assert.match(invalid(fields), /7 fields exceeds the limit of 6/)
-  assert.match(invalid({ type: 'form', id: 'ask', fields: [{ id: 'name', label: 'Name' }, { id: 'name', label: 'Again' }] }), /duplicate field id "name"/)
+  assert.match(
+    invalid({
+      type: 'form',
+      id: 'ask',
+      fields: [
+        { id: 'name', label: 'Name' },
+        { id: 'name', label: 'Again' },
+      ],
+    }),
+    /duplicate field id "name"/,
+  )
   // A field id may match the form's own id: the two namespaces are separate.
   assert.equal(validateView({ type: 'form', id: 'name', fields: [{ id: 'name', label: 'Name' }] }).ok, true)
 
@@ -103,18 +183,34 @@ test('validateView enforces table, options, form, depth, node, and id limits', (
   // plain object's prototype instead of its fields.
   assert.equal(invalid(options('__proto__')), 'view.id: "__proto__" cannot be an id')
   assert.equal(invalid(confirm('__proto__')), 'view.id: "__proto__" cannot be an id')
-  assert.equal(invalid({ type: 'form', id: 'ask', fields: [{ id: '__proto__', label: 'Name' }] }), 'view.fields[0].id: "__proto__" cannot be an id')
+  assert.equal(
+    invalid({ type: 'form', id: 'ask', fields: [{ id: '__proto__', label: 'Name' }] }),
+    'view.fields[0].id: "__proto__" cannot be an id',
+  )
 })
 
-test('checkShownView runs the call\'s own checks and names the card and its kind', () => {
+test("checkShownView runs the call's own checks and names the card and its kind", () => {
   assert.deepEqual(checkShownView('  Status  ', text()), { title: 'Status', interactive: false })
   assert.deepEqual(checkShownView('Pick', options()), { title: 'Pick', interactive: true })
   assert.equal(checkShownView(' ', text()).error, 'Give the view a title.')
-  assert.equal(checkShownView('Card', { type: 'nope' }).error, 'view.type: unknown component "nope"; allowed: stack, text, metric, table, options, confirm, form, progress')
+  assert.equal(
+    checkShownView('Card', { type: 'nope' }).error,
+    'view.type: unknown component "nope"; allowed: stack, text, metric, table, options, confirm, form, progress',
+  )
   assert.equal(checkShownView('Card', undefined).error, 'view: expected a component object')
   const room = VIEW_BYTE_LIMIT - viewBytes('', text())
-  assert.equal(checkShownView('x'.repeat(room + 1), text()).error, `The view is ${VIEW_BYTE_LIMIT + 1} bytes; the limit is ${VIEW_BYTE_LIMIT}.`)
-  assert.equal(checkShownView('Card', { get type() { throw new Error('no') } }).error, 'The view is not JSON data.')
+  assert.equal(
+    checkShownView('x'.repeat(room + 1), text()).error,
+    `The view is ${VIEW_BYTE_LIMIT + 1} bytes; the limit is ${VIEW_BYTE_LIMIT}.`,
+  )
+  assert.equal(
+    checkShownView('Card', {
+      get type() {
+        throw new Error('no')
+      },
+    }).error,
+    'The view is not JSON data.',
+  )
 })
 
 test('viewBytes counts the blueprint JSON plus the title in UTF-8', () => {
@@ -129,7 +225,13 @@ test('viewBytes counts the blueprint JSON plus the title in UTF-8', () => {
 
 test('viewSummary keeps a short list of component values', () => {
   const view = stack(metric(), options(), text(` ${'word '.repeat(30)}`))
-  assert.equal(viewSummary(view), `metric: 进度=70%; options: A/B/C; text: ${'word '.repeat(30).trim()}`.slice(0, 'metric: 进度=70%; options: A/B/C; '.length) + viewSummary(view).split('; ')[2])
+  assert.equal(
+    viewSummary(view),
+    `metric: 进度=70%; options: A/B/C; text: ${'word '.repeat(30).trim()}`.slice(
+      0,
+      'metric: 进度=70%; options: A/B/C; '.length,
+    ) + viewSummary(view).split('; ')[2],
+  )
   const parts = viewSummary(view).split('; ')
   assert.equal(parts[0], 'metric: 进度=70%')
   assert.equal(parts[1], 'options: A/B/C')
@@ -151,10 +253,18 @@ test('validateViewAnswer checks the submitted component and keeps the question-c
   assert.deepEqual(validateViewAnswer(view, 'go', { confirmed: true }), { confirmed: true })
   assert.match(invalidAnswer(view, 'go', { confirmed: 'yes' }), /values\.confirmed: expected a boolean/)
   assert.deepEqual(validateViewAnswer(view, 'ask', { fields: {} }), { fields: {} })
-  assert.deepEqual(validateViewAnswer(view, 'ask', { fields: { name: '', note: 'hi' } }), { fields: { name: '', note: 'hi' } })
+  assert.deepEqual(validateViewAnswer(view, 'ask', { fields: { name: '', note: 'hi' } }), {
+    fields: { name: '', note: 'hi' },
+  })
   assert.match(invalidAnswer(view, 'ask', { fields: { other: 'x' } }), /unknown field; allowed: name, note/)
-  assert.match(invalidAnswer(view, 'ask', { fields: { name: 'x'.repeat(2001) } }), /2001 characters exceeds the limit of 2000/)
-  assert.match(invalidAnswer(view, 'missing', { selected: ['A'] }), /no interactive component with id "missing"; allowed: pick, many, go, ask/)
+  assert.match(
+    invalidAnswer(view, 'ask', { fields: { name: 'x'.repeat(2001) } }),
+    /2001 characters exceeds the limit of 2000/,
+  )
+  assert.match(
+    invalidAnswer(view, 'missing', { selected: ['A'] }),
+    /no interactive component with id "missing"; allowed: pick, many, go, ask/,
+  )
   assert.match(invalidAnswer(view, '', {}), /expected an interactive component id/)
 })
 

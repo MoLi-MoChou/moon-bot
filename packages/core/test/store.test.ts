@@ -62,7 +62,7 @@ function runtime(t, saved = undefined) {
   return { rt, home, statePath, warnings, dispose }
 }
 
-test('a failed state write rejects and leaves the saved file unchanged', async (t) => {
+test('a failed state write rejects and leaves the saved file unchanged', async t => {
   const { rt, statePath } = runtime(t)
   await rt.load()
   await rt.save()
@@ -73,8 +73,12 @@ test('a failed state write rejects and leaves the saved file unchanged', async (
   assert.deepEqual(fs.readFileSync(statePath), original)
 })
 
-test('a failed migration write warns but load() still resolves', async (t) => {
-  const { rt, statePath, warnings } = runtime(t, { version: 1, mainBotId: 'chief', bots: { chief: { id: 'chief', name: 'Chief' } } })
+test('a failed migration write warns but load() still resolves', async t => {
+  const { rt, statePath, warnings } = runtime(t, {
+    version: 1,
+    mainBotId: 'chief',
+    bots: { chief: { id: 'chief', name: 'Chief' } },
+  })
   // The migrated team's first write fails: a directory takes the temp file's path.
   fs.mkdirSync(`${statePath}.${process.pid}.tmp`)
   await rt.load()
@@ -88,7 +92,7 @@ test('a failed migration write warns but load() still resolves', async (t) => {
   assert.ok(saved.mainBotIds.includes('chief'))
 })
 
-test('a failed state rename rejects and preserves the saved file', async (t) => {
+test('a failed state rename rejects and preserves the saved file', async t => {
   const { rt, statePath } = runtime(t)
   await rt.load()
   await rt.save()
@@ -106,7 +110,7 @@ test('a failed state rename rejects and preserves the saved file', async (t) => 
   }
 })
 
-test('malformed state is backed up before a later save', async (t) => {
+test('malformed state is backed up before a later save', async t => {
   const original = '{"version":1,'
   const { rt, statePath } = runtime(t, original)
   await rt.load()
@@ -118,7 +122,7 @@ test('malformed state is backed up before a later save', async (t) => {
   assert.equal(JSON.parse(fs.readFileSync(statePath, 'utf8')).prefs.marker, 'recovered')
 })
 
-test('malformed state stays read-only when its backup cannot be copied', async (t) => {
+test('malformed state stays read-only when its backup cannot be copied', async t => {
   const original = '{"version":1,'
   const { rt, statePath } = runtime(t, original)
   const restore = patch('copyFile', () => async () => {
@@ -130,13 +134,16 @@ test('malformed state stays read-only when its backup cannot be copied', async (
     rt.state.prefs.marker = 'not saved'
     await rt.save()
     assert.equal(fs.readFileSync(statePath, 'utf8'), original)
-    assert.deepEqual(fs.readdirSync(rt.home).filter(name => name.startsWith('state.json.broken-')), [])
+    assert.deepEqual(
+      fs.readdirSync(rt.home).filter(name => name.startsWith('state.json.broken-')),
+      [],
+    )
   } finally {
     restore()
   }
 })
 
-test('a state from a newer version remains untouched', async (t) => {
+test('a state from a newer version remains untouched', async t => {
   const original = JSON.stringify({ version: 999, revision: 77, recoveryMarker: 'keep' })
   const { rt, statePath } = runtime(t, original)
   await rt.load()
@@ -146,7 +153,7 @@ test('a state from a newer version remains untouched', async (t) => {
   assert.equal(fs.readFileSync(statePath, 'utf8'), original)
 })
 
-test('a read error keeps the existing state read-only', async (t) => {
+test('a read error keeps the existing state read-only', async t => {
   const original = JSON.stringify({ version: 1, revision: 77, recoveryMarker: 'keep' })
   const { rt, statePath } = runtime(t, original)
   const restore = patch('readFile', originalRead => async (path, ...args) => {
@@ -163,7 +170,7 @@ test('a read error keeps the existing state read-only', async (t) => {
   assert.equal(fs.readFileSync(statePath, 'utf8'), original)
 })
 
-test('refresh adopts a fixed state file and clears read-only mode', async (t) => {
+test('refresh adopts a fixed state file and clears read-only mode', async t => {
   const { rt, statePath } = runtime(t, { version: 999, revision: 77 })
   await rt.load()
   assert.match(rt.readOnly(), /could not be read/)
@@ -177,7 +184,7 @@ test('refresh adopts a fixed state file and clears read-only mode', async (t) =>
   assert.equal(JSON.parse(fs.readFileSync(statePath, 'utf8')).prefs.marker, 'saved after repair')
 })
 
-test('an unusable state lock warns and keeps the team saving', async (t) => {
+test('an unusable state lock warns and keeps the team saving', async t => {
   const { rt, home, statePath, warnings } = runtime(t)
   const lockPath = join(home, 'state.lock')
   const restore = patchSync('writeFileSync', originalWrite => (path, ...args) => {
@@ -198,14 +205,18 @@ test('an unusable state lock warns and keeps the team saving', async (t) => {
   }
 })
 
-test('a queued save rejects after another host takes the lock', async (t) => {
+test('a queued save rejects after another host takes the lock', async t => {
   const { rt, home, statePath } = runtime(t)
   await rt.load()
   await rt.save()
   let entered
   let unblock
-  const atMkdir = new Promise(resolve => { entered = resolve })
-  const gate = new Promise(resolve => { unblock = resolve })
+  const atMkdir = new Promise(resolve => {
+    entered = resolve
+  })
+  const gate = new Promise(resolve => {
+    unblock = resolve
+  })
   let paused = false
   const restore = patch('mkdir', originalMkdir => async (path, ...args) => {
     if (path === home && !paused) {
@@ -220,7 +231,10 @@ test('a queued save rejects after another host takes the lock', async (t) => {
     const active = rt.save()
     await atMkdir
     const queued = rt.save()
-    fs.writeFileSync(join(home, 'state.lock'), JSON.stringify({ pid: process.ppid, host: hostname(), token: 'new-owner' }))
+    fs.writeFileSync(
+      join(home, 'state.lock'),
+      JSON.stringify({ pid: process.ppid, host: hostname(), token: 'new-owner' }),
+    )
     const ownerState = JSON.stringify({ version: 1, revision: 900, prefs: { marker: 'new owner' } })
     fs.writeFileSync(statePath, ownerState)
     unblock()
@@ -234,11 +248,14 @@ test('a queued save rejects after another host takes the lock', async (t) => {
   }
 })
 
-test('a read-only host resolves awaited saves without writing', async (t) => {
+test('a read-only host resolves awaited saves without writing', async t => {
   const { rt, home, statePath } = runtime(t)
   await rt.load()
   await rt.save()
-  fs.writeFileSync(join(home, 'state.lock'), JSON.stringify({ pid: process.ppid, host: hostname(), token: 'new-owner' }))
+  fs.writeFileSync(
+    join(home, 'state.lock'),
+    JSON.stringify({ pid: process.ppid, host: hostname(), token: 'new-owner' }),
+  )
   const ownerState = JSON.stringify({ version: 1, revision: 900, prefs: { marker: 'new owner' } })
   fs.writeFileSync(statePath, ownerState)
   await rt.refresh()
@@ -248,14 +265,18 @@ test('a read-only host resolves awaited saves without writing', async (t) => {
   assert.equal(fs.readFileSync(statePath, 'utf8'), ownerState)
 })
 
-test('dispose waits for a pending save and prevents later writes', async (t) => {
+test('dispose waits for a pending save and prevents later writes', async t => {
   const { rt, home, statePath, dispose } = runtime(t)
   await rt.load()
   await rt.save()
   let entered
   let unblock
-  const atRename = new Promise(resolve => { entered = resolve })
-  const gate = new Promise(resolve => { unblock = resolve })
+  const atRename = new Promise(resolve => {
+    entered = resolve
+  })
+  const gate = new Promise(resolve => {
+    unblock = resolve
+  })
   const restore = patch('rename', originalRename => async (from, to) => {
     if (to === statePath) {
       entered()

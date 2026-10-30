@@ -24,12 +24,17 @@ function heldRuntime() {
     start: async () => {},
     stop: async () => {},
     steer: async () => false,
-    cancelTurn: async (_sessionId: string, reason?: string) => { cancelled.push(reason ?? 'user') },
-    runTurn: () => (async function* () {
-      await new Promise<void>(resolve => { releases.push(resolve) })
-      yield { type: 'turn/start', turn: 1 }
-      yield { type: 'turn/end', turn: 1, reason: { kind: 'completed' } }
-    })(),
+    cancelTurn: async (_sessionId: string, reason?: string) => {
+      cancelled.push(reason ?? 'user')
+    },
+    runTurn: () =>
+      (async function* () {
+        await new Promise<void>(resolve => {
+          releases.push(resolve)
+        })
+        yield { type: 'turn/start', turn: 1 }
+        yield { type: 'turn/end', turn: 1, reason: { kind: 'completed' } }
+      })(),
   }
   return { runtime, releases, cancelled }
 }
@@ -65,7 +70,10 @@ test('followups behind a running turn are counted until each one begins', async 
   await settle(() => releases.length === 3, 'the third turn to block')
   releases[2]?.()
   await settle(() => agent.status === 'idle', 'every turn to finish')
-  assert.deepEqual(agent.calls.map(call => (call.content[0] as { readonly text?: string }).text), ['one', 'two', 'three'])
+  assert.deepEqual(
+    agent.calls.map(call => (call.content[0] as { readonly text?: string }).text),
+    ['one', 'two', 'three'],
+  )
 })
 
 test('a cancel drops the messages waiting behind the turn', async () => {
@@ -77,7 +85,7 @@ test('a cancel drops the messages waiting behind the turn', async () => {
   await settle(() => releases.length === 1, 'the turn to block')
   agent.cancel()
   assert.equal(agent.pendingTurns(), 0, 'the queue goes with the turn')
-  assert.deepEqual(cancelled, ['user'], 'the running turn is cancelled as the user\'s stop')
+  assert.deepEqual(cancelled, ['user'], "the running turn is cancelled as the user's stop")
   // The aborted turn ends: the dropped followup must not start a turn after it.
   releases[0]?.()
   await settle(() => agent.status === 'idle', 'the aborted turn to end')
@@ -102,7 +110,7 @@ test('a steer that finds no turn waits behind the queued followups instead of ju
   await settle(() => agent.status === 'idle', 'every turn to finish')
 })
 
-test('a Main Bot\'s stop is recorded as a hook, not as the user', async () => {
+test("a Main Bot's stop is recorded as a hook, not as the user", async () => {
   const { runtime, releases, cancelled } = heldRuntime()
   const agent = engineAgentOf('s1', { runtime, emitEvent: () => undefined })
   agent.followup(message('one'))
@@ -142,8 +150,16 @@ test('prepend inserts at the front and skips a request already queued', async ()
   const agent = engineAgentOf('s1', { runtime, emitEvent: () => undefined })
   agent.followup(message('one'))
   await settle(() => releases.length === 1, 'the turn to block')
-  agent.inbox.prepend('next-step', { id: 'keep', content: [{ type: 'text', text: 'kept' }], source: { exchangeId: 'ex-1' } })
-  agent.inbox.prepend('next-turn', { id: 'dup', content: [{ type: 'text', text: 'again' }], source: { exchangeId: 'ex-1' } })
+  agent.inbox.prepend('next-step', {
+    id: 'keep',
+    content: [{ type: 'text', text: 'kept' }],
+    source: { exchangeId: 'ex-1' },
+  })
+  agent.inbox.prepend('next-turn', {
+    id: 'dup',
+    content: [{ type: 'text', text: 'again' }],
+    source: { exchangeId: 'ex-1' },
+  })
   assert.equal(agent.pendingTurns(), 1)
   assert.equal(agent.inbox.nextTurn[0]?.id, 'keep')
   assert.equal(agent.inbox.nextStep.length, 0)

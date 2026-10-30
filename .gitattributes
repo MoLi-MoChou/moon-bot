@@ -1,2 +1,30 @@
+# Keep LF in the working tree on Windows so Biome format:check matches Linux CI.
+# Without this, Git's default autocrlf on windows-latest turns every file into CRLF
+# and `biome format` reports hundreds of false failures.
+* text=auto eol=lf
+
 # Shell scripts are copied into the Docker image as they are; CRLF breaks them.
 *.sh text eol=lf
+
+# Binary / generated
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.zip binary
+*.gz binary
+*.tgz binary
+*.7z binary
+*.exe binary
+*.dll binary
+*.node binary
+*.wasm binary
+pnpm-lock.yaml -text
+package-lock.json -text
+yarn.lock -text

@@ -9,7 +9,9 @@ const ownPrimitives = {
   name: 'moon-bot-primitives',
   enforce: 'pre',
   resolveId(source, importer) {
-    return source === './primitives.tsx' && importer?.replaceAll('\\', '/').includes('/packages/core/src/client/') ? primitives : null
+    return source === './primitives.tsx' && importer?.replaceAll('\\', '/').includes('/packages/core/src/client/')
+      ? primitives
+      : null
   },
 }
 

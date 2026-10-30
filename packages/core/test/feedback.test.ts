@@ -6,7 +6,10 @@ import { build } from 'esbuild'
 
 const bundle = await build({
   entryPoints: [fileURLToPath(new URL('../src/client/feedback.tsx', import.meta.url))],
-  bundle: true, format: 'cjs', platform: 'node', write: false,
+  bundle: true,
+  format: 'cjs',
+  platform: 'node',
+  write: false,
   external: ['react', 'react-dom'],
 })
 const ISSUES = 'https://github.com/MoLi-MoChou/moon-bot/issues/new'
@@ -17,26 +20,47 @@ function page(window) {
   const react = {
     createElement: (type, props, ...children) => ({ type, props: props ?? {}, children: children.flat(Infinity) }),
     Fragment: 'fragment',
-    useState: initial => [initial, (next) => { if (typeof next === 'string') notes.push(next) }],
+    useState: initial => [
+      initial,
+      next => {
+        if (typeof next === 'string') notes.push(next)
+      },
+    ],
     useEffect: () => {},
     useRef: current => ({ current }),
     useLayoutEffect: () => {},
   }
   const module = { exports: {} as { FeedbackPage: (props: Record<string, unknown>) => unknown } }
   runInNewContext(bundle.outputFiles[0].text, {
-    module, exports: module.exports, window, URL, URLSearchParams, setTimeout, clearTimeout,
+    module,
+    exports: module.exports,
+    window,
+    URL,
+    URLSearchParams,
+    setTimeout,
+    clearTimeout,
     navigator: { clipboard: { writeText: () => Promise.resolve() } },
-    require: (name) => {
+    require: name => {
       if (name === 'react') return react
       if (name === 'react-dom') return {}
       throw new Error(`no platform module ${name}`)
     },
   })
-  const actions = { diagnostics: async () => ({ markdown: '| Moon Bot | 0.1.6 |', issuesUrl: ISSUES, entries: [], total: 0 }) }
+  const actions = {
+    diagnostics: async () => ({ markdown: '| Moon Bot | 0.1.6 |', issuesUrl: ISSUES, entries: [], total: 0 }),
+  }
   let pending
-  const run = (promise) => { pending = promise; return promise }
+  const run = promise => {
+    pending = promise
+    return promise
+  }
   const tree = module.exports.FeedbackPage({ actions, run, Section: 'section', Row: 'row' })
-  const find = node => (Array.isArray(node) ? node.flatMap(find) : node && typeof node === 'object' ? [...(node.props?.className === 'bt-fb-primary' ? [node] : []), ...find(node.children)] : [])
+  const find = node =>
+    Array.isArray(node)
+      ? node.flatMap(find)
+      : node && typeof node === 'object'
+        ? [...(node.props?.className === 'bt-fb-primary' ? [node] : []), ...find(node.children)]
+        : []
   return {
     notes,
     report: async () => {
@@ -51,17 +75,26 @@ function page(window) {
 // the page said the browser blocked the new window.
 test('on the Desktop, "Report on GitHub" hands the issue address to the system browser', async () => {
   const opened = []
-  const window = { dshDesktop: { protocolVersion: 1 }, open: (url = '') => { opened.push(String(url)); return null } }
+  const window = {
+    dshDesktop: { protocolVersion: 1 },
+    open: (url = '') => {
+      opened.push(String(url))
+      return null
+    },
+  }
   const { notes, report } = page(window)
   await report()
   assert.equal(opened.length, 1)
   assert.ok(opened[0].startsWith(`${ISSUES}?template=bug.yml`))
-  assert.equal(notes.some(note => /blocked the new window/.test(note)), false)
+  assert.equal(
+    notes.some(note => /blocked the new window/.test(note)),
+    false,
+  )
   assert.ok(notes.includes('Opened a new GitHub issue with the diagnostics filled in. Check it before you submit.'))
 })
 
 test('in a browser, the window reserved in the click gets the issue address', async () => {
-  const reserved: { location: { href: string }, opener?: unknown } = { location: { href: '' } }
+  const reserved: { location: { href: string }; opener?: unknown } = { location: { href: '' } }
   const window = { open: () => reserved }
   const { notes, report } = page(window)
   await report()

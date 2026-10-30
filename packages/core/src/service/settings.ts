@@ -18,9 +18,19 @@ const parseFile = (text: string): SettingsFile => {
   try {
     const value = JSON.parse(text) as unknown
     if (value === null || typeof value !== 'object' || Array.isArray(value)) return emptyFile()
-    const file = value as { version?: unknown, revision?: unknown, sections?: unknown }
-    if (file.version !== 1 || typeof file.sections !== 'object' || file.sections === null || Array.isArray(file.sections)) return emptyFile()
-    return { version: 1, revision: typeof file.revision === 'number' ? file.revision : 0, sections: file.sections as Record<string, Record<string, unknown>> }
+    const file = value as { version?: unknown; revision?: unknown; sections?: unknown }
+    if (
+      file.version !== 1 ||
+      typeof file.sections !== 'object' ||
+      file.sections === null ||
+      Array.isArray(file.sections)
+    )
+      return emptyFile()
+    return {
+      version: 1,
+      revision: typeof file.revision === 'number' ? file.revision : 0,
+      sections: file.sections as Record<string, Record<string, unknown>>,
+    }
   } catch {
     return emptyFile()
   }
@@ -57,7 +67,8 @@ export class FileSettings implements SettingsService {
   }
 
   private load(): SettingsFile {
-    if (this.file === undefined) this.file = existsSync(this.path) ? parseFile(readFileSync(this.path, 'utf8')) : emptyFile()
+    if (this.file === undefined)
+      this.file = existsSync(this.path) ? parseFile(readFileSync(this.path, 'utf8')) : emptyFile()
     return this.file
   }
 
@@ -80,7 +91,7 @@ export class FileSettings implements SettingsService {
     if (revision !== undefined && revision !== file.revision) {
       throw Object.assign(new Error('settings changed elsewhere; read again'), { code: 'bot/stale' })
     }
-    const section = file.sections[ns] ??= {}
+    const section = (file.sections[ns] ??= {})
     for (const operation of operations) {
       if (operation.op === 'set') setAt(section, operation.path, operation.value)
       // `unset` is the name the host modules use (the host's settings vocabulary).

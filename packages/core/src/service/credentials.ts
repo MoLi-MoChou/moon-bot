@@ -42,7 +42,7 @@ export class FileCredentials implements CredentialsService {
     chmodSync(this.file, 0o600)
   }
 
-  async describe(ref: string): Promise<{ configured?: boolean, writable?: boolean }> {
+  async describe(ref: string): Promise<{ configured?: boolean; writable?: boolean }> {
     return { configured: this.load()[ref] !== undefined, writable: true }
   }
 

@@ -40,7 +40,11 @@ export class LocalRunner implements ExecutionRunner {
 
   runtimeFor(_sessionId: string, bot: RunnerBotSpec | undefined): AgentRuntime {
     const configured = bot?.engine
-    if (configured !== null && typeof configured === 'object' && (configured as { kind?: unknown }).kind === 'acp-remote') {
+    if (
+      configured !== null &&
+      typeof configured === 'object' &&
+      (configured as { kind?: unknown }).kind === 'acp-remote'
+    ) {
       const agentId = (configured as { agentId?: unknown }).agentId
       // One runtime per agentId, shared by every Bot and session that names it: the
       // JSON-RPC ids live in the runtime, so two runtimes on one wire would collide.
@@ -52,7 +56,9 @@ export class LocalRunner implements ExecutionRunner {
           remote = new AcpRuntime({
             transport: new RelayTransport(this.options.relay, agentId),
             emit: this.options.emit,
-            ...(this.options.requestPermission !== undefined ? { requestPermission: this.options.requestPermission } : {}),
+            ...(this.options.requestPermission !== undefined
+              ? { requestPermission: this.options.requestPermission }
+              : {}),
           })
           this.acp.set(key, remote)
         }
@@ -60,12 +66,15 @@ export class LocalRunner implements ExecutionRunner {
       }
     }
     const localAgents = this.discovered ?? (this.discovered = this.catalog.list())
-    const discovered = typeof bot?.runtimeId === 'string'
-      ? localAgents.find(entry => entry.id === bot.runtimeId && canLaunch(entry))
-      : undefined
-    const spec = discovered ?? (configured !== null && typeof configured === 'object' && (configured as { kind?: unknown }).kind === 'acp'
-      ? configured as { command?: unknown; args?: readonly string[]; key?: unknown }
-      : undefined)
+    const discovered =
+      typeof bot?.runtimeId === 'string'
+        ? localAgents.find(entry => entry.id === bot.runtimeId && canLaunch(entry))
+        : undefined
+    const spec =
+      discovered ??
+      (configured !== null && typeof configured === 'object' && (configured as { kind?: unknown }).kind === 'acp'
+        ? (configured as { command?: unknown; args?: readonly string[]; key?: unknown })
+        : undefined)
     const command = typeof spec?.command === 'string' ? spec.command : ''
     if (command === '') return this.options.builtin
     const key = typeof spec?.key === 'string' && spec.key !== '' ? spec.key : command

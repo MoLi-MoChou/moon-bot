@@ -5,7 +5,13 @@ import { t, language } from './i18n.ts'
 const MAX = 30
 // The same failure again within this window bumps a count instead of a new line.
 const REPEAT_MS = 5 * 60 * 1000
-interface ClientErrorEntry { time: number; level: 'error'; text: string; code?: string; count?: number }
+interface ClientErrorEntry {
+  time: number
+  level: 'error'
+  text: string
+  code?: string
+  count?: number
+}
 const entries: ClientErrorEntry[] = []
 // An API failure is noted where it happens; the menu or form that shows it must not add it again.
 const noted = new WeakSet<object>()
@@ -36,11 +42,19 @@ export function noteClientError(where: string, error: unknown): void {
 }
 
 // A catch handler that keeps the failure without bothering the user.
-export const quietly = (where: string) => (error: unknown): void => noteClientError(where, error)
+export const quietly =
+  (where: string) =>
+  (error: unknown): void =>
+    noteClientError(where, error)
 
-export const clearClientErrors = (): void => { entries.length = 0 }
+export const clearClientErrors = (): void => {
+  entries.length = 0
+}
 
-export const clientErrors = (): ClientErrorEntry[] => entries.map(entry => (entry.count !== undefined && entry.count > 1 ? { ...entry, text: `${entry.text} (×${entry.count})` } : { ...entry }))
+export const clientErrors = (): ClientErrorEntry[] =>
+  entries.map(entry =>
+    entry.count !== undefined && entry.count > 1 ? { ...entry, text: `${entry.text} (×${entry.count})` } : { ...entry },
+  )
 
 export function clientFacts(): Record<string, string> {
   return {
@@ -77,12 +91,17 @@ export function failureLabel(code: string, message?: string): string {
 const URL_LIMIT = 7000
 export const WHAT_MAX = 2000
 const PASTE_NOTE = 'Moon Bot copied the diagnostics to the clipboard. Paste them here.'
-const REST_NOTE = 'The recent errors do not fit in the link. Moon Bot copied the diagnostics to the clipboard: paste them below this line.'
+const REST_NOTE =
+  'The recent errors do not fit in the link. Moon Bot copied the diagnostics to the clipboard: paste them below this line.'
 
-export function issueUrl(base: string, { what = '', diagnostics }: { what?: string; diagnostics: string }): { url: string; inline: boolean } {
+export function issueUrl(
+  base: string,
+  { what = '', diagnostics }: { what?: string; diagnostics: string },
+): { url: string; inline: boolean } {
   const text = what.trim().slice(0, WHAT_MAX)
   const title = text.split('\n')[0]?.slice(0, 80) ?? ''
-  const build = (body: string): string => `${base}?${new URLSearchParams({ template: 'bug.yml', ...(title ? { title } : {}), ...(text ? { what: text } : {}), diagnostics: body })}`
+  const build = (body: string): string =>
+    `${base}?${new URLSearchParams({ template: 'bug.yml', ...(title ? { title } : {}), ...(text ? { what: text } : {}), diagnostics: body })}`
   const full = build(diagnostics)
   if (full.length <= URL_LIMIT) return { url: full, inline: true }
   // The versions table leads the report and stays short; only the errors make it

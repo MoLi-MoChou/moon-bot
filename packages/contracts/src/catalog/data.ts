@@ -1,4 +1,4 @@
-import type { ConnectorCatalogEntry } from '../connector-catalog.ts';
+import type { ConnectorCatalogEntry } from '../connector-catalog.ts'
 
 export const DATA_CONNECTORS: readonly ConnectorCatalogEntry[] = [
   {
@@ -20,7 +20,12 @@ export const DATA_CONNECTORS: readonly ConnectorCatalogEntry[] = [
     transport: 'stdio',
     command: 'npx',
     args: ['-y', 'mcp-server-mysql'],
-    env: { MYSQL_HOST: '$MOON_BOT_SECRET_MYSQL_HOST', MYSQL_USER: '$MOON_BOT_SECRET_MYSQL_USER', MYSQL_PASSWORD: '$MOON_BOT_SECRET_MYSQL_PASSWORD', MYSQL_DATABASE: '$MOON_BOT_SECRET_MYSQL_DATABASE' },
+    env: {
+      MYSQL_HOST: '$MOON_BOT_SECRET_MYSQL_HOST',
+      MYSQL_USER: '$MOON_BOT_SECRET_MYSQL_USER',
+      MYSQL_PASSWORD: '$MOON_BOT_SECRET_MYSQL_PASSWORD',
+      MYSQL_DATABASE: '$MOON_BOT_SECRET_MYSQL_DATABASE',
+    },
     secrets: [
       { name: 'MYSQL_HOST', label: 'MySQL Host' },
       { name: 'MYSQL_USER', label: 'MySQL User' },
@@ -72,7 +77,10 @@ export const DATA_CONNECTORS: readonly ConnectorCatalogEntry[] = [
     transport: 'stdio',
     command: 'npx',
     args: ['-y', 'mcp-server-elasticsearch'],
-    env: { ELASTICSEARCH_URL: '$MOON_BOT_SECRET_ELASTICSEARCH_URL', ELASTICSEARCH_API_KEY: '$MOON_BOT_SECRET_ELASTICSEARCH_API_KEY' },
+    env: {
+      ELASTICSEARCH_URL: '$MOON_BOT_SECRET_ELASTICSEARCH_URL',
+      ELASTICSEARCH_API_KEY: '$MOON_BOT_SECRET_ELASTICSEARCH_API_KEY',
+    },
     secrets: [
       { name: 'ELASTICSEARCH_URL', label: 'Elasticsearch Node URL' },
       { name: 'ELASTICSEARCH_API_KEY', label: 'Elasticsearch API Key' },
@@ -87,7 +95,11 @@ export const DATA_CONNECTORS: readonly ConnectorCatalogEntry[] = [
     transport: 'stdio',
     command: 'npx',
     args: ['-y', 'clickhouse-mcp'],
-    env: { CLICKHOUSE_HOST: '$MOON_BOT_SECRET_CLICKHOUSE_HOST', CLICKHOUSE_USER: '$MOON_BOT_SECRET_CLICKHOUSE_USER', CLICKHOUSE_PASSWORD: '$MOON_BOT_SECRET_CLICKHOUSE_PASSWORD' },
+    env: {
+      CLICKHOUSE_HOST: '$MOON_BOT_SECRET_CLICKHOUSE_HOST',
+      CLICKHOUSE_USER: '$MOON_BOT_SECRET_CLICKHOUSE_USER',
+      CLICKHOUSE_PASSWORD: '$MOON_BOT_SECRET_CLICKHOUSE_PASSWORD',
+    },
     secrets: [
       { name: 'CLICKHOUSE_HOST', label: 'ClickHouse Host / Endpoint' },
       { name: 'CLICKHOUSE_USER', label: 'ClickHouse User' },
@@ -103,7 +115,11 @@ export const DATA_CONNECTORS: readonly ConnectorCatalogEntry[] = [
     transport: 'stdio',
     command: 'npx',
     args: ['-y', 'snowflake-mcp'],
-    env: { SNOWFLAKE_ACCOUNT: '$MOON_BOT_SECRET_SNOWFLAKE_ACCOUNT', SNOWFLAKE_USER: '$MOON_BOT_SECRET_SNOWFLAKE_USER', SNOWFLAKE_PASSWORD: '$MOON_BOT_SECRET_SNOWFLAKE_PASSWORD' },
+    env: {
+      SNOWFLAKE_ACCOUNT: '$MOON_BOT_SECRET_SNOWFLAKE_ACCOUNT',
+      SNOWFLAKE_USER: '$MOON_BOT_SECRET_SNOWFLAKE_USER',
+      SNOWFLAKE_PASSWORD: '$MOON_BOT_SECRET_SNOWFLAKE_PASSWORD',
+    },
     secrets: [
       { name: 'SNOWFLAKE_ACCOUNT', label: 'Snowflake Account Identifier' },
       { name: 'SNOWFLAKE_USER', label: 'Snowflake User' },
@@ -137,4 +153,4 @@ export const DATA_CONNECTORS: readonly ConnectorCatalogEntry[] = [
     secrets: [{ name: 'ALLOWED_DIRECTORY', label: 'Allowed root folder path (e.g. /path/to/project)' }],
     website: 'https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem',
   },
-];
+]

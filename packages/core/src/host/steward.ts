@@ -40,7 +40,12 @@ interface ChatMessage {
   readonly content?: unknown
 }
 
-export function linesFor({ window, reserve, checkRatio }: StewardLines): { window: number; usable: number; hard: number; check: number } {
+export function linesFor({ window, reserve, checkRatio }: StewardLines): {
+  window: number
+  usable: number
+  hard: number
+  check: number
+} {
   const declared = typeof window === 'number' && Number.isInteger(window) && window > 0 ? window : DEFAULT_WINDOW
   const room = typeof reserve === 'number' && Number.isInteger(reserve) && reserve > 0 ? reserve : 0
   const usable = Math.max(declared - room, Math.floor(declared / 2))
@@ -50,7 +55,7 @@ export function linesFor({ window, reserve, checkRatio }: StewardLines): { windo
 }
 
 export const STEWARD_SYSTEM = [
-  'You are the context steward of an AI assistant\'s long-running conversation. The conversation has grown long, and room has to be made now in one of two ways. You choose which.',
+  "You are the context steward of an AI assistant's long-running conversation. The conversation has grown long, and room has to be made now in one of two ways. You choose which.",
   '',
   '- "switch": the current piece of work has reached a stopping point. The latest request is answered or done, nothing is left half-done, and nothing is promised for right now; what comes next is likely something new. The conversation moves on to a fresh one that opens with a handoff note and the latest messages.',
   '- "compact": the work is still under way. A task is half-done, the assistant is in the middle of its steps, the user and the assistant are still working on the same thing, or an answer or a result is still awaited. The older messages are condensed into a summary in place, and the work goes on without a break.',
@@ -87,7 +92,7 @@ export function stewardRequest({ lines, midTurn, checkpoints, group }: StewardRe
     used += cost
   }
   return [
-    `Where: ${group ? 'the assistant\'s conversation in a group chat with the user and other Bots' : 'the assistant\'s own chat with the user'}.`,
+    `Where: ${group ? "the assistant's conversation in a group chat with the user and other Bots" : "the assistant's own chat with the user"}.`,
     `Now: ${midTurn ? 'the assistant is in the middle of a turn: it is still working and has not finished its reply' : 'the assistant has just finished its turn'}.`,
     `Condensed so far in this conversation: ${checkpoints} ${checkpoints === 1 ? 'time' : 'times'}.`,
     '',
@@ -121,7 +126,10 @@ export function checkpointCount(messages: unknown): number {
   let count = 0
   for (const message of (Array.isArray(messages) ? messages : []) as readonly ChatMessage[]) {
     if (message?.role !== 'user' || !Array.isArray(message.content)) continue
-    const text = message.content.filter(block => block?.type === 'text').map(block => block.text).join('\n')
+    const text = message.content
+      .filter(block => block?.type === 'text')
+      .map(block => block.text)
+      .join('\n')
     const at = text.indexOf(SUMMARY_TAG)
     if (at === -1) continue
     const found = CHECKPOINT_MARK.exec(text.slice(at + SUMMARY_TAG.length).trimStart())
@@ -138,11 +146,11 @@ export const CHECKPOINT_PROMPT = [
   '- The results so far, item by item: every finding, answer, figure or list entry that the user may ask for again or that a later step builds on (a final summary, for one), each in one terse line with its number or name and its identifiers exactly as first written (full paths, names, figures). Do not fold them into themes or ranges.',
   '- Decisions, with the reason; and what was rejected, so that it is not proposed again.',
   '- What the work depends on: the constraints, preferences and corrections the user gave.',
-  '- What remains: every request not yet answered in your replies above, in the user\'s words; then the next steps, in order, and what finishes the current piece of work.',
+  "- What remains: every request not yet answered in your replies above, in the user's words; then the next steps, in order, and what finishes the current piece of work.",
   '- Exact data still needed: names, numbers, dates, paths, commands, identifiers, links, and error messages word for word.',
   '',
   'Rules:',
-  '- Language: write the whole checkpoint — every heading and every line — in the same language as the user\'s own messages in this conversation. English messages get an English checkpoint; Chinese messages get a Chinese checkpoint.',
+  "- Language: write the whole checkpoint — every heading and every line — in the same language as the user's own messages in this conversation. English messages get an English checkpoint; Chinese messages get a Chinese checkpoint.",
   '- Do not make anything up. Leave a detail out rather than guess it.',
   '- Record only what your replies above actually gave. The user never sees this summary, so do not do any of the remaining work in it: a final summary, an answer or a step the user asked for and you have not given yet goes under what remains, as not done.',
   '- When a newer message contradicts an older one, the newer one wins.',
@@ -168,8 +176,15 @@ export function checkpointTail(region: unknown, all: unknown): readonly ChatMess
 export function checkpointTailNote(tail: readonly ChatMessage[]): string {
   const first = tail[0]
   const text = (Array.isArray(first?.content) ? first.content : [])
-    .filter(block => block?.type === 'text').map(block => block.text).join(' ').replace(/\s+/g, ' ').trim()
-  const from = text === '' ? `from your ${first?.role === 'assistant' ? 'own step' : 'latest input'}` : `from the one that begins "${text.slice(0, 80)}"`
+    .filter(block => block?.type === 'text')
+    .map(block => block.text)
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  const from =
+    text === ''
+      ? `from your ${first?.role === 'assistant' ? 'own step' : 'latest input'}`
+      : `from the one that begins "${text.slice(0, 80)}"`
   return `The last ${tail.length === 1 ? 'message' : `${tail.length} messages`} above, ${from}, stay right after your summary, word for word. Count what they give as given: summarize only what comes before them, and do not copy them.`
 }
 

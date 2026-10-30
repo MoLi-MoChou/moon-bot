@@ -7,8 +7,12 @@ const memoryStorage = (entries = {}) => {
   return {
     map,
     getItem: key => (map.has(key) ? map.get(key) : null),
-    setItem: (key, value) => { map.set(key, String(value)) },
-    removeItem: (key) => { map.delete(key) },
+    setItem: (key, value) => {
+      map.set(key, String(value))
+    },
+    removeItem: key => {
+      map.delete(key)
+    },
   } as Storage & { map: Map<string, string> }
 }
 
@@ -35,7 +39,11 @@ test('values saved under the dsh-bot keys move to the moon-bot keys', () => {
 })
 
 test('the dsh-bot-team keys move too, and the newer name wins', () => {
-  const storage = memoryStorage({ 'dsh-bot-team:unread': 'oldest', 'dsh-bot-team:prefs': 'team', 'dsh-bot:prefs': 'newer' })
+  const storage = memoryStorage({
+    'dsh-bot-team:unread': 'oldest',
+    'dsh-bot-team:prefs': 'team',
+    'dsh-bot:prefs': 'newer',
+  })
   migrateStorage(storage)
   assert.equal(storage.getItem(STORAGE.unread), 'oldest')
   assert.equal(storage.getItem(STORAGE.prefs), 'newer')
@@ -53,14 +61,24 @@ test('a value already under the current key is never overwritten', () => {
 })
 
 test('the newest legacy name wins when the current key is empty', () => {
-  const storage = memoryStorage({ 'dsh-bot-team:unread': 'oldest', 'dsh-bot:unread': 'older', 'ds-bot:unread': 'newest' })
+  const storage = memoryStorage({
+    'dsh-bot-team:unread': 'oldest',
+    'dsh-bot:unread': 'older',
+    'ds-bot:unread': 'newest',
+  })
   migrateStorage(storage)
   assert.equal(storage.getItem(STORAGE.unread), 'newest')
 })
 
 test('every current key has its legacy keys, and unusable storage is no error', () => {
   for (const key of Object.values(STORAGE)) assert.ok(legacyKeys(key).length > 0, key)
-  const broken = { getItem: () => { throw new Error('denied') }, setItem() {}, removeItem() {} } as unknown as Storage
+  const broken = {
+    getItem: () => {
+      throw new Error('denied')
+    },
+    setItem() {},
+    removeItem() {},
+  } as unknown as Storage
   assert.doesNotThrow(() => migrateStorage(broken))
 })
 

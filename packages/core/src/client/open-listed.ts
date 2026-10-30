@@ -20,7 +20,10 @@ export function listedOpener({ list, open, refresh, current }: ListedOpenerOptio
     drop()
     drop = () => {}
     const listed = (): boolean => list.getSnapshot().byId?.[target] !== undefined
-    if (listed()) { open(target); return }
+    if (listed()) {
+      open(target)
+      return
+    }
     const from = current?.()
     const off = list.subscribe(() => {
       if (current?.() !== from) {

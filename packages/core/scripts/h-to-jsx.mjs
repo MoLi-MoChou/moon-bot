@@ -10,14 +10,21 @@ if (files.length === 0) {
 }
 
 function isHCall(node) {
-  return ts.isCallExpression(node)
-    && ts.isIdentifier(node.expression)
-    && node.expression.text === 'h'
-    && node.arguments.length >= 1
+  return (
+    ts.isCallExpression(node) &&
+    ts.isIdentifier(node.expression) &&
+    node.expression.text === 'h' &&
+    node.arguments.length >= 1
+  )
 }
 
 function propsToJsxAttributes(propsExpr, factory) {
-  if (!propsExpr || propsExpr.kind === ts.SyntaxKind.NullKeyword || (ts.isIdentifier(propsExpr) && propsExpr.text === 'null')) return []
+  if (
+    !propsExpr ||
+    propsExpr.kind === ts.SyntaxKind.NullKeyword ||
+    (ts.isIdentifier(propsExpr) && propsExpr.text === 'null')
+  )
+    return []
   if (ts.isObjectLiteralExpression(propsExpr)) {
     const attrs = []
     for (const prop of propsExpr.properties) {
@@ -26,9 +33,7 @@ function propsToJsxAttributes(propsExpr, factory) {
         continue
       }
       if (!ts.isPropertyAssignment(prop) && !ts.isShorthandPropertyAssignment(prop)) continue
-      const name = ts.isIdentifier(prop.name) ? prop.name.text
-        : ts.isStringLiteral(prop.name) ? prop.name.text
-        : null
+      const name = ts.isIdentifier(prop.name) ? prop.name.text : ts.isStringLiteral(prop.name) ? prop.name.text : null
       if (name === null) {
         // computed — keep as spread of a one-key object would be lossy; skip
         continue
@@ -36,7 +41,12 @@ function propsToJsxAttributes(propsExpr, factory) {
       // Hyphenated aria-/data- names are valid JsxIdentifiers (Identifier text may include '-').
       const jsxName = factory.createIdentifier(name)
       if (ts.isShorthandPropertyAssignment(prop)) {
-        attrs.push(factory.createJsxAttribute(jsxName, factory.createJsxExpression(undefined, factory.createIdentifier(prop.name.text))))
+        attrs.push(
+          factory.createJsxAttribute(
+            jsxName,
+            factory.createJsxExpression(undefined, factory.createIdentifier(prop.name.text)),
+          ),
+        )
         continue
       }
       const init = prop.initializer
@@ -109,11 +119,11 @@ function transformSource(filePath) {
   const sf = ts.createSourceFile(filePath, text, ts.ScriptTarget.ES2022, true, kind)
   let changed = false
   // Proper two-phase: transform h calls bottom-up
-  const transformer = (context) => {
-    const visitNode = (node) => {
+  const transformer = context => {
+    const visitNode = node => {
       node = ts.visitEachChild(node, visitNode, context)
       if (isHCall(node)) {
-        const jsx = hCallToJsx(node, context.factory, (n) => n)
+        const jsx = hCallToJsx(node, context.factory, n => n)
         if (jsx !== node && (ts.isJsxElement(jsx) || ts.isJsxSelfClosingElement(jsx) || ts.isJsxFragment(jsx))) {
           changed = true
           return jsx
@@ -121,7 +131,7 @@ function transformSource(filePath) {
       }
       return node
     }
-    return (node) => ts.visitNode(node, visitNode)
+    return node => ts.visitNode(node, visitNode)
   }
 
   const result = ts.transform(sf, [transformer])

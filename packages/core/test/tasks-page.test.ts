@@ -8,11 +8,18 @@ import { build } from 'esbuild'
 
 const bundle = await build({
   entryPoints: [fileURLToPath(new URL('../src/client/tasks-page.tsx', import.meta.url))],
-  bundle: true, format: 'cjs', platform: 'node', write: false,
+  bundle: true,
+  format: 'cjs',
+  platform: 'node',
+  write: false,
   external: ['react', 'react-dom'],
 })
 interface State {
-  answer: { running: readonly Record<string, unknown>[]; completed: readonly Record<string, unknown>[]; waiting: readonly Record<string, unknown>[] } | null
+  answer: {
+    running: readonly Record<string, unknown>[]
+    completed: readonly Record<string, unknown>[]
+    waiting: readonly Record<string, unknown>[]
+  } | null
   now: number
   busy: string | null
   stopped: ReadonlySet<string>
@@ -23,16 +30,37 @@ interface State {
   withdraw?: (sessionId: string, id: string) => void
   continueTurn?: ((sessionId: string) => Promise<unknown>) | undefined
 }
-const module = { exports: {} as {
-  elapsed: (ms: number) => string
-  doingText: (task: Record<string, unknown>, translate?: (key: string, params?: Record<string, unknown>) => string) => string
-  reasonText: (reason: string) => string
-  holdText: (hold: string | undefined) => string | undefined
-  filterTasks: (answer: { running: readonly Record<string, unknown>[]; completed: readonly Record<string, unknown>[]; waiting: readonly Record<string, unknown>[] }, filters: { state: string; botId: string }) => { running: readonly Record<string, unknown>[]; completed: readonly Record<string, unknown>[]; waiting: readonly Record<string, unknown>[] }
-  TasksBoard: (props: { state: State; onOpen: (sessionId: string) => void; initialFilters?: { state: string; botId: string } }) => unknown
-} }
+const module = {
+  exports: {} as {
+    elapsed: (ms: number) => string
+    doingText: (
+      task: Record<string, unknown>,
+      translate?: (key: string, params?: Record<string, unknown>) => string,
+    ) => string
+    reasonText: (reason: string) => string
+    holdText: (hold: string | undefined) => string | undefined
+    filterTasks: (
+      answer: {
+        running: readonly Record<string, unknown>[]
+        completed: readonly Record<string, unknown>[]
+        waiting: readonly Record<string, unknown>[]
+      },
+      filters: { state: string; botId: string },
+    ) => {
+      running: readonly Record<string, unknown>[]
+      completed: readonly Record<string, unknown>[]
+      waiting: readonly Record<string, unknown>[]
+    }
+    TasksBoard: (props: {
+      state: State
+      onOpen: (sessionId: string) => void
+      initialFilters?: { state: string; botId: string }
+    }) => unknown
+  },
+}
 runInNewContext(bundle.outputFiles[0].text, {
-  module, exports: module.exports,
+  module,
+  exports: module.exports,
   require: name => {
     const platform = {
       react: {
@@ -53,7 +81,10 @@ runInNewContext(bundle.outputFiles[0].text, {
           return node
         },
         Fragment: 'fragment',
-        useState: (initial: unknown) => [typeof initial === 'function' ? (initial as () => unknown)() : initial, () => {}],
+        useState: (initial: unknown) => [
+          typeof initial === 'function' ? (initial as () => unknown)() : initial,
+          () => {},
+        ],
         useEffect: () => {},
         useLayoutEffect: () => {},
         useRef: (initial: unknown) => ({ current: initial }),
@@ -75,26 +106,38 @@ let hookIndex = 0
 let pendingEffects: (() => void)[] = []
 let stateUpdates = 0
 const depsChanged = (next: readonly unknown[] | undefined, previous: readonly unknown[] | undefined): boolean =>
-  next === undefined || previous === undefined || next.length !== previous.length || next.some((value, index) => !Object.is(value, previous[index]))
+  next === undefined ||
+  previous === undefined ||
+  next.length !== previous.length ||
+  next.some((value, index) => !Object.is(value, previous[index]))
 const hookReact = {
-  createElement: (type: unknown, props: unknown, ...children: unknown[]) => ({ type, props: props ?? {}, children: children.flat(Infinity) }),
+  createElement: (type: unknown, props: unknown, ...children: unknown[]) => ({
+    type,
+    props: props ?? {},
+    children: children.flat(Infinity),
+  }),
   Fragment: 'fragment',
   useState: (initial: unknown) => {
     const index = hookIndex++
-    const cell = hookCells[index] ??= { value: typeof initial === 'function' ? (initial as () => unknown)() : initial }
-    return [cell.value, (next: unknown) => {
-      cell.value = typeof next === 'function' ? (next as (value: unknown) => unknown)(cell.value) : next
-      stateUpdates += 1
-    }]
+    const cell = (hookCells[index] ??= {
+      value: typeof initial === 'function' ? (initial as () => unknown)() : initial,
+    })
+    return [
+      cell.value,
+      (next: unknown) => {
+        cell.value = typeof next === 'function' ? (next as (value: unknown) => unknown)(cell.value) : next
+        stateUpdates += 1
+      },
+    ]
   },
   useRef: (initial: unknown) => {
     const index = hookIndex++
-    const cell = hookCells[index] ??= { ref: { current: initial } }
+    const cell = (hookCells[index] ??= { ref: { current: initial } })
     return cell.ref
   },
   useEffect: (effect: () => (() => void) | void, deps?: readonly unknown[]) => {
     const index = hookIndex++
-    const cell = hookCells[index] ??= {}
+    const cell = (hookCells[index] ??= {})
     if (depsChanged(deps, cell.deps)) {
       pendingEffects.push(() => {
         cell.cleanup?.()
@@ -112,7 +155,9 @@ runInNewContext(bundle.outputFiles[0].text, {
     intervals.add(timer)
     return timer
   },
-  clearInterval: (timer: { callback: () => void }) => { intervals.delete(timer) },
+  clearInterval: (timer: { callback: () => void }) => {
+    intervals.delete(timer)
+  },
   require: name => {
     if (name === 'react') return hookReact
     if (name === 'react-dom') return {}
@@ -146,7 +191,10 @@ const mountTasks = (taskActions: unknown) => {
 const deferred = <T>() => {
   let resolve!: (value: T | PromiseLike<T>) => void
   let reject!: (reason?: unknown) => void
-  const promise = new Promise<T>((yes, no) => { resolve = yes; reject = no })
+  const promise = new Promise<T>((yes, no) => {
+    resolve = yes
+    reject = no
+  })
   return { promise, resolve, reject }
 }
 const tick = () => new Promise<void>(resolve => setImmediate(resolve))
@@ -154,18 +202,17 @@ const taskAnswer = (botName: string) => ({ running: [running({ botName })], comp
 
 // The element tree the fake createElement builds: walk every node for its text and props.
 const elements = (node: unknown): { props: Record<string, unknown>; children?: readonly unknown[] }[] => {
-  if (Array.isArray(node))
-    return node.flatMap(elements)
-  if (node === null || typeof node !== 'object')
-    return []
+  if (Array.isArray(node)) return node.flatMap(elements)
+  if (node === null || typeof node !== 'object') return []
   const element = node as { props?: Record<string, unknown>; children?: readonly unknown[] }
-  return [element as { props: Record<string, unknown>; children?: readonly unknown[] }, ...(element.children ?? []).flatMap(elements)]
+  return [
+    element as { props: Record<string, unknown>; children?: readonly unknown[] },
+    ...(element.children ?? []).flatMap(elements),
+  ]
 }
 const textOf = (node: unknown): string => {
-  if (typeof node === 'string' || typeof node === 'number')
-    return String(node)
-  if (Array.isArray(node))
-    return node.map(textOf).join(' ')
+  if (typeof node === 'string' || typeof node === 'number') return String(node)
+  if (Array.isArray(node)) return node.map(textOf).join(' ')
   if (node !== null && typeof node === 'object')
     return ((node as { children?: readonly unknown[] }).children ?? []).map(textOf).join(' ')
   return ''
@@ -173,24 +220,44 @@ const textOf = (node: unknown): string => {
 const propsOf = (node: unknown): Record<string, unknown>[] => elements(node).map(element => element.props)
 const rows = (patch: Partial<State> = {}): State => ({
   answer: { running: [], completed: [], waiting: [] },
-  now: 10_000, busy: null, stopped: new Set(), notice: null, error: null,
-  refresh: () => {}, stop: () => {},
+  now: 10_000,
+  busy: null,
+  stopped: new Set(),
+  notice: null,
+  error: null,
+  refresh: () => {},
+  stop: () => {},
   ...patch,
 })
-const running = (patch: Record<string, unknown> = {}) => ({ sessionId: 'chat:b1', botId: 'b1', botName: 'Writer', since: 1_000, ...patch })
+const running = (patch: Record<string, unknown> = {}) => ({
+  sessionId: 'chat:b1',
+  botId: 'b1',
+  botName: 'Writer',
+  since: 1_000,
+  ...patch,
+})
 
 test('hold copy is omitted when no fact is present', () => {
   assert.equal(holdText(undefined), undefined)
   assert.equal(holdText('approval'), 'Waiting for your approval')
-  const tree = TasksBoard({ state: rows({ answer: { running: [running()], completed: [], waiting: [] } }), onOpen: () => {} })
+  const tree = TasksBoard({
+    state: rows({ answer: { running: [running()], completed: [], waiting: [] } }),
+    onOpen: () => {},
+  })
   assert.doesNotMatch(textOf(tree), /approval|queued|Engine busy/)
-  const labels = propsOf(tree).map(props => props['aria-label']).filter(label => typeof label === 'string')
+  const labels = propsOf(tree)
+    .map(props => props['aria-label'])
+    .filter(label => typeof label === 'string')
   assert.ok(labels.includes('Filter by state'))
   assert.ok(labels.includes('Filter by Bot'))
 })
 
 test('task filters select a state and Bot without changing the host answer', () => {
-  const answer = { running: [running({ botId: 'b1' }), running({ botId: 'b2' })], waiting: [{ botId: 'b1' }], completed: [{ botId: 'b2' }] }
+  const answer = {
+    running: [running({ botId: 'b1' }), running({ botId: 'b2' })],
+    waiting: [{ botId: 'b1' }],
+    completed: [{ botId: 'b2' }],
+  }
   const filtered = filterTasks(answer, { state: 'running', botId: 'b2' })
   assert.equal(filtered.running.length, 1)
   assert.equal(filtered.running[0]?.botId, 'b2')
@@ -209,19 +276,28 @@ test('the clocks read as minutes and seconds, then hours', () => {
 })
 
 test('a row says what the Bot is doing, in the order the host reports it', () => {
-  const identity = (key: string, params?: Record<string, unknown>) => params === undefined ? key : `${key} ${JSON.stringify(params)}`
+  const identity = (key: string, params?: Record<string, unknown>) =>
+    params === undefined ? key : `${key} ${JSON.stringify(params)}`
   assert.equal(doingText({ switching: true }, identity), 'Switching to a new session')
-  assert.equal(doingText({ tool: 'read_file', target: 'plan.md' }, identity), 'Running {tool} on {target} {"tool":"read_file","target":"plan.md"}')
+  assert.equal(
+    doingText({ tool: 'read_file', target: 'plan.md' }, identity),
+    'Running {tool} on {target} {"tool":"read_file","target":"plan.md"}',
+  )
   assert.equal(doingText({ tool: 'web_search' }, identity), 'Running {tool} {"tool":"web_search"}')
   assert.equal(doingText({ said: 'Looking at the logs' }, identity), 'Looking at the logs')
   assert.equal(doingText({}, identity), 'Working')
 })
 
 test('a running row says how many messages wait behind its turn, and who its Stop ends', () => {
-  const tree = TasksBoard({ state: rows({ answer: { running: [running({ queued: 2, fromName: 'Chief' })], completed: [], waiting: [] } }), onOpen: () => {} })
+  const tree = TasksBoard({
+    state: rows({ answer: { running: [running({ queued: 2, fromName: 'Chief' })], completed: [], waiting: [] } }),
+    onOpen: () => {},
+  })
   assert.match(textOf(tree), /2 queued/)
   assert.match(textOf(tree), /for Chief/)
-  const labels = propsOf(tree).map(props => props['aria-label']).filter(label => typeof label === 'string')
+  const labels = propsOf(tree)
+    .map(props => props['aria-label'])
+    .filter(label => typeof label === 'string')
   assert.ok(labels.includes('Stop Writer'), `the stop names the Bot: ${labels.join(', ')}`)
 })
 
@@ -229,8 +305,14 @@ test('a running row lists each queued preview and withdraws that one', () => {
   const withdrawn: string[] = []
   const tree = TasksBoard({
     state: rows({
-      answer: { running: [running({ queued: 1, queue: [{ id: 'q1', preview: 'check the logs' }] })], completed: [], waiting: [] },
-      withdraw: (_sessionId, id) => { withdrawn.push(id) },
+      answer: {
+        running: [running({ queued: 1, queue: [{ id: 'q1', preview: 'check the logs' }] })],
+        completed: [],
+        waiting: [],
+      },
+      withdraw: (_sessionId, id) => {
+        withdrawn.push(id)
+      },
     }),
     onOpen: () => {},
   })
@@ -242,20 +324,38 @@ test('a running row lists each queued preview and withdraws that one', () => {
 })
 
 test('a row with nothing queued says nothing about a queue', () => {
-  const tree = TasksBoard({ state: rows({ answer: { running: [running()], completed: [], waiting: [] } }), onOpen: () => {} })
+  const tree = TasksBoard({
+    state: rows({ answer: { running: [running()], completed: [], waiting: [] } }),
+    onOpen: () => {},
+  })
   assert.doesNotMatch(textOf(tree), /queued/)
 })
 
 test('a stopped row reads stopped and takes its Stop away', () => {
-  const tree = TasksBoard({ state: rows({ answer: { running: [running()], completed: [], waiting: [] }, stopped: new Set(['chat:b1:1000']) }), onOpen: () => {} })
+  const tree = TasksBoard({
+    state: rows({ answer: { running: [running()], completed: [], waiting: [] }, stopped: new Set(['chat:b1:1000']) }),
+    onOpen: () => {},
+  })
   assert.match(textOf(tree), /Stopped by you/)
-  assert.equal(propsOf(tree).some(props => props['aria-label'] === 'Stop Writer'), false)
+  assert.equal(
+    propsOf(tree).some(props => props['aria-label'] === 'Stop Writer'),
+    false,
+  )
 })
 
 test('a turn that starts after a stop is not the turn that was stopped', () => {
-  const tree = TasksBoard({ state: rows({ answer: { running: [running({ since: 2_000 })], completed: [], waiting: [] }, stopped: new Set(['chat:b1:1000']) }), onOpen: () => {} })
+  const tree = TasksBoard({
+    state: rows({
+      answer: { running: [running({ since: 2_000 })], completed: [], waiting: [] },
+      stopped: new Set(['chat:b1:1000']),
+    }),
+    onOpen: () => {},
+  })
   assert.doesNotMatch(textOf(tree), /Stopped by you/)
-  assert.equal(propsOf(tree).some(props => props['aria-label'] === 'Stop Writer'), true)
+  assert.equal(
+    propsOf(tree).some(props => props['aria-label'] === 'Stop Writer'),
+    true,
+  )
 })
 
 test('a finished row says who ended it', () => {
@@ -268,11 +368,17 @@ test('a finished row says who ended it', () => {
 })
 
 test('a stop that found nothing says so instead of staying silent', () => {
-  const tree = TasksBoard({ state: rows({ notice: 'Writer had already finished, so nothing was stopped.' }), onOpen: () => {} })
+  const tree = TasksBoard({
+    state: rows({ notice: 'Writer had already finished, so nothing was stopped.' }),
+    onOpen: () => {},
+  })
   const notice = elements(tree).find(element => element.props.role === 'status')
   assert.ok(notice !== undefined, 'the notice is announced')
   assert.match(textOf(notice.children), /had already finished/)
-  assert.equal(propsOf(tree).some(props => props['aria-label'] === 'Stop Writer'), false)
+  assert.equal(
+    propsOf(tree).some(props => props['aria-label'] === 'Stop Writer'),
+    false,
+  )
 })
 
 test('a stale refresh response cannot replace a newer answer', async () => {
@@ -320,26 +426,41 @@ test('an empty shelf hides the filters and keeps one calm empty', () => {
   const tree = TasksBoard({ state: rows(), onOpen: () => {} })
   assert.match(textOf(tree), /Nobody is working right now/)
   assert.match(textOf(tree), /Running turns, waiting handoffs/)
-  const labels = propsOf(tree).map(props => props['aria-label']).filter(label => typeof label === 'string')
+  const labels = propsOf(tree)
+    .map(props => props['aria-label'])
+    .filter(label => typeof label === 'string')
   assert.equal(labels.includes('Filter by state'), false, 'filters stay off an empty shelf')
   assert.equal(labels.includes('Filter by Bot'), false)
 })
 
 test('a queued hold does not repeat the count pill', () => {
-  const tree = TasksBoard({ state: rows({ answer: { running: [running({ queued: 2, hold: 'queued' })], completed: [], waiting: [] } }), onOpen: () => {} })
+  const tree = TasksBoard({
+    state: rows({ answer: { running: [running({ queued: 2, hold: 'queued' })], completed: [], waiting: [] } }),
+    onOpen: () => {},
+  })
   assert.match(textOf(tree), /2 queued/)
   // One "queued" from the count pill; no second bare "Queued" hold.
   assert.equal((textOf(tree).match(/queued/gi) ?? []).length, 1)
 })
 
-test('a waiting row opens that Bot\'s chat', () => {
+test("a waiting row opens that Bot's chat", () => {
   const opened: string[] = []
   const tree = TasksBoard({
-    state: rows({ answer: { running: [], completed: [], waiting: [{ botId: 'b1', botName: 'Writer', for: ['Chief'], hold: 'handoff' }] } }),
-    onOpen: id => { opened.push(id) },
+    state: rows({
+      answer: {
+        running: [],
+        completed: [],
+        waiting: [{ botId: 'b1', botName: 'Writer', for: ['Chief'], hold: 'handoff' }],
+      },
+    }),
+    onOpen: id => {
+      opened.push(id)
+    },
   })
   assert.match(textOf(tree), /Waiting for Chief/)
-  const who = elements(tree).find(element => element.props?.className === 'bt-task-who' && typeof element.props.onClick === 'function')
+  const who = elements(tree).find(
+    element => element.props?.className === 'bt-task-who' && typeof element.props.onClick === 'function',
+  )
   assert.ok(who !== undefined, 'waiting row is a button')
   ;(who!.props.onClick as () => void)()
   assert.deepEqual(opened, ['b1'])
@@ -354,7 +475,9 @@ test('filters that match nothing offer a clear path', () => {
   assert.match(textOf(tree), /No tasks match these filters/)
   assert.match(textOf(tree), /Clear filters/)
   // The Waiting filter hid the running row; filters stay so they can be cleared.
-  const labels = propsOf(tree).map(props => props['aria-label']).filter(label => typeof label === 'string')
+  const labels = propsOf(tree)
+    .map(props => props['aria-label'])
+    .filter(label => typeof label === 'string')
   assert.ok(labels.includes('Filter by state'))
 })
 
@@ -362,8 +485,14 @@ test('a turn cut off by a restart says so, and Continue resumes that session', a
   const continued: string[] = []
   const tree = TasksBoard({
     state: rows({
-      answer: { running: [], completed: [], waiting: [{ botId: 'b1', botName: 'Writer', for: ['Chief'], hold: 'interrupted', sessionId: 'chat:b1' }] },
-      continueTurn: async (sessionId) => { continued.push(sessionId) },
+      answer: {
+        running: [],
+        completed: [],
+        waiting: [{ botId: 'b1', botName: 'Writer', for: ['Chief'], hold: 'interrupted', sessionId: 'chat:b1' }],
+      },
+      continueTurn: async sessionId => {
+        continued.push(sessionId)
+      },
     }),
     onOpen: () => {},
   })

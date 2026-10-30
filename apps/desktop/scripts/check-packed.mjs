@@ -35,7 +35,8 @@ function stopChildren() {
   for (const child of children) {
     if (child.exitCode !== null || child.signalCode !== null) continue
     // On Windows a plain kill ends only the main process; /T takes the Host and Electron's helpers along.
-    if (process.platform === 'win32') spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' })
+    if (process.platform === 'win32')
+      spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' })
     else child.kill()
   }
 }
@@ -66,38 +67,48 @@ function outsideCheckout(file) {
 
 function startMock() {
   const mock = spawn(process.execPath, [join(root, '..', '..', 'packages', 'core', 'dev', 'mock-llm.ts')], {
-    env: { ...process.env, MOCK_PORT: '0', MOCK_LOG: join(work, 'mock.log') }, stdio: ['ignore', 'pipe', 'inherit'],
+    env: { ...process.env, MOCK_PORT: '0', MOCK_LOG: join(work, 'mock.log') },
+    stdio: ['ignore', 'pipe', 'inherit'],
   })
   children.push(mock)
   return new Promise((done, reject) => {
     let text = ''
     mock.stdout.setEncoding('utf8')
-    mock.stdout.on('data', (chunk) => {
+    mock.stdout.on('data', chunk => {
       text += chunk
       const url = /http:\/\/127\.0\.0\.1:\d+\/v1/u.exec(text)?.[0]
       if (url) done(url)
     })
-    mock.once('exit', (code) => { reject(new Error(`check-packed: the mock model stopped (exit ${String(code)})`)) })
+    mock.once('exit', code => {
+      reject(new Error(`check-packed: the mock model stopped (exit ${String(code)})`))
+    })
   })
 }
 
 function configureMock(home, baseUrl) {
-  writeFileSync(join(home, 'settings.json'), `${JSON.stringify({
-    version: 1,
-    revision: 1,
-    sections: {
-      'llm-pi-ai': {
-        providers: {
-          mock: {
-            api: 'anthropic-messages',
-            baseURL: baseUrl,
-            apiKeyEnv: 'MOON_BOT_MOCK_API_KEY',
-            models: [{ id: 'mock-1', name: 'Moon Bot mock' }],
+  writeFileSync(
+    join(home, 'settings.json'),
+    `${JSON.stringify(
+      {
+        version: 1,
+        revision: 1,
+        sections: {
+          'llm-pi-ai': {
+            providers: {
+              mock: {
+                api: 'anthropic-messages',
+                baseURL: baseUrl,
+                apiKeyEnv: 'MOON_BOT_MOCK_API_KEY',
+                models: [{ id: 'mock-1', name: 'Moon Bot mock' }],
+              },
+            },
           },
         },
       },
-    },
-  }, null, 2)}\n`)
+      null,
+      2,
+    )}\n`,
+  )
   writeFileSync(join(home, 'credentials.json'), `${JSON.stringify({ MOON_BOT_MOCK_API_KEY: 'mock-key' })}\n`)
 }
 
@@ -119,11 +130,16 @@ function devtools(url, problems) {
   const socket = new WebSocket(url)
   const pending = new Map()
   let next = 1
-  socket.addEventListener('message', (event) => {
+  socket.addEventListener('message', event => {
     const message = JSON.parse(String(event.data))
-    if (message.method === 'Runtime.exceptionThrown') problems.push(`exception: ${message.params.exceptionDetails.exception?.description ?? message.params.exceptionDetails.text}`)
-    if (message.method === 'Runtime.consoleAPICalled' && message.params.type === 'error') problems.push(`console.error: ${message.params.args.map(arg => arg.value ?? arg.description).join(' ')}`)
-    if (message.method === 'Log.entryAdded' && message.params.entry.level === 'error') problems.push(`log: ${message.params.entry.text} ${message.params.entry.url ?? ''}`)
+    if (message.method === 'Runtime.exceptionThrown')
+      problems.push(
+        `exception: ${message.params.exceptionDetails.exception?.description ?? message.params.exceptionDetails.text}`,
+      )
+    if (message.method === 'Runtime.consoleAPICalled' && message.params.type === 'error')
+      problems.push(`console.error: ${message.params.args.map(arg => arg.value ?? arg.description).join(' ')}`)
+    if (message.method === 'Log.entryAdded' && message.params.entry.level === 'error')
+      problems.push(`log: ${message.params.entry.text} ${message.params.entry.url ?? ''}`)
     const entry = pending.get(message.id)
     if (entry === undefined) return
     pending.delete(message.id)
@@ -134,16 +150,20 @@ function devtools(url, problems) {
     socket.addEventListener('open', done, { once: true })
     socket.addEventListener('error', reject, { once: true })
   })
-  const call = (method, params = {}) => new Promise((done, reject) => {
-    const id = next++
-    const timer = setTimeout(() => {
-      pending.delete(id)
-      reject(new Error(`the window did not answer ${method}`))
-    }, 30_000)
-    const settle = action => (value) => { clearTimeout(timer); action(value) }
-    pending.set(id, { resolve: settle(done), reject: settle(reject) })
-    socket.send(JSON.stringify({ id, method, params }))
-  })
+  const call = (method, params = {}) =>
+    new Promise((done, reject) => {
+      const id = next++
+      const timer = setTimeout(() => {
+        pending.delete(id)
+        reject(new Error(`the window did not answer ${method}`))
+      }, 30_000)
+      const settle = action => value => {
+        clearTimeout(timer)
+        action(value)
+      }
+      pending.set(id, { resolve: settle(done), reject: settle(reject) })
+      socket.send(JSON.stringify({ id, method, params }))
+    })
   return { opened, call }
 }
 
@@ -151,14 +171,19 @@ function devtools(url, problems) {
 // find an element, so a frame change shows here and not as a broken window.
 function micaRules() {
   const css = readFileSync(join(root, 'src', 'mica.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//gu, '')
-  return [...css.matchAll(/([^{}]+)\{/gu)].map(([, selectors]) => selectors.split(',')
-    .map(selector => selector.trim().replace(/::(?:before|after)$/u, ''))
-    .filter(selector => selector !== '' && selector !== 'body'))
+  return [...css.matchAll(/([^{}]+)\{/gu)]
+    .map(([, selectors]) =>
+      selectors
+        .split(',')
+        .map(selector => selector.trim().replace(/::(?:before|after)$/u, ''))
+        .filter(selector => selector !== '' && selector !== 'body'),
+    )
     .filter(rule => rule.length > 0)
 }
 
 async function chat(cdp) {
-  const evaluate = async expression => (await cdp.call('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true })).result.value
+  const evaluate = async expression =>
+    (await cdp.call('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true })).result.value
   const until = async (expression, label, ms = 120_000) => {
     const end = Date.now() + ms
     while (Date.now() < end) {
@@ -168,15 +193,22 @@ async function chat(cdp) {
     throw new Error(`timed out waiting for ${label}`)
   }
   // DSH shows a preview notice once per profile; it would keep the focus away from the composer.
-  const dismissNotice = () => evaluate("[...document.querySelectorAll('[role=dialog] button')].find(node => /^(Continue|继续)$/u.test(node.textContent.trim()))?.click()")
+  const dismissNotice = () =>
+    evaluate(
+      "[...document.querySelectorAll('[role=dialog] button')].find(node => /^(Continue|继续)$/u.test(node.textContent.trim()))?.click()",
+    )
   const text = needle => `document.body.innerText.includes(${JSON.stringify(needle)})`
   await cdp.call('Runtime.enable')
   await cdp.call('Log.enable')
   await until("document.querySelector('.bt-tile, .bt-row')", 'the team')
-  const stale = await evaluate(`${JSON.stringify(micaRules())}.filter(rule => !rule.some(selector => document.querySelector(selector) !== null)).map(rule => rule.join(', '))`)
+  const stale = await evaluate(
+    `${JSON.stringify(micaRules())}.filter(rule => !rule.some(selector => document.querySelector(selector) !== null)).map(rule => rule.join(', '))`,
+  )
   if (stale.length > 0) throw new Error(`src/mica.css no longer matches Moon Bot's page: ${stale.join(' | ')}`)
   await dismissNotice()
-  const main = await evaluate("fetch('api/bot', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ endpoint: 'state', payload: {} }) }).then(r => r.json()).then(r => r.value.mainBotId)")
+  const main = await evaluate(
+    "fetch('api/bot', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ endpoint: 'state', payload: {} }) }).then(r => r.json()).then(r => r.value.mainBotId)",
+  )
   await evaluate(`document.querySelector(${JSON.stringify(`[data-bot-id="${main}"]`)}).click()`)
   await until("document.querySelector('.bt-model-chip:not(.bt-model-chip-quiet)')", 'the model choice')
   await evaluate("document.querySelector('.bt-model-chip:not(.bt-model-chip-quiet)').click()")
@@ -186,15 +218,27 @@ async function chat(cdp) {
   await evaluate("[...document.querySelectorAll('[role=textbox][contenteditable=true], textarea')].at(-1).focus()")
   // Fill the native textarea and click the current send control. This works for both the
   // contenteditable composer used by the plugin surface and Moon Bot's standalone textarea.
-  await evaluate("(() => { const input = document.querySelector('[data-composer-input]'); if (!input) return false; const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set; setter?.call(input, 'packaged app check'); input.dispatchEvent(new Event('input', { bubbles: true })); input.dispatchEvent(new Event('change', { bubbles: true })); return true })()")
-  await until("document.querySelector('.mb-send:not(:disabled), button[type=submit]:not(:disabled)')", 'the send button', 10_000)
+  await evaluate(
+    "(() => { const input = document.querySelector('[data-composer-input]'); if (!input) return false; const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set; setter?.call(input, 'packaged app check'); input.dispatchEvent(new Event('input', { bubbles: true })); input.dispatchEvent(new Event('change', { bubbles: true })); return true })()",
+  )
+  await until(
+    "document.querySelector('.mb-send:not(:disabled), button[type=submit]:not(:disabled)')",
+    'the send button',
+    10_000,
+  )
   await evaluate("document.querySelector('.mb-send:not(:disabled), button[type=submit]:not(:disabled)')?.click()")
   // The mock model starts its reply with 收到： and the message.
-  await until(text('收到：packaged app check'), 'the reply').catch(async (error) => {
+  await until(text('收到：packaged app check'), 'the reply').catch(async error => {
     // What the window showed, and what the mock model was asked, so a timeout says why.
-    console.log(`check-packed: page at timeout ${JSON.stringify(await evaluate('document.body.innerText.slice(-600)').catch(() => '?'))}`)
-    console.log(`check-packed: focus ${JSON.stringify(await evaluate('document.activeElement?.outerHTML.slice(0, 200)').catch(() => '?'))}`)
-    try { console.log(`check-packed: mock log tail ${readFileSync(join(work, 'mock.log'), 'utf8').slice(-1500)}`) } catch {}
+    console.log(
+      `check-packed: page at timeout ${JSON.stringify(await evaluate('document.body.innerText.slice(-600)').catch(() => '?'))}`,
+    )
+    console.log(
+      `check-packed: focus ${JSON.stringify(await evaluate('document.activeElement?.outerHTML.slice(0, 200)').catch(() => '?'))}`,
+    )
+    try {
+      console.log(`check-packed: mock log tail ${readFileSync(join(work, 'mock.log'), 'utf8').slice(-1500)}`)
+    } catch {}
     throw error
   })
   await sleep(1000)
@@ -210,15 +254,27 @@ try {
   // A terminal inside an Electron-based editor may set ELECTRON_RUN_AS_NODE, which turns the app into plain Node.
   const { ELECTRON_RUN_AS_NODE: _runAsNode, ...env } = process.env
   Object.assign(env, {
-    MOON_BOT_DATA: join(work, 'home'), MOON_BOT_SHELL_DATA: join(work, 'shell'),
+    MOON_BOT_DATA: join(work, 'home'),
+    MOON_BOT_SHELL_DATA: join(work, 'shell'),
     MOON_BOT_WORKSPACE: join(work, 'workspace'),
   })
-  const app = spawn(outsideCheckout(resolve(executable)), [`--remote-debugging-port=${String(port)}`, ...(process.platform === 'linux' ? ['--no-sandbox'] : [])], { stdio: 'inherit', env })
+  const app = spawn(
+    outsideCheckout(resolve(executable)),
+    [`--remote-debugging-port=${String(port)}`, ...(process.platform === 'linux' ? ['--no-sandbox'] : [])],
+    { stdio: 'inherit', env },
+  )
   children.push(app)
-  const exited = new Promise((done) => { app.once('exit', (code, signal) => { done({ code, signal }) }) })
+  const exited = new Promise(done => {
+    app.once('exit', (code, signal) => {
+      done({ code, signal })
+    })
+  })
   const cdp = devtools((await appPage(port, Date.now() + 120_000)).webSocketDebuggerUrl, problems)
   await cdp.opened
-  const chatError = await chat(cdp).then(() => undefined, error => error)
+  const chatError = await chat(cdp).then(
+    () => undefined,
+    error => error,
+  )
   if (shotFile) {
     const { data } = await cdp.call('Page.captureScreenshot', { format: 'png' })
     writeFileSync(resolve(shotFile), Buffer.from(data, 'base64'))

@@ -30,7 +30,7 @@ const parseEvent = (block: string): ParsedEvent | undefined => {
 }
 
 const asRecord = (value: unknown): Record<string, unknown> =>
-  (value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {})
+  value !== null && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {}
 
 // Read over fetch: EventSource does not load from the window's own scheme. After a
 // break the feed reconnects, and its first event (`hello`) tells the window to catch up.

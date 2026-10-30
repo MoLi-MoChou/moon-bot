@@ -26,7 +26,11 @@ export function MarkdownText({ text }: MarkdownTextProps): ReactElement {
     if (start > cursor) children.push(text.slice(cursor, start))
     const label = match[1] ?? ''
     const id = match[2] ?? ''
-    children.push(<a href={`${MENTION_ORIGIN}${id}`} className='bt-mention-link'>{label}</a>)
+    children.push(
+      <a href={`${MENTION_ORIGIN}${id}`} className='bt-mention-link'>
+        {label}
+      </a>,
+    )
     cursor = start + match[0].length
   }
   if (cursor < text.length) children.push(text.slice(cursor))

@@ -121,7 +121,9 @@ pnpm install
 ```sh
 pnpm run build                         # 重建 workspace 产物
 pnpm test                              # 有 test 脚本的 workspace 单元测试
-pnpm run check:static                  # 全仓 typecheck + lint
+pnpm run check:static                  # 全仓 typecheck + lint + format:check
+pnpm run format                        # 仅 Biome format（见 docs/format.md；不替代 oxlint/gates）
+pnpm run format:check                  # Biome format 门禁（已含在 check:static）
 cd packages/core && node scripts/build-client.ts --check   # client.js 与 src/client 一致
 ```
 

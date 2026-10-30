@@ -17,8 +17,26 @@ const seed = () => ({
     a: { id: 'a', name: 'Chief', role: 'Boss', sessionId: 'a', createdAt: 1 },
     b: { id: 'b', name: 'Writer', role: 'Write', sessionId: 'b', createdAt: 2 },
   },
-  rooms: { r1: { id: 'r1', name: 'Ops', members: ['a', 'b'], mode: 'admin', admin: 'a', named: true, sessions: { b: 'gb' }, log: [], seq: 0, seen: {} } },
-  agents: {}, exchanges: [], exchangeTurns: {}, questions: {}, prefs: {}, revision: 0,
+  rooms: {
+    r1: {
+      id: 'r1',
+      name: 'Ops',
+      members: ['a', 'b'],
+      mode: 'admin',
+      admin: 'a',
+      named: true,
+      sessions: { b: 'gb' },
+      log: [],
+      seq: 0,
+      seen: {},
+    },
+  },
+  agents: {},
+  exchanges: [],
+  exchangeTurns: {},
+  questions: {},
+  prefs: {},
+  revision: 0,
 })
 
 function start(t) {
@@ -29,36 +47,81 @@ function start(t) {
   const deleted = []
   const tasks = []
   const scheduleService = {
-    async catalog() { return tasks },
+    async catalog() {
+      return tasks
+    },
     async create(sessionId, request) {
       created.push({ sessionId, ...request })
-      const record = { id: `t${created.length}`, sessionId, title: request.title, prompt: request.prompt, kind: request.at !== undefined ? 'at' : request.daily !== undefined ? 'daily' : request.every_seconds !== undefined ? 'every' : 'cron', ...(request.at !== undefined ? { scheduledAt: request.at } : {}), ...(request.daily !== undefined ? { time: request.daily.time, timeZone: request.daily.time_zone } : {}), ...(request.every_seconds !== undefined ? { everySeconds: request.every_seconds } : {}) }
+      const record = {
+        id: `t${created.length}`,
+        sessionId,
+        title: request.title,
+        prompt: request.prompt,
+        kind:
+          request.at !== undefined
+            ? 'at'
+            : request.daily !== undefined
+              ? 'daily'
+              : request.every_seconds !== undefined
+                ? 'every'
+                : 'cron',
+        ...(request.at !== undefined ? { scheduledAt: request.at } : {}),
+        ...(request.daily !== undefined ? { time: request.daily.time, timeZone: request.daily.time_zone } : {}),
+        ...(request.every_seconds !== undefined ? { everySeconds: request.every_seconds } : {}),
+      }
       tasks.push(record)
       return record
     },
-    async delete({ sessionId, id }) { deleted.push({ sessionId, id }); const at = tasks.findIndex(task => task.id === id); if (at >= 0) tasks.splice(at, 1) },
-    async list({ sessionId }) { return tasks.filter(task => task.sessionId === sessionId) },
+    async delete({ sessionId, id }) {
+      deleted.push({ sessionId, id })
+      const at = tasks.findIndex(task => task.id === id)
+      if (at >= 0) tasks.splice(at, 1)
+    },
+    async list({ sessionId }) {
+      return tasks.filter(task => task.sessionId === sessionId)
+    },
   }
   const ctx = fakeContext({ services: { schedule: scheduleService } })
   Object.assign(ctx, {
     llm: { listProviders: () => [], listModels: async () => [], resolveModelInfo: async () => ({}) },
-    workspaceRegistry: { get: () => undefined, resolveByPath: async () => undefined, create: async path => ({ id: 'w1', path }), archiveSession: async () => {} },
-    sessionController: { create: async () => ({ sessionId: 's1' }), resolveAgent: async sessionId => ({ agent: { id: sessionId, session: { id: sessionId }, followup() {}, steer() {}, cancel() {} } }), selectModel: async () => {} },
+    workspaceRegistry: {
+      get: () => undefined,
+      resolveByPath: async () => undefined,
+      create: async path => ({ id: 'w1', path }),
+      archiveSession: async () => {},
+    },
+    sessionController: {
+      create: async () => ({ sessionId: 's1' }),
+      resolveAgent: async sessionId => ({
+        agent: { id: sessionId, session: { id: sessionId }, followup() {}, steer() {}, cancel() {} },
+      }),
+      selectModel: async () => {},
+    },
     sessionTitle: { rename: async () => {} },
     sessions: { flush: async () => {} },
   })
   apply(ctx, { home })
-  const tool = (name, args, sessionId) => ctx.registeredTools.get(name).execute(args, { agent: { id: sessionId }, callId: 'c1' })
-  t.after(() => { void ctx.dispose().then(() => rmSync(home, { recursive: true, force: true, maxRetries: 20, retryDelay: 50 })) })
+  const tool = (name, args, sessionId) =>
+    ctx.registeredTools.get(name).execute(args, { agent: { id: sessionId }, callId: 'c1' })
+  t.after(() => {
+    void ctx.dispose().then(() => rmSync(home, { recursive: true, force: true, maxRetries: 20, retryDelay: 50 }))
+  })
   return { tool, created, deleted, tasks }
 }
 
-test('a reminder made in a Bot chat comes back to that chat', async (t) => {
+test('a reminder made in a Bot chat comes back to that chat', async t => {
   const env = start(t)
-  const answer = await env.tool('create_schedule', {
-    title: 'Charging test', prompt: 'remind the user to test the charging screen before 9:00',
-    when: 'daily', time: '09:00', time_zone: 'Asia/Shanghai',
-  }, 'a')
+  const answer = await env.tool(
+    'create_schedule',
+    {
+      title: 'Charging test',
+      prompt: 'remind the user to test the charging screen before 9:00',
+      when: 'daily',
+      time: '09:00',
+      time_zone: 'Asia/Shanghai',
+    },
+    'a',
+  )
   assert.match(answer, /^Set "Charging test"/)
   assert.equal(env.created.length, 1)
   // The target is the Bot's own chat Session, not the id the model passed anywhere.
@@ -66,33 +129,51 @@ test('a reminder made in a Bot chat comes back to that chat', async (t) => {
   assert.deepEqual(env.created[0].daily, { time: '09:00:00', time_zone: 'Asia/Shanghai' })
 })
 
-test('a reminder made while speaking in a group comes back to the group', async (t) => {
+test('a reminder made while speaking in a group comes back to the group', async t => {
   const env = start(t)
-  const answer = await env.tool('create_schedule', {
-    title: 'Group standup', prompt: 'post the standup note', when: 'every', minutes: '60',
-  }, 'gb')
+  const answer = await env.tool(
+    'create_schedule',
+    {
+      title: 'Group standup',
+      prompt: 'post the standup note',
+      when: 'every',
+      minutes: '60',
+    },
+    'gb',
+  )
   assert.match(answer, /group chat/)
   assert.equal(env.created[0].sessionId, 'gb')
   assert.deepEqual(env.created[0].every_seconds, 3600)
 })
 
-test('a Session outside the team cannot be given a reminder', async (t) => {
+test('a Session outside the team cannot be given a reminder', async t => {
   const env = start(t)
-  const answer = await env.tool('create_schedule', { title: 'X', prompt: 'Y', when: 'every', minutes: '5' }, 'not-a-team-session')
+  const answer = await env.tool(
+    'create_schedule',
+    { title: 'X', prompt: 'Y', when: 'every', minutes: '5' },
+    'not-a-team-session',
+  )
   assert.match(answer, /not one a reminder can come back to/)
   assert.equal(env.created.length, 0)
 })
 
-test('a reminder in the past is refused and nothing is stored', async (t) => {
+test('a reminder in the past is refused and nothing is stored', async t => {
   const env = start(t)
-  const answer = await env.tool('create_schedule', {
-    title: 'Late', prompt: 'too late', when: 'at', at: '2020-01-01T00:00:00Z',
-  }, 'a')
+  const answer = await env.tool(
+    'create_schedule',
+    {
+      title: 'Late',
+      prompt: 'too late',
+      when: 'at',
+      at: '2020-01-01T00:00:00Z',
+    },
+    'a',
+  )
   assert.match(answer, /The reminder was not set: Pick a time in the future/)
   assert.equal(env.created.length, 0)
 })
 
-test('list_schedules shows only this conversation\'s reminders, and delete removes one', async (t) => {
+test("list_schedules shows only this conversation's reminders, and delete removes one", async t => {
   const env = start(t)
   await env.tool('create_schedule', { title: 'Mine', prompt: 'mine', when: 'every', minutes: '30' }, 'a')
   await env.tool('create_schedule', { title: 'Group', prompt: 'group', when: 'every', minutes: '30' }, 'gb')
@@ -109,19 +190,34 @@ test('list_schedules shows only this conversation\'s reminders, and delete remov
   assert.deepEqual(env.deleted, [{ sessionId: 'a', id: 't1' }])
 })
 
-test('with scheduling turned off the tools say so instead of pretending', async (t) => {
+test('with scheduling turned off the tools say so instead of pretending', async t => {
   const home = mkdtempSync(join(tmpdir(), 'moon-bot-schedule-off-'))
   writeFileSync(join(home, 'state.json'), JSON.stringify(seed()))
   const ctx = fakeContext()
   Object.assign(ctx, {
     llm: { listProviders: () => [], listModels: async () => [], resolveModelInfo: async () => ({}) },
-    workspaceRegistry: { get: () => undefined, resolveByPath: async () => undefined, create: async path => ({ id: 'w1', path }), archiveSession: async () => {} },
-    sessionController: { create: async () => ({ sessionId: 's1' }), resolveAgent: async sessionId => ({ agent: { id: sessionId, session: { id: sessionId }, followup() {}, steer() {}, cancel() {} } }), selectModel: async () => {} },
+    workspaceRegistry: {
+      get: () => undefined,
+      resolveByPath: async () => undefined,
+      create: async path => ({ id: 'w1', path }),
+      archiveSession: async () => {},
+    },
+    sessionController: {
+      create: async () => ({ sessionId: 's1' }),
+      resolveAgent: async sessionId => ({
+        agent: { id: sessionId, session: { id: sessionId }, followup() {}, steer() {}, cancel() {} },
+      }),
+      selectModel: async () => {},
+    },
     sessionTitle: { rename: async () => {} },
     sessions: { flush: async () => {} },
   })
   apply(ctx, { home })
-  t.after(() => { void ctx.dispose().then(() => rmSync(home, { recursive: true, force: true, maxRetries: 20, retryDelay: 50 })) })
-  const answer = await ctx.registeredTools.get('create_schedule').execute({ title: 'X', prompt: 'Y', when: 'every', minutes: '5' }, { agent: { id: 'a' }, callId: 'c1' })
+  t.after(() => {
+    void ctx.dispose().then(() => rmSync(home, { recursive: true, force: true, maxRetries: 20, retryDelay: 50 }))
+  })
+  const answer = await ctx.registeredTools
+    .get('create_schedule')
+    .execute({ title: 'X', prompt: 'Y', when: 'every', minutes: '5' }, { agent: { id: 'a' }, callId: 'c1' })
   assert.match(answer, /Scheduled tasks are turned off/)
 })

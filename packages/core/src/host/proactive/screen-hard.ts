@@ -46,13 +46,7 @@ export interface ScreenInput {
   readonly quiet: { readonly from: string; readonly to: string } | null
 }
 
-export type DropReason =
-  | 'daily-cap'
-  | 'repeats'
-  | 'mentioned-recently'
-  | 'quiet-hours'
-  | 'not-worth-it'
-  | 'concurrent'
+export type DropReason = 'daily-cap' | 'repeats' | 'mentioned-recently' | 'quiet-hours' | 'not-worth-it' | 'concurrent'
 
 export type ScreenVerdict =
   | { readonly kind: 'accept' }
@@ -67,7 +61,10 @@ const minutesOf = (time: string): number | undefined => {
 }
 
 /** Whether a local time falls inside quiet hours, which may run past midnight. */
-export function withinQuietHours(localTime: string, quiet: { readonly from: string; readonly to: string } | null): boolean {
+export function withinQuietHours(
+  localTime: string,
+  quiet: { readonly from: string; readonly to: string } | null,
+): boolean {
   if (quiet === null) return false
   const now = minutesOf(localTime)
   const from = minutesOf(quiet.from)
@@ -85,13 +82,16 @@ export function withinQuietHours(localTime: string, quiet: { readonly from: stri
 export function startOfLocalDay(now: number, timeZone: string | undefined): number {
   const format = new Intl.DateTimeFormat('en-GB', {
     ...(timeZone === undefined ? {} : { timeZone }),
-    hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
   })
   const parts = format.formatToParts(now)
   const read = (kind: string): number => Number(parts.find(part => part.type === kind)?.value ?? 0)
   // Some zones render midnight as 24 rather than 00.
   const hour = read('hour') % 24
-  const sinceMidnight = ((hour * 60) + read('minute')) * 60_000 + read('second') * 1000
+  const sinceMidnight = (hour * 60 + read('minute')) * 60_000 + read('second') * 1000
   return now - sinceMidnight
 }
 

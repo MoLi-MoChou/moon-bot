@@ -16,7 +16,12 @@ export interface ServeBrowserReadsOptions {
  * `browser-result`. A change in the open pages ends the poll so the host learns at once.
  * Returns the stop function.
  */
-export function serveBrowserReads({ browsers, post, clientId = globalThis.crypto.randomUUID(), retryMs = 1000 }: ServeBrowserReadsOptions): () => void {
+export function serveBrowserReads({
+  browsers,
+  post,
+  clientId = globalThis.crypto.randomUUID(),
+  retryMs = 1000,
+}: ServeBrowserReadsOptions): () => void {
   let stopped = false
   let poll: AbortController | undefined
   let reported = ''
@@ -52,7 +57,11 @@ export function serveBrowserReads({ browsers, post, clientId = globalThis.crypto
       const open = browsers.openPages()
       reported = JSON.stringify(open)
       try {
-        const requests = await post<readonly BrowserReadRequest[]>('browser-wait', { clientId, open }, controller.signal)
+        const requests = await post<readonly BrowserReadRequest[]>(
+          'browser-wait',
+          { clientId, open },
+          controller.signal,
+        )
         failures = 0
         for (const request of Array.isArray(requests) ? requests : []) void answer(request)
       } catch {

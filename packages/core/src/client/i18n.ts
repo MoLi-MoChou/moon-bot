@@ -19,16 +19,25 @@ interface LocaleService {
 
 const HOST_ERRORS: readonly (readonly [RegExp, string])[] = [
   // Approval refusal from the host (shows in chat + sidebar preview when the user rejects).
-  [/^Error:\s*the user rejected escalating this command to danger-full-access\.?$/i, '你拒绝了完全访问权限，命令没有执行'],
+  [
+    /^Error:\s*the user rejected escalating this command to danger-full-access\.?$/i,
+    '你拒绝了完全访问权限，命令没有执行',
+  ],
   [/^the user rejected escalating this command to danger-full-access\.?$/i, '你拒绝了完全访问权限，命令没有执行'],
-  [/^Error:\s*the user rejected escalating this command to workspace-write\.?$/i, '你拒绝了工作区写入权限，命令没有执行'],
+  [
+    /^Error:\s*the user rejected escalating this command to workspace-write\.?$/i,
+    '你拒绝了工作区写入权限，命令没有执行',
+  ],
   [/^the user rejected escalating this command to workspace-write\.?$/i, '你拒绝了工作区写入权限，命令没有执行'],
   [/^Error:\s*the user rejected escalating this command to ([\w-]+)\.?$/i, '你拒绝了权限提升（$1），命令没有执行'],
   [/^the user rejected escalating this command to ([\w-]+)\.?$/i, '你拒绝了权限提升（$1），命令没有执行'],
   [/^Error:\s*the user rejected(?: this (?:command|action|request))?\.?$/i, '你拒绝了这次操作，命令没有执行'],
   [/^the user rejected(?: this (?:command|action|request))?\.?$/i, '你拒绝了这次操作，命令没有执行'],
   [/^Model (.+) is not available\. Available: (.*)$/, '模型 $1 不可用。可用的：$2'],
-  [/^The API key for (.+) is set outside Moon Bot and cannot be changed here$/, '$1 的 API key 是在 Moon Bot 之外设置的，这里改不了'],
+  [
+    /^The API key for (.+) is set outside Moon Bot and cannot be changed here$/,
+    '$1 的 API key 是在 Moon Bot 之外设置的，这里改不了',
+  ],
   [/^(.+) takes no API key here$/, '$1 不能在这里填 API key'],
   [/^(.+) is already set up$/, '$1 已经设置过了'],
   [/^Moon Bot offers no provider (.+)$/, 'Moon Bot 没有服务商 $1'],
@@ -43,7 +52,10 @@ const HOST_ERRORS: readonly (readonly [RegExp, string])[] = [
   [/^A Bot named (.+) already exists$/, '已经有叫 $1 的 Bot 了'],
   [/^Name (.*) is not available$/, '名字 $1 不可用'],
   [/^"(.+)" calls everyone in a group, so it cannot be a Bot name$/, '「$1」在群里表示所有人，不能用作 Bot 名字'],
-  [/^"(.+)" stands for the user in a chat, so it cannot be a Bot name$/, '「$1」在对话里表示用户本人，不能用作 Bot 名字'],
+  [
+    /^"(.+)" stands for the user in a chat, so it cannot be a Bot name$/,
+    '「$1」在对话里表示用户本人，不能用作 Bot 名字',
+  ],
   [/^Another group chat is already called "(.+)"$/, '已经有叫「$1」的群聊了'],
   [/^A group chat holds at most (\d+) Bots$/, '一个群聊最多 $1 个 Bot'],
   [/^Reply mode must be one of (.+)$/, '回复模式只能是 $1'],
@@ -51,7 +63,10 @@ const HOST_ERRORS: readonly (readonly [RegExp, string])[] = [
   [/^A key must have at least (\d+) characters$/, '密钥至少 $1 个字符'],
   [/^A key can have at most (\d+) characters$/, '密钥最多 $1 个字符'],
   [/^(.+) is not saved yet$/, '$1 还没有保存'],
-  [/^The Bot team in (.+) is open in another Moon Bot \((.+)\)\. This window shows the team but cannot change it; close the other one and reload\.$/, '$1 里的 Bot 团队已在另一个 Moon Bot 中打开（$2）。这个窗口只能查看，不能修改；关掉另一个后刷新。'],
+  [
+    /^The Bot team in (.+) is open in another Moon Bot \((.+)\)\. This window shows the team but cannot change it; close the other one and reload\.$/,
+    '$1 里的 Bot 团队已在另一个 Moon Bot 中打开（$2）。这个窗口只能查看，不能修改；关掉另一个后刷新。',
+  ],
   [/^HTTP (\d+)$/, '请求失败（HTTP $1）'],
   [/^GitHub answered (\d+)$/, 'GitHub 返回了 $1'],
   [/^Keep the name under (\d+) characters$/, '名字不能超过 $1 个字'],
@@ -62,8 +77,14 @@ const HOST_ERRORS: readonly (readonly [RegExp, string])[] = [
   // Memory changes the memory panel asked for; the whole message is matched.
   [/^This looks like a key, token, or password[\s\S]*$/, '看起来像密钥、令牌或密码，记忆不会保存这类内容'],
   [/^An entry holds at most (\d+) characters; this one has (\d+)\.[\s\S]*$/, '一条记忆最多 $1 个字符，这条有 $2 个'],
-  [/^[\s\S]*'s MEMORY\.md would have (\d+) of its (\d+) characters\.[\s\S]*$/, '主记忆会超过 $2 个字符的上限，请先删掉一些'],
-  [/^The topic \[\[(.+?)\]\] in [\s\S]* would have (\d+) of its (\d+) characters\.[\s\S]*$/, '主题 $1 会超过 $3 个字符的上限'],
+  [
+    /^[\s\S]*'s MEMORY\.md would have (\d+) of its (\d+) characters\.[\s\S]*$/,
+    '主记忆会超过 $2 个字符的上限，请先删掉一些',
+  ],
+  [
+    /^The topic \[\[(.+?)\]\] in [\s\S]* would have (\d+) of its (\d+) characters\.[\s\S]*$/,
+    '主题 $1 会超过 $3 个字符的上限',
+  ],
   [/^[\s\S]* already has (\d+) topics, the most it holds\.[\s\S]*$/, '主题已经有 $1 个，不能再加新主题'],
   [/^There is no entry (.+)\.$/, '没有第 $1 条'],
   [/^No entry in [\s\S]* matches "([\s\S]*)"\.[\s\S]*$/, '找不到「$1」这条记忆'],
@@ -88,10 +109,8 @@ const HOST_ERRORS: readonly (readonly [RegExp, string])[] = [
   [/^Unknown endpoint (.+)$/, '未知的接口 $1'],
 ]
 
-
-const fill = (text: string, params?: Record<string, unknown>): string => (params
-  ? text.replace(/\{(\w+)\}/g, (match, name) => (name in params ? String(params[name]) : match))
-  : text)
+const fill = (text: string, params?: Record<string, unknown>): string =>
+  params ? text.replace(/\{(\w+)\}/g, (match, name) => (name in params ? String(params[name]) : match)) : text
 
 let service: LocaleService | null = null
 let bound: ((key: string, params?: Record<string, unknown>) => string) | null = null
@@ -103,7 +122,10 @@ export function installLocale(locale: LocaleService | null | undefined): () => v
   bound = locale.bind(NAMESPACE)
   const off = locale.register(NAMESPACE, 'zh', ZH)
   return () => {
-    if (service === locale) { service = null; bound = null }
+    if (service === locale) {
+      service = null
+      bound = null
+    }
     if (typeof off === 'function') off()
   }
 }
@@ -138,20 +160,90 @@ const ERROR_COPY: Record<string, { en: string; zh: string; hint: string; hintZh:
     hint: 'Check the network and try again in a moment.',
     hintZh: '检查一下网络，过几秒再试。',
   },
-  HTTP_401: { en: 'The sign-in has expired.', zh: '登录状态过期了。', hint: 'Reload the page and sign in again.', hintZh: '刷新页面重新登录。' },
-  HTTP_403: { en: 'This action is not allowed for this window.', zh: '这个窗口没有做这个操作的权限。', hint: 'Reload, or let the Main Bot do it.', hintZh: '刷新页面，或者让主 Bot 来做。' },
-  HTTP_404: { en: 'What it asked for is gone.', zh: '要找的内容不在了。', hint: 'Reload the page and try again.', hintZh: '刷新页面再试一次。' },
-  HTTP_429: { en: 'Too many requests just now.', zh: '刚才的请求太多了。', hint: 'Wait a few seconds and try again.', hintZh: '等几秒再试。' },
-  HTTP_500: { en: 'The server failed.', zh: '服务端出错了。', hint: 'Try again later; if it keeps happening, send the diagnostics from Settings → Feedback.', hintZh: '稍后再试；一直这样的话，到「设置 → 反馈」把诊断发给开发者。' },
-  'bot/invalid': { en: 'The request holds something it cannot accept.', zh: '请求里有不能接受的内容。', hint: 'Change it and try again.', hintZh: '改一下再试。' },
-  'bot/refused': { en: 'That was refused.', zh: '这个操作被拒绝了。', hint: 'Follow the hint and try another way.', hintZh: '按提示换个做法；还不行就到「设置 → 反馈」发诊断。' },
-  'bot/not-found': { en: 'What it asked for is not there any more.', zh: '找不到要操作的对象了。', hint: 'Reload the page and check it is still there.', hintZh: '刷新页面，确认它还在。' },
-  'bot/stale': { en: 'That is no longer open.', zh: '这个已经关掉了。', hint: 'Reload the page and open it again.', hintZh: '刷新页面重新打开一次。' },
-  'bot/read-only': { en: 'This window can only look, not change.', zh: '这个窗口现在只能看，不能改。', hint: 'Close the other Moon Bot window that has this team open, then reload.', hintZh: '关掉另一个打开同一团队的 Moon Bot 窗口，然后刷新。' },
-  'bot/unavailable': { en: 'That is not available here.', zh: '这项内容现在拿不到。', hint: 'Try again in a moment.', hintZh: '稍后再试。' },
-  'bot/browser-off': { en: 'The Bot\'s browser is off.', zh: 'Bot 的浏览器没有打开。', hint: 'Turn it on in the settings, or let the Bot do it another way.', hintZh: '在设置里打开浏览器，或者让 Bot 换一种方式做。' },
-  'bot/internal': { en: 'Moon Bot itself failed.', zh: 'Moon Bot 内部出错了。', hint: 'Restart Moon Bot; if it keeps happening, send the diagnostics from Settings → Feedback.', hintZh: '重启 Moon Bot；一直这样的话，到「设置 → 反馈」发诊断。' },
-  'bot/error': { en: 'Something went wrong.', zh: '出了点问题。', hint: 'Try again; send the diagnostics if it keeps happening.', hintZh: '再试一次；一直这样就发诊断。' },
+  HTTP_401: {
+    en: 'The sign-in has expired.',
+    zh: '登录状态过期了。',
+    hint: 'Reload the page and sign in again.',
+    hintZh: '刷新页面重新登录。',
+  },
+  HTTP_403: {
+    en: 'This action is not allowed for this window.',
+    zh: '这个窗口没有做这个操作的权限。',
+    hint: 'Reload, or let the Main Bot do it.',
+    hintZh: '刷新页面，或者让主 Bot 来做。',
+  },
+  HTTP_404: {
+    en: 'What it asked for is gone.',
+    zh: '要找的内容不在了。',
+    hint: 'Reload the page and try again.',
+    hintZh: '刷新页面再试一次。',
+  },
+  HTTP_429: {
+    en: 'Too many requests just now.',
+    zh: '刚才的请求太多了。',
+    hint: 'Wait a few seconds and try again.',
+    hintZh: '等几秒再试。',
+  },
+  HTTP_500: {
+    en: 'The server failed.',
+    zh: '服务端出错了。',
+    hint: 'Try again later; if it keeps happening, send the diagnostics from Settings → Feedback.',
+    hintZh: '稍后再试；一直这样的话，到「设置 → 反馈」把诊断发给开发者。',
+  },
+  'bot/invalid': {
+    en: 'The request holds something it cannot accept.',
+    zh: '请求里有不能接受的内容。',
+    hint: 'Change it and try again.',
+    hintZh: '改一下再试。',
+  },
+  'bot/refused': {
+    en: 'That was refused.',
+    zh: '这个操作被拒绝了。',
+    hint: 'Follow the hint and try another way.',
+    hintZh: '按提示换个做法；还不行就到「设置 → 反馈」发诊断。',
+  },
+  'bot/not-found': {
+    en: 'What it asked for is not there any more.',
+    zh: '找不到要操作的对象了。',
+    hint: 'Reload the page and check it is still there.',
+    hintZh: '刷新页面，确认它还在。',
+  },
+  'bot/stale': {
+    en: 'That is no longer open.',
+    zh: '这个已经关掉了。',
+    hint: 'Reload the page and open it again.',
+    hintZh: '刷新页面重新打开一次。',
+  },
+  'bot/read-only': {
+    en: 'This window can only look, not change.',
+    zh: '这个窗口现在只能看，不能改。',
+    hint: 'Close the other Moon Bot window that has this team open, then reload.',
+    hintZh: '关掉另一个打开同一团队的 Moon Bot 窗口，然后刷新。',
+  },
+  'bot/unavailable': {
+    en: 'That is not available here.',
+    zh: '这项内容现在拿不到。',
+    hint: 'Try again in a moment.',
+    hintZh: '稍后再试。',
+  },
+  'bot/browser-off': {
+    en: "The Bot's browser is off.",
+    zh: 'Bot 的浏览器没有打开。',
+    hint: 'Turn it on in the settings, or let the Bot do it another way.',
+    hintZh: '在设置里打开浏览器，或者让 Bot 换一种方式做。',
+  },
+  'bot/internal': {
+    en: 'Moon Bot itself failed.',
+    zh: 'Moon Bot 内部出错了。',
+    hint: 'Restart Moon Bot; if it keeps happening, send the diagnostics from Settings → Feedback.',
+    hintZh: '重启 Moon Bot；一直这样的话，到「设置 → 反馈」发诊断。',
+  },
+  'bot/error': {
+    en: 'Something went wrong.',
+    zh: '出了点问题。',
+    hint: 'Try again; send the diagnostics if it keeps happening.',
+    hintZh: '再试一次；一直这样就发诊断。',
+  },
 }
 
 // The host's own reason, in the user's language. A message that cannot be translated is
@@ -193,4 +285,3 @@ export const dateLocale = (): string => (language().startsWith('zh') ? 'zh-CN' :
 
 // Translations for the tests: the Chinese dictionary itself.
 export const DICTIONARY: { zh: typeof ZH } = { zh: ZH }
-

@@ -11,19 +11,38 @@ import { build } from 'esbuild'
 const PLUGIN = dirname(dirname(fileURLToPath(import.meta.url)))
 const { outputFiles } = await build({
   stdin: { contents: "export { roomLead } from './src/client/sidebar-rows.tsx'", resolveDir: PLUGIN },
-  bundle: true, format: 'cjs', platform: 'node', write: false, logLevel: 'silent',
+  bundle: true,
+  format: 'cjs',
+  platform: 'node',
+  write: false,
+  logLevel: 'silent',
   external: ['react', 'react-dom'],
 })
-const module = { exports: {} as {
-  roomLead: (members: readonly Record<string, unknown>[], roster: { byId: Record<string, { name: string }> }) => { line: unknown, first?: { name: string } }
-} }
+const module = {
+  exports: {} as {
+    roomLead: (
+      members: readonly Record<string, unknown>[],
+      roster: { byId: Record<string, { name: string }> },
+    ) => { line: unknown; first?: { name: string } }
+  },
+}
 runInNewContext(outputFiles[0].text, {
-  module, exports: module.exports,
+  module,
+  exports: module.exports,
   require: name => {
     if (name === 'react') {
       return {
-        createElement: (type: unknown, props: unknown, ...children: unknown[]) => ({ type, props: props ?? {}, children }),
-        Fragment: 'fragment', useEffect: () => {}, useLayoutEffect: () => {}, useRef: () => ({ current: null }), useMemo: (make: () => unknown) => make(), useId: () => 'id',
+        createElement: (type: unknown, props: unknown, ...children: unknown[]) => ({
+          type,
+          props: props ?? {},
+          children,
+        }),
+        Fragment: 'fragment',
+        useEffect: () => {},
+        useLayoutEffect: () => {},
+        useRef: () => ({ current: null }),
+        useMemo: (make: () => unknown) => make(),
+        useId: () => 'id',
       }
     }
     return {}
@@ -43,7 +62,13 @@ test('a working member leads the line, and the rest are counted', () => {
   const one = roomLead([{ id: 'a', tool: 'read_file' }], roster)
   assert.equal(one.first?.name, 'Ada')
   assert.notEqual(one.line, null)
-  const two = roomLead([{ id: 'a', tool: 'read_file' }, { id: 'b', tool: 'web_search' }], roster)
+  const two = roomLead(
+    [
+      { id: 'a', tool: 'read_file' },
+      { id: 'b', tool: 'web_search' },
+    ],
+    roster,
+  )
   assert.equal(two.first?.name, 'Ada')
   assert.match(JSON.stringify(two.line), /\+1/)
 })

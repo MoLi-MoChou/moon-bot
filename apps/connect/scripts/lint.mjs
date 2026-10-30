@@ -11,10 +11,9 @@ if (!existsSync(bin)) {
   process.exit(2)
 }
 const extra = process.argv.slice(2)
-const result = spawnSync(
-  process.execPath,
-  [bin, '-c', '.oxlintrc.json', ...extra, 'src', 'scripts', 'test'],
-  { cwd: plugin, stdio: 'inherit' },
-)
+const result = spawnSync(process.execPath, [bin, '-c', '.oxlintrc.json', ...extra, 'src', 'scripts', 'test'], {
+  cwd: plugin,
+  stdio: 'inherit',
+})
 if (result.error) console.error(`lint: ${result.error.message}`)
 process.exit(result.status ?? 1)

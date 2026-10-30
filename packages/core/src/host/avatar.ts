@@ -18,7 +18,8 @@ const codeOf = (error: unknown): string | undefined =>
   typeof error === 'object' && error !== null ? (error as { readonly code?: string }).code : undefined
 const messageOf = (error: unknown): string => (error instanceof Error ? error.message : String(error))
 
-const ascii = (bytes: Buffer, start: number, end: number): string => Buffer.from(bytes.subarray(start, end)).toString('latin1')
+const ascii = (bytes: Buffer, start: number, end: number): string =>
+  Buffer.from(bytes.subarray(start, end)).toString('latin1')
 
 // The real format, from the bytes themselves: an extension, a Content-Type header, or
 // the mime in a data URL can all be wrong.
@@ -30,7 +31,8 @@ function mimeOf(bytes: Buffer): string | undefined {
   return undefined
 }
 
-const tooLarge = (size: number): string => `The avatar image is too large: ${size} bytes, and the limit is ${MAX_BYTES} bytes (about 120 KB). ${HINT}`
+const tooLarge = (size: number): string =>
+  `The avatar image is too large: ${size} bytes, and the limit is ${MAX_BYTES} bytes (about 120 KB). ${HINT}`
 const NOT_IMAGE = `The avatar must be a PNG, JPEG, WebP, or GIF image. ${HINT}`
 
 function toDataUrl(bytes: Buffer): string {
@@ -53,7 +55,11 @@ interface AvatarReadOptions {
   readonly isData?: (real: string) => Promise<boolean>
 }
 
-async function readLocal(path: string, baseDir: string | undefined, isData: AvatarReadOptions['isData']): Promise<string> {
+async function readLocal(
+  path: string,
+  baseDir: string | undefined,
+  isData: AvatarReadOptions['isData'],
+): Promise<string> {
   const full = resolve(baseDir ?? process.cwd(), expandHome(path))
   // Checked and read at the real path, where links lead, so a link cannot reach into
   // the host's data, and one changed after the check is not followed.
@@ -63,17 +69,23 @@ async function readLocal(path: string, baseDir: string | undefined, isData: Avat
     real = await realpath(full)
     info = await stat(real)
   } catch (error) {
-    if (codeOf(error) === 'ENOENT') throw new Error(`There is no image file at ${full}. Pass the path of an existing image file.`)
-    throw new Error(`Cannot read the image at ${full}: ${codeOf(error) === 'EACCES' ? 'permission denied' : messageOf(error)}`)
+    if (codeOf(error) === 'ENOENT')
+      throw new Error(`There is no image file at ${full}. Pass the path of an existing image file.`)
+    throw new Error(
+      `Cannot read the image at ${full}: ${codeOf(error) === 'EACCES' ? 'permission denied' : messageOf(error)}`,
+    )
   }
   if (!info.isFile()) throw new Error(`${full} is not an image file. Pass the path of an image file.`)
-  if (await isData?.(real)) throw new Error(`${full} is in Moon Bot data, so it cannot be a Bot's photo. Pass an image from another folder.`)
+  if (await isData?.(real))
+    throw new Error(`${full} is in Moon Bot data, so it cannot be a Bot's photo. Pass an image from another folder.`)
   if (info.size > MAX_BYTES) throw new Error(tooLarge(info.size))
   let bytes: Buffer
   try {
     bytes = await readFile(real)
   } catch (error) {
-    throw new Error(`Cannot read the image at ${full}: ${codeOf(error) === 'EACCES' ? 'permission denied' : messageOf(error)}`)
+    throw new Error(
+      `Cannot read the image at ${full}: ${codeOf(error) === 'EACCES' ? 'permission denied' : messageOf(error)}`,
+    )
   }
   if (bytes.length > MAX_BYTES) throw new Error(tooLarge(bytes.length))
   return toDataUrl(bytes)
@@ -85,7 +97,8 @@ function readDataUrl(value: string): string {
   const header = value.slice('data:'.length, comma)
   const [mime = '', ...params] = header.split(';').map(part => part.trim().toLowerCase())
   if (!MIMES.has(mime)) throw new Error(`The avatar data URL must hold a PNG, JPEG, WebP, or GIF image. ${HINT}`)
-  if (!params.includes('base64')) throw new Error('The avatar data URL must be base64 encoded, as in data:image/png;base64,...')
+  if (!params.includes('base64'))
+    throw new Error('The avatar data URL must be base64 encoded, as in data:image/png;base64,...')
   const payload = value.slice(comma + 1).replace(/\s/g, '')
   if (payload === '' || payload.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/.test(payload)) {
     throw new Error('The avatar data URL does not hold valid base64 image data.')
@@ -101,9 +114,16 @@ export async function readAvatar(input: unknown, { baseDir, isData }: AvatarRead
   const value = typeof input === 'string' ? input.trim() : ''
   if (value === '') throw new Error(`Give an image path or a data URL. ${HINT}`)
   if (/^data:/i.test(value)) return readDataUrl(value)
-  if (/^https?:\/\//i.test(value)) throw new Error('An http(s) link is not downloaded here. Save the image to a file and pass its path, or pass a data URL.')
-  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(value)) throw new Error(`The avatar must be a local image path or a data URL. ${HINT}`)
+  if (/^https?:\/\//i.test(value))
+    throw new Error(
+      'An http(s) link is not downloaded here. Save the image to a file and pass its path, or pass a data URL.',
+    )
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(value))
+    throw new Error(`The avatar must be a local image path or a data URL. ${HINT}`)
   // A network path (\\host\share) would make Windows connect to that host and sign in.
-  if (/^[\\/]{2}/.test(value)) throw new Error('A network path is not read here. Copy the image to this computer and pass its path, or pass a data URL.')
+  if (/^[\\/]{2}/.test(value))
+    throw new Error(
+      'A network path is not read here. Copy the image to this computer and pass its path, or pass a data URL.',
+    )
   return readLocal(value, baseDir, isData)
 }

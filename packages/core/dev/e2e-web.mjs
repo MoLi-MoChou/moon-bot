@@ -59,14 +59,22 @@ const cache = process.env.PLAYWRIGHT_BROWSERS_PATH ?? join(homedir(), '.cache', 
 const cachedBrowser = (() => {
   if (!existsSync(cache)) return undefined
   for (const dir of readdirSync(cache).filter(name => name.startsWith('chromium'))) {
-    for (const candidate of [join(cache, dir, 'chrome-linux', 'chrome'), join(cache, dir, 'chrome-linux', 'headless_shell')]) {
+    for (const candidate of [
+      join(cache, dir, 'chrome-linux', 'chrome'),
+      join(cache, dir, 'chrome-linux', 'headless_shell'),
+    ]) {
       if (existsSync(candidate)) return candidate
     }
   }
   return undefined
 })()
-const browserPath = [process.env.CHROME_BIN, '/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/chromium', cachedBrowser]
-  .find(candidate => candidate !== undefined && candidate !== '' && existsSync(candidate))
+const browserPath = [
+  process.env.CHROME_BIN,
+  '/usr/bin/google-chrome',
+  '/usr/bin/google-chrome-stable',
+  '/usr/bin/chromium',
+  cachedBrowser,
+].find(candidate => candidate !== undefined && candidate !== '' && existsSync(candidate))
 
 const problems = []
 const shot = name => join(outDir, name)
@@ -101,7 +109,8 @@ try {
   await page.fill('input[name=password]', 'definitely-not-it')
   await page.click('button[type=submit]')
   await page.waitForLoadState('domcontentloaded')
-  if (await page.locator('input[name=password]').count() === 0) throw new Error('a wrong password was let through to the app')
+  if ((await page.locator('input[name=password]').count()) === 0)
+    throw new Error('a wrong password was let through to the app')
   await page.screenshot({ path: shot('01-wrong-password.png') })
 
   // 2. The right password opens the team: the sidebar shows up.
@@ -137,7 +146,7 @@ try {
     await page.getByRole('button', { name: 'Expand sidebar' }).click()
     await page.locator(botSelector).waitFor({ state: 'visible', timeout })
     await page.waitForSelector('[data-composer-input]', { timeout })
-    if (await page.locator(`${botSelector}[aria-current="page"]`).count() !== 1)
+    if ((await page.locator(`${botSelector}[aria-current="page"]`).count()) !== 1)
       throw new Error(`reload lost the selected Bot ${String(stable.id)}`)
     const feed = await page.evaluate(async () => {
       const response = await fetch('/api/bot/feed', { cache: 'no-store' })
@@ -147,7 +156,8 @@ try {
       await reader.cancel()
       return { ok: true, hello: new TextDecoder().decode(first.value).startsWith('event: hello\n') }
     })
-    if (feed.ok !== true || feed.hello !== true) throw new Error(`feed did not open with hello: ${JSON.stringify(feed)}`)
+    if (feed.ok !== true || feed.hello !== true)
+      throw new Error(`feed did not open with hello: ${JSON.stringify(feed)}`)
     await page.screenshot({ path: shot('03-reloaded.png') })
     console.log(`e2e-web: ok (read-only) — health, auth, state, reload, selection, and feed (screenshots in ${outDir})`)
   } else {
@@ -161,26 +171,37 @@ try {
       return await response.json()
     })
     if (created?.ok !== true) throw new Error(`create-bot failed: ${JSON.stringify(created)}`)
-    const ready = await page.evaluate(async input => {
-      const post = async (endpoint, payload) => {
-        const response = await fetch('/api/bot', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ endpoint, payload }),
-        })
-        return await response.json()
-      }
-      if (input.mockUrl !== null) {
-        const added = await post('provider-add', { custom: true, provider: 'mock-anthropic', api: 'anthropic-messages', baseURL: input.mockUrl, key: 'sk-mock', models: ['claude-3-5-sonnet'] })
-        // A rerun on a bench whose provider already exists is fine.
-        if (added?.ok !== true && !/already set up/.test(added?.error?.message ?? '')) return { ok: false, why: 'provider-add: ' + JSON.stringify(added) }
-      }
-      const state = await post('state', {})
-      const ref = state?.value?.models?.[0]?.ref
-      if (typeof ref !== 'string') return { ok: false, why: 'no model in the catalog' }
-      const updated = await post('update-bot', { id: input.botId, model: ref })
-      return { ok: updated?.ok === true, ref }
-    }, { botId: created.value.id, mockUrl: mockUrl ?? null })
+    const ready = await page.evaluate(
+      async input => {
+        const post = async (endpoint, payload) => {
+          const response = await fetch('/api/bot', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ endpoint, payload }),
+          })
+          return await response.json()
+        }
+        if (input.mockUrl !== null) {
+          const added = await post('provider-add', {
+            custom: true,
+            provider: 'mock-anthropic',
+            api: 'anthropic-messages',
+            baseURL: input.mockUrl,
+            key: 'sk-mock',
+            models: ['claude-3-5-sonnet'],
+          })
+          // A rerun on a bench whose provider already exists is fine.
+          if (added?.ok !== true && !/already set up/.test(added?.error?.message ?? ''))
+            return { ok: false, why: 'provider-add: ' + JSON.stringify(added) }
+        }
+        const state = await post('state', {})
+        const ref = state?.value?.models?.[0]?.ref
+        if (typeof ref !== 'string') return { ok: false, why: 'no model in the catalog' }
+        const updated = await post('update-bot', { id: input.botId, model: ref })
+        return { ok: updated?.ok === true, ref }
+      },
+      { botId: created.value.id, mockUrl: mockUrl ?? null },
+    )
     if (ready?.ok !== true) throw new Error(`could not give the E2E Bot a model: ${JSON.stringify(ready)}`)
     await page.reload({ waitUntil: 'domcontentloaded' })
     await page.waitForSelector('.bt-row', { timeout })

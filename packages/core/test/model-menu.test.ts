@@ -6,16 +6,27 @@ import { build } from 'esbuild'
 
 const bundle = await build({
   entryPoints: [fileURLToPath(new URL('../src/client/model-menu.tsx', import.meta.url))],
-  bundle: true, format: 'cjs', platform: 'node', write: false,
+  bundle: true,
+  format: 'cjs',
+  platform: 'node',
+  write: false,
   external: ['react', 'react-dom'],
 })
-const module = { exports: {} as {
-  groupModels: (models: { ref: string, [key: string]: unknown }[]) => Map<string, { ref: string, [key: string]: unknown }[]>
-  ModelChoiceDock: (props: Record<string, unknown>) => unknown
-  effortRows: (options: { efforts: { id: string, name: string }[], defaultEffort?: string }) => { effort: string | undefined }[]
-} }
+const module = {
+  exports: {} as {
+    groupModels: (
+      models: { ref: string; [key: string]: unknown }[],
+    ) => Map<string, { ref: string; [key: string]: unknown }[]>
+    ModelChoiceDock: (props: Record<string, unknown>) => unknown
+    effortRows: (options: {
+      efforts: { id: string; name: string }[]
+      defaultEffort?: string
+    }) => { effort: string | undefined }[]
+  },
+}
 runInNewContext(bundle.outputFiles[0].text, {
-  module, exports: module.exports,
+  module,
+  exports: module.exports,
   require: name => {
     const platform = {
       react: {
@@ -37,14 +48,21 @@ function nodes(tree, match) {
 }
 
 // `harness`: the window has DSH's own settings to send the user to, as the plugin does.
-function dock(models, { model, ready = true, harness = true }: { model?: string, ready?: boolean, harness?: boolean } = {}) {
+function dock(
+  models,
+  { model, ready = true, harness = true }: { model?: string; ready?: boolean; harness?: boolean } = {},
+) {
   const picked = []
   const bot = { id: 'chief', name: 'Chief', model }
   const roster = { ready, byId: { chief: bot }, models, defaultModel: models[0]?.ref }
   const tree = ModelChoiceDock({
-    sessionId: bot.id, useRoster: select => select(roster),
+    sessionId: bot.id,
+    useRoster: select => select(roster),
     actions: {
-      updateBot: (id, patch) => { picked.push([id, patch.model]); return Promise.resolve() },
+      updateBot: (id, patch) => {
+        picked.push([id, patch.model])
+        return Promise.resolve()
+      },
       ...(harness ? { openShellSettingsPanel: () => {}, openShellOnboardingPanel: () => {} } : {}),
     },
   })
@@ -60,14 +78,26 @@ const models = [
 test('the first model choice shows provider groups and keeps each model route', () => {
   const { tree, picked } = dock(models)
   const groups = nodes(tree, node => node.props.className === 'bt-model-choice-group')
-  assert.deepEqual(groups.map(group => group.props['aria-label']), ['DeepSeek', 'Ollama'])
-  assert.deepEqual(groups.map(group => nodes(group, node => node.props.className === 'bt-model-choice-provider')[0].children[0]), ['DeepSeek', 'Ollama'])
+  assert.deepEqual(
+    groups.map(group => group.props['aria-label']),
+    ['DeepSeek', 'Ollama'],
+  )
+  assert.deepEqual(
+    groups.map(group => nodes(group, node => node.props.className === 'bt-model-choice-provider')[0].children[0]),
+    ['DeepSeek', 'Ollama'],
+  )
   const buttons = groups.map(group => nodes(group, node => node.type === 'button'))
-  assert.deepEqual(buttons.map(list => list.map(button => button.children[0])), [['DeepSeek Flash', 'DeepSeek Pro'], ['DeepSeek Flash']])
+  assert.deepEqual(
+    buttons.map(list => list.map(button => button.children[0])),
+    [['DeepSeek Flash', 'DeepSeek Pro'], ['DeepSeek Flash']],
+  )
   assert.match(buttons[0][0].props.title, /official\/flash.*Default/)
   buttons[1][0].props.onClick()
   buttons[0][0].props.onClick()
-  assert.deepEqual(picked, [['chief', 'local/flash'], ['chief', 'official/flash']])
+  assert.deepEqual(picked, [
+    ['chief', 'local/flash'],
+    ['chief', 'official/flash'],
+  ])
   assert.equal(nodes(tree, node => node.type === 'button' && node.children.includes('Manage models')).length, 1)
 })
 
@@ -78,29 +108,36 @@ test('providers with the same display name stay distinct, and unnamed providers 
     { ref: 'custom/flash', provider: 'custom', name: 'Flash' },
   ]
   const groups = groupModels(entries)
-  assert.deepEqual(Array.from(groups, ([label, list]) => [label, Array.from(list, model => model.ref)]), [
-    ['Cloud (official)', ['official/flash']],
-    ['Cloud (local)', ['local/flash']],
-    ['custom', ['custom/flash']],
-  ])
+  assert.deepEqual(
+    Array.from(groups, ([label, list]) => [label, Array.from(list, model => model.ref)]),
+    [
+      ['Cloud (official)', ['official/flash']],
+      ['Cloud (local)', ['local/flash']],
+      ['custom', ['custom/flash']],
+    ],
+  )
 })
 
 test('an unavailable model offers the same provider groups', () => {
   const { tree } = dock(models, { model: 'gone/flash' })
-  assert.deepEqual(nodes(tree, node => node.props.className === 'bt-model-choice-group').map(group => group.props['aria-label']), ['DeepSeek', 'Ollama'])
+  assert.deepEqual(
+    nodes(tree, node => node.props.className === 'bt-model-choice-group').map(group => group.props['aria-label']),
+    ['DeepSeek', 'Ollama'],
+  )
   assert.ok(nodes(tree, node => node.props.className === 'bt-bubble')[0].children[0].includes('not available anymore'))
 })
 
 test('an empty catalog offers setup choices, and a ready model needs no choice dock', () => {
   const { tree } = dock([])
-  assert.deepEqual(nodes(tree, node => node.type === 'button').map(button => button.children[0]), [
-    'Enter a DeepSeek API key', 'Open settings to set up a custom model',
-  ])
+  assert.deepEqual(
+    nodes(tree, node => node.type === 'button').map(button => button.children[0]),
+    ['Enter a DeepSeek API key', 'Open settings to set up a custom model'],
+  )
   assert.equal(dock(models, { model: models[0].ref }).tree, null)
   assert.equal(dock(models, { ready: false }).tree, null)
 })
 
-test('without DSH\'s own settings, the choice offers no way into them', () => {
+test("without DSH's own settings, the choice offers no way into them", () => {
   const buttons = tree => nodes(tree, node => node.type === 'button').map(button => button.children[0])
   assert.deepEqual(buttons(dock(models, { harness: false }).tree), ['DeepSeek Flash', 'DeepSeek Pro', 'DeepSeek Flash'])
   assert.deepEqual(buttons(dock([], { harness: false }).tree), [])
@@ -115,7 +152,9 @@ test('a window with its own Models page offers that as the empty-catalog setup',
     useRoster: select => select({ ready: true, byId: { chief: bot }, models: [] }),
     actions: {
       updateBot: () => Promise.resolve(),
-      openModels: () => { opened.push('models') },
+      openModels: () => {
+        opened.push('models')
+      },
     },
   })
   assert.deepEqual(buttons(tree), ['Open settings to set up a custom model'])
@@ -138,10 +177,19 @@ test('a window with its own Models page offers that as the empty-catalog setup',
 })
 
 test('the Thinking section always offers Default, so a picked level can be cleared', () => {
-  const efforts = [{ id: 'low', name: 'Low' }, { id: 'high', name: 'High' }]
+  const efforts = [
+    { id: 'low', name: 'Low' },
+    { id: 'high', name: 'High' },
+  ]
   // Array.from: the rows come from the bundle's realm, whose arrays are not this one's.
-  assert.deepEqual(Array.from(effortRows({ efforts, defaultEffort: 'high' }), row => row.effort), [undefined, 'low', 'high'])
-  assert.deepEqual(Array.from(effortRows({ efforts }), row => row.effort), [undefined, 'low', 'high'])
+  assert.deepEqual(
+    Array.from(effortRows({ efforts, defaultEffort: 'high' }), row => row.effort),
+    [undefined, 'low', 'high'],
+  )
+  assert.deepEqual(
+    Array.from(effortRows({ efforts }), row => row.effort),
+    [undefined, 'low', 'high'],
+  )
   assert.equal(effortRows({ efforts: [] }).length, 0)
 })
 
@@ -163,7 +211,11 @@ test('a window without DSH settings asks for the missing API key in the first ch
   const tree = ModelChoiceDock({
     sessionId: bot.id,
     useRoster: select => select({ ready: true, byId: { chief: bot }, models: keyless }),
-    actions: { setProviderKey: (provider, value) => { saved.push([provider, value]) } },
+    actions: {
+      setProviderKey: (provider, value) => {
+        saved.push([provider, value])
+      },
+    },
   })
   assert.match(nodes(tree, node => node.props.className === 'bt-bubble')[0].children[0], /need a DeepSeek API key/)
   const [card] = nodes(tree, node => node.props.model !== undefined)

@@ -2,14 +2,21 @@
 // with the system. The Moon Bot tile comes from assets/icons (scripts/icon.py).
 import { readFileSync } from 'node:fs'
 
-const tile = (name: string): string => `data:image/png;base64,${readFileSync(new URL(`../assets/icons/${name}.png`, import.meta.url)).toString('base64')}`
-const LOGO = tile('moon-bot-96'), LOGO_DARK = tile('moon-bot-dark-96'), FAVICON = tile('moon-bot-32')
+const tile = (name: string): string =>
+  `data:image/png;base64,${readFileSync(new URL(`../assets/icons/${name}.png`, import.meta.url)).toString('base64')}`
+const LOGO = tile('moon-bot-96'),
+  LOGO_DARK = tile('moon-bot-dark-96'),
+  FAVICON = tile('moon-bot-32')
 
 const ESCAPES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }
 const esc = (s: string): string => String(s).replace(/[&<>"]/gu, c => ESCAPES[c] ?? c)
 
 export function loginPage({ error = false, wait = false }: { error?: boolean; wait?: boolean } = {}): string {
-  const note = wait ? '尝试次数过多，请 10 分钟后再试。 Too many tries, wait 10 minutes.' : error ? '密码不对。 Wrong password.' : ''
+  const note = wait
+    ? '尝试次数过多，请 10 分钟后再试。 Too many tries, wait 10 minutes.'
+    : error
+      ? '密码不对。 Wrong password.'
+      : ''
   return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Moon Bot · 登录</title><link rel="icon" type="image/png" href="${FAVICON}"><style>
 :root{color-scheme:light dark;--bg:#fcfafd;--glow:#efe6fa;--card:#fff;--ink:#2a2233;--ink2:rgba(42,34,51,.6);--line:rgba(70,45,110,.12);--accent:#8a6bd1;--btn:#8a6bd1;--btn-ink:#fff;--logo:url("${LOGO}")}

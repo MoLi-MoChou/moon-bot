@@ -19,13 +19,29 @@ const seed = () => ({
   version: 1,
   mainBotIds: ['a'],
   bots: { a: { id: 'a', name: 'Chief', role: 'Boss', sessionId: 'a', createdAt: 1, capabilities: ['echo'] } },
-  rooms: {}, agents: {}, exchanges: [], exchangeTurns: {}, questions: {}, revision: 1,
-  capabilities: { items: {
-    echo: { name: 'echo', kind: 'mcp', description: 'Echo service', transport: 'stdio', command: process.execPath, args: [ECHO], env: {}, approved: true },
-  } },
+  rooms: {},
+  agents: {},
+  exchanges: [],
+  exchangeTurns: {},
+  questions: {},
+  revision: 1,
+  capabilities: {
+    items: {
+      echo: {
+        name: 'echo',
+        kind: 'mcp',
+        description: 'Echo service',
+        transport: 'stdio',
+        command: process.execPath,
+        args: [ECHO],
+        env: {},
+        approved: true,
+      },
+    },
+  },
 })
 
-test('a standalone Bot mounts an MCP capability into the registry, L3 by policy', async (t) => {
+test('a standalone Bot mounts an MCP capability into the registry, L3 by policy', async t => {
   const home = mkdtempSync(join(tmpdir(), 'ds-bot-cap-'))
   t.after(() => rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }))
   writeFileSync(join(home, 'state.json'), JSON.stringify(seed()))
@@ -33,8 +49,26 @@ test('a standalone Bot mounts an MCP capability into the registry, L3 by policy'
   const ctx = fakeContext()
   Object.assign(ctx, {
     llm: { listProviders: () => [], listModels: async () => [], resolveModelInfo: async () => ({}) },
-    workspaceRegistry: { get: () => undefined, resolveByPath: async () => undefined, create: async path => ({ id: 'w1', path }), archiveSession: async () => {} },
-    sessionController: { create: async () => ({ sessionId: 's1' }), resolveAgent: async sessionId => ({ agent: { session: { id: sessionId }, calls: [], inbox: { nextStep: [], nextTurn: [], remove: () => false }, followup() {}, steer() {}, cancel() {} } }), selectModel: async () => {} },
+    workspaceRegistry: {
+      get: () => undefined,
+      resolveByPath: async () => undefined,
+      create: async path => ({ id: 'w1', path }),
+      archiveSession: async () => {},
+    },
+    sessionController: {
+      create: async () => ({ sessionId: 's1' }),
+      resolveAgent: async sessionId => ({
+        agent: {
+          session: { id: sessionId },
+          calls: [],
+          inbox: { nextStep: [], nextTurn: [], remove: () => false },
+          followup() {},
+          steer() {},
+          cancel() {},
+        },
+      }),
+      selectModel: async () => {},
+    },
     sessionTitle: { rename: async () => {} },
     sessions: { flush: async () => {} },
   })

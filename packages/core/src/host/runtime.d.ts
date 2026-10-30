@@ -84,7 +84,10 @@ export interface StoredRoom {
   mode?: string
   notice?: string
   named?: boolean
-  log?: readonly ({ readonly text: string; readonly seq: number; readonly [key: string]: unknown } | Record<string, unknown>)[]
+  log?: readonly (
+    | { readonly text: string; readonly seq: number; readonly [key: string]: unknown }
+    | Record<string, unknown>
+  )[]
   botRounds?: number
   seen?: Record<string, unknown>
   sessions?: Record<string, string>
@@ -212,7 +215,6 @@ export interface DeliveryInput {
   readonly work?: string | undefined
 }
 
-
 /** One saved capability: an MCP server, a skill, or a pack of them. */
 export interface CapabilityItem {
   name: string
@@ -296,11 +298,7 @@ export interface HostRuntime {
   groupSessionsOf(botId: string): readonly string[]
 
   // --- provided by chat-index.ts
-  eventsBackwards(
-    sessionId: string,
-    signal?: AbortSignal,
-    maxPages?: number,
-  ): AsyncIterable<SessionEvent>
+  eventsBackwards(sessionId: string, signal?: AbortSignal, maxPages?: number): AsyncIterable<SessionEvent>
 
   // --- provided by delivery.ts and diagnostics.ts
   resolveAgent(sessionId: string): Promise<Agent>
@@ -339,7 +337,11 @@ export interface HostRuntime {
   dshSpawn?(command: string, argv: readonly string[], options: { readonly windowsHide?: boolean }): ChildProcess
   // --- provided by tasks-panel.ts
   /** Async because each running Session's Agent is resolved for its queued messages. */
-  tasksView?(): Promise<{ readonly running: readonly Readonly<Record<string, unknown>>[]; readonly completed: readonly Readonly<Record<string, unknown>>[]; readonly waiting: readonly { readonly botId: string; readonly botName: string; readonly for: readonly string[] }[] }>
+  tasksView?(): Promise<{
+    readonly running: readonly Readonly<Record<string, unknown>>[]
+    readonly completed: readonly Readonly<Record<string, unknown>>[]
+    readonly waiting: readonly { readonly botId: string; readonly botName: string; readonly for: readonly string[] }[]
+  }>
   noteTurn?(sessionId: string, event: { readonly type?: string; readonly reason?: unknown }): void
   stopTask?(sessionId: string): Promise<boolean>
   /** Drops one queued message that has not started. False when it is already gone. */
@@ -365,7 +367,12 @@ export interface HostRuntime {
   noteApproval?(sessionId: string | undefined, note: ApprovalNote | undefined): void
 
   readOnly(): string | undefined
-  approvalsView?(): readonly { readonly botId: string; readonly sessionId: string; readonly tool?: string; readonly at: number }[]
+  approvalsView?(): readonly {
+    readonly botId: string
+    readonly sessionId: string
+    readonly tool?: string
+    readonly at: number
+  }[]
   switchJobs?(): Iterable<{ readonly botId: string; readonly roomId?: string }>
   doingOf?(entry: LiveEntry): { readonly tool?: string; readonly target?: string; readonly said?: string }
   catalog(options?: { readonly fresh?: boolean }): Promise<readonly ModelEntry[]>
@@ -390,11 +397,24 @@ export interface HostRuntime {
     readonly setEnabled: (id: string, enabled: boolean) => boolean
     readonly removeSubscription: (id: string) => boolean
   }
-  proactiveSubscriptionsOf?(botId: string): readonly { readonly id: string, readonly topics: string, readonly dailyCap: number, readonly quietFrom: string | null, readonly quietTo: string | null, readonly enabled: boolean }[]
+  proactiveSubscriptionsOf?(botId: string): readonly {
+    readonly id: string
+    readonly topics: string
+    readonly dailyCap: number
+    readonly quietFrom: string | null
+    readonly quietTo: string | null
+    readonly enabled: boolean
+  }[]
   proactiveReview?(botId: string): Promise<unknown>
   proactiveLocalTime?(): string
   /** Recent proactive runs, for the task panel: a run that said nothing still happened. */
-  proactiveRounds?(): readonly { readonly subscriptionId: string, readonly botId: string, readonly botName: string, readonly at: number, readonly outcome: string }[]
+  proactiveRounds?(): readonly {
+    readonly subscriptionId: string
+    readonly botId: string
+    readonly botName: string
+    readonly at: number
+    readonly outcome: string
+  }[]
   proactiveSend?(sessionId: string, message: Record<string, unknown>): boolean
   proactiveRules?(): {
     readonly rulesForBot: (botId: string) => readonly Record<string, unknown>[]
@@ -403,7 +423,9 @@ export interface HostRuntime {
     readonly auditOf: (ruleId: string) => readonly Record<string, unknown>[]
   }
   /** A Bot's own remembered lines, read-only, for work that is not the memory panel. */
-  memoryLinesOf?(botId: string): readonly { readonly topic: string | null, readonly text: string, readonly added: string | null }[]
+  memoryLinesOf?(
+    botId: string,
+  ): readonly { readonly topic: string | null; readonly text: string; readonly added: string | null }[]
   /** Empties a Bot's memory for good (a reset, not a delete). */
   clearBotMemory?(botId: string): Promise<void>
   /** Empties one Session's transcript; the Session row stays. */
@@ -422,8 +444,18 @@ export interface HostRuntime {
   capabilityEnsureTimeoutMs?: number
   cancelApprovals?(sessionId: string): void
   ownRequest(options: { readonly sessionId?: string | undefined; readonly messages?: unknown }): boolean
-  partsOf(botId: string): readonly { readonly sessionId: string; readonly number: number; readonly startedAt: number; readonly endedAt?: number | undefined }[]
-  historyEntry(event: SessionEvent, forDisplay: boolean): { readonly text: string; readonly who?: string; readonly answer?: boolean; readonly keepAnswers?: boolean } | undefined
+  partsOf(botId: string): readonly {
+    readonly sessionId: string
+    readonly number: number
+    readonly startedAt: number
+    readonly endedAt?: number | undefined
+  }[]
+  historyEntry(
+    event: SessionEvent,
+    forDisplay: boolean,
+  ):
+    | { readonly text: string; readonly who?: string; readonly answer?: boolean; readonly keepAnswers?: boolean }
+    | undefined
   clock(time: number | undefined): string
   partLines(sessionId: string, signal: AbortSignal): AsyncIterable<{ readonly text: string; readonly time: number }>
   defaultRef?(): string | undefined

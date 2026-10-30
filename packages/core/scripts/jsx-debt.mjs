@@ -16,9 +16,11 @@ export const DEBT = join(PLUGIN, 'test', 'jsx-debt.json')
 // conditional is a different character, so those calls are not counted.
 const STATIC_H = /(?<![\w$.])h\(\s*([A-Z][A-Za-z0-9_]*)\s*[,)]/g
 
-const code = text => text.split(/\r?\n/)
-  .map(line => (/^\s*(\/\/|\/\*|\*\/|\*\s|\*$)/.test(line) ? '' : line.replace(/\s\/\/\s.*$/, '')))
-  .join('\n')
+const code = text =>
+  text
+    .split(/\r?\n/)
+    .map(line => (/^\s*(\/\/|\/\*|\*\/|\*\s|\*$)/.test(line) ? '' : line.replace(/\s\/\/\s.*$/, '')))
+    .join('\n')
 
 export function countFile(text) {
   STATIC_H.lastIndex = 0
@@ -43,9 +45,7 @@ export function countTree(dir, prefix) {
 }
 
 export function countClient(root = PLUGIN) {
-  const trees = [
-    [join(root, 'src', 'client'), 'src/client/'],
-  ]
+  const trees = [[join(root, 'src', 'client'), 'src/client/']]
   if (root === PLUGIN) trees.push([join(dirname(root), '..', 'apps', 'desktop', 'ui', 'src'), 'apps/desktop/ui/src/'])
   const found = {}
   for (const [dir, prefix] of trees) Object.assign(found, countTree(dir, prefix))

@@ -42,7 +42,8 @@ interface RoomWorkView extends Omit<WorkBotView, 'roomId'> {
 }
 
 /** `record`'s values read as plain objects, for JSON the caller did not type. */
-const objectOf = (value: unknown): Record<string, unknown> => (value !== null && typeof value === 'object' ? value as Record<string, unknown> : {})
+const objectOf = (value: unknown): Record<string, unknown> =>
+  value !== null && typeof value === 'object' ? (value as Record<string, unknown>) : {}
 
 const firstString = (args: Record<string, unknown>, keys: readonly string[]): string | undefined => {
   for (const key of keys) {
@@ -63,14 +64,27 @@ export function install(rt: TurnsRuntime): void {
     if (call === undefined) return {}
     const said = entry.step?.replace(/\s+/g, ' ').trim().slice(0, 160)
     let args: Record<string, unknown>
-    try { args = objectOf(JSON.parse(call.args || '{}')) } catch { args = {} }
+    try {
+      args = objectOf(JSON.parse(call.args || '{}'))
+    } catch {
+      args = {}
+    }
     const note = firstString(args, ['description', 'justification'])
     const path = firstString(args, ['file_path', 'path'])
     const url = firstString(args, ['url'])
     let site: string | undefined
-    try { site = url === undefined ? undefined : new URL(url).host } catch { site = undefined }
+    try {
+      site = url === undefined ? undefined : new URL(url).host
+    } catch {
+      site = undefined
+    }
     const target = path?.split(/[\\/]/).filter(Boolean).at(-1) ?? firstString(args, ['query', 'pattern']) ?? site
-    return { tool: call.name, ...(said ? { said } : {}), ...(note ? { note: note.slice(0, 120) } : {}), ...(target ? { target: target.slice(0, 80) } : {}) }
+    return {
+      tool: call.name,
+      ...(said ? { said } : {}),
+      ...(note ? { note: note.slice(0, 120) } : {}),
+      ...(target ? { target: target.slice(0, 80) } : {}),
+    }
   }
 
   // Activity is tracked per Session; a Bot's mascot shows its own chat's, else a group's.
@@ -150,11 +164,15 @@ export function install(rt: TurnsRuntime): void {
     const rooms: Record<string, RoomWorkView[]> = {}
     const add = (roomId: string, botId: string, work: Omit<RoomWorkView, 'botId'>): void => {
       if (rooms[roomId]?.some(item => item.botId === botId) === true) return
-      rooms[roomId] = [...(rooms[roomId] ?? []), { botId, ...work, ...(speaking.has(`${roomId}:${botId}`) ? { speaking: true } : {}) }]
+      rooms[roomId] = [
+        ...(rooms[roomId] ?? []),
+        { botId, ...work, ...(speaking.has(`${roomId}:${botId}`) ? { speaking: true } : {}) },
+      ]
     }
     for (const [id, entry] of core.live) {
       const owner = rt.groupOwners.get(id)
-      if (entry.turn !== undefined && owner !== undefined) add(owner.roomId, owner.botId, { since: entry.since, ...doingOf(entry) })
+      if (entry.turn !== undefined && owner !== undefined)
+        add(owner.roomId, owner.botId, { since: entry.since, ...doingOf(entry) })
     }
     for (const job of rt.switchJobs?.() ?? []) {
       if (job.roomId !== undefined) add(job.roomId, job.botId, { since: job.since, switching: true })
@@ -165,13 +183,22 @@ export function install(rt: TurnsRuntime): void {
   // What a running tool call is about, for an approval card: its own description and
   // the command, path or address it acts on.
   const callDetail = (sessionId: string | undefined, callId?: string): ApprovalDetail => {
-    const raw = sessionId === undefined || callId === undefined ? undefined : core.live.get(sessionId)?.calls?.get(callId)?.args
+    const raw =
+      sessionId === undefined || callId === undefined ? undefined : core.live.get(sessionId)?.calls?.get(callId)?.args
     let args: Record<string, unknown>
-    try { args = objectOf(JSON.parse(raw ?? '{}')) } catch { args = {} }
-    const first = (keys: readonly string[]): string | undefined => keys.map(key => args[key]).find((value): value is string => typeof value === 'string' && value.trim() !== '')
+    try {
+      args = objectOf(JSON.parse(raw ?? '{}'))
+    } catch {
+      args = {}
+    }
+    const first = (keys: readonly string[]): string | undefined =>
+      keys.map(key => args[key]).find((value): value is string => typeof value === 'string' && value.trim() !== '')
     const text = first(['description', 'justification'])
     const code = first(['command', 'cmd', 'file_path', 'path', 'url', 'query'])
-    return { ...(text ? { text: text.trim().slice(0, 300) } : {}), ...(code ? { code: code.trim().slice(0, 400) } : {}) }
+    return {
+      ...(text ? { text: text.trim().slice(0, 300) } : {}),
+      ...(code ? { code: code.trim().slice(0, 400) } : {}),
+    }
   }
 
   // A stopped round stops the member work it started: the turn that answers it, or the
@@ -187,7 +214,8 @@ export function install(rt: TurnsRuntime): void {
       return
     }
     for (const message of [...(agent.inbox?.nextStep ?? []), ...(agent.inbox?.nextTurn ?? [])]) {
-      if (sourceOf(message.source)?.exchangeId === exchangeId && agent.inbox?.remove(message.id) === true) core.stoppedRoomTurns.delete(exchangeId)
+      if (sourceOf(message.source)?.exchangeId === exchangeId && agent.inbox?.remove(message.id) === true)
+        core.stoppedRoomTurns.delete(exchangeId)
     }
   }
 
@@ -200,13 +228,22 @@ export function install(rt: TurnsRuntime): void {
     const waiting = new Map<string | undefined, readonly [string, SourceInfo]>()
     for (const id of sessionIds) {
       const entry = core.live.get(id)
-      const held: (SourceInfo | undefined)[] = [entry?.info, entry?.pending, ...(entry?.joined ?? []).map(joined => joined.info)]
+      const held: (SourceInfo | undefined)[] = [
+        entry?.info,
+        entry?.pending,
+        ...(entry?.joined ?? []).map(joined => joined.info),
+      ]
       if (entry?.turn !== undefined) {
         const agent = await rt.resolveAgent(id).catch(() => undefined)
-        held.push(...[...(agent?.inbox?.nextStep ?? []), ...(agent?.inbox?.nextTurn ?? [])].map(message => sourceOf(message.source)))
+        held.push(
+          ...[...(agent?.inbox?.nextStep ?? []), ...(agent?.inbox?.nextTurn ?? [])].map(message =>
+            sourceOf(message.source),
+          ),
+        )
       }
       for (const source of held) {
-        if (source?.kind === SOURCE_KIND && expectsReply(source) && !answersUser(source)) waiting.set(source.exchangeId, [id, source])
+        if (source?.kind === SOURCE_KIND && expectsReply(source) && !answersUser(source))
+          waiting.set(source.exchangeId, [id, source])
       }
       core.live.delete(id)
       core.setActivity(id, undefined)
@@ -220,8 +257,19 @@ export function install(rt: TurnsRuntime): void {
   }
 
   Object.assign(rt, {
-    live: core.live, liveOf: core.liveOf, roomWaiters: core.roomWaiters, roomProgress: core.roomProgress,
-    roomInbox: core.roomInbox, activityView, workView, roomWorkView, turnsView, callDetail, doingOf, stopRoomTurn, releaseBot,
+    live: core.live,
+    liveOf: core.liveOf,
+    roomWaiters: core.roomWaiters,
+    roomProgress: core.roomProgress,
+    roomInbox: core.roomInbox,
+    activityView,
+    workView,
+    roomWorkView,
+    turnsView,
+    callDetail,
+    doingOf,
+    stopRoomTurn,
+    releaseBot,
     noteSent,
   })
 }

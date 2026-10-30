@@ -13,7 +13,10 @@ const fresh = (t: { after: (run: () => void) => void }, budget = DEFAULT_BUDGET)
   const store = openStore(home)
   t.after(() => store.close())
   t.after(() => rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }))
-  const engine = new PolicyEngine({ countersOf: async (sessionId, level, spend) => store.policy.spend(sessionId, level, spend) }, budget)
+  const engine = new PolicyEngine(
+    { countersOf: async (sessionId, level, spend) => store.policy.spend(sessionId, level, spend) },
+    budget,
+  )
   return { store, engine }
 }
 
@@ -33,7 +36,7 @@ test('every team tool is classified, and the levels follow the plan', () => {
   assert.equal(ruleOf('working_directory').asksItself, true)
 })
 
-test('L0–L2 always run; L3 and L4 run within their budgets, then ask', async (t) => {
+test('L0–L2 always run; L3 and L4 run within their budgets, then ask', async t => {
   const { engine } = fresh(t, { level3PerDay: 2, level4PerDay: 1 })
   for (const tool of ['list_bots', 'message_bot', 'create_group']) {
     for (let index = 0; index < 5; index += 1) assert.equal((await engine.decide('s', tool)).kind, 'allow', tool)
@@ -47,7 +50,7 @@ test('L0–L2 always run; L3 and L4 run within their budgets, then ask', async (
   assert.equal((await engine.decide('s', 'delete_group')).kind, 'approval')
 })
 
-test('budgets are per session and per level', async (t) => {
+test('budgets are per session and per level', async t => {
   const { engine } = fresh(t, { level3PerDay: 1, level4PerDay: 1 })
   assert.equal((await engine.decide('a', 'mcp_novel_connector')).kind, 'allow')
   assert.equal((await engine.decide('a', 'mcp_novel_connector')).kind, 'approval')
@@ -55,7 +58,7 @@ test('budgets are per session and per level', async (t) => {
   assert.equal((await engine.decide('a', 'delete_group')).kind, 'allow', 'L4 has its own counter')
 })
 
-test('the refusal names no appeal — the model cannot argue past it', async (t) => {
+test('the refusal names no appeal — the model cannot argue past it', async t => {
   const { engine } = fresh(t, { level3PerDay: 0, level4PerDay: 0 })
   const asked = await engine.decide('s', 'delete_group')
   assert.equal(asked.kind, 'approval')
@@ -63,7 +66,7 @@ test('the refusal names no appeal — the model cannot argue past it', async (t)
   assert.ok(!/bypass|ignore|override|instead/i.test(text), 'no loophole words in the refusal')
 })
 
-test('the ledger counts in the store, by UTC day', (t) => {
+test('the ledger counts in the store, by UTC day', t => {
   const { store } = fresh(t)
   assert.equal(store.policy.spend('s', 3, 2), 2)
   assert.equal(store.policy.spend('s', 3), 3)

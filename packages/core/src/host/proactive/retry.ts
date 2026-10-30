@@ -29,7 +29,7 @@ export interface RetryDeps {
   readonly earlierOf: (subscriptionId: string) => readonly EarlierCandidate[]
   readonly deliveredToday: (subscriptionId: string) => number
   readonly dailyCapOf: (subscriptionId: string) => number
-  readonly quietOf: (subscriptionId: string) => { readonly from: string, readonly to: string } | null
+  readonly quietOf: (subscriptionId: string) => { readonly from: string; readonly to: string } | null
   readonly mentionedRecently: (subscriptionId: string) => boolean
   readonly localTime: () => string
   readonly now: () => number
@@ -45,7 +45,9 @@ export type RetryOutcome = 'sent' | 'still-quiet' | 'dropped' | 'gone'
  * Retries the delayed candidates that can now be sent. Returns what happened to each, so a
  * caller can log it; nothing is thrown, because this runs from a poll.
  */
-export async function retryDelayed(deps: RetryDeps): Promise<readonly { readonly id: string, readonly outcome: RetryOutcome }[]> {
+export async function retryDelayed(
+  deps: RetryDeps,
+): Promise<readonly { readonly id: string; readonly outcome: RetryOutcome }[]> {
   const now = deps.now()
   const results: { id: string; outcome: RetryOutcome }[] = []
   for (const candidate of deps.delayedOf(now)) {
@@ -99,9 +101,12 @@ export const stillWorthRetrying = (candidate: DelayedCandidate, now: number): bo
   now - candidate.createdAt <= 7 * 24 * 60 * 60_000
 
 /** The host-facing wrapper: reads the store and sends through the runtime. */
-export async function retryFrom(rt: HostRuntime, deps: Omit<RetryDeps, 'send' | 'live'> & {
-  readonly send: RetryDeps['send']
-}): Promise<readonly { readonly id: string, readonly outcome: RetryOutcome }[]> {
+export async function retryFrom(
+  rt: HostRuntime,
+  deps: Omit<RetryDeps, 'send' | 'live'> & {
+    readonly send: RetryDeps['send']
+  },
+): Promise<readonly { readonly id: string; readonly outcome: RetryOutcome }[]> {
   return await retryDelayed({
     ...deps,
     live: sessionId => rt.readOnly() === undefined && rt.live.get(sessionId) !== undefined,

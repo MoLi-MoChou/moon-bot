@@ -44,9 +44,15 @@ test('ui kit sources never import host/store/service/engine/client or forbidden 
 test('ui kit barrel lists chrome and empty-state primitives by name', () => {
   const text = readFileSync(BARREL, 'utf8')
   for (const name of [
-    'EmptyState', 'EMPTY_STATE_CSS',
-    'Field', 'Select',
-    'Card', 'Row', 'Switch', 'SwitchRow', 'InlineText',
+    'EmptyState',
+    'EMPTY_STATE_CSS',
+    'Field',
+    'Select',
+    'Card',
+    'Row',
+    'Switch',
+    'SwitchRow',
+    'InlineText',
     'SETTINGS_CHROME_CSS',
   ]) {
     assert.match(text, new RegExp(`\\b${name}\\b`))

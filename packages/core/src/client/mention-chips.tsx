@@ -2,7 +2,16 @@
 // store, the engine and the copy/paste codec; only the input paints a known name as a
 // pill. A mirror layer under a transparent textarea does the painting, so the caret,
 // the selection and the IME keep working on the real textarea.
-import { Fragment, createElement as h, useEffect, useLayoutEffect, useRef, type CSSProperties, type ReactElement, type RefObject } from 'react'
+import {
+  Fragment,
+  createElement as h,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  type CSSProperties,
+  type ReactElement,
+  type RefObject,
+} from 'react'
 import { mentionSpans } from 'moon-bot-contracts'
 
 /** A Bot the composer may mention: its name and the CSS ink its chip wears. */
@@ -44,9 +53,11 @@ export function mentionChips(
     const name = text.slice(span.start + 1, span.end)
     if ('bot' in span) {
       const ink = byId.get(span.bot.id)?.ink
-      chips.push(ink === undefined
-        ? { start: span.start, end: span.end, kind: 'bot', name }
-        : { start: span.start, end: span.end, kind: 'bot', name, ink })
+      chips.push(
+        ink === undefined
+          ? { start: span.start, end: span.end, kind: 'bot', name }
+          : { start: span.start, end: span.end, kind: 'bot', name, ink },
+      )
     } else if (everyone) {
       chips.push({ start: span.start, end: span.end, kind: 'everyone', name })
     }
@@ -77,7 +88,8 @@ export function deleteMentionBefore(text: string, caret: number, chips: readonly
   for (const chip of chips) {
     if (caret <= chip.start) break
     if (caret <= chip.end) return { text: remove(text, chip.start, chip.end), caret: chip.start }
-    if (caret === chip.end + 1 && text[chip.end] === ' ') return { text: remove(text, chip.start, chip.end + 1), caret: chip.start }
+    if (caret === chip.end + 1 && text[chip.end] === ' ')
+      return { text: remove(text, chip.start, chip.end + 1), caret: chip.start }
   }
   return null
 }
@@ -87,7 +99,12 @@ const inkOf = (chip: MentionChip): CSSProperties | undefined =>
 
 // The mirror: the same text, with each mention as a chip. It is aria-hidden and inert —
 // the textarea above it holds the value, the caret and the selection.
-export function MentionMirror({ field, text, chips, composing = false }: {
+export function MentionMirror({
+  field,
+  text,
+  chips,
+  composing = false,
+}: {
   readonly field: RefObject<HTMLTextAreaElement | null>
   readonly text: string
   readonly chips: readonly MentionChip[]
@@ -112,11 +129,32 @@ export function MentionMirror({ field, text, chips, composing = false }: {
     observer.observe(input)
     input.addEventListener('scroll', sync)
     sync()
-    return () => { observer.disconnect(); input.removeEventListener('scroll', sync) }
+    return () => {
+      observer.disconnect()
+      input.removeEventListener('scroll', sync)
+    }
   }, [field])
-  return <div ref={mirror} className='bt-mention-mirror' {...(composing ? { 'data-composing': 'true' } : {})} aria-hidden='true'>{chipSegments(text, chips).map((segment, index) => (segment.kind === 'chip'
-      ? <span key={index} className='bt-mention-chip' data-kind={segment.chip.kind} style={inkOf(segment.chip)}>{`@${segment.chip.name}`}</span>
-      : h(Fragment, { key: index }, segment.text)))}{/* A textarea keeps the line box after a trailing newline; the mirror needs a grapheme to paint that last empty line. */}{text.endsWith('\n') ? '\u200b' : null}</div>
+  return (
+    <div
+      ref={mirror}
+      className='bt-mention-mirror'
+      {...(composing ? { 'data-composing': 'true' } : {})}
+      aria-hidden='true'>
+      {chipSegments(text, chips).map((segment, index) =>
+        segment.kind === 'chip' ? (
+          <span
+            key={index}
+            className='bt-mention-chip'
+            data-kind={segment.chip.kind}
+            style={inkOf(segment.chip)}>{`@${segment.chip.name}`}</span>
+        ) : (
+          h(Fragment, { key: index }, segment.text)
+        ),
+      )}
+      {/* A textarea keeps the line box after a trailing newline; the mirror needs a grapheme to paint that last empty line. */}
+      {text.endsWith('\n') ? '\u200b' : null}
+    </div>
+  )
 }
 
 // The layers' styles. Colors come from the theme tokens and each Bot's ink, radii from

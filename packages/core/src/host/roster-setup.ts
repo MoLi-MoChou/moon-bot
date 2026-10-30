@@ -14,7 +14,11 @@ export interface RosterSetup {
   createSession(title: string, options?: { readonly dir?: string }): Promise<string>
 }
 
-export function createRosterSetup({ ctx, rt, state }: {
+export function createRosterSetup({
+  ctx,
+  rt,
+  state,
+}: {
   readonly ctx: HostContext
   readonly rt: HostRuntime
   readonly state: StoredState
@@ -22,7 +26,10 @@ export function createRosterSetup({ ctx, rt, state }: {
   // The team folder is DS Bot's own: deleted, it is made again before a Session needs it.
   async function keepTeamFolder(): Promise<string | undefined> {
     const team = rt.teamFolder()
-    if (team !== undefined) await mkdir(team, { recursive: true }).catch(error => rt.warn('moon-bot: team folder %s not made again: %s', team, error))
+    if (team !== undefined)
+      await mkdir(team, { recursive: true }).catch(error =>
+        rt.warn('moon-bot: team folder %s not made again: %s', team, error),
+      )
     return team
   }
 
@@ -34,7 +41,8 @@ export function createRosterSetup({ ctx, rt, state }: {
     }
     const path = rt.defaultTeamFolder()
     await mkdir(path, { recursive: true })
-    const workspace = await ctx.workspaceRegistry.resolveByPath(path) ?? await ctx.workspaceRegistry.create(path, 'Moon Bot')
+    const workspace =
+      (await ctx.workspaceRegistry.resolveByPath(path)) ?? (await ctx.workspaceRegistry.create(path, 'Moon Bot'))
     state.workspaceId = workspace.id
     await rt.save()
     return workspace.id
@@ -57,10 +65,11 @@ export function createRosterSetup({ ctx, rt, state }: {
     // belong to no saved Bot.
     const readOnly = rt.readOnly()
     if (readOnly !== undefined) throw new Error(readOnly)
-    const usable = dir !== undefined && await rt.isFolder(dir)
-    if (dir !== undefined && !usable) rt.warn('moon-bot: the working folder %s is gone; %s starts in the team workspace', dir, title)
+    const usable = dir !== undefined && (await rt.isFolder(dir))
+    if (dir !== undefined && !usable)
+      rt.warn('moon-bot: the working folder %s is gone; %s starts in the team workspace', dir, title)
     const place = usable ? { cwd: dir } : { workspaceId: await ensureWorkspace() }
-    const { sessionId } = await ctx.sessionController.create({ ...place, ...await botPreset() })
+    const { sessionId } = await ctx.sessionController.create({ ...place, ...(await botPreset()) })
     const agent = await rt.resolveAgent(sessionId)
     await ctx.sessionTitle.rename(agent.session, title)
     return sessionId

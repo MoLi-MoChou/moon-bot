@@ -25,21 +25,39 @@ test('an install from before the rename keeps its marks, prefs and tabs', () => 
   storage.setItem('ds-bot:agent-sessions', '["s1"]')
   storage.setItem('ds-bot:browser-width', '600')
   storage.setItem('ds-bot:sidebar-order', '["room-1"]')
-  storage.setItem('ds-bot.browser.v2', '{"bot": {"tabs": [{"id":"t","url":"https://example.com/","title":"Example"}], "active":"t"}}')
+  storage.setItem(
+    'ds-bot.browser.v2',
+    '{"bot": {"tabs": [{"id":"t","url":"https://example.com/","title":"Example"}], "active":"t"}}',
+  )
 
   migrateStorage(storage)
 
   assert.equal(storage.getItem(STORAGE.unread), '{"room-1":true}')
   assert.equal(storage.getItem(STORAGE.reactions), '{"m1":"👍"}')
   assert.equal(storage.getItem(STORAGE.seen), '{"room-1":42}')
-  assert.deepEqual(JSON.parse(storage.getItem(STORAGE.prefs) ?? 'null'), { theme: 'claude', accent: '#123456', motion: 'quiet' })
+  assert.deepEqual(JSON.parse(storage.getItem(STORAGE.prefs) ?? 'null'), {
+    theme: 'claude',
+    accent: '#123456',
+    motion: 'quiet',
+  })
   assert.equal(storage.getItem(STORAGE.surface), 'agent')
   assert.equal(storage.getItem(STORAGE.agentSessions), '["s1"]')
   assert.equal(storage.getItem(STORAGE.browserWidth), '600')
   assert.equal(storage.getItem(STORAGE.sidebarOrder), '["room-1"]')
-  assert.deepEqual(JSON.parse(storage.getItem(STORAGE.browsers) ?? 'null'), { bot: { tabs: [{ id: 't', url: 'https://example.com/', title: 'Example' }], active: 't' } })
+  assert.deepEqual(JSON.parse(storage.getItem(STORAGE.browsers) ?? 'null'), {
+    bot: { tabs: [{ id: 't', url: 'https://example.com/', title: 'Example' }], active: 't' },
+  })
   // The old names are gone, so a later read never sees a stale copy.
-  for (const key of ['ds-bot:unread', 'ds-bot:reactions', 'ds-bot:seen', 'ds-bot:prefs', 'ds-bot:surface', 'ds-bot:agent-sessions', 'ds-bot:browser-width', 'ds-bot:sidebar-order']) {
+  for (const key of [
+    'ds-bot:unread',
+    'ds-bot:reactions',
+    'ds-bot:seen',
+    'ds-bot:prefs',
+    'ds-bot:surface',
+    'ds-bot:agent-sessions',
+    'ds-bot:browser-width',
+    'ds-bot:sidebar-order',
+  ]) {
     assert.equal(storage.getItem(key), null, `${key} is cleared`)
   }
   // A second load changes nothing: migration is one way and idempotent.

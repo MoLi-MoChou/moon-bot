@@ -1,25 +1,45 @@
-import { createElement as h } from 'react';
-import type { ReactNode } from 'react';
+import { createElement as h } from 'react'
+import type { ReactNode } from 'react'
 // The one action an empty state may offer: it must really do something here.
 export interface EmptyStateAction {
-    label: string;
-    icon?: ReactNode;
-    onClick: () => void;
+  label: string
+  icon?: ReactNode
+  onClick: () => void
 }
 export interface EmptyStateProps {
-    icon?: ReactNode;
-    art?: ReactNode;
-    title?: ReactNode;
-    hint?: ReactNode;
-    action?: EmptyStateAction;
-    compact?: boolean;
+  icon?: ReactNode
+  art?: ReactNode
+  title?: ReactNode
+  hint?: ReactNode
+  action?: EmptyStateAction
+  compact?: boolean
 }
 // One look for every list, panel and search that has nothing to show yet: a mark on
 // a soft accent disc, a title, a hint and at most one action. The action is only
 // passed when it really does something here; there is no inert button. `art` takes
 // the disc's place when the empty thing already has a face (a Bot's mark).
 export function EmptyState({ icon, art, title, hint, action, compact = false }: EmptyStateProps) {
-    return <div className='bt-es' data-compact={compact || undefined} role='status'>{art ? <span className='bt-es-art' aria-hidden>{art}</span> : icon ? <span className='bt-es-mark' aria-hidden>{icon}</span> : null}{title ? <span className='bt-es-title'>{title}</span> : null}{hint ? <span className='bt-es-hint'>{hint}</span> : null}{action ? <button type='button' className='bt-es-action' onClick={action.onClick}>{action.icon ?? null}{action.label}</button> : null}</div>;
+  return (
+    <div className='bt-es' data-compact={compact || undefined} role='status'>
+      {art ? (
+        <span className='bt-es-art' aria-hidden>
+          {art}
+        </span>
+      ) : icon ? (
+        <span className='bt-es-mark' aria-hidden>
+          {icon}
+        </span>
+      ) : null}
+      {title ? <span className='bt-es-title'>{title}</span> : null}
+      {hint ? <span className='bt-es-hint'>{hint}</span> : null}
+      {action ? (
+        <button type='button' className='bt-es-action' onClick={action.onClick}>
+          {action.icon ?? null}
+          {action.label}
+        </button>
+      ) : null}
+    </div>
+  )
 }
 export const EMPTY_STATE_CSS = `
 .bt-es{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;margin:auto;max-width:360px;padding:28px 16px;text-align:center;animation:bt-es-in .32s cubic-bezier(.16,1,.3,1) both}
@@ -42,4 +62,4 @@ export const EMPTY_STATE_CSS = `
 .bt-es-action:focus-visible{outline:2px solid var(--bt-accent);outline-offset:2px}
 @keyframes bt-es-in{from{opacity:0;transform:translateY(6px)}}
 @media (prefers-reduced-motion:reduce){.bt-es{animation:none}.bt-es-action{transition:none}}
-`;
+`

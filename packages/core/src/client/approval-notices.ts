@@ -1,7 +1,17 @@
 import { t } from './i18n.ts'
 
-interface ApprovalEntry { id: string; at?: number; tool?: string; botId: string; roomId?: string; sessionId?: string }
-export interface ApprovalWork { getSnapshot(): { approvals?: readonly ApprovalEntry[] }; subscribe(listener: () => void): () => void }
+interface ApprovalEntry {
+  id: string
+  at?: number
+  tool?: string
+  botId: string
+  roomId?: string
+  sessionId?: string
+}
+export interface ApprovalWork {
+  getSnapshot(): { approvals?: readonly ApprovalEntry[] }
+  subscribe(listener: () => void): () => void
+}
 export interface ApprovalRoster {
   getSnapshot(): {
     byId?: Record<string, { name?: string } | undefined>
@@ -20,7 +30,13 @@ export interface ApprovalNoticeOptions {
 // A system notification for each approval that starts waiting while this window is in
 // the background or shows another conversation. Only where the platform already allows
 // notifications: DS Bot never asks for the permission.
-export function noticeApprovals({ work, roster, shownSession, openSession, since = Date.now() }: ApprovalNoticeOptions): () => void {
+export function noticeApprovals({
+  work,
+  roster,
+  shownSession,
+  openSession,
+  since = Date.now(),
+}: ApprovalNoticeOptions): () => void {
   const told = new Set<string>()
   const notify = (): void => {
     const approvals = work.getSnapshot().approvals ?? []
@@ -37,10 +53,13 @@ export function noticeApprovals({ work, roster, shownSession, openSession, since
       if (document.visibilityState === 'visible' && shownSession() === place) continue
       const snapshot = roster.getSnapshot()
       const room = entry.roomId !== undefined ? snapshot.roomsById?.[entry.roomId] : undefined
-      const note = new Notification(t('{name} is waiting for your approval', { name: snapshot.byId?.[entry.botId]?.name ?? t('A Bot') }), {
-        body: [room?.name, entry.tool].filter(Boolean).join(' · '),
-        tag: `moon-bot-approval-${entry.id}`,
-      })
+      const note = new Notification(
+        t('{name} is waiting for your approval', { name: snapshot.byId?.[entry.botId]?.name ?? t('A Bot') }),
+        {
+          body: [room?.name, entry.tool].filter(Boolean).join(' · '),
+          tag: `moon-bot-approval-${entry.id}`,
+        },
+      )
       note.onclick = () => {
         window.focus()
         openSession(entry.roomId ?? entry.botId)

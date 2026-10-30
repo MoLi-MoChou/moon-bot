@@ -12,8 +12,8 @@ import type { EngineContentBlock } from '../events.ts'
 
 /** The tool surface a connector talks to: the SDK client's, loosened for tests. */
 interface ToolSurface {
-  list(): Promise<{ tools: readonly { name: string, description?: string, inputSchema?: unknown }[] }>
-  callTool(input: { name: string, arguments?: unknown }): Promise<{ content?: unknown, isError?: boolean }>
+  list(): Promise<{ tools: readonly { name: string; description?: string; inputSchema?: unknown }[] }>
+  callTool(input: { name: string; arguments?: unknown }): Promise<{ content?: unknown; isError?: boolean }>
   close(): Promise<void>
 }
 
@@ -47,9 +47,16 @@ export class McpConnector {
     const surface = (): ToolSurface => {
       const own = this.connect()
       return {
-        list: async () => (await (await own).listTools()) as unknown as { tools: readonly { name: string, description?: string, inputSchema?: unknown }[] },
-        callTool: async input => (await (await own).callTool(input as never)) as unknown as { content?: unknown, isError?: boolean },
-        close: async () => { await this.client?.close().catch(() => {}); this.client = undefined },
+        list: async () =>
+          (await (await own).listTools()) as unknown as {
+            tools: readonly { name: string; description?: string; inputSchema?: unknown }[]
+          },
+        callTool: async input =>
+          (await (await own).callTool(input as never)) as unknown as { content?: unknown; isError?: boolean },
+        close: async () => {
+          await this.client?.close().catch(() => {})
+          this.client = undefined
+        },
       }
     }
     this.tools = tools ?? surface()
@@ -69,11 +76,13 @@ export class McpConnector {
       await this.client.connect(new StreamableHTTPClientTransport(new URL(url), options))
       return this.client
     }
-    await this.client.connect(new StdioClientTransport({
-      command: this.spec.command ?? '',
-      args: [...(this.spec.args ?? [])],
-      ...(this.spec.env !== undefined ? { env: { ...process.env, ...this.spec.env } as Record<string, string> } : {}),
-    }))
+    await this.client.connect(
+      new StdioClientTransport({
+        command: this.spec.command ?? '',
+        args: [...(this.spec.args ?? [])],
+        ...(this.spec.env !== undefined ? { env: { ...process.env, ...this.spec.env } as Record<string, string> } : {}),
+      }),
+    )
     return this.client
   }
 
@@ -83,19 +92,26 @@ export class McpConnector {
     const tools = listed.tools
     return tools.flatMap((tool): readonly ToolEntry[] => {
       if (typeof tool?.name !== 'string' || tool.name === '') return []
-      const schema = tool.inputSchema !== null && typeof tool.inputSchema === 'object' && !Array.isArray(tool.inputSchema)
-        ? tool.inputSchema as Readonly<Record<string, unknown>>
-        : { type: 'object', properties: {} }
+      const schema =
+        tool.inputSchema !== null && typeof tool.inputSchema === 'object' && !Array.isArray(tool.inputSchema)
+          ? (tool.inputSchema as Readonly<Record<string, unknown>>)
+          : { type: 'object', properties: {} }
       const name = `mcp__${this.spec.id}__${tool.name}`
-      const description = typeof tool.description === 'string' && tool.description !== '' ? tool.description : `${this.spec.id} tool ${tool.name}`
-      return [{
-        name,
-        description,
-        parameters: schema,
-        // The server validates its own input; the registry's schema passes it through.
-        schema: z.record(z.unknown()),
-        execute: async (input: Readonly<Record<string, unknown>>): Promise<ToolOutcome | string> => this.call(tool.name, input),
-      }] as unknown as readonly ToolEntry[]
+      const description =
+        typeof tool.description === 'string' && tool.description !== ''
+          ? tool.description
+          : `${this.spec.id} tool ${tool.name}`
+      return [
+        {
+          name,
+          description,
+          parameters: schema,
+          // The server validates its own input; the registry's schema passes it through.
+          schema: z.record(z.unknown()),
+          execute: async (input: Readonly<Record<string, unknown>>): Promise<ToolOutcome | string> =>
+            this.call(tool.name, input),
+        },
+      ] as unknown as readonly ToolEntry[]
     })
   }
 
@@ -106,12 +122,13 @@ export class McpConnector {
         const result = await this.tools.callTool({ name: tool, arguments: input })
         const blocks: EngineContentBlock[] = Array.isArray(result.content)
           ? result.content.flatMap(block => {
-            const view = block as { type?: unknown, text?: unknown }
-            return view?.type === 'text' && typeof view.text === 'string' ? [{ type: 'text', text: view.text }] : []
-          })
+              const view = block as { type?: unknown; text?: unknown }
+              return view?.type === 'text' && typeof view.text === 'string' ? [{ type: 'text', text: view.text }] : []
+            })
           : []
-        let text = blocks.map(block => block.type === 'text' ? block.text : '').join('\n')
-        if (text.length > RESULT_CHARS) text = `${text.slice(0, RESULT_CHARS)}\n… (${String(text.length - RESULT_CHARS)} more characters cut)`
+        let text = blocks.map(block => (block.type === 'text' ? block.text : '')).join('\n')
+        if (text.length > RESULT_CHARS)
+          text = `${text.slice(0, RESULT_CHARS)}\n… (${String(text.length - RESULT_CHARS)} more characters cut)`
         return {
           content: text === '' ? [] : [{ type: 'text', text }],
           ...(result.isError === true ? { isError: true } : {}),
@@ -122,7 +139,15 @@ export class McpConnector {
           await this.tools.close().catch(() => {})
           continue
         }
-        return { content: [{ type: 'text', text: `${this.spec.id}.${tool} failed: ${error instanceof Error ? error.message : String(error)}` }], isError: true }
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `${this.spec.id}.${tool} failed: ${error instanceof Error ? error.message : String(error)}`,
+            },
+          ],
+          isError: true,
+        }
       }
     }
   }

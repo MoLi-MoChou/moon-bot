@@ -38,7 +38,8 @@ const userVersion = (db: Database.Database): number => {
 
 const applyMigrations = (db: Database.Database): void => {
   const from = userVersion(db)
-  if (from > MIGRATIONS.length) throw new Error(`store schema is newer than this code knows (v${from} > v${MIGRATIONS.length})`)
+  if (from > MIGRATIONS.length)
+    throw new Error(`store schema is newer than this code knows (v${from} > v${MIGRATIONS.length})`)
   db.transaction(() => {
     for (let index = from; index < MIGRATIONS.length; index += 1) {
       const migration = MIGRATIONS[index]
@@ -51,7 +52,10 @@ const applyMigrations = (db: Database.Database): void => {
 /** Opens (and if needed creates) the team store at `<home>/store.sqlite3`. */
 export function openStore(home: string, options: { readonly file?: string; readonly readonly?: boolean } = {}): Store {
   mkdirSync(home, { recursive: true })
-  const db = new Database(join(home, options.file ?? 'store.sqlite3'), options.readonly === true ? { readonly: true } : {})
+  const db = new Database(
+    join(home, options.file ?? 'store.sqlite3'),
+    options.readonly === true ? { readonly: true } : {},
+  )
   db.pragma('journal_mode = WAL')
   db.pragma('foreign_keys = ON')
   applyMigrations(db)

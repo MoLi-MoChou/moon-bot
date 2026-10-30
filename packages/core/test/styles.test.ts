@@ -17,30 +17,48 @@ const { outputFiles } = await build({
     contents: "export { installStyles, installCompiledStyles } from './src/client/design/index.ts'",
     resolveDir: PLUGIN,
   },
-  bundle: true, format: 'cjs', platform: 'browser', write: false, logLevel: 'silent',
+  bundle: true,
+  format: 'cjs',
+  platform: 'browser',
+  write: false,
+  logLevel: 'silent',
   external: ['react', 'react-dom'],
 })
 const react = {
-  createElement: (type, props, ...children) => ({ type, props: { ...props, children } }), Fragment: Symbol('Fragment'),
-  useEffect() {}, useLayoutEffect() {}, useState: initial => [initial, () => {}],
-  useMemo: make => make(), useRef: current => ({ current }), useId: () => 'id',
+  createElement: (type, props, ...children) => ({ type, props: { ...props, children } }),
+  Fragment: Symbol('Fragment'),
+  useEffect() {},
+  useLayoutEffect() {},
+  useState: initial => [initial, () => {}],
+  useMemo: make => make(),
+  useRef: current => ({ current }),
+  useId: () => 'id',
 }
 
 const tick = () => new Promise(resolve => setImmediate(resolve))
 // The app's style tags in a document, all of them or those of one group.
-const tagged = (document, tag?) => [...document.head.querySelectorAll('style')]
-  .filter(style => style.dataset.moonBot !== undefined && (tag === undefined || style.dataset.moonBot === tag))
+const tagged = (document, tag?) =>
+  [...document.head.querySelectorAll('style')].filter(
+    style => style.dataset.moonBot !== undefined && (tag === undefined || style.dataset.moonBot === tag),
+  )
 
 // A fresh jsdom document with the bundled style helpers bound to it.
 const bench = () => {
   const { window } = new JSDOM('<!doctype html><html><head></head><body></body></html>')
-  const module = { exports: {} as { installStyles: (css: string, tag: string) => { dataset: Record<string, string>, isConnected: boolean }, installCompiledStyles: (css: string, tag: string) => () => void } }
+  const module = {
+    exports: {} as {
+      installStyles: (css: string, tag: string) => { dataset: Record<string, string>; isConnected: boolean }
+      installCompiledStyles: (css: string, tag: string) => () => void
+    },
+  }
   runInNewContext(outputFiles[0].text, {
-    module, exports: module.exports,
+    module,
+    exports: module.exports,
     document: window.document,
     MutationObserver: window.MutationObserver,
     HTMLLinkElement: window.HTMLLinkElement,
-    setTimeout, clearTimeout,
+    setTimeout,
+    clearTimeout,
     require: name => (name === 'react' ? react : {}),
   })
   return { window, module }

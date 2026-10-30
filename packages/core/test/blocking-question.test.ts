@@ -15,7 +15,16 @@ const team = () => ({
     chief: { id: 'chief', sessionId: 'chief', name: 'Chief', role: 'Lead', instructions: '', createdAt: 1 },
     writer: { id: 'writer', sessionId: 'writer', name: 'Writer', role: 'Write', instructions: '', createdAt: 2 },
   },
-  rooms: { room: { id: 'room', name: 'Desk', members: ['chief', 'writer'], sessions: { writer: 'room-writer' }, admin: 'chief', mode: 'everyone' } },
+  rooms: {
+    room: {
+      id: 'room',
+      name: 'Desk',
+      members: ['chief', 'writer'],
+      sessions: { writer: 'room-writer' },
+      admin: 'chief',
+      mode: 'everyone',
+    },
+  },
   agents: { dsh: { id: 'dsh', name: 'DSH Agent', sessions: ['plain'], createdAt: 3 } },
   exchanges: [],
   exchangeTurns: {},
@@ -25,7 +34,13 @@ const team = () => ({
 
 // dsh keeps one Agent per Session and fires agent/created, waiting for its listeners,
 // the first time a Session resolves one. restrict() calls are recorded per Session.
-async function setup({ served = ['read', 'ask_user', QUESTION], goals }: { served?: readonly string[], goals?: unknown } = {}) {
+async function setup({
+  served = ['read', 'ask_user', QUESTION],
+  goals,
+}: {
+  served?: readonly string[]
+  goals?: unknown
+} = {}) {
   const home = mkdtempSync(join(tmpdir(), 'ds-bot-blocking-question-'))
   writeFileSync(join(home, 'state.json'), JSON.stringify(team()))
   const ctx = fakeContext({ services: goals === undefined ? {} : { goals } })
@@ -34,13 +49,18 @@ async function setup({ served = ['read', 'ask_user', QUESTION], goals }: { serve
   const sent = []
   let sessions = 0
   const created = agent => Promise.all((ctx.listeners.get('agent/created') ?? []).map(listener => listener({ agent })))
-  const agentFor = async (id) => {
+  const agentFor = async id => {
     if (agents.has(id)) return agents.get(id)
     const agent = {
       id,
       session: { id },
       ctx: {
-        tools: { restrict: (filter) => { hidden.push([id, [...filter.deny]]); return () => {} } },
+        tools: {
+          restrict: filter => {
+            hidden.push([id, [...filter.deny]])
+            return () => {}
+          },
+        },
         effect: execute => execute(),
       },
       followup: message => sent.push({ sessionId: id, message }),
@@ -72,7 +92,10 @@ async function setup({ served = ['read', 'ask_user', QUESTION], goals }: { serve
   })
   const rt = createRuntime(ctx, { home, github: false, diagnosticsFile: false })
   await rt.load()
-  const guard = (name, sessionId) => ctx.guards.map(check => check({ name, agent: sessionId === undefined ? undefined : { id: sessionId } })).find(reason => reason !== undefined)
+  const guard = (name, sessionId) =>
+    ctx.guards
+      .map(check => check({ name, agent: sessionId === undefined ? undefined : { id: sessionId } }))
+      .find(reason => reason !== undefined)
   const hiddenIn = id => hidden.filter(([sessionId, deny]) => sessionId === id && deny.includes(QUESTION))
   const stop = async () => {
     await ctx.dispose()
@@ -102,11 +125,14 @@ function goalService() {
 const startGoal = (ctx, goals, sessionId) => {
   const goal = { id: `goal-${sessionId}`, revision: 1, objective: 'Ship it', phase: 'active', maxGoalRounds: 256 }
   goals?.current.set(sessionId, goal)
-  const event = { type: 'goal/change', data: { kind: 'goal/change', version: 1, operation: 'create', goal, roundsStarted: 0, createdAt: 1, updatedAt: 1 } }
+  const event = {
+    type: 'goal/change',
+    data: { kind: 'goal/change', version: 1, operation: 'create', goal, roundsStarted: 0, createdAt: 1, updatedAt: 1 },
+  }
   for (const listener of ctx.listeners.get('session/event') ?? []) listener({ id: sessionId }, event)
 }
 
-const until = async (check) => {
+const until = async check => {
   const end = Date.now() + 2000
   while (!check()) {
     if (Date.now() > end) throw new Error('until: the condition did not hold within 2 s')
@@ -114,7 +140,7 @@ const until = async (check) => {
   }
 }
 
-test('a Bot\'s own chat and its group Session lose dsh\'s blocking question tool; other Sessions keep it', async (t) => {
+test("a Bot's own chat and its group Session lose dsh's blocking question tool; other Sessions keep it", async t => {
   const { agentFor, hidden, hiddenIn, stop } = await setup()
   t.after(stop)
   for (const id of ['chief', 'writer', 'room-writer', 'plain', 'elsewhere']) await agentFor(id)
@@ -124,10 +150,11 @@ test('a Bot\'s own chat and its group Session lose dsh\'s blocking question tool
   assert.deepEqual(hiddenIn('plain'), [])
   assert.deepEqual(hiddenIn('elsewhere'), [])
   // The mask names only that tool, never Moon Bot's own ask_user.
-  for (const [sessionId, deny] of hidden.filter(([id]) => id !== 'plain')) assert.deepEqual([sessionId, deny], [sessionId, [QUESTION]])
+  for (const [sessionId, deny] of hidden.filter(([id]) => id !== 'plain'))
+    assert.deepEqual([sessionId, deny], [sessionId, [QUESTION]])
 })
 
-test('resolving a Bot\'s Agent again does not hide the tool twice', async (t) => {
+test("resolving a Bot's Agent again does not hide the tool twice", async t => {
   const { rt, hiddenIn, stop } = await setup()
   t.after(stop)
   await rt.resolveAgent('writer')
@@ -136,7 +163,7 @@ test('resolving a Bot\'s Agent again does not hide the tool twice', async (t) =>
   assert.equal(hiddenIn('writer').length, 1)
 })
 
-test('a profile without the tool gets no mask, which restrict() would refuse', async (t) => {
+test('a profile without the tool gets no mask, which restrict() would refuse', async t => {
   const { agentFor, hidden, guard, stop } = await setup({ served: ['read', 'ask_user'] })
   t.after(stop)
   await agentFor('writer')
@@ -145,10 +172,11 @@ test('a profile without the tool gets no mask, which restrict() would refuse', a
   assert.match(guard(QUESTION, 'writer'), /Bots cannot use ask_user_question/)
 })
 
-test('the guard refuses the blocking question tool in Bot Sessions only', async (t) => {
+test('the guard refuses the blocking question tool in Bot Sessions only', async t => {
   const { guard, stop } = await setup()
   t.after(stop)
-  for (const sessionId of ['chief', 'writer', 'room-writer']) assert.match(guard(QUESTION, sessionId), /Ask with ask_user in your own chat, or ask in your reply\./)
+  for (const sessionId of ['chief', 'writer', 'room-writer'])
+    assert.match(guard(QUESTION, sessionId), /Ask with ask_user in your own chat, or ask in your reply\./)
   for (const sessionId of ['plain', 'elsewhere', undefined]) assert.equal(guard(QUESTION, sessionId), undefined)
   assert.equal(guard('ask_user', 'writer'), undefined)
   assert.equal(guard('read', 'writer'), undefined)
@@ -157,10 +185,14 @@ test('the guard refuses the blocking question tool in Bot Sessions only', async 
 // FeiZhuLulu/DeepSeek-Bot#77: a new Bot told never to use a question tool was opened
 // with "use ask_user", and a model that picked dsh's ask_user_question for it held the
 // Bot until the card was answered, with other Bots' messages queued behind it.
-test('a new Bot that rules out question tools opens without one and cannot block on dsh\'s', async (t) => {
+test("a new Bot that rules out question tools opens without one and cannot block on dsh's", async t => {
   const { rt, hiddenIn, guard, sent, stop } = await setup()
   t.after(stop)
-  const receiver = await rt.createBot({ name: 'Receiver', instructions: 'Never use ask_user or any question tool.', createdBy: 'chief' })
+  const receiver = await rt.createBot({
+    name: 'Receiver',
+    instructions: 'Never use ask_user or any question tool.',
+    createdBy: 'chief',
+  })
   await until(() => sent.some(entry => entry.sessionId === receiver.id))
   const kickoff = sent.find(entry => entry.sessionId === receiver.id).message.content[0].text
   assert.doesNotMatch(kickoff, /ask_user|allowCustom/)
@@ -172,18 +204,23 @@ test('a new Bot that rules out question tools opens without one and cannot block
 
 // MoLi-MoChou/moon-bot#133: /goal in a group chat started DSH's goal rounds, which the
 // group never answered, so round after round ran and showed the raw goal prompt.
-test('a Bot\'s chat and its group Sessions lose the goal tools; other Sessions keep them', async (t) => {
-  const { agentFor, hidden, stop } = await setup({ served: ['read', 'ask_user', QUESTION, 'create_goal', 'update_goal', 'get_goal'] })
+test("a Bot's chat and its group Sessions lose the goal tools; other Sessions keep them", async t => {
+  const { agentFor, hidden, stop } = await setup({
+    served: ['read', 'ask_user', QUESTION, 'create_goal', 'update_goal', 'get_goal'],
+  })
   t.after(stop)
   for (const id of ['chief', 'room-writer', 'plain']) await agentFor(id)
   // A DSH Agent Session ('plain') has its own mask, which leaves the goal tools.
-  assert.deepEqual(hidden.filter(([, deny]) => deny.includes('create_goal')), [
-    ['chief', [QUESTION, 'create_goal', 'update_goal', 'get_goal']],
-    ['room-writer', [QUESTION, 'create_goal', 'update_goal', 'get_goal']],
-  ])
+  assert.deepEqual(
+    hidden.filter(([, deny]) => deny.includes('create_goal')),
+    [
+      ['chief', [QUESTION, 'create_goal', 'update_goal', 'get_goal']],
+      ['room-writer', [QUESTION, 'create_goal', 'update_goal', 'get_goal']],
+    ],
+  )
 })
 
-test('a goal started in a Bot chat or a group is blocked; one elsewhere runs', async (t) => {
+test('a goal started in a Bot chat or a group is blocked; one elsewhere runs', async t => {
   const goals = goalService()
   const { ctx, agentFor, stop } = await setup({ goals })
   t.after(stop)
@@ -194,12 +231,19 @@ test('a goal started in a Bot chat or a group is blocked; one elsewhere runs', a
   assert.deepEqual(goals.blocked, [])
   await until(() => goals.blocked.length === 3)
   await new Promise(resolve => setTimeout(resolve, 20))
-  assert.deepEqual(goals.blocked.map(entry => entry.sessionId), ['writer', 'room', 'room-writer'])
-  for (const entry of goals.blocked) assert.deepEqual([entry.code, entry.message], ['not-supported', 'Moon Bot does not run goals. Ask the Bot in a message instead.'])
+  assert.deepEqual(
+    goals.blocked.map(entry => entry.sessionId),
+    ['writer', 'room', 'room-writer'],
+  )
+  for (const entry of goals.blocked)
+    assert.deepEqual(
+      [entry.code, entry.message],
+      ['not-supported', 'Moon Bot does not run goals. Ask the Bot in a message instead.'],
+    )
   assert.equal(goals.current.get('plain').phase, 'active')
 })
 
-test('without DSH\'s goal service a goal change is left alone', async (t) => {
+test("without DSH's goal service a goal change is left alone", async t => {
   const { ctx, rt, agentFor, stop } = await setup()
   t.after(stop)
   const warnings = []

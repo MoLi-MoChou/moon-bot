@@ -39,21 +39,25 @@ interface Review {
 }
 
 interface PreAuthReader {
-  proactiveRules?(): {
-    readonly rulesForBot: (botId: string) => readonly Record<string, unknown>[]
-    readonly add: (input: Record<string, unknown>) => Record<string, unknown>
-    readonly revoke: (id: string) => boolean
-    readonly auditOf: (ruleId: string) => readonly Record<string, unknown>[]
-  } | undefined
+  proactiveRules?():
+    | {
+        readonly rulesForBot: (botId: string) => readonly Record<string, unknown>[]
+        readonly add: (input: Record<string, unknown>) => Record<string, unknown>
+        readonly revoke: (id: string) => boolean
+        readonly auditOf: (ruleId: string) => readonly Record<string, unknown>[]
+      }
+    | undefined
 }
 
 interface ProactiveReader {
-  proactiveStore?(): {
-    readonly subscriptionsOf: (botId: string) => readonly ProactiveEntry[]
-    readonly addSubscription: (input: Record<string, unknown>) => ProactiveEntry
-    readonly setEnabled: (id: string, enabled: boolean) => boolean
-    readonly removeSubscription: (id: string) => boolean
-  } | undefined
+  proactiveStore?():
+    | {
+        readonly subscriptionsOf: (botId: string) => readonly ProactiveEntry[]
+        readonly addSubscription: (input: Record<string, unknown>) => ProactiveEntry
+        readonly setEnabled: (id: string, enabled: boolean) => boolean
+        readonly removeSubscription: (id: string) => boolean
+      }
+    | undefined
   proactiveReview?(botId: string): Promise<Review>
 }
 
@@ -74,15 +78,17 @@ export function proactiveHandlers(rt: ChannelRuntime): ChannelHandlers {
   const reader = rt as unknown as ProactiveReader
   const storeOf = () => reader.proactiveStore?.()
   const handlers: Partial<Record<string, ChannelHandler>> = {
-    'proactive-subscriptions': async (body) => {
+    'proactive-subscriptions': async body => {
       await rt.load()
       const store = storeOf()
       if (store === undefined) return fail('Proactive messages are turned off on this host', 'bot/unavailable')
       const botId = String(body.botId ?? '')
       if (botId === '') return fail('Say which Bot these are for', 'bot/invalid')
-      return ok({ subscriptions: store.subscriptionsOf(botId).map(item => entry(item as unknown as Record<string, unknown>)) })
+      return ok({
+        subscriptions: store.subscriptionsOf(botId).map(item => entry(item as unknown as Record<string, unknown>)),
+      })
     },
-    'proactive-subscribe': async (body) => {
+    'proactive-subscribe': async body => {
       await rt.load()
       const store = storeOf()
       if (store === undefined) return fail('Proactive messages are turned off on this host', 'bot/unavailable')
@@ -106,7 +112,7 @@ export function proactiveHandlers(rt: ChannelRuntime): ChannelHandlers {
       })
       return ok({ subscription: entry(made as unknown as Record<string, unknown>) })
     },
-    'proactive-unsubscribe': async (body) => {
+    'proactive-unsubscribe': async body => {
       await rt.load()
       const store = storeOf()
       if (store === undefined) return fail('Proactive messages are turned off on this host', 'bot/unavailable')
@@ -114,7 +120,7 @@ export function proactiveHandlers(rt: ChannelRuntime): ChannelHandlers {
       if (id === '') return fail('Say which subscription', 'bot/invalid')
       return ok({ removed: store.removeSubscription(id) })
     },
-    'proactive-enable': async (body) => {
+    'proactive-enable': async body => {
       await rt.load()
       const store = storeOf()
       if (store === undefined) return fail('Proactive messages are turned off on this host', 'bot/unavailable')
@@ -124,7 +130,7 @@ export function proactiveHandlers(rt: ChannelRuntime): ChannelHandlers {
       // the user can turn it back on when they want it again.
       return ok({ enabled: store.setEnabled(id, body.enabled !== false) })
     },
-    'proactive-stats': async (body) => {
+    'proactive-stats': async body => {
       await rt.load()
       const stats = (rt as unknown as { proactiveStats?: (since: number) => Record<string, number> }).proactiveStats
       if (stats === undefined) return fail('Proactive messages are turned off on this host', 'bot/unavailable')
@@ -134,7 +140,7 @@ export function proactiveHandlers(rt: ChannelRuntime): ChannelHandlers {
       const since = Date.now() - days * 24 * 60 * 60_000
       return ok({ ...stats(since), since })
     },
-    'proactive-preauth-list': async (body) => {
+    'proactive-preauth-list': async body => {
       await rt.load()
       const rules = (rt as unknown as PreAuthReader).proactiveRules?.()
       if (rules === undefined) return fail('Pre-authorised rules are turned off on this host', 'bot/unavailable')
@@ -144,7 +150,7 @@ export function proactiveHandlers(rt: ChannelRuntime): ChannelHandlers {
         rules: rules.rulesForBot(botId).map(rule => ({ ...rule, audit: rules.auditOf(String(rule.id)) })),
       })
     },
-    'proactive-preauth-write': async (body) => {
+    'proactive-preauth-write': async body => {
       await rt.load()
       const rules = (rt as unknown as PreAuthReader).proactiveRules?.()
       if (rules === undefined) return fail('Pre-authorised rules are turned off on this host', 'bot/unavailable')
@@ -169,13 +175,13 @@ export function proactiveHandlers(rt: ChannelRuntime): ChannelHandlers {
       })
       return ok({ rule: made })
     },
-    'proactive-preauth-revoke': async (body) => {
+    'proactive-preauth-revoke': async body => {
       await rt.load()
       const rules = (rt as unknown as PreAuthReader).proactiveRules?.()
       if (rules === undefined) return fail('Pre-authorised rules are turned off on this host', 'bot/unavailable')
       return ok({ revoked: rules.revoke(String(body.id ?? '')) })
     },
-    'proactive-review': async (body) => {
+    'proactive-review': async body => {
       await rt.load()
       const review = reader.proactiveReview
       if (review === undefined) return fail('Proactive messages are turned off on this host', 'bot/unavailable')

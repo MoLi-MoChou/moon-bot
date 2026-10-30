@@ -11,7 +11,8 @@ const WHERE = {
 export function archProblem({ target, platform, host = process.arch, targets = [] }) {
   // electron-builder packs a universal app one architecture at a time: the hook only sees the
   // inner x64/arm64 builds, so a universal request is known from the requested targets.
-  if (target === 'universal' || targets.includes('universal')) return 'A universal app would need the native modules of both architectures. Build one app per architecture.'
+  if (target === 'universal' || targets.includes('universal'))
+    return 'A universal app would need the native modules of both architectures. Build one app per architecture.'
   if (target === host) return undefined
   const where = WHERE[platform]?.[target] ?? `with an ${target} Node`
   return `This Node runs on ${host}, so pnpm installed ${host} native modules, and an ${target} app with them would not start. Install the dependencies and build ${where}.`

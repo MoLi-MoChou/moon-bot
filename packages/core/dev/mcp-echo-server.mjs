@@ -1,19 +1,25 @@
 import { createInterface } from 'node:readline'
 
 const send = message => process.stdout.write(`${JSON.stringify(message)}\n`)
-const tools = [{
-  name: 'echo',
-  description: 'Return the supplied text.',
-  inputSchema: {
-    type: 'object',
-    properties: { text: { type: 'string' } },
-    required: ['text'],
+const tools = [
+  {
+    name: 'echo',
+    description: 'Return the supplied text.',
+    inputSchema: {
+      type: 'object',
+      properties: { text: { type: 'string' } },
+      required: ['text'],
+    },
   },
-}]
+]
 
 for await (const line of createInterface({ input: process.stdin })) {
   let request
-  try { request = JSON.parse(line) } catch { continue }
+  try {
+    request = JSON.parse(line)
+  } catch {
+    continue
+  }
   if (!request || request.id === undefined) continue
   let result
   switch (request.method) {

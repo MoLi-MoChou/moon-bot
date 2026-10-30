@@ -23,7 +23,15 @@ export interface ProactiveSubscription {
 export interface ProactiveInstall {
   readonly deps: ProactiveDeps
   /** Hands a prepared message to a Session's engine; false when it cannot take one. */
-  readonly hand?: ((sessionId: string, message: { readonly content: readonly { readonly type: 'text', readonly text: string }[], readonly source: { readonly kind: 'proactive', readonly subscriptionId: string, readonly candidateId: string } }) => boolean) | undefined
+  readonly hand?:
+    | ((
+        sessionId: string,
+        message: {
+          readonly content: readonly { readonly type: 'text'; readonly text: string }[]
+          readonly source: { readonly kind: 'proactive'; readonly subscriptionId: string; readonly candidateId: string }
+        },
+      ) => boolean)
+    | undefined
   /** Every subscription of a Bot, enabled or not, for the settings surface. */
   readonly listOf: (botId: string) => readonly ProactiveSubscription[]
   readonly add: (input: Record<string, unknown>) => ProactiveSubscription
@@ -53,5 +61,7 @@ export function install(rt: HostRuntime, install: ProactiveInstall): void {
 }
 
 /** Called once at install time so the service can share the same reads. */
-export const reviewWith = (rt: HostRuntime, deps: ProactiveDeps) =>
-  async (botId: string): Promise<Review> => await review(rt, deps, botId)
+export const reviewWith =
+  (rt: HostRuntime, deps: ProactiveDeps) =>
+  async (botId: string): Promise<Review> =>
+    await review(rt, deps, botId)

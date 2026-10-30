@@ -7,7 +7,7 @@ import type { Disposer } from '../host/host-types.js'
 
 /** A history page request, as the host's pagers ask it. */
 export interface PageRequest {
-  readonly address: { readonly kind: string, readonly sessionId: string }
+  readonly address: { readonly kind: string; readonly sessionId: string }
   readonly throughSeq?: number | undefined
   readonly beforeSeq?: number | undefined
   readonly maxMessages?: number | undefined
@@ -15,7 +15,10 @@ export interface PageRequest {
 
 /** A history page answer: session events with their sequence numbers. */
 export interface PageAnswer {
-  readonly records: readonly { readonly seq: number, readonly event: { readonly type: string, readonly time?: number, readonly data?: unknown } }[]
+  readonly records: readonly {
+    readonly seq: number
+    readonly event: { readonly type: string; readonly time?: number; readonly data?: unknown }
+  }[]
   readonly hasMore: boolean
 }
 
@@ -85,11 +88,20 @@ export class ServiceContext {
 
   get = <T>(name: string): T | undefined => this.services[name] as T | undefined
 
-  on = (name: string, listener: (payload: unknown, second: unknown) => unknown, options?: { readonly prepend?: boolean }): Disposer => {
+  on = (
+    name: string,
+    listener: (payload: unknown, second: unknown) => unknown,
+    options?: { readonly prepend?: boolean },
+  ): Disposer => {
     const entry = { name, run: listener }
     const list = this.listeners.get(name) ?? []
     this.listeners.set(name, options?.prepend === true ? [entry, ...list] : [...list, entry])
-    return () => { this.listeners.set(name, (this.listeners.get(name) ?? []).filter(item => item !== entry)) }
+    return () => {
+      this.listeners.set(
+        name,
+        (this.listeners.get(name) ?? []).filter(item => item !== entry),
+      )
+    }
   }
 
   /** Fans an event out in registration order; middleware (with `next`) is not used here. */
@@ -112,14 +124,23 @@ export class ServiceContext {
     const first = names[0]
     if (first === undefined) return
     const service = this.services[first]
-    if (service !== undefined) inject({ [first]: service, effect: (execute: () => (() => void) | void) => { const dispose = execute(); if (typeof dispose === 'function') this.disposers.push(dispose) } })
+    if (service !== undefined)
+      inject({
+        [first]: service,
+        effect: (execute: () => (() => void) | void) => {
+          const dispose = execute()
+          if (typeof dispose === 'function') this.disposers.push(dispose)
+        },
+      })
   }
 
   readonly connection = {
     fetch: {
       register: (route: FetchRoute): (() => void) => {
         this.routes.set(route.path, route)
-        return () => { this.routes.delete(route.path) }
+        return () => {
+          this.routes.delete(route.path)
+        }
       },
     },
   }
@@ -128,7 +149,9 @@ export class ServiceContext {
     register: (tool: unknown): (() => void) => {
       const name = (tool as { name?: string }).name ?? ''
       this.registeredTools.set(name, tool)
-      return () => { this.registeredTools.delete(name) }
+      return () => {
+        this.registeredTools.delete(name)
+      }
     },
     guard: (): (() => void) => () => {},
     schemas: (): readonly unknown[] => [],
@@ -138,7 +161,9 @@ export class ServiceContext {
     section: (section: unknown): (() => void) => {
       const name = (section as { name?: string }).name ?? ''
       this.sections.set(name, section)
-      return () => { this.sections.delete(name) }
+      return () => {
+        this.sections.delete(name)
+      }
     },
   }
 
@@ -170,9 +195,15 @@ export class ServiceContext {
     },
     // A user message into a session: the host queued it in the inbox; the standalone engine
     // takes it as the turn's trigger, with the user source the route expects.
-    prompt: async (input: { readonly sessionId: string, readonly content: readonly unknown[], readonly mode?: string }, signal?: AbortSignal): Promise<void> => {
+    prompt: async (
+      input: { readonly sessionId: string; readonly content: readonly unknown[]; readonly mode?: string },
+      signal?: AbortSignal,
+    ): Promise<void> => {
       if (this.agentOf === undefined) throw Object.assign(new Error('Session unavailable'), { code: 'bot/unavailable' })
-      const agent = await this.agentOf(input.sessionId) as { followup?(message: unknown): void, steer?(message: unknown): void }
+      const agent = (await this.agentOf(input.sessionId)) as {
+        followup?(message: unknown): void
+        steer?(message: unknown): void
+      }
       const message = { content: input.content, source: { kind: 'user' } }
       if (input.mode === 'steer') agent.steer?.(message)
       else agent.followup?.(message)
@@ -185,7 +216,7 @@ export class ServiceContext {
   readonly workspaceRegistry = {
     get: (): undefined => undefined,
     resolveByPath: async (): Promise<undefined> => undefined,
-    create: async (path: string): Promise<{ id: string, path: string }> => ({ id: path, path }),
+    create: async (path: string): Promise<{ id: string; path: string }> => ({ id: path, path }),
     archiveSession: async (): Promise<void> => {},
   }
 
@@ -202,7 +233,11 @@ export class ServiceContext {
   /** Runs every disposer, in reverse registration order. */
   async dispose(): Promise<void> {
     for (const dispose of this.disposers.splice(0).reverse()) {
-      try { dispose() } catch { /* a failing cleanup does not stop the others */ }
+      try {
+        dispose()
+      } catch {
+        /* a failing cleanup does not stop the others */
+      }
     }
   }
 }

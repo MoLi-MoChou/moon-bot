@@ -12,9 +12,10 @@ export interface LocaleService {
   readonly bind: (namespace: string) => (key: string, params?: Params) => string
 }
 
-const fill = (text: string, params: Params | undefined): string => (params === undefined
-  ? text
-  : text.replace(/\{(\w+)\}/g, (match: string, name: string) => (name in params ? String(params[name]) : match)))
+const fill = (text: string, params: Params | undefined): string =>
+  params === undefined
+    ? text
+    : text.replace(/\{(\w+)\}/g, (match: string, name: string) => (name in params ? String(params[name]) : match))
 
 export function createLocale(tag: string): LocaleService {
   const active: Language = /^zh\b/iu.test(tag) ? 'zh' : 'en'
@@ -24,7 +25,9 @@ export function createLocale(tag: string): LocaleService {
     register(namespace, language, dictionary) {
       const key = `${namespace}:${language}`
       dictionaries.set(key, dictionary)
-      return () => { dictionaries.delete(key) }
+      return () => {
+        dictionaries.delete(key)
+      }
     },
     bind: namespace => (key, params) => fill(dictionaries.get(`${namespace}:${active}`)?.[key] ?? key, params),
   }

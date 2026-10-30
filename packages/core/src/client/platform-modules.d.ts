@@ -1,8 +1,13 @@
 // The Desktop bridge the window may carry; the Web build has no such member.
-interface Window { dshDesktop?: DshDesktopBridge; dsBotApp?: DsBotAppBridge }
+interface Window {
+  dshDesktop?: DshDesktopBridge
+  dsBotApp?: DsBotAppBridge
+}
 // The Web Speech API, which the composer's dictation uses. TypeScript's DOM lib does
 // not declare it; only the members this client reads are named.
-interface SpeechRecognitionAlternativeLike { readonly transcript: string }
+interface SpeechRecognitionAlternativeLike {
+  readonly transcript: string
+}
 interface SpeechRecognitionResultLike {
   readonly isFinal: boolean
   readonly length: number
@@ -16,7 +21,9 @@ interface SpeechRecognitionEventLike {
   readonly resultIndex: number
   readonly results: SpeechRecognitionResultsLike
 }
-interface SpeechRecognitionErrorLike { readonly error: string }
+interface SpeechRecognitionErrorLike {
+  readonly error: string
+}
 interface SpeechRecognitionLike {
   lang: string
   interimResults: boolean
@@ -28,7 +35,9 @@ interface SpeechRecognitionLike {
   stop: () => void
   abort: () => void
 }
-interface SpeechRecognitionCtor { new (): SpeechRecognitionLike }
+interface SpeechRecognitionCtor {
+  new (): SpeechRecognitionLike
+}
 interface Window {
   SpeechRecognition?: SpeechRecognitionCtor
   webkitSpeechRecognition?: SpeechRecognitionCtor
@@ -118,14 +127,28 @@ interface WebviewElement extends HTMLElement {
   goForward(): void
   focus(): void
   executeJavaScript<T = unknown>(code: string): Promise<T>
-  addEventListener<K extends keyof WebviewEventMap>(type: K, listener: (event: WebviewEventMap[K]) => void, options?: boolean | AddEventListenerOptions): void
-  addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void
+  addEventListener<K extends keyof WebviewEventMap>(
+    type: K,
+    listener: (event: WebviewEventMap[K]) => void,
+    options?: boolean | AddEventListenerOptions,
+  ): void
+  addEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject,
+    options?: boolean | AddEventListenerOptions,
+  ): void
 }
-interface HTMLElementTagNameMap { webview: WebviewElement }
+interface HTMLElementTagNameMap {
+  webview: WebviewElement
+}
 
 // react-dom is a runtime dependency the shell supplies; only its types are missing here,
 // so declare the one function the client calls. A portal is a React child either way.
 declare module 'react-dom' {
   import type { ReactNode } from 'react'
-  export function createPortal(children: ReactNode, container: Element | DocumentFragment, key?: string | null): ReactNode
+  export function createPortal(
+    children: ReactNode,
+    container: Element | DocumentFragment,
+    key?: string | null,
+  ): ReactNode
 }

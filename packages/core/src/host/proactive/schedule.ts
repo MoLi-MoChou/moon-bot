@@ -86,13 +86,18 @@ export function startDuePoll(deps: DueDeps): () => void {
   let stopped = false
   let timer: ReturnType<typeof setTimeout> | undefined
   const tick = (): void => {
-    void pollDue(deps).catch((error: unknown) => {
-      deps.log('moon-bot: proactive poll failed: %s', error instanceof Error ? error.message : error)
-    }).finally(() => {
-      if (!stopped) timer = setTimeout(tick, DUE_POLL_MS)
-    })
+    void pollDue(deps)
+      .catch((error: unknown) => {
+        deps.log('moon-bot: proactive poll failed: %s', error instanceof Error ? error.message : error)
+      })
+      .finally(() => {
+        if (!stopped) timer = setTimeout(tick, DUE_POLL_MS)
+      })
   }
   timer = setTimeout(tick, DUE_POLL_MS)
   timer.unref?.()
-  return () => { stopped = true; clearTimeout(timer) }
+  return () => {
+    stopped = true
+    clearTimeout(timer)
+  }
 }

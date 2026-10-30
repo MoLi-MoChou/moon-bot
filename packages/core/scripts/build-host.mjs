@@ -51,7 +51,7 @@ function rewriteTsSpecifiers(text) {
 function fingerprint(dir) {
   if (!existsSync(dir)) return ''
   const hash = createHash('sha256')
-  const walk = (base) => {
+  const walk = base => {
     for (const name of readdirSync(base).sort()) {
       const path = join(base, name)
       const st = statSync(path)

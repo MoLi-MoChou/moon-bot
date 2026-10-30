@@ -7,11 +7,21 @@ export interface RosterRoles {
   setFlags(id: string, patch: { readonly pinned?: unknown; readonly hidden?: unknown }): Promise<unknown>
 }
 
-export function createRosterRoles({ rt, state }: { readonly rt: HostRuntime; readonly state: StoredState }): RosterRoles {
+export function createRosterRoles({
+  rt,
+  state,
+}: {
+  readonly rt: HostRuntime
+  readonly state: StoredState
+}): RosterRoles {
   // The first Main Bot is the sidebar tile. `replace` gives a Main Bot's place to
   // another Bot in one step, so the team never has none; `primary` moves a Bot to the
   // front and keeps the others.
-  async function setMain(id: string, main: boolean, { primary = false, replace }: { readonly primary?: boolean; readonly replace?: string } = {}): Promise<void> {
+  async function setMain(
+    id: string,
+    main: boolean,
+    { primary = false, replace }: { readonly primary?: boolean; readonly replace?: string } = {},
+  ): Promise<void> {
     const bot = rt.botOf(id)
     if (bot === undefined) throw new Error('Unknown Bot')
     const others = state.mainBotIds.filter(other => other !== id)
@@ -40,7 +50,10 @@ export function createRosterRoles({ rt, state }: { readonly rt: HostRuntime; rea
     await rt.save()
   }
 
-  async function setFlags(id: string, patch: { readonly pinned?: unknown; readonly hidden?: unknown }): Promise<unknown> {
+  async function setFlags(
+    id: string,
+    patch: { readonly pinned?: unknown; readonly hidden?: unknown },
+  ): Promise<unknown> {
     const entry = rt.botOf(id) ?? rt.roomOf(id) ?? rt.own(state.agents, id)
     if (entry === undefined) throw new Error('Unknown conversation')
     const target = entry as { pinned?: boolean; hidden?: boolean }

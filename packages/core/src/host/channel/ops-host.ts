@@ -52,34 +52,56 @@ export function hostHandlers(rt: ChannelRuntime): ChannelHandlers {
   return {
     // Model providers and their keys, for a window without the host's own Models page.
     providers: async () => ok(await rt.providersView()),
-    'provider-key': async (body) => {
+    'provider-key': async body => {
       if (body.value === null) await rt.clearProviderKey(String(body.provider ?? ''))
       else await rt.setProviderKey(String(body.provider ?? ''), body.value)
       return ok(await rt.providersView())
     },
-    'provider-add': async (body) => ok(await rt.addProvider(body)),
-    'provider-models': async (body) => ok(await rt.discoverModels(body)),
-    'provider-remove': async (body) => ok(await rt.removeProvider(String(body.provider ?? ''))),
+    'provider-add': async body => ok(await rt.addProvider(body)),
+    'provider-models': async body => ok(await rt.discoverModels(body)),
+    'provider-remove': async body => ok(await rt.removeProvider(String(body.provider ?? ''))),
 
-    ...grouped(rt, ['secret-set', 'secret-allow', 'secret-cancel', 'secret-update', 'secret-delete'] as const,
-      (endpoint, body) => rt.secretEndpoint(endpoint, body)),
-    ...grouped(rt, ['connector-connect', 'connector-disconnect', 'connector-retry'] as const,
-      (endpoint, body) => rt.connectorEndpoint(endpoint, body)),
-    ...grouped(rt, ['capability-save', 'capability-delete', 'capability-approve', 'capability-test', 'capability-retry', 'bot-capability'] as const,
-      (endpoint, body) => rt.capabilityEndpoint(endpoint, body)),
-    ...grouped(rt, ['schedules', 'schedule-create', 'schedule-delete'] as const,
-      (endpoint, body) => rt.scheduleEndpoint(endpoint, body)),
-    ...grouped(rt, ['memory-view', 'memory-ask', 'memory-forget'] as const,
-      (endpoint, body) => rt.memoryEndpoint(endpoint, body)),
+    ...grouped(
+      rt,
+      ['secret-set', 'secret-allow', 'secret-cancel', 'secret-update', 'secret-delete'] as const,
+      (endpoint, body) => rt.secretEndpoint(endpoint, body),
+    ),
+    ...grouped(rt, ['connector-connect', 'connector-disconnect', 'connector-retry'] as const, (endpoint, body) =>
+      rt.connectorEndpoint(endpoint, body),
+    ),
+    ...grouped(
+      rt,
+      [
+        'capability-save',
+        'capability-delete',
+        'capability-approve',
+        'capability-test',
+        'capability-retry',
+        'bot-capability',
+      ] as const,
+      (endpoint, body) => rt.capabilityEndpoint(endpoint, body),
+    ),
+    ...grouped(rt, ['schedules', 'schedule-create', 'schedule-delete'] as const, (endpoint, body) =>
+      rt.scheduleEndpoint(endpoint, body),
+    ),
+    ...grouped(rt, ['memory-view', 'memory-ask', 'memory-forget'] as const, (endpoint, body) =>
+      rt.memoryEndpoint(endpoint, body),
+    ),
 
-    'answer-question': async (body) => {
+    'answer-question': async body => {
       if (typeof body.sessionId !== 'string') return fail('Nothing to send', 'bot/invalid')
       await rt.load()
       const past = rt.pastOwners.get(body.sessionId)
-      const sessionId = rt.botOf(body.sessionId) ? rt.chatOf(body.sessionId) : past && past.roomId === undefined ? rt.chatOf(past.botId) : body.sessionId
+      const sessionId = rt.botOf(body.sessionId)
+        ? rt.chatOf(body.sessionId)
+        : past && past.roomId === undefined
+          ? rt.chatOf(past.botId)
+          : body.sessionId
       const questions = state.questions
-      const question = questions === undefined ? undefined : rt.own(questions, sessionId) as PendingQuestion | undefined
-      if (question === undefined || question.id !== body.questionId) return fail('This question is no longer open', 'bot/stale')
+      const question =
+        questions === undefined ? undefined : (rt.own(questions, sessionId) as PendingQuestion | undefined)
+      if (question === undefined || question.id !== body.questionId)
+        return fail('This question is no longer open', 'bot/stale')
       const reply = questionReply(question, body.answer)
       if (reply === undefined) return fail('Nothing to send', 'bot/invalid')
       // Claim the question before queueing so a second answer is refused.
@@ -96,13 +118,17 @@ export function hostHandlers(rt: ChannelRuntime): ChannelHandlers {
       await rt.save()
       return ok(true)
     },
-    'view-reply': async (body) => {
+    'view-reply': async body => {
       if (typeof body.sessionId !== 'string') return fail('Nothing to send', 'bot/invalid')
       await rt.load()
       const past = rt.pastOwners.get(body.sessionId)
-      const sessionId = rt.botOf(body.sessionId) ? rt.chatOf(body.sessionId) : past && past.roomId === undefined ? rt.chatOf(past.botId) : body.sessionId
+      const sessionId = rt.botOf(body.sessionId)
+        ? rt.chatOf(body.sessionId)
+        : past && past.roomId === undefined
+          ? rt.chatOf(past.botId)
+          : body.sessionId
       const views = state.views
-      const pending = views === undefined ? undefined : rt.own(views, sessionId) as PendingView | undefined
+      const pending = views === undefined ? undefined : (rt.own(views, sessionId) as PendingView | undefined)
       if (pending === undefined || pending.id !== body.viewId) return fail('This view is no longer open', 'bot/stale')
       const checked = validateViewAnswer(pending.view, body.action, body.values)
       if ('error' in checked) return fail(checked.error, 'bot/invalid')
@@ -122,38 +148,46 @@ export function hostHandlers(rt: ChannelRuntime): ChannelHandlers {
       await rt.save()
       return ok(true)
     },
-    send: async (body) => {
+    send: async body => {
       const text = String(body.text ?? '').trim()
       if (text === '' || typeof body.sessionId !== 'string') return fail('Nothing to send', 'bot/invalid')
       await rt.load()
-      if (typeof rt.roomOf(body.sessionId)?.archivedAt === 'number') return fail('This group chat is archived', 'bot/invalid')
+      if (typeof rt.roomOf(body.sessionId)?.archivedAt === 'number')
+        return fail('This group chat is archived', 'bot/invalid')
       // A Bot id or an earlier part of its own chat means the current part.
       const past = rt.pastOwners.get(body.sessionId)
-      const sessionId = rt.botOf(body.sessionId) ? rt.chatOf(body.sessionId) : past && past.roomId === undefined ? rt.chatOf(past.botId) : body.sessionId
+      const sessionId = rt.botOf(body.sessionId)
+        ? rt.chatOf(body.sessionId)
+        : past && past.roomId === undefined
+          ? rt.chatOf(past.botId)
+          : body.sessionId
       await rt.ensureCapabilities(sessionId)
       // The window shows the Bot working from the send on: the engine's first event may be
       // a moment away (a turn queued behind another, an agent being spawned), and a turn
       // that fails says so in the chat. A send the engine never took takes the mark back.
       rt.noteSent?.(sessionId, true)
       try {
-        await ctx.sessionController.prompt({
-          requestId: randomUUID(),
-          sessionId,
-          mode: 'queue',
-          content: [{ type: 'text', text }],
-        }, AbortSignal.timeout(30_000))
+        await ctx.sessionController.prompt(
+          {
+            requestId: randomUUID(),
+            sessionId,
+            mode: 'queue',
+            content: [{ type: 'text', text }],
+          },
+          AbortSignal.timeout(30_000),
+        )
       } catch (error) {
         rt.noteSent?.(sessionId, false)
         throw error
       }
       return ok(true)
     },
-    'approval-answer': async (body) => {
+    'approval-answer': async body => {
       rt.answerApproval(body.id, body.choice)
       return ok(true)
     },
-    'stop-member-work': async (body) => ok(await rt.stopMemberWork(String(body.roomId ?? ''), String(body.botId ?? ''))),
-    'dismiss-question': async (body) => {
+    'stop-member-work': async body => ok(await rt.stopMemberWork(String(body.roomId ?? ''), String(body.botId ?? ''))),
+    'dismiss-question': async body => {
       await rt.load()
       const questions = state.questions
       if (questions !== undefined && rt.own(questions, body.sessionId as string | undefined) !== undefined) {
@@ -162,7 +196,7 @@ export function hostHandlers(rt: ChannelRuntime): ChannelHandlers {
       }
       return ok(true)
     },
-    'dismiss-view': async (body) => {
+    'dismiss-view': async body => {
       await rt.load()
       const views = state.views
       if (views !== undefined && rt.own(views, body.sessionId as string | undefined) !== undefined) {
@@ -172,7 +206,7 @@ export function hostHandlers(rt: ChannelRuntime): ChannelHandlers {
       return ok(true)
     },
 
-    'update-check': async (body) => {
+    'update-check': async body => {
       const fresh = body.fresh === true
       return ok(await rt.updateCheck({ fresh }))
     },
@@ -180,19 +214,19 @@ export function hostHandlers(rt: ChannelRuntime): ChannelHandlers {
     'repo-stars': async () => ok(await rt.repoStars()),
 
     // The Desktop window's long poll for read_browser, and its answers.
-    'browser-wait': async (body) => {
+    'browser-wait': async body => {
       if (rt.browserChannel === undefined) return fail('Bot browsers are off on this host', 'bot/browser-off')
       const clientId = typeof body.clientId === 'string' ? body.clientId.slice(0, 100) : ''
       if (clientId === '') return fail('A browser poll needs a clientId', 'bot/invalid')
       await rt.load()
       return ok(await rt.browserChannel.wait(clientId, rt.browserOpen(body.open)))
     },
-    'browser-result': async (body) => {
+    'browser-result': async body => {
       if (rt.browserChannel === undefined) return fail('Bot browsers are off on this host', 'bot/browser-off')
       return ok(rt.browserChannel.result(body))
     },
 
-    diagnostics: async (body) => {
+    diagnostics: async body => {
       await rt.load()
       return ok(await rt.diagnostics.report(body))
     },

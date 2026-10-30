@@ -1,6 +1,16 @@
 // The right-hand panels: the drawer shell and its tabs, Bot and group settings,
 // the settings dialog, connectors, and the memory dialog.
-import { DIALOG_EXIT_MS, EASE_IN, EASE_PANEL, PANEL_LINGER_MS, SHEET_EXIT_MS, spring, SPRING_POP, SPRING_SHAPE, SPRING_TAP } from '../motion.tsx'
+import {
+  DIALOG_EXIT_MS,
+  EASE_IN,
+  EASE_PANEL,
+  PANEL_LINGER_MS,
+  SHEET_EXIT_MS,
+  spring,
+  SPRING_POP,
+  SPRING_SHAPE,
+  SPRING_TAP,
+} from '../motion.tsx'
 
 // Side panels, drawers, Bot settings, the settings dialog and connectors.
 export const PANELS_CSS = `

@@ -1,4 +1,4 @@
-import type { ConnectorCatalogEntry } from '../connector-catalog.ts';
+import type { ConnectorCatalogEntry } from '../connector-catalog.ts'
 
 export const WEB_CONNECTORS: readonly ConnectorCatalogEntry[] = [
   {
@@ -46,7 +46,9 @@ export const WEB_CONNECTORS: readonly ConnectorCatalogEntry[] = [
     command: 'npx',
     args: ['-y', 'perplexity-mcp'],
     env: { PERPLEXITY_API_KEY: '$MOON_BOT_SECRET_PERPLEXITY_API_KEY' },
-    secrets: [{ name: 'PERPLEXITY_API_KEY', label: 'Perplexity API Key', url: 'https://www.perplexity.ai/settings/api' }],
+    secrets: [
+      { name: 'PERPLEXITY_API_KEY', label: 'Perplexity API Key', url: 'https://www.perplexity.ai/settings/api' },
+    ],
     website: 'https://www.perplexity.ai',
   },
   {
@@ -73,7 +75,13 @@ export const WEB_CONNECTORS: readonly ConnectorCatalogEntry[] = [
     command: 'npx',
     args: ['-y', 'bing-search-mcp'],
     env: { BING_API_KEY: '$MOON_BOT_SECRET_BING_API_KEY' },
-    secrets: [{ name: 'BING_API_KEY', label: 'Bing Search API Key', url: 'https://www.microsoft.com/en-us/bing/apis/bing-web-search-api' }],
+    secrets: [
+      {
+        name: 'BING_API_KEY',
+        label: 'Bing Search API Key',
+        url: 'https://www.microsoft.com/en-us/bing/apis/bing-web-search-api',
+      },
+    ],
     website: 'https://www.bing.com',
   },
   {
@@ -120,4 +128,4 @@ export const WEB_CONNECTORS: readonly ConnectorCatalogEntry[] = [
     args: ['-y', '@modelcontextprotocol/server-fetch'],
     website: 'https://github.com/modelcontextprotocol/servers/tree/main/src/fetch',
   },
-];
+]

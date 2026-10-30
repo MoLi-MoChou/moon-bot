@@ -46,10 +46,11 @@ export interface FoldedCall {
   readonly reset: boolean
 }
 
-const count = (value: unknown): number => (typeof value === 'number' && Number.isSafeInteger(value) && value > 0 ? value : 0)
+const count = (value: unknown): number =>
+  typeof value === 'number' && Number.isSafeInteger(value) && value > 0 ? value : 0
 
 const recordOf = (value: unknown): Readonly<Record<string, unknown>> | undefined =>
-  (typeof value === 'object' && value !== null ? value as Record<string, unknown> : undefined)
+  typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : undefined
 
 function usageChunk(stream: unknown): unknown {
   if (!Array.isArray(stream)) return undefined
@@ -87,23 +88,34 @@ export function foldCalls(events: readonly SessionEvent[], from: FoldSnapshot = 
     switch (event.type) {
       case 'request/header': {
         const config = recordOf(recordOf(data.header)?.config)
-        if (typeof config?.provider === 'string' && config.provider !== '' && typeof config.model === 'string' && config.model !== '') {
+        if (
+          typeof config?.provider === 'string' &&
+          config.provider !== '' &&
+          typeof config.model === 'string' &&
+          config.model !== ''
+        ) {
           state.provider = config.provider
           state.model = config.model
         }
         break
       }
       case 'request/context':
-        if (typeof data.provider === 'string' && data.provider !== '' && typeof data.model === 'string' && data.model !== '') {
+        if (
+          typeof data.provider === 'string' &&
+          data.provider !== '' &&
+          typeof data.model === 'string' &&
+          data.model !== ''
+        ) {
           state.provider = data.provider
           state.model = data.model
         }
         break
       case 'llm/retry-started': {
         const retry = state.retry
-        state.retry = retry !== null && retry.turn === data.turn && retry.step === data.step
-          ? { ...retry, count: retry.count + 1 }
-          : { turn: data.turn, step: data.step, count: 1 }
+        state.retry =
+          retry !== null && retry.turn === data.turn && retry.step === data.step
+            ? { ...retry, count: retry.count + 1 }
+            : { turn: data.turn, step: data.step, count: 1 }
         break
       }
       case 'session/end-seed':

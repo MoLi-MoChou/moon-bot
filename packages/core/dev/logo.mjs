@@ -37,7 +37,12 @@ function logo(mode) {
   const step = (Math.PI * 2) / RING.length
   const seats = RING.map((look, index) => {
     const angle = -Math.PI / 2 + index * step
-    return { ...look, size: RING_SIZE, x: CENTER + RING_RADIUS * Math.cos(angle), y: CENTER + RING_RADIUS * Math.sin(angle) }
+    return {
+      ...look,
+      size: RING_SIZE,
+      x: CENTER + RING_RADIUS * Math.cos(angle),
+      y: CENTER + RING_RADIUS * Math.sin(angle),
+    }
   })
   const orbit = `<circle cx="${CENTER}" cy="${CENTER}" r="${RING_RADIUS}" fill="none" stroke="${ORBIT[mode]}" stroke-opacity=".22" stroke-width="2" stroke-dasharray="2 10" stroke-linecap="round"/>`
   const marks = [...seats, { ...WHALE, x: CENTER, y: CENTER }].map((seat, index) => character(seat, mode, `m${index}`))
@@ -51,8 +56,15 @@ function character({ shape, color, size, x, y }, mode, id) {
   const scale = size / def.size
   const stops = GRADIENTS[color]
   const paint = stops ? `url(#${id}g)` : INKS[color][mode === 'light' ? 0 : 1]
-  const gradient = stops ? `<linearGradient id="${id}g" gradientUnits="userSpaceOnUse" x1="18" y1="10" x2="78" y2="92">${stops.map(([offset, value]) => `<stop offset="${offset}" stop-color="${value}"/>`).join('')}</linearGradient>` : ''
-  const eyes = def.eyes.map(([cx, cy, w, h, tilt]) => `<g transform="translate(${cx} ${cy}) rotate(${tilt})"><rect x="${-w / 2}" y="${-h / 2}" width="${w}" height="${h}" rx="${w / 2}" fill="#000"/></g>`).join('')
+  const gradient = stops
+    ? `<linearGradient id="${id}g" gradientUnits="userSpaceOnUse" x1="18" y1="10" x2="78" y2="92">${stops.map(([offset, value]) => `<stop offset="${offset}" stop-color="${value}"/>`).join('')}</linearGradient>`
+    : ''
+  const eyes = def.eyes
+    .map(
+      ([cx, cy, w, h, tilt]) =>
+        `<g transform="translate(${cx} ${cy}) rotate(${tilt})"><rect x="${-w / 2}" y="${-h / 2}" width="${w}" height="${h}" rx="${w / 2}" fill="#000"/></g>`,
+    )
+    .join('')
   const place = `translate(${(x - size / 2).toFixed(1)} ${(y - size / 2).toFixed(1)}) scale(${scale})`
   return `<g transform="${place}"><defs>${gradient}<mask id="${id}" ${maskBox(def.size)}>${holes(def, eyes)}</mask></defs><g mask="url(#${id})">${bodyOf(def, paint)}</g></g>`
 }

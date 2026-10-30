@@ -30,11 +30,15 @@ class FakeAgentSocket implements RelaySocket {
   readonly received: string[] = []
   readonly said: string[] = []
   private nextSession = 0
-  closedWith: { code: number, reason: string } | undefined
+  closedWith: { code: number; reason: string } | undefined
 
   send(data: string): void {
     this.received.push(data)
-    const message = JSON.parse(data) as { id?: number, method?: string, params?: { sessionId?: string, prompt?: { text?: string }[] } }
+    const message = JSON.parse(data) as {
+      id?: number
+      method?: string
+      params?: { sessionId?: string; prompt?: { text?: string }[] }
+    }
     const reply = (object: Record<string, unknown>): void => {
       const line = JSON.stringify(object)
       this.said.push(line)
@@ -42,12 +46,26 @@ class FakeAgentSocket implements RelaySocket {
       for (const listener of [...this.messageListeners]) listener(line)
     }
     if (message.method === 'initialize') {
-      reply({ jsonrpc: '2.0', id: message.id, result: { protocolVersion: '1', capabilities: {}, serverInfo: { name: 'relay-fixture', version: '1.0' } } })
+      reply({
+        jsonrpc: '2.0',
+        id: message.id,
+        result: { protocolVersion: '1', capabilities: {}, serverInfo: { name: 'relay-fixture', version: '1.0' } },
+      })
     } else if (message.method === 'session/new') {
       reply({ jsonrpc: '2.0', id: message.id, result: { sessionId: `acp-${++this.nextSession}` } })
     } else if (message.method === 'session/prompt') {
       const text = (message.params?.prompt ?? []).map(block => block.text ?? '').join('')
-      reply({ jsonrpc: '2.0', method: 'session/update', params: { sessionId: message.params?.sessionId, update: { sessionUpdate: 'agent_message', content: [{ type: 'text', text: `Relay did it: ${text.slice(0, 40)}` }] } } })
+      reply({
+        jsonrpc: '2.0',
+        method: 'session/update',
+        params: {
+          sessionId: message.params?.sessionId,
+          update: {
+            sessionUpdate: 'agent_message',
+            content: [{ type: 'text', text: `Relay did it: ${text.slice(0, 40)}` }],
+          },
+        },
+      })
       reply({ jsonrpc: '2.0', id: message.id, result: { stopReason: 'end_turn' } })
     } else if (message.id !== undefined) {
       reply({ jsonrpc: '2.0', id: message.id, result: {} })
@@ -119,10 +137,15 @@ async function t2(home: string): Promise<void> {
   // initialize goes out, the scripted fixture answers, the line comes back.
   const transport = new RelayTransport(registry, 'kai-laptop')
   const lines: string[] = []
-  transport.onLine(line => { lines.push(line) })
+  transport.onLine(line => {
+    lines.push(line)
+  })
   await transport.open()
   transport.write('{"jsonrpc":"2.0","id":1,"method":"initialize"}')
-  assert.ok(lines.some(line => line.includes('relay-fixture')), 'initialize crossed the relay both ways')
+  assert.ok(
+    lines.some(line => line.includes('relay-fixture')),
+    'initialize crossed the relay both ways',
+  )
 
   // A newer connection replaces the older one; the old wire closes with 4000.
   const second = new FakeAgentSocket()
@@ -131,7 +154,10 @@ async function t2(home: string): Promise<void> {
 
   // The transport picked the replacement up: writes go to the new wire.
   transport.write('{"jsonrpc":"2.0","id":2,"method":"ping"}')
-  assert.ok(second.received.some(line => line.includes('"id":2')), 'the replacement carries the write')
+  assert.ok(
+    second.received.some(line => line.includes('"id":2')),
+    'the replacement carries the write',
+  )
   assert.ok(!first.received.some(line => line.includes('"id":2')), 'the replaced wire is done')
 
   // Revoking cuts the live connection.
@@ -147,18 +173,48 @@ interface Host {
   agentOf(sessionId: string): BridgeAgent
 }
 
-async function startRemote(t: { after: (run: () => Promise<void> | void) => void }): Promise<{ host: Host, relay: RelayRegistry, token: string }> {
+async function startRemote(t: {
+  after: (run: () => Promise<void> | void) => void
+}): Promise<{ host: Host; relay: RelayRegistry; token: string }> {
   const home = mkdtempSync(join(tmpdir(), 'relay-e2e-'))
-  writeFileSync(join(home, 'state.json'), JSON.stringify({
-    version: 1,
-    mainBotIds: ['a'],
-    bots: {
-      a: { id: 'a', name: 'Chief', role: 'Boss', sessionId: 'a', createdAt: 1, model: 'custom/mock-1' },
-      b: { id: 'b', name: 'Atlas', role: 'Work', sessionId: 'b', createdAt: 2, engine: { kind: 'acp-remote' as const, agentId: 'kai-laptop' } },
-    },
-    rooms: { r1: { id: 'r1', name: 'Ops', members: ['a', 'b'], mode: 'admin', admin: 'b', named: true, sessions: { b: 'gb' }, log: [], seq: 0, seen: {} } },
-    agents: {}, exchanges: [], exchangeTurns: {}, questions: {}, prefs: {}, revision: 0,
-  }))
+  writeFileSync(
+    join(home, 'state.json'),
+    JSON.stringify({
+      version: 1,
+      mainBotIds: ['a'],
+      bots: {
+        a: { id: 'a', name: 'Chief', role: 'Boss', sessionId: 'a', createdAt: 1, model: 'custom/mock-1' },
+        b: {
+          id: 'b',
+          name: 'Atlas',
+          role: 'Work',
+          sessionId: 'b',
+          createdAt: 2,
+          engine: { kind: 'acp-remote' as const, agentId: 'kai-laptop' },
+        },
+      },
+      rooms: {
+        r1: {
+          id: 'r1',
+          name: 'Ops',
+          members: ['a', 'b'],
+          mode: 'admin',
+          admin: 'b',
+          named: true,
+          sessions: { b: 'gb' },
+          log: [],
+          seq: 0,
+          seen: {},
+        },
+      },
+      agents: {},
+      exchanges: [],
+      exchangeTurns: {},
+      questions: {},
+      prefs: {},
+      revision: 0,
+    }),
+  )
 
   // The built-in Chief runs on a scripted endpoint; the remote Bot never touches it.
   const mock = createServer((req, res) => {
@@ -166,24 +222,31 @@ async function startRemote(t: { after: (run: () => Promise<void> | void) => void
     req.on('end', () => {
       res.writeHead(200, { 'content-type': 'text/event-stream' })
       const send = (delta: Record<string, unknown>): void => {
-        res.write(`data: ${JSON.stringify({ id: 'x', object: 'chat.completion.chunk', created: 1, model: 'm', choices: [{ index: 0, delta, finish_reason: null }] })}${NL}${NL}`)
+        res.write(
+          `data: ${JSON.stringify({ id: 'x', object: 'chat.completion.chunk', created: 1, model: 'm', choices: [{ index: 0, delta, finish_reason: null }] })}${NL}${NL}`,
+        )
       }
       send({ role: 'assistant', content: '' })
       send({ content: 'From the built-in Chief.' })
-      res.write(`data: ${JSON.stringify({ id: 'x', object: 'chat.completion.chunk', created: 1, model: 'm', choices: [{ index: 0, delta: {}, finish_reason: 'stop' }] })}${NL}${NL}`)
+      res.write(
+        `data: ${JSON.stringify({ id: 'x', object: 'chat.completion.chunk', created: 1, model: 'm', choices: [{ index: 0, delta: {}, finish_reason: 'stop' }] })}${NL}${NL}`,
+      )
       res.write(`data: [DONE]${NL}${NL}`)
       res.end()
     })
   })
-  const mockPort = await new Promise<number>(resolve => mock.listen(0, '127.0.0.1', () => resolve((mock.address() as { port: number }).port)))
+  const mockPort = await new Promise<number>(resolve =>
+    mock.listen(0, '127.0.0.1', () => resolve((mock.address() as { port: number }).port)),
+  )
   t.after(() => new Promise<void>(resolve => mock.close(() => resolve())))
   const mockUrl = `http://127.0.0.1:${mockPort}/v1`
 
   const settings = new FileSettings(home)
   const llm = {
-    resolveRoute: async (provider: string) => provider === 'custom'
-      ? { provider, api: 'openai-completions' as const, baseUrl: mockUrl, apiKey: 'sk', models: [{ id: 'mock-1' }] }
-      : undefined,
+    resolveRoute: async (provider: string) =>
+      provider === 'custom'
+        ? { provider, api: 'openai-completions' as const, baseUrl: mockUrl, apiKey: 'sk', models: [{ id: 'mock-1' }] }
+        : undefined,
   } as unknown as StandaloneLlm
   const wired = wireService({ home, llm, services: { settings } })
 
@@ -191,7 +254,7 @@ async function startRemote(t: { after: (run: () => Promise<void> | void) => void
   const agents = new Map<string, BridgeAgent>()
   const agentOf = (sessionId: string): BridgeAgent => {
     let agent = agents.get(sessionId)
-    if (agent === undefined) agents.set(sessionId, agent = wired.agentOf(sessionId) as BridgeAgent)
+    if (agent === undefined) agents.set(sessionId, (agent = wired.agentOf(sessionId) as BridgeAgent))
     return agent
   }
   await (wired.runtime as unknown as { load(): Promise<unknown> }).load()
@@ -207,7 +270,7 @@ async function startRemote(t: { after: (run: () => Promise<void> | void) => void
   return { host: { ctx, tool, agentOf }, relay: wired.relay, token }
 }
 
-test('a remote agent as a full Bot: a turn over the relay, then a replaced connection', async (t) => {
+test('a remote agent as a full Bot: a turn over the relay, then a replaced connection', async t => {
   const { host, relay, token } = await startRemote(t)
   const agent = new FakeAgentSocket()
   assert.equal(relay.admit(agent, token), 'kai-laptop')
@@ -239,5 +302,8 @@ test('a remote agent as a full Bot: a turn over the relay, then a replaced conne
   while (!delivered.some(item => String(JSON.stringify(item)).includes('Relay did it')) && Date.now() < untilSecond) {
     await new Promise(resolve => setTimeout(resolve, 25))
   }
-  assert.ok(delivered.some(item => String(JSON.stringify(item)).includes('Relay did it')), 'the replacement agent answered the next task')
+  assert.ok(
+    delivered.some(item => String(JSON.stringify(item)).includes('Relay did it')),
+    'the replacement agent answered the next task',
+  )
 })

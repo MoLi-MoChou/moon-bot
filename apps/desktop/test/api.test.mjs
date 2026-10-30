@@ -2,11 +2,13 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { openFeed } from '../ui/src/api.ts'
 
-test('openFeed delivers a final SSE event when the stream ends without a blank line', async (t) => {
+test('openFeed delivers a final SSE event when the stream ends without a blank line', async t => {
   const encoder = new TextEncoder()
   let reads = 0
   const previousFetch = globalThis.fetch
-  t.after(() => { globalThis.fetch = previousFetch })
+  t.after(() => {
+    globalThis.fetch = previousFetch
+  })
   globalThis.fetch = async () => ({
     ok: true,
     status: 200,

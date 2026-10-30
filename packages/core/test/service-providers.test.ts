@@ -19,39 +19,68 @@ const openaiMock = () => {
       const body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')
       const text = script.shift() ?? '好了。'
       res.writeHead(200, { 'content-type': 'text/event-stream' })
-      const send = (delta: Record<string, unknown>): void => { res.write(`data: ${JSON.stringify({ id: 'x', object: 'chat.completion.chunk', created: 1, model: body.model, choices: [{ index: 0, delta, finish_reason: null }] })}\n\n`) }
+      const send = (delta: Record<string, unknown>): void => {
+        res.write(
+          `data: ${JSON.stringify({ id: 'x', object: 'chat.completion.chunk', created: 1, model: body.model, choices: [{ index: 0, delta, finish_reason: null }] })}\n\n`,
+        )
+      }
       send({ role: 'assistant', content: '' })
       send({ content: text })
-      res.write(`data: ${JSON.stringify({ id: 'x', object: 'chat.completion.chunk', created: 1, model: body.model, choices: [{ index: 0, delta: {}, finish_reason: 'stop' }] })}\n\n`)
+      res.write(
+        `data: ${JSON.stringify({ id: 'x', object: 'chat.completion.chunk', created: 1, model: body.model, choices: [{ index: 0, delta: {}, finish_reason: 'stop' }] })}\n\n`,
+      )
       res.write('data: [DONE]\n\n')
       res.end()
     })
   })
   return {
-    reply(...texts: string[]): void { script.push(...texts) },
-    listen: (): Promise<{ port: number }> => new Promise(resolve => server.listen(0, '127.0.0.1', () => resolve({ port: (server.address() as { port: number }).port }))),
+    reply(...texts: string[]): void {
+      script.push(...texts)
+    },
+    listen: (): Promise<{ port: number }> =>
+      new Promise(resolve =>
+        server.listen(0, '127.0.0.1', () => resolve({ port: (server.address() as { port: number }).port })),
+      ),
     close: (): Promise<void> => new Promise(resolve => server.close(() => resolve())),
   }
 }
 
-test('the providers page adds a provider, and a Bot on it runs its turn', async (t) => {
+test('the providers page adds a provider, and a Bot on it runs its turn', async t => {
   const mock = openaiMock()
   mock.reply('At your service.')
   const { port } = await mock.listen()
   t.after(() => void mock.close())
   const home = mkdtempSync(join(tmpdir(), 'ds-bot-providers-'))
-  writeFileSync(join(home, 'state.json'), JSON.stringify({
-    version: 1,
-    mainBotIds: ['a'],
-    bots: { a: { id: 'a', name: 'Chief', role: 'Boss', sessionId: 'a', createdAt: 1 } },
-    rooms: {}, agents: {}, exchanges: [], exchangeTurns: {}, questions: {}, prefs: {}, revision: 0,
-  }))
+  writeFileSync(
+    join(home, 'state.json'),
+    JSON.stringify({
+      version: 1,
+      mainBotIds: ['a'],
+      bots: { a: { id: 'a', name: 'Chief', role: 'Boss', sessionId: 'a', createdAt: 1 } },
+      rooms: {},
+      agents: {},
+      exchanges: [],
+      exchangeTurns: {},
+      questions: {},
+      prefs: {},
+      revision: 0,
+    }),
+  )
   const service = await startService({ home, password: '', logger: false })
   t.after(() => service.close())
   t.after(() => rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }))
 
-  const call = async (endpoint: string, payload: Record<string, unknown>): Promise<{ ok?: boolean, value?: unknown, error?: { message?: string } }> =>
-    (await fetch(`${service.url}/api/bot`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ endpoint, payload }) })).json() as never
+  const call = async (
+    endpoint: string,
+    payload: Record<string, unknown>,
+  ): Promise<{ ok?: boolean; value?: unknown; error?: { message?: string } }> =>
+    (
+      await fetch(`${service.url}/api/bot`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ endpoint, payload }),
+      })
+    ).json() as never
 
   // The page's first read: available, with the built-in list to add from.
   const first = await call('providers', {})
@@ -60,11 +89,16 @@ test('the providers page adds a provider, and a Bot on it runs its turn', async 
 
   // Adding a provider with its key, as the page's form does.
   const added = await call('provider-add', {
-    custom: true, provider: 'mocklab', name: 'Mock Lab', api: 'openai-completions',
-    baseURL: `http://127.0.0.1:${port}/v1`, key: 'sk-test', models: [{ id: 'mock-1', name: 'Mock One' }],
+    custom: true,
+    provider: 'mocklab',
+    name: 'Mock Lab',
+    api: 'openai-completions',
+    baseURL: `http://127.0.0.1:${port}/v1`,
+    key: 'sk-test',
+    models: [{ id: 'mock-1', name: 'Mock One' }],
   })
   assert.equal(added.ok, true, JSON.stringify(added.error))
-  const providers = (added.value as { providers: { id: string, key?: { configured?: boolean } }[] }).providers
+  const providers = (added.value as { providers: { id: string; key?: { configured?: boolean } }[] }).providers
   assert.ok(providers.some(entry => entry.id === 'mocklab' && entry.key?.configured === true))
 
   // The Bot takes the added model, and a message through the channel runs the turn.
@@ -78,22 +112,26 @@ test('the providers page adds a provider, and a Bot on it runs its turn', async 
   for (let attempt = 0; attempt < 40 && reply === ''; attempt += 1) {
     await new Promise(resolve => setTimeout(resolve, 250))
     const chat = await call('chat', { botId: 'a' })
-    const items = (chat.value as { items: { kind: string, text?: string }[] }).items
+    const items = (chat.value as { items: { kind: string; text?: string }[] }).items
     reply = items.filter(item => item.kind === 'bot').at(-1)?.text ?? ''
   }
   assert.match(reply, /At your service\./)
 
   // A provider added on this page can be removed from it again, key and all: the
   // service's settings are the user's own layer, and the host's `unset` takes the route out.
-  const listed = (await call('providers', {})).value as { providers: { id: string, removable?: boolean }[] }
+  const listed = (await call('providers', {})).value as { providers: { id: string; removable?: boolean }[] }
   assert.equal(listed.providers.find(entry => entry.id === 'mocklab')?.removable, true)
   const removed = await call('provider-remove', { provider: 'mocklab' })
   assert.equal(removed.ok, true, JSON.stringify(removed.error))
   const after = (await call('providers', {})).value as { providers: { id: string }[] }
   assert.ok(!after.providers.some(entry => entry.id === 'mocklab'), 'the route is gone')
   const readded = await call('provider-add', {
-    custom: true, provider: 'mocklab', api: 'openai-completions', baseURL: `http://127.0.0.1:${port}/v1`, models: ['mock-1'],
+    custom: true,
+    provider: 'mocklab',
+    api: 'openai-completions',
+    baseURL: `http://127.0.0.1:${port}/v1`,
+    models: ['mock-1'],
   })
-  const back = (readded.value as { providers: { id: string, key?: { configured?: boolean } | null }[] }).providers
+  const back = (readded.value as { providers: { id: string; key?: { configured?: boolean } | null }[] }).providers
   assert.notEqual(back.find(entry => entry.id === 'mocklab')?.key?.configured, true, 'its key went with it')
 })

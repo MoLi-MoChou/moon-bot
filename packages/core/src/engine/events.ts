@@ -13,7 +13,14 @@
 export type EngineStopReason =
   | { readonly kind: 'completed' }
   | { readonly kind: 'aborted'; readonly reason?: 'user' | 'disposed' | string | undefined }
-  | { readonly kind: 'error'; readonly error: { readonly code?: string | undefined; readonly message?: string | undefined; readonly status?: number | undefined } }
+  | {
+      readonly kind: 'error'
+      readonly error: {
+        readonly code?: string | undefined
+        readonly message?: string | undefined
+        readonly status?: number | undefined
+      }
+    }
 
 /** One content block of a message, as the host and the client read it. */
 export type EngineContentBlock =
@@ -35,20 +42,28 @@ export type EngineEvent =
   | { readonly type: 'assistant/message'; readonly message: EngineAssistantMessage }
   | { readonly type: 'tool/call'; readonly callId: string; readonly name: string; readonly arguments: string }
   | { readonly type: 'tool/result'; readonly callId: string; readonly isError?: boolean }
-  | { readonly type: 'user/message'; readonly content: readonly EngineContentBlock[]; readonly source: Readonly<Record<string, unknown>> | undefined }
+  | {
+      readonly type: 'user/message'
+      readonly content: readonly EngineContentBlock[]
+      readonly source: Readonly<Record<string, unknown>> | undefined
+    }
   | { readonly type: 'turn/end'; readonly turn: number; readonly reason: EngineStopReason }
 
 /** One engine event as the session/event channel delivers it: a payload with a time. */
 export type TimedEngineEvent = EngineEvent & { readonly time?: number | undefined }
 
-const blockOf = (block: unknown): EngineContentBlock | undefined => (
-  block !== null && typeof block === 'object' && typeof (block as EngineContentBlock).type === 'string' ? block as EngineContentBlock : undefined
-)
+const blockOf = (block: unknown): EngineContentBlock | undefined =>
+  block !== null && typeof block === 'object' && typeof (block as EngineContentBlock).type === 'string'
+    ? (block as EngineContentBlock)
+    : undefined
 
-const contentOf = (value: unknown): readonly EngineContentBlock[] => (Array.isArray(value) ? value.flatMap(block => {
-  const blockView = blockOf(block)
-  return blockView === undefined ? [] : [blockView]
-}) : [])
+const contentOf = (value: unknown): readonly EngineContentBlock[] =>
+  Array.isArray(value)
+    ? value.flatMap(block => {
+        const blockView = blockOf(block)
+        return blockView === undefined ? [] : [blockView]
+      })
+    : []
 
 /**
  * Reads a plain session/event payload as an EngineEvent. The router receives events as
@@ -64,19 +79,36 @@ export function engineEventOf(value: unknown): EngineEvent | undefined {
     case 'assistant/stream':
       return typeof event.text === 'string' ? { type: 'assistant/stream', text: event.text } : undefined
     case 'assistant/message':
-      return { type: 'assistant/message', message: { content: contentOf(event.message !== null && typeof event.message === 'object' ? (event.message as { content?: unknown }).content : undefined) } }
+      return {
+        type: 'assistant/message',
+        message: {
+          content: contentOf(
+            event.message !== null && typeof event.message === 'object'
+              ? (event.message as { content?: unknown }).content
+              : undefined,
+          ),
+        },
+      }
     case 'tool/call':
       return typeof event.callId === 'string' && typeof event.name === 'string'
-        ? { type: 'tool/call', callId: event.callId, name: event.name, arguments: typeof event.arguments === 'string' ? event.arguments : '' }
+        ? {
+            type: 'tool/call',
+            callId: event.callId,
+            name: event.name,
+            arguments: typeof event.arguments === 'string' ? event.arguments : '',
+          }
         : undefined
     case 'tool/result':
-      return typeof event.callId === 'string' ? { type: 'tool/result', callId: event.callId, ...(event.isError === true ? { isError: true } : {}) } : undefined
+      return typeof event.callId === 'string'
+        ? { type: 'tool/result', callId: event.callId, ...(event.isError === true ? { isError: true } : {}) }
+        : undefined
     case 'user/message': {
       const source = event.source
       return {
         type: 'user/message',
         content: contentOf(event.content),
-        source: source !== null && typeof source === 'object' ? source as Readonly<Record<string, unknown>> : undefined,
+        source:
+          source !== null && typeof source === 'object' ? (source as Readonly<Record<string, unknown>>) : undefined,
       }
     }
     case 'turn/end': {
@@ -86,11 +118,18 @@ export function engineEventOf(value: unknown): EngineEvent | undefined {
       if (kind === 'completed') return { type: 'turn/end', turn: numberOr(event.turn), reason: { kind: 'completed' } }
       if (kind === 'aborted') {
         const why = (reason as { reason?: unknown }).reason
-        return { type: 'turn/end', turn: numberOr(event.turn), reason: { kind: 'aborted', ...(typeof why === 'string' ? { reason: why } : {}) } }
+        return {
+          type: 'turn/end',
+          turn: numberOr(event.turn),
+          reason: { kind: 'aborted', ...(typeof why === 'string' ? { reason: why } : {}) },
+        }
       }
       if (kind === 'error') {
         const error = (reason as { error?: unknown }).error
-        const detail = error !== null && typeof error === 'object' ? error as { code?: unknown; message?: unknown; status?: unknown } : {}
+        const detail =
+          error !== null && typeof error === 'object'
+            ? (error as { code?: unknown; message?: unknown; status?: unknown })
+            : {}
         return {
           type: 'turn/end',
           turn: numberOr(event.turn),
@@ -114,9 +153,9 @@ export function engineEventOf(value: unknown): EngineEvent | undefined {
 const numberOr = (value: unknown): number => (typeof value === 'number' ? value : 0)
 
 /** The text of a message's text blocks, joined as one step's text. */
-export const textOfContent = (content: readonly EngineContentBlock[]): string => content
-  .flatMap(block => block.type === 'text' ? [block.text] : [])
-  .join('\n')
+export const textOfContent = (content: readonly EngineContentBlock[]): string =>
+  content.flatMap(block => (block.type === 'text' ? [block.text] : [])).join('\n')
 
 /** Whether a step's message makes any tool call (its text is then a preamble, not the answer). */
-export const callsTools = (message: EngineAssistantMessage): boolean => message.content.some(block => block.type === 'tool-call')
+export const callsTools = (message: EngineAssistantMessage): boolean =>
+  message.content.some(block => block.type === 'tool-call')

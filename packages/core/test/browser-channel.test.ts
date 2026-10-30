@@ -115,16 +115,40 @@ test('pageText pages long text and lists controls on the first page only', () =>
 test('pageText reads Markdown in parts cut at line breaks, and each part lists the controls it marks', () => {
   const rows = Array.from({ length: 6 }, (_, index) => `| r${index} | link[#${index + 2}] |`).join('\n')
   const text = `# Title[#1]\n\nIntro paragraph.\n\n| a | b |\n| --- | --- |\n${rows}`
-  const items = [{ role: 'link', name: 'Title', href: 'https://example.com/#t' }, ...Array.from({ length: 6 }, (_, index) => ({ role: 'link', name: `r${index}`, href: `https://example.com/${index}` }))]
-  const page = { url: 'https://example.com/', title: 'Example', format: 'markdown', text, items, truncated: 'reading took longer than 1500 ms' }
+  const items = [
+    { role: 'link', name: 'Title', href: 'https://example.com/#t' },
+    ...Array.from({ length: 6 }, (_, index) => ({
+      role: 'link',
+      name: `r${index}`,
+      href: `https://example.com/${index}`,
+    })),
+  ]
+  const page = {
+    url: 'https://example.com/',
+    title: 'Example',
+    format: 'markdown',
+    text,
+    items,
+    truncated: 'reading took longer than 1500 ms',
+  }
   const first = pageText(page, { size: 80 })
-  assert.match(first, /Note: the page was too large to read whole \(reading took longer than 1500 ms\); the text stops there\./)
+  assert.match(
+    first,
+    /Note: the page was too large to read whole \(reading took longer than 1500 ms\); the text stops there\./,
+  )
   const cut = partEnd(text, 0, 80)
   // The first part ends at a line break, after a whole table row.
   assert.equal(text[cut - 1], '\n')
   assert.ok(cut <= 80 && cut >= 48)
-  assert.ok(first.includes(`Text as Markdown; [#n] marks a link or control, listed below (characters 0–${cut} of ${text.length}; call read_browser with from: ${cut} for more):\n${text.slice(0, cut)}\n`))
-  assert.match(first, /Links and controls in this part:\n\[#1\] link "Title" → https:\/\/example\.com\/#t\n\[#2\] link "r0"/)
+  assert.ok(
+    first.includes(
+      `Text as Markdown; [#n] marks a link or control, listed below (characters 0–${cut} of ${text.length}; call read_browser with from: ${cut} for more):\n${text.slice(0, cut)}\n`,
+    ),
+  )
+  assert.match(
+    first,
+    /Links and controls in this part:\n\[#1\] link "Title" → https:\/\/example\.com\/#t\n\[#2\] link "r0"/,
+  )
   assert.doesNotMatch(first, /\[#7\] link/)
   const rest = pageText(page, { from: cut, size: 10_000 })
   assert.match(rest, new RegExp(`characters ${cut}–${text.length} of ${text.length}\\):`))
@@ -132,7 +156,10 @@ test('pageText reads Markdown in parts cut at line breaks, and each part lists t
   assert.doesNotMatch(rest, /\[#1\] link/)
   // A mark the list does not have, and a part with too many marks.
   assert.doesNotMatch(pageText({ ...page, text: 'see [#99]' }), /Links and controls/)
-  assert.match(pageText(page, { itemsMax: 2 }), /Links and controls in this part \(the first 2 of 7\):\n\[#1\][^\n]*\n\[#2\][^\n]*$/)
+  assert.match(
+    pageText(page, { itemsMax: 2 }),
+    /Links and controls in this part \(the first 2 of 7\):\n\[#1\][^\n]*\n\[#2\][^\n]*$/,
+  )
 })
 
 test('partEnd prefers a blank line, then a line break, and cuts hard only without either', () => {

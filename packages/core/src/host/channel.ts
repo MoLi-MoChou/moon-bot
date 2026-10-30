@@ -69,14 +69,30 @@ export interface ChannelRuntime extends HostRuntime {
   cachedDefault(): string | undefined
   reasoningOf(ref: string): Promise<ModelReasoning | undefined>
   thinkingOf(sessionId: string, turn: number): Promise<number | undefined>
-  approvalsView(): readonly { readonly botId: string; readonly sessionId: string; readonly tool?: string; readonly at: number }[]
+  approvalsView(): readonly {
+    readonly botId: string
+    readonly sessionId: string
+    readonly tool?: string
+    readonly at: number
+  }[]
   browserOpen(value: unknown): Record<string, { readonly url: string; readonly title: string }>
-  waitingView?(): Readonly<Record<string, { readonly bots: readonly string[]; readonly rooms: readonly string[]; readonly for: readonly string[] }>>
+  waitingView?(): Readonly<
+    Record<
+      string,
+      { readonly bots: readonly string[]; readonly rooms: readonly string[]; readonly for: readonly string[] }
+    >
+  >
   turnsView?(): Readonly<Record<string, number>>
   /** Local context figures for one session, used when no projection service is installed. */
-  contextStats?(sessionId: string): Promise<{ readonly contextPressure: { readonly projectedTokens: number; readonly contextWindow: number } } | undefined>
+  contextStats?(
+    sessionId: string,
+  ): Promise<
+    { readonly contextPressure: { readonly projectedTokens: number; readonly contextWindow: number } } | undefined
+  >
   /** Condense the current part in place, or refuse with a sentence the client can show. */
-  compactChat?(sessionId: string): Promise<{ readonly compacted: true } | { readonly compacted: false; readonly reason: string }>
+  compactChat?(
+    sessionId: string,
+  ): Promise<{ readonly compacted: true } | { readonly compacted: false; readonly reason: string }>
 
   providersView(): Promise<Record<string, unknown>>
   clearProviderKey(provider: string): Promise<void>
@@ -89,10 +105,17 @@ export interface ChannelRuntime extends HostRuntime {
   createBot(options: CreateBotOptions): Promise<StoredBot>
   updateBot(id: unknown, patch: ChannelBody): Promise<StoredBot>
   deleteBot(id: unknown): Promise<void>
-  setMain(id: unknown, main: boolean, options: { readonly primary?: boolean; readonly replace?: string | undefined }): Promise<void>
+  setMain(
+    id: unknown,
+    main: boolean,
+    options: { readonly primary?: boolean; readonly replace?: string | undefined },
+  ): Promise<void>
   setFlags(id: unknown, patch: ChannelBody): Promise<unknown>
   createRoom(options: CreateRoomOptions): Promise<StoredRoom>
-  updateRoom(id: unknown, patch: ChannelBody): Promise<{ readonly room: StoredRoom; readonly changes: readonly string[] }>
+  updateRoom(
+    id: unknown,
+    patch: ChannelBody,
+  ): Promise<{ readonly room: StoredRoom; readonly changes: readonly string[] }>
   deleteRoom(id: unknown): Promise<void>
   archiveRoom(id: unknown, archived: boolean): Promise<StoredRoom>
   greetRoom(roomId: string): Promise<void>
@@ -139,8 +162,19 @@ export interface ChannelRuntime extends HostRuntime {
   workspaceDescribe(path: unknown): Promise<WorkspaceDescription>
 
   /** Deliverables (2026-10-28 files-and-library): the files a turn left behind. */
-  deliverablesOf?(sessionId: string, turn: number): readonly { readonly name: string; readonly path: string; readonly size: number; readonly createdAt: number }[]
-  libraryOf?(options: { readonly since?: number | undefined; readonly limit?: number | undefined }): readonly { readonly sessionId: string; readonly turn: number | null; readonly ownerId: string | null; readonly name: string; readonly path: string; readonly size: number; readonly createdAt: number }[]
+  deliverablesOf?(
+    sessionId: string,
+    turn: number,
+  ): readonly { readonly name: string; readonly path: string; readonly size: number; readonly createdAt: number }[]
+  libraryOf?(options: { readonly since?: number | undefined; readonly limit?: number | undefined }): readonly {
+    readonly sessionId: string
+    readonly turn: number | null
+    readonly ownerId: string | null
+    readonly name: string
+    readonly path: string
+    readonly size: number
+    readonly createdAt: number
+  }[]
 
   noteFailure(entry: FailureNote): void
   diagnostics: DiagnosticsService
@@ -150,12 +184,40 @@ export interface ChannelRuntime extends HostRuntime {
   repoStars(): Promise<number | null>
 }
 
-
 const LANGUAGES: Readonly<Record<string, string>> = { zh: 'Chinese (简体中文)', en: 'English' }
 
 // What a host that only reads the team may still answer.
 // Updates change the host profile, not the team, so a reading host may run them too.
-const READS: ReadonlySet<RpcEndpoint> = new Set<RpcEndpoint>(['state', 'models', 'efforts', 'engines', 'providers', 'provider-models', 'earlier', 'chat', 'run-stats', 'room-progress', 'exchange', 'exchange-text', 'file-text', 'usage', 'schedules', 'memory-view', 'browser-wait', 'browser-result', 'diagnostics', 'diagnostics-log', 'diagnostics-clear', 'update-check', 'update-install', 'repo-stars', 'approval-answer', 'thinking', 'workspace-download', 'workspace-describe'])
+const READS: ReadonlySet<RpcEndpoint> = new Set<RpcEndpoint>([
+  'state',
+  'models',
+  'efforts',
+  'engines',
+  'providers',
+  'provider-models',
+  'earlier',
+  'chat',
+  'run-stats',
+  'room-progress',
+  'exchange',
+  'exchange-text',
+  'file-text',
+  'usage',
+  'schedules',
+  'memory-view',
+  'browser-wait',
+  'browser-result',
+  'diagnostics',
+  'diagnostics-log',
+  'diagnostics-clear',
+  'update-check',
+  'update-install',
+  'repo-stars',
+  'approval-answer',
+  'thinking',
+  'workspace-download',
+  'workspace-describe',
+])
 
 export function install(rt: ChannelRuntime): void {
   const { ctx } = rt
@@ -167,7 +229,14 @@ export function install(rt: ChannelRuntime): void {
     return LANGUAGES[(locale.value.split('-')[0] ?? '').toLowerCase()] ?? locale.value
   }
 
-  const handlers: ChannelHandlers = { ...teamHandlers(rt, locale), ...hostHandlers(rt), ...engineHandlers(rt), ...relayHandlers(rt), ...taskHandlers(rt), ...proactiveHandlers(rt) }
+  const handlers: ChannelHandlers = {
+    ...teamHandlers(rt, locale),
+    ...hostHandlers(rt),
+    ...engineHandlers(rt),
+    ...relayHandlers(rt),
+    ...taskHandlers(rt),
+    ...proactiveHandlers(rt),
+  }
 
   const handle = async (endpoint: string, payload: unknown, signal: AbortSignal): Promise<ChannelResult> => {
     try {
@@ -181,24 +250,38 @@ export function install(rt: ChannelRuntime): void {
     } catch (error) {
       const code = errorCode(error)
       const message = messageOf(error)
-      if (code === 'bot/internal') rt.noteFailure({ source: 'api', text: `${endpoint}: ${message}`, code: failureCodeOf(error), stack: stackOf(error) })
+      if (code === 'bot/internal')
+        rt.noteFailure({
+          source: 'api',
+          text: `${endpoint}: ${message}`,
+          code: failureCodeOf(error),
+          stack: stackOf(error),
+        })
       return fail(message, code)
     }
   }
 
   // An exact Fetch route on the shared /api channel; the browser authenticates with its session cookie.
-  ctx.effect(() => ctx.connection.fetch.register({
-    path: ROUTE,
-    methods: ['POST'],
-    requestBody: 'buffered',
-    fetch: async (request) => {
-      let body: unknown
-      try { body = await request.json() } catch { body = {} }
-      const record = recordOf(body) ?? {}
-      const result = await handle(String(record.endpoint ?? ''), record.payload, request.signal)
-      return new Response(JSON.stringify(result), { status: 200, headers: { 'content-type': 'application/json' } })
-    },
-  }), 'moon-bot: api route')
+  ctx.effect(
+    () =>
+      ctx.connection.fetch.register({
+        path: ROUTE,
+        methods: ['POST'],
+        requestBody: 'buffered',
+        fetch: async request => {
+          let body: unknown
+          try {
+            body = await request.json()
+          } catch {
+            body = {}
+          }
+          const record = recordOf(body) ?? {}
+          const result = await handle(String(record.endpoint ?? ''), record.payload, request.signal)
+          return new Response(JSON.stringify(result), { status: 200, headers: { 'content-type': 'application/json' } })
+        },
+      }),
+    'moon-bot: api route',
+  )
 
   ctx.effect(() => {
     void rt.load()

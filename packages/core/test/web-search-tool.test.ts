@@ -15,7 +15,13 @@ const seed = () => ({
     a: { id: 'a', name: 'Chief', role: 'Boss', sessionId: 'a', createdAt: 1 },
     r: { id: 'r', name: 'Researcher', role: 'Research', sessionId: 'r', createdAt: 2 },
   },
-  rooms: {}, agents: {}, exchanges: [], exchangeTurns: {}, questions: {}, prefs: {}, revision: 0,
+  rooms: {},
+  agents: {},
+  exchanges: [],
+  exchangeTurns: {},
+  questions: {},
+  prefs: {},
+  revision: 0,
 })
 
 const BING_HTML = `
@@ -31,10 +37,24 @@ function boot(home: string) {
   const ctx = fakeContext()
   Object.assign(ctx, {
     llm: { listProviders: () => [], listModels: async () => [], resolveModelInfo: async () => ({}) },
-    workspaceRegistry: { get: () => undefined, resolveByPath: async () => undefined, create: async (path: string) => ({ id: 'w1', path }), archiveSession: async () => {} },
+    workspaceRegistry: {
+      get: () => undefined,
+      resolveByPath: async () => undefined,
+      create: async (path: string) => ({ id: 'w1', path }),
+      archiveSession: async () => {},
+    },
     sessionController: {
       create: async () => ({ sessionId: 's1' }),
-      resolveAgent: async (sessionId: string) => ({ agent: { session: { id: sessionId }, calls: [], inbox: { nextStep: [], nextTurn: [], remove: () => false }, followup() {}, steer() {}, cancel() {} } }),
+      resolveAgent: async (sessionId: string) => ({
+        agent: {
+          session: { id: sessionId },
+          calls: [],
+          inbox: { nextStep: [], nextTurn: [], remove: () => false },
+          followup() {},
+          steer() {},
+          cancel() {},
+        },
+      }),
       selectModel: async () => {},
     },
     sessionTitle: { rename: async () => {} },
@@ -73,7 +93,7 @@ test('web_search refuses an empty query', async () => {
   }
 })
 
-test('web_search returns keyless fallback sources from a mocked Bing page', async (t) => {
+test('web_search returns keyless fallback sources from a mocked Bing page', async t => {
   const home = mkdtempSync(join(tmpdir(), 'moon-web-search-'))
   const original = globalThis.fetch
   globalThis.fetch = (async (input: RequestInfo | URL) => {
@@ -83,7 +103,9 @@ test('web_search returns keyless fallback sources from a mocked Bing page', asyn
     }
     return new Response('no', { status: 404 })
   }) as typeof fetch
-  t.after(() => { globalThis.fetch = original })
+  t.after(() => {
+    globalThis.fetch = original
+  })
   const { ctx } = boot(home)
   t.after(async () => {
     await ctx.dispose()

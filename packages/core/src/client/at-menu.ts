@@ -59,7 +59,10 @@ export interface ChatRefRow {
   updatedAt?: number | undefined
 }
 
-const conversationOf = (roster: MentionRoster, sessionId: string): { room: MentionRoom } | { self: MentionBot } | null => {
+const conversationOf = (
+  roster: MentionRoster,
+  sessionId: string,
+): { room: MentionRoom } | { self: MentionBot } | null => {
   if (!roster.ready) return null
   const room = roster.roomsById[sessionId]
   if (room) return { room }
@@ -74,11 +77,14 @@ export function mentionRows(roster: MentionRoster, sessionId: string, query = ''
   if (here === null) return null
   const room = 'room' in here ? here.room : null
   const selfId = 'self' in here ? here.self.id : undefined
-  const bots = room !== null
-    ? room.members.map(id => roster.byId[id]).filter((bot): bot is MentionBot => bot !== undefined)
-    : roster.bots.filter(bot => bot.id !== selfId)
+  const bots =
+    room !== null
+      ? room.members.map(id => roster.byId[id]).filter((bot): bot is MentionBot => bot !== undefined)
+      : roster.bots.filter(bot => bot.id !== selfId)
   const needle = query.trim().toLowerCase()
-  const rows: MentionRow[] = bots.filter(bot => bot.name.toLowerCase().includes(needle)).map(bot => ({ bot, text: `@${bot.name} ` }))
+  const rows: MentionRow[] = bots
+    .filter(bot => bot.name.toLowerCase().includes(needle))
+    .map(bot => ({ bot, text: `@${bot.name} ` }))
   const everyone = String(t('Everyone'))
   if (room !== null && bots.length > 1 && [everyone, ...ROOM_ALL].some(word => word.toLowerCase().startsWith(needle))) {
     rows.push({ room, text: `@${everyone} ` })
@@ -94,16 +100,31 @@ export function chatRows(roster: MentionRoster, list: ChatList | undefined, sess
   if (here === null) return []
   const byId = list?.byId ?? {}
   const selfId = 'self' in here ? here.self.id : undefined
-  const bots: ChatRefRow[] = roster.bots.filter(bot => bot.id !== selfId).map((bot) => {
-    const id = String(currentPart(bot))
-    return { sessionId: id, label: String(t('Chat with {name}', { name: bot.name })), bot, updatedAt: byId[id]?.updatedAt }
-  })
+  const bots: ChatRefRow[] = roster.bots
+    .filter(bot => bot.id !== selfId)
+    .map(bot => {
+      const id = String(currentPart(bot))
+      return {
+        sessionId: id,
+        label: String(t('Chat with {name}', { name: bot.name })),
+        bot,
+        updatedAt: byId[id]?.updatedAt,
+      }
+    })
   const team = new Set<string>([
     ...roster.bots.flatMap(bot => [bot.id, String(currentPart(bot)), ...(bot.parts ?? [])]),
     ...roster.rooms.flatMap(room => [room.id, ...(room.parts ?? [])]),
   ])
-  const others = (list?.ids ?? []).map(id => byId[id])
-    .filter((row): row is OtherChat => row !== undefined && row.id !== sessionId && !team.has(row.id) && row.origin !== 'subagent' && row.blank !== true)
+  const others = (list?.ids ?? [])
+    .map(id => byId[id])
+    .filter(
+      (row): row is OtherChat =>
+        row !== undefined &&
+        row.id !== sessionId &&
+        !team.has(row.id) &&
+        row.origin !== 'subagent' &&
+        row.blank !== true,
+    )
     .sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
     .slice(0, OTHER_CHATS_MAX)
     .map(row => ({ sessionId: row.id, label: row.displayTitle || row.title || row.id, updatedAt: row.updatedAt }))
@@ -139,7 +160,12 @@ interface TriggerSource {
 
 // `launched(sessionId)`: whether "+ → Reference a chat" opened the menu, so the chats
 // never join a typed "@". `iconFor(row)` is the row's character mark.
-export function atSources({ roster, sessions, launched, iconFor }: {
+export function atSources({
+  roster,
+  sessions,
+  launched,
+  iconFor,
+}: {
   roster: { getSnapshot: () => MentionRoster }
   sessions: { list: { getSnapshot: () => ChatList } }
   launched: (sessionId: string) => boolean

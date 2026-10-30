@@ -17,7 +17,12 @@ test('a message shows the clock today, and the day it came in before that', () =
   const older = at(5, 9, 3)
   const date = new Date(older)
   const sameYear = date.getFullYear() === new Date().getFullYear()
-  const day = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', ...(sameYear ? {} : { year: 'numeric' }) })
+  const day = date.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    ...(sameYear ? {} : { year: 'numeric' }),
+  })
   assert.equal(messageClock(older), `${day} ${clockOf(older)}`)
   // The hover title always names the day.
   assert.equal(clockLabel(today), `Today ${clockOf(today)}`)

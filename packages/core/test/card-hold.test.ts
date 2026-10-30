@@ -17,45 +17,80 @@ const { outputFiles } = await build({
     ].join('\n'),
     resolveDir: fileURLToPath(new URL('..', import.meta.url)),
   },
-  bundle: true, format: 'cjs', platform: 'browser', write: false, logLevel: 'silent', external: ['react'],
+  bundle: true,
+  format: 'cjs',
+  platform: 'browser',
+  write: false,
+  logLevel: 'silent',
+  external: ['react'],
 })
 let current
-const slot = (make) => {
+const slot = make => {
   const index = current.index++
-  return current.slots[index] ??= make()
+  return (current.slots[index] ??= make())
 }
 const effect = (make, deps) => {
   const cell = slot(() => ({}))
   if (!cell.deps || deps.some((value, index) => value !== cell.deps[index])) {
-    current.effects.push(() => { cell.stop?.(); cell.stop = make(); cell.deps = deps })
+    current.effects.push(() => {
+      cell.stop?.()
+      cell.stop = make()
+      cell.deps = deps
+    })
   }
 }
 const react = {
   createElement: (type, props, ...children) => ({ type, props: { ...props, children } }),
-  useState: (initial) => {
+  useState: initial => {
     const cell = slot(() => ({ value: typeof initial === 'function' ? initial() : initial }))
-    return [cell.value, next => { cell.value = typeof next === 'function' ? next(cell.value) : next }]
+    return [
+      cell.value,
+      next => {
+        cell.value = typeof next === 'function' ? next(cell.value) : next
+      },
+    ]
   },
   useRef: initial => slot(() => ({ current: initial })),
   useId: () => slot(() => ({ id: 'card-id' })).id,
-  useEffect: effect, useLayoutEffect: effect,
+  useEffect: effect,
+  useLayoutEffect: effect,
 }
 const keys = new Set<(event: unknown) => void>()
-const module = { exports: {} as { useDockHold: (sessionId: string, kind: string, id: string, actions: unknown, inline: boolean) => unknown, PendingQuestion: (props: Record<string, unknown>) => unknown, SecretCard: (props: Record<string, unknown>) => unknown } }
-runInNewContext(outputFiles[0].text, {
-  module, exports: module.exports,
-  require: name => { assert.equal(name, 'react'); return react },
-  document: {
-    activeElement: null, querySelector: () => null,
-    addEventListener: (type, listener) => { if (type === 'keydown') keys.add(listener) },
-    removeEventListener: (type, listener) => { if (type === 'keydown') keys.delete(listener) },
+const module = {
+  exports: {} as {
+    useDockHold: (sessionId: string, kind: string, id: string, actions: unknown, inline: boolean) => unknown
+    PendingQuestion: (props: Record<string, unknown>) => unknown
+    SecretCard: (props: Record<string, unknown>) => unknown
   },
-  HTMLInputElement: class {}, HTMLTextAreaElement: class {}, HTMLSelectElement: class {}, HTMLElement: class {},
+}
+runInNewContext(outputFiles[0].text, {
+  module,
+  exports: module.exports,
+  require: name => {
+    assert.equal(name, 'react')
+    return react
+  },
+  document: {
+    activeElement: null,
+    querySelector: () => null,
+    addEventListener: (type, listener) => {
+      if (type === 'keydown') keys.add(listener)
+    },
+    removeEventListener: (type, listener) => {
+      if (type === 'keydown') keys.delete(listener)
+    },
+  },
+  HTMLInputElement: class {},
+  HTMLTextAreaElement: class {},
+  HTMLSelectElement: class {},
+  HTMLElement: class {},
 })
 const { useDockHold, PendingQuestion, SecretCard } = module.exports
 const mount = (Component, props) => {
   const instance = {
-    slots: [], effects: [], props,
+    slots: [],
+    effects: [],
+    props,
     render(next = instance.props) {
       instance.props = next
       instance.index = 0
@@ -65,7 +100,9 @@ const mount = (Component, props) => {
       for (const run of instance.effects.splice(0)) run()
       return out
     },
-    unmount() { for (const cell of instance.slots) cell.stop?.() },
+    unmount() {
+      for (const cell of instance.slots) cell.stop?.()
+    },
   }
   return instance
 }
@@ -87,7 +124,10 @@ const tick = () => new Promise(resolve => setImmediate(resolve))
 const deferred = () => {
   let resolve
   let reject
-  const promise = new Promise((yes, no) => { resolve = yes; reject = no })
+  const promise = new Promise((yes, no) => {
+    resolve = yes
+    reject = no
+  })
   return { promise, resolve, reject }
 }
 const lease = () => {
@@ -97,7 +137,13 @@ const lease = () => {
   return { source, actions, count }
 }
 const Hold = props => useDockHold(props.sessionId, props.kind, props.id, props.actions, props.inline)
-const question = { id: 'question', question: 'Which draft?', options: ['Short', 'Detailed'], allowCustom: true, multiSelect: true }
+const question = {
+  id: 'question',
+  question: 'Which draft?',
+  options: ['Short', 'Detailed'],
+  allowCustom: true,
+  multiSelect: true,
+}
 
 // Multiple slot instances may coexist briefly during a render. One cleanup must
 // not release another instance's ownership of that same request.
@@ -142,7 +188,10 @@ test('a question keeps its custom answer and selection while submitting, after f
   const wait = deferred()
   const sent = []
   let result = wait.promise
-  actions.answerQuestion = (...args) => { sent.push(plain(args)); return result }
+  actions.answerQuestion = (...args) => {
+    sent.push(plain(args))
+    return result
+  }
   const pending = mount(PendingQuestion, { actions, sessionId: 'chief', question, inline: false })
   const initial = childOf(pending.render())
   const view = mount(initial.type, initial.props)
@@ -167,7 +216,10 @@ test('a question keeps its custom answer and selection while submitting, after f
   form = view.render(childOf(pending.render()).props)
   assert.equal(field(form).props.value, 'Custom draft')
   assert.equal(field(form).props.readOnly, false)
-  assert.deepEqual(options(form).map(option => option.props['aria-pressed']), [false, true])
+  assert.deepEqual(
+    options(form).map(option => option.props['aria-pressed']),
+    [false, true],
+  )
   result = Promise.resolve()
   form.props.onSubmit({ preventDefault() {} })
   await tick()
@@ -182,13 +234,30 @@ test('keyboard selection owns a dock card and busy questions cannot submit or di
   const { actions, count } = lease()
   const wait = deferred()
   const sent = []
-  actions.answerQuestion = (...args) => { sent.push(args); return wait.promise }
-  actions.dismissQuestion = () => { sent.push('dismiss'); return wait.promise }
-  const pending = mount(PendingQuestion, { actions, sessionId: 'chief', question: { ...question, multiSelect: false }, inline: false })
+  actions.answerQuestion = (...args) => {
+    sent.push(args)
+    return wait.promise
+  }
+  actions.dismissQuestion = () => {
+    sent.push('dismiss')
+    return wait.promise
+  }
+  const pending = mount(PendingQuestion, {
+    actions,
+    sessionId: 'chief',
+    question: { ...question, multiSelect: false },
+    inline: false,
+  })
   const initial = childOf(pending.render())
   const view = mount(initial.type, initial.props)
   view.render()
-  const key = () => ({ key: 'a', target: null, preventDefault() { this.defaultPrevented = true } })
+  const key = () => ({
+    key: 'a',
+    target: null,
+    preventDefault() {
+      this.defaultPrevented = true
+    },
+  })
   for (const listener of keys) listener(key())
   for (const listener of keys) listener(key())
   initial.props.onDismiss()
@@ -209,9 +278,18 @@ test('secret edits stay local and an in-flight save preserves value and scope fo
   const wait = deferred()
   const sent = []
   let result = wait.promise
-  actions.secretSet = payload => { sent.push(payload); return result }
+  actions.secretSet = payload => {
+    sent.push(payload)
+    return result
+  }
   const request = { id: 'request', kind: 'fill', name: 'DEMO_TOKEN' }
-  const card = mount(SecretCard, { actions, sessionId: 'chief', bot: { id: 'chief', name: 'Chief' }, request, roster: { secrets: [] } })
+  const card = mount(SecretCard, {
+    actions,
+    sessionId: 'chief',
+    bot: { id: 'chief', name: 'Chief' },
+    request,
+    roster: { secrets: [] },
+  })
   let out = card.render()
   find(out, node => node.type.name === 'MaskedInput').props.onChange('synthetic-test-value')
   find(out, node => node.type.name === 'ScopeSwitch').props.onChange('bot')

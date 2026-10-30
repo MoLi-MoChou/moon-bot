@@ -16,7 +16,10 @@ const ROSTER_VALUE = {
 
 test('indexRoster indexes agents by id and by Session', () => {
   const roster = indexRoster(ROSTER_VALUE)
-  assert.deepEqual(roster.agents.map(agent => agent.id), ['a1'])
+  assert.deepEqual(
+    roster.agents.map(agent => agent.id),
+    ['a1'],
+  )
   assert.equal(roster.agentsById.a1.name, 'DSH Agent')
   assert.equal(roster.agentOf.s1, 'a1')
   assert.equal(roster.agentOf.s2, 'a1')
@@ -48,6 +51,12 @@ test('isAgentSession follows the roster first, the cache before it is ready', ()
 })
 
 test('the plain flag maps to the mounted groups', () => {
-  assert.deepEqual(groupsFor({ mode: 'bot', plain: isAgentSession(indexRoster(ROSTER_VALUE), new Set(), 's1') }), { shell: true, conversation: false })
-  assert.deepEqual(groupsFor({ mode: 'bot', plain: isAgentSession(indexRoster(ROSTER_VALUE), new Set(), 'm1') }), { shell: true, conversation: true })
+  assert.deepEqual(groupsFor({ mode: 'bot', plain: isAgentSession(indexRoster(ROSTER_VALUE), new Set(), 's1') }), {
+    shell: true,
+    conversation: false,
+  })
+  assert.deepEqual(groupsFor({ mode: 'bot', plain: isAgentSession(indexRoster(ROSTER_VALUE), new Set(), 'm1') }), {
+    shell: true,
+    conversation: true,
+  })
 })

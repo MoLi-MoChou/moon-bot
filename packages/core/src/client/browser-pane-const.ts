@@ -16,7 +16,16 @@ export const MIN_WIDTH = 360
 export const MIN_CHAT = 420
 // How long the Bot's mark shows that it read the page.
 export const READ_FLASH_MS = 2400
-export const EMPTY_PAGE: PanelPage = { url: '', title: '', favicon: null, loading: false, canGoBack: false, canGoForward: false, error: null, excerpt: '' }
+export const EMPTY_PAGE: PanelPage = {
+  url: '',
+  title: '',
+  favicon: null,
+  loading: false,
+  canGoBack: false,
+  canGoForward: false,
+  error: null,
+  excerpt: '',
+}
 export const EMPTY_TABS: PanelTabs = { ids: [], active: null }
 // The indicator's leading edge runs the fast spring, the trailing one the slow
 // spring — the capsule stretches into the move, then settles.
@@ -24,4 +33,3 @@ export const { lead: SPRING_LEAD, trail: SPRING_TRAIL } = PANEL_TAB_EDGES
 // The entries that open the browser view from another surface; each takes its own
 // arguments, so the panel only wraps them.
 export const OPEN_ENTRIES = ['openBrowser', 'browserNewTab', 'browserPick'] as const
-

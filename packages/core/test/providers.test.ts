@@ -7,10 +7,38 @@ import { checkKey, install, keyRefFor } from '../src/host/providers.ts'
 // directory offers catalog providers, and its settings take path writes the way DSH's
 // do, under a revision. Routes come and go with the pi-ai section.
 // A pi-ai settings tree: providers under user and base, merged the way the page reads them.
-interface PiTree { providers?: Record<string, { apiKeyEnv?: string, displayName?: string, models?: (string | { id: string, [key: string]: unknown })[] }>, [key: string]: unknown }
+interface PiTree {
+  providers?: Record<
+    string,
+    { apiKeyEnv?: string; displayName?: string; models?: (string | { id: string; [key: string]: unknown })[] }
+  >
+  [key: string]: unknown
+}
 // The Models page as these tests read it.
-type PageView = { available: boolean, providers?: { id: string, key: { configured: boolean, writable: boolean }, removable: boolean, models: { ref: string, [key: string]: unknown }[] }[], addable?: { id: string, name: string }[], protocols?: string[] }
-function dsh({ keys = {}, readOnly = [], user = {}, base = {}, catalog = { anthropic: ['claude-a', 'claude-b'], moonshotai: ['kimi-k3'] } }: { keys?: Record<string, string>, readOnly?: string[], user?: PiTree, base?: PiTree, catalog?: Record<string, string[]> } = {}) {
+type PageView = {
+  available: boolean
+  providers?: {
+    id: string
+    key: { configured: boolean; writable: boolean }
+    removable: boolean
+    models: { ref: string; [key: string]: unknown }[]
+  }[]
+  addable?: { id: string; name: string }[]
+  protocols?: string[]
+}
+function dsh({
+  keys = {},
+  readOnly = [],
+  user = {},
+  base = {},
+  catalog = { anthropic: ['claude-a', 'claude-b'], moonshotai: ['kimi-k3'] },
+}: {
+  keys?: Record<string, string>
+  readOnly?: string[]
+  user?: PiTree
+  base?: PiTree
+  catalog?: Record<string, string[]>
+} = {}) {
   const store: Record<string, string> = { ...keys }
   const writes = []
   const listeners = new Map()
@@ -21,7 +49,13 @@ function dsh({ keys = {}, readOnly = [], user = {}, base = {}, catalog = { anthr
   const services = {
     settings: {
       describe: () => [
-        { ns: 'llm-deepseek', revision: 0, value: { apiKeyEnv: 'DEEPSEEK_API_KEY' }, user: {}, base: { apiKeyEnv: 'DEEPSEEK_API_KEY' } },
+        {
+          ns: 'llm-deepseek',
+          revision: 0,
+          value: { apiKeyEnv: 'DEEPSEEK_API_KEY' },
+          user: {},
+          base: { apiKeyEnv: 'DEEPSEEK_API_KEY' },
+        },
         { ns: 'llm-deepseek-account', revision: 0, value: {}, user: {}, base: {} },
         { ns: 'llm-pi-ai', revision, value: piValue(), user: structuredClone(pi.user), base: structuredClone(pi.base) },
       ],
@@ -34,7 +68,8 @@ function dsh({ keys = {}, readOnly = [], user = {}, base = {}, catalog = { anthr
           else delete parent[op.path.at(-1)]
         }
         for (const [id, profile] of Object.entries(next.providers ?? {})) {
-          if (!(id in catalog) && !(profile.models?.length > 0)) throw new Error(`llm-pi-ai: provider "${id}" resolves no models`)
+          if (!(id in catalog) && !(profile.models?.length > 0))
+            throw new Error(`llm-pi-ai: provider "${id}" resolves no models`)
         }
         writes.push([ns, ops])
         pi = { ...pi, user: next }
@@ -43,17 +78,30 @@ function dsh({ keys = {}, readOnly = [], user = {}, base = {}, catalog = { anthr
     },
     credentials: {
       describe: async ref => ({ configured: ref in store, writable: !readOnly.includes(ref) }),
-      set: async (ref, value) => { writes.push(['set', ref]); store[ref] = value },
-      unset: async (ref) => { writes.push(['unset', ref]); delete store[ref] },
+      set: async (ref, value) => {
+        writes.push(['set', ref])
+        store[ref] = value
+      },
+      unset: async ref => {
+        writes.push(['unset', ref])
+        delete store[ref]
+      },
     },
   }
   const discovered = []
   const ctx = {
-    on(name, listener) { listeners.set(name, listener); return () => listeners.delete(name) },
+    on(name, listener) {
+      listeners.set(name, listener)
+      return () => listeners.delete(name)
+    },
     get: name => services[name],
     llm: {
-      listProviders: () => [{ id: 'deepseek-official', name: 'DeepSeek' }, { id: 'deepseek-account', name: 'DeepSeek Account' }, ...routes().map(id => ({ id, name: piValue().providers[id].displayName ?? id }))],
-      listModels: async (id) => {
+      listProviders: () => [
+        { id: 'deepseek-official', name: 'DeepSeek' },
+        { id: 'deepseek-account', name: 'DeepSeek Account' },
+        ...routes().map(id => ({ id, name: piValue().providers[id].displayName ?? id })),
+      ],
+      listModels: async id => {
         if (id === 'deepseek-official') return [{ id: 'deepseek-flash', name: 'DeepSeek Flash' }]
         if (id === 'deepseek-account') return []
         const profile = piValue().providers[id]
@@ -61,28 +109,57 @@ function dsh({ keys = {}, readOnly = [], user = {}, base = {}, catalog = { anthr
       },
       listConfigurableProviders: () => [
         { provider: 'deepseek-official', displayName: 'DeepSeek', settingsNs: 'llm-deepseek', settingsPath: [] },
-        { provider: 'deepseek-account', displayName: 'DeepSeek Account', settingsNs: 'llm-deepseek-account', settingsPath: [] },
-        ...Object.keys(catalog).map(id => ({ provider: id, displayName: id, settingsNs: 'llm-pi-ai', settingsPath: ['providers', id], declared: false })),
-        ...routes().filter(id => !(id in catalog)).map(id => ({ provider: id, displayName: piValue().providers[id].displayName ?? id, settingsNs: 'llm-pi-ai', settingsPath: ['providers', id], declared: true })),
+        {
+          provider: 'deepseek-account',
+          displayName: 'DeepSeek Account',
+          settingsNs: 'llm-deepseek-account',
+          settingsPath: [],
+        },
+        ...Object.keys(catalog).map(id => ({
+          provider: id,
+          displayName: id,
+          settingsNs: 'llm-pi-ai',
+          settingsPath: ['providers', id],
+          declared: false,
+        })),
+        ...routes()
+          .filter(id => !(id in catalog))
+          .map(id => ({
+            provider: id,
+            displayName: piValue().providers[id].displayName ?? id,
+            settingsNs: 'llm-pi-ai',
+            settingsPath: ['providers', id],
+            declared: true,
+          })),
       ],
-      discoverModels: async (ns, request) => { discovered.push([ns, request]); return [{ id: 'relay-1', name: 'Relay One', contextWindow: 128000, inputModalities: ['text'] }, { id: 'relay-2' }] },
+      discoverModels: async (ns, request) => {
+        discovered.push([ns, request])
+        return [
+          { id: 'relay-1', name: 'Relay One', contextWindow: 128000, inputModalities: ['text'] },
+          { id: 'relay-2' },
+        ]
+      },
     },
   }
-  const rt = { ctx, state: { bots: {} } } as unknown as Parameters<typeof installModels>[0] & Parameters<typeof install>[0] & {
-    catalog(options?: { fresh?: boolean }): Promise<{ provider: string, needsKey?: boolean, [key: string]: unknown }[]>
-    providersView(): Promise<PageView>
-    setProviderKey(provider: string, key: string): Promise<unknown>
-    clearProviderKey(provider: string): Promise<unknown>
-    addProvider(options: Record<string, unknown>): Promise<PageView>
-    removeProvider(provider: string): Promise<PageView>
-    discoverModels(request: Record<string, unknown>): Promise<{ id: string, name?: string }[]>
-  }
+  const rt = { ctx, state: { bots: {} } } as unknown as Parameters<typeof installModels>[0] &
+    Parameters<typeof install>[0] & {
+      catalog(options?: {
+        fresh?: boolean
+      }): Promise<{ provider: string; needsKey?: boolean; [key: string]: unknown }[]>
+      providersView(): Promise<PageView>
+      setProviderKey(provider: string, key: string): Promise<unknown>
+      clearProviderKey(provider: string): Promise<unknown>
+      addProvider(options: Record<string, unknown>): Promise<PageView>
+      removeProvider(provider: string): Promise<PageView>
+      discoverModels(request: Record<string, unknown>): Promise<{ id: string; name?: string }[]>
+    }
   installModels(rt)
   install(rt)
   return { rt, store, writes, listeners, discovered }
 }
 
-const needing = async rt => (await rt.catalog({ fresh: true })).filter(entry => entry.needsKey).map(entry => entry.provider)
+const needing = async rt =>
+  (await rt.catalog({ fresh: true })).filter(entry => entry.needsKey).map(entry => entry.provider)
 const row = (view, id) => view.providers.find(provider => provider.id === id)
 
 test('models of a provider whose API key is set nowhere need the key', async () => {
@@ -102,19 +179,25 @@ test('without DSH settings or credentials no model needs a key, and there is no 
 })
 
 test('the page lists the providers set up and the ones DSH can add', async () => {
-  const { rt } = dsh({ keys: { DEEPSEEK_API_KEY: 'k' }, user: { providers: { moonshotai: { apiKeyEnv: 'MOONSHOTAI_API_KEY' } } } })
+  const { rt } = dsh({
+    keys: { DEEPSEEK_API_KEY: 'k' },
+    user: { providers: { moonshotai: { apiKeyEnv: 'MOONSHOTAI_API_KEY' } } },
+  })
   const view = await rt.providersView()
-  assert.deepEqual(view.providers.map(provider => [provider.id, provider.key, provider.removable, provider.models.length]), [
-    ['deepseek-official', { configured: true, writable: true }, false, 1],
-    ['moonshotai', { configured: false, writable: true }, true, 1],
-  ])
+  assert.deepEqual(
+    view.providers.map(provider => [provider.id, provider.key, provider.removable, provider.models.length]),
+    [
+      ['deepseek-official', { configured: true, writable: true }, false, 1],
+      ['moonshotai', { configured: false, writable: true }, true, 1],
+    ],
+  )
   // The account route has no key and no models before a sign-in.
   assert.equal(row(view, 'deepseek-account'), undefined)
   assert.deepEqual(view.addable, [{ id: 'anthropic', name: 'anthropic' }])
   assert.deepEqual(view.protocols, ['openai-completions', 'openai-responses', 'anthropic-messages'])
 })
 
-test('a saved API key goes to the provider\'s reference and frees its models', async () => {
+test("a saved API key goes to the provider's reference and frees its models", async () => {
   const { rt, store, writes } = dsh()
   await rt.setProviderKey('deepseek-official', '  sk-test  ')
   assert.deepEqual(writes, [['set', 'DEEPSEEK_API_KEY']])
@@ -133,13 +216,22 @@ test('a key set outside Moon Bot is not overwritten or removed', async () => {
   assert.deepEqual(row(await rt.providersView(), 'deepseek-official').key, { configured: true, writable: false })
 })
 
-test('a provider from DSH\'s list goes in with the key DSH\'s own page would name', async () => {
+test("a provider from DSH's list goes in with the key DSH's own page would name", async () => {
   const { rt, store, writes } = dsh()
   const view = await rt.addProvider({ provider: 'moonshotai', key: 'sk-kimi' })
-  assert.deepEqual(writes, [['llm-pi-ai', [{ op: 'set', path: ['providers', 'moonshotai'], value: { apiKeyEnv: 'MOONSHOTAI_API_KEY' } }]], ['set', 'MOONSHOTAI_API_KEY']])
+  assert.deepEqual(writes, [
+    ['llm-pi-ai', [{ op: 'set', path: ['providers', 'moonshotai'], value: { apiKeyEnv: 'MOONSHOTAI_API_KEY' } }]],
+    ['set', 'MOONSHOTAI_API_KEY'],
+  ])
   assert.equal(store.MOONSHOTAI_API_KEY, 'sk-kimi')
-  assert.deepEqual(row(view, 'moonshotai').models.map(model => model.ref), ['moonshotai/kimi-k3'])
-  assert.equal(view.addable.some(entry => entry.id === 'moonshotai'), false)
+  assert.deepEqual(
+    row(view, 'moonshotai').models.map(model => model.ref),
+    ['moonshotai/kimi-k3'],
+  )
+  assert.equal(
+    view.addable.some(entry => entry.id === 'moonshotai'),
+    false,
+  )
   await assert.rejects(rt.addProvider({ provider: 'moonshotai', key: 'sk-kimi' }), /moonshotai is already set up/)
   await assert.rejects(rt.addProvider({ provider: 'deepseek-official' }), /already set up/)
   await assert.rejects(rt.addProvider({ provider: 'nowhere' }), /Moon Bot offers no provider nowhere/)
@@ -149,27 +241,56 @@ test('a blank key keeps a key that is already there, else leaves the route witho
   const { rt, writes } = dsh({ keys: { ANTHROPIC_API_KEY: 'k' } })
   await rt.addProvider({ provider: 'anthropic', key: '' })
   await rt.addProvider({ provider: 'moonshotai' })
-  assert.deepEqual(writes.map(([, ops]) => ops[0].value), [{ apiKeyEnv: 'ANTHROPIC_API_KEY' }, {}])
+  assert.deepEqual(
+    writes.map(([, ops]) => ops[0].value),
+    [{ apiKeyEnv: 'ANTHROPIC_API_KEY' }, {}],
+  )
 })
 
 test('a custom API goes in with its endpoint, protocol and the models picked', async () => {
   const { rt, store, writes } = dsh()
   await rt.addProvider({
-    custom: true, provider: 'relay', name: ' My relay ', api: 'openai-completions', baseURL: ' https://relay.example/v1 ', key: 'sk-relay',
+    custom: true,
+    provider: 'relay',
+    name: ' My relay ',
+    api: 'openai-completions',
+    baseURL: ' https://relay.example/v1 ',
+    key: 'sk-relay',
     models: [{ id: 'relay-1', name: 'Relay One', contextWindow: 128000, inputModalities: ['text'] }, 'relay-2'],
   })
-  assert.deepEqual(writes[0], ['llm-pi-ai', [{ op: 'set', path: ['providers', 'relay'], value: {
-    displayName: 'My relay', api: 'openai-completions', baseURL: 'https://relay.example/v1', apiKeyEnv: 'RELAY_API_KEY',
-    models: [{ id: 'relay-1', name: 'Relay One', contextWindow: 128000, input: ['text'] }, { id: 'relay-2' }],
-  } }]])
+  assert.deepEqual(writes[0], [
+    'llm-pi-ai',
+    [
+      {
+        op: 'set',
+        path: ['providers', 'relay'],
+        value: {
+          displayName: 'My relay',
+          api: 'openai-completions',
+          baseURL: 'https://relay.example/v1',
+          apiKeyEnv: 'RELAY_API_KEY',
+          models: [{ id: 'relay-1', name: 'Relay One', contextWindow: 128000, input: ['text'] }, { id: 'relay-2' }],
+        },
+      },
+    ],
+  ])
   assert.equal(store.RELAY_API_KEY, 'sk-relay')
   const view = await rt.providersView()
-  assert.deepEqual([row(view, 'relay').name, row(view, 'relay').custom, row(view, 'relay').removable], ['My relay', true, true])
+  assert.deepEqual(
+    [row(view, 'relay').name, row(view, 'relay').custom, row(view, 'relay').removable],
+    ['My relay', true, true],
+  )
 })
 
 test('a custom API is refused before anything is written when it cannot serve', async () => {
   const { rt, writes } = dsh()
-  const custom = { custom: true, provider: 'relay', api: 'openai-completions', baseURL: 'https://relay.example/v1', models: ['m'] }
+  const custom = {
+    custom: true,
+    provider: 'relay',
+    api: 'openai-completions',
+    baseURL: 'https://relay.example/v1',
+    models: ['m'],
+  }
   await assert.rejects(rt.addProvider({ ...custom, provider: 'My Relay' }), /lowercase letters, digits and dashes/)
   await assert.rejects(rt.addProvider({ ...custom, provider: 'anthropic' }), /Moon Bot already offers anthropic/)
   await assert.rejects(rt.addProvider({ ...custom, api: 'grpc' }), /protocol must be one of/)
@@ -183,9 +304,18 @@ test('a custom API is refused before anything is written when it cannot serve', 
 
 test('fetching models asks DSH about the endpoint, with the typed key for that question only', async () => {
   const { rt, discovered, store } = dsh()
-  const models = await rt.discoverModels({ baseURL: 'https://relay.example/v1', api: 'openai-completions', key: 'sk-relay' })
-  assert.deepEqual(discovered, [['llm-pi-ai', { baseURL: 'https://relay.example/v1', api: 'openai-completions', apiKey: 'sk-relay' }]])
-  assert.deepEqual(models, [{ id: 'relay-1', name: 'Relay One', contextWindow: 128000, inputModalities: ['text'] }, { id: 'relay-2' }])
+  const models = await rt.discoverModels({
+    baseURL: 'https://relay.example/v1',
+    api: 'openai-completions',
+    key: 'sk-relay',
+  })
+  assert.deepEqual(discovered, [
+    ['llm-pi-ai', { baseURL: 'https://relay.example/v1', api: 'openai-completions', apiKey: 'sk-relay' }],
+  ])
+  assert.deepEqual(models, [
+    { id: 'relay-1', name: 'Relay One', contextWindow: 128000, inputModalities: ['text'] },
+    { id: 'relay-2' },
+  ])
   assert.deepEqual(store, {})
   // A provider DSH ships is answered from its own catalog.
   await rt.discoverModels({ provider: 'anthropic' })
@@ -193,13 +323,32 @@ test('fetching models asks DSH about the endpoint, with the typed key for that q
 })
 
 test('removing a provider takes its key along unless another provider names it', async () => {
-  const user = { providers: { moonshotai: { apiKeyEnv: 'MOONSHOTAI_API_KEY' }, kimi: { apiKeyEnv: 'MOONSHOTAI_API_KEY', api: 'openai-completions', baseURL: 'https://k.example/v1', models: [{ id: 'k' }] }, relay: { apiKeyEnv: 'RELAY_API_KEY', api: 'openai-completions', baseURL: 'https://r.example/v1', models: [{ id: 'r' }] } } }
+  const user = {
+    providers: {
+      moonshotai: { apiKeyEnv: 'MOONSHOTAI_API_KEY' },
+      kimi: {
+        apiKeyEnv: 'MOONSHOTAI_API_KEY',
+        api: 'openai-completions',
+        baseURL: 'https://k.example/v1',
+        models: [{ id: 'k' }],
+      },
+      relay: {
+        apiKeyEnv: 'RELAY_API_KEY',
+        api: 'openai-completions',
+        baseURL: 'https://r.example/v1',
+        models: [{ id: 'r' }],
+      },
+    },
+  }
   const { rt, store } = dsh({ user, keys: { MOONSHOTAI_API_KEY: 'a', RELAY_API_KEY: 'b' } })
   await rt.removeProvider('moonshotai')
   assert.equal(store.MOONSHOTAI_API_KEY, 'a')
   const view = await rt.removeProvider('relay')
   assert.equal('RELAY_API_KEY' in store, false)
-  assert.deepEqual(view.providers.map(provider => provider.id), ['deepseek-official', 'kimi'])
+  assert.deepEqual(
+    view.providers.map(provider => provider.id),
+    ['deepseek-official', 'kimi'],
+  )
   await assert.rejects(rt.removeProvider('relay'), /relay is not set up/)
   await assert.rejects(rt.removeProvider('deepseek-official'), /not set up/)
 })
@@ -214,9 +363,15 @@ test('a changed credential drops the cached catalog', async () => {
   const { rt, store, listeners } = dsh()
   assert.deepEqual(await needing(rt), ['deepseek-official'])
   store.DEEPSEEK_API_KEY = 'k'
-  assert.deepEqual((await rt.catalog()).filter(entry => entry.needsKey).map(entry => entry.provider), ['deepseek-official'])
+  assert.deepEqual(
+    (await rt.catalog()).filter(entry => entry.needsKey).map(entry => entry.provider),
+    ['deepseek-official'],
+  )
   listeners.get('credentials/reference-updated')()
-  assert.deepEqual((await rt.catalog()).filter(entry => entry.needsKey).map(entry => entry.provider), [])
+  assert.deepEqual(
+    (await rt.catalog()).filter(entry => entry.needsKey).map(entry => entry.provider),
+    [],
+  )
 })
 
 test('an API key is what an HTTP header carries, without a NAME= or quotes', () => {
@@ -230,7 +385,7 @@ test('an API key is what an HTTP header carries, without a NAME= or quotes', () 
   assert.throws(() => checkKey('sk-密钥'), /no spaces/)
 })
 
-test('a route\'s key reference follows DSH\'s own Models page', () => {
+test("a route's key reference follows DSH's own Models page", () => {
   assert.equal(keyRefFor('moonshotai'), 'MOONSHOTAI_API_KEY')
   assert.equal(keyRefFor('my-gateway2'), 'MY_GATEWAY2_API_KEY')
 })

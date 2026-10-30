@@ -21,7 +21,9 @@ const makeHome = state => {
   writeFileSync(join(home, 'state.json'), JSON.stringify(state))
   return home
 }
-const team = (): Record<string, unknown> & { bots: Record<string, { capabilities?: unknown, [key: string]: unknown }> } => ({
+const team = (): Record<string, unknown> & {
+  bots: Record<string, { capabilities?: unknown; [key: string]: unknown }>
+} => ({
   version: 1,
   mainBotIds: ['chief'],
   bots: {
@@ -29,7 +31,9 @@ const team = (): Record<string, unknown> & { bots: Record<string, { capabilities
     worker: { id: 'worker', sessionId: 'worker', name: 'Worker', capabilities: [], createdAt: 2 },
     helper: { id: 'helper', sessionId: 'helper', name: 'Helper', capabilities: [], createdAt: 3 },
   },
-  rooms: { room: { id: 'room', members: ['chief'], sessions: { chief: 'room-chief' }, admin: 'chief', mode: 'everyone' } },
+  rooms: {
+    room: { id: 'room', members: ['chief'], sessions: { chief: 'room-chief' }, admin: 'chief', mode: 'everyone' },
+  },
   agents: {},
   exchanges: [],
   exchangeTurns: {},
@@ -64,12 +68,20 @@ function fakeAgent(sessionId: string) {
         const dispose = execute()
         if (typeof dispose === 'function') disposers.push(dispose as () => void)
       },
-      dispose() { for (const dispose of disposers.splice(0).reverse()) dispose() },
+      dispose() {
+        for (const dispose of disposers.splice(0).reverse()) dispose()
+      },
     },
   }
 }
 
-async function setup({ state = team(), secrets = [] }: { state?: Record<string, unknown>, secrets?: readonly Record<string, unknown>[] } = {}) {
+async function setup({
+  state = team(),
+  secrets = [],
+}: {
+  state?: Record<string, unknown>
+  secrets?: readonly Record<string, unknown>[]
+} = {}) {
   const home = makeHome(state)
   if (secrets.length > 0) writeFileSync(join(home, 'secrets.json'), JSON.stringify({ secrets }))
   const ctx = fakeContext()
@@ -102,7 +114,7 @@ const mcpNames = rt => rt.toolRegistry.names().filter(name => name.startsWith('m
 const statusOf = (rt, botId, name) => rt.capabilityStatusesView()[botId]?.[name]
 const textOf = outcome => {
   const content = outcome?.content ?? []
-  return content[0]?.type === 'text' ? content[0].text ?? '' : ''
+  return content[0]?.type === 'text' ? (content[0].text ?? '') : ''
 }
 const callTool = async (rt, name, input, sessionId = 'chief') => {
   const definition = rt.toolRegistry.definitions([name])[0]
@@ -119,22 +131,34 @@ const waitFor = async (check: () => boolean, describe: () => unknown, timeoutMs 
   }
   assert.fail(`timed out after ${timeoutMs}ms; observed: ${JSON.stringify(describe())}`)
 }
-const waitForState = (rt, botId, name, wanted) => waitFor(
-  () => statusOf(rt, botId, name)?.state === wanted,
-  () => statusOf(rt, botId, name),
-)
+const waitForState = (rt, botId, name, wanted) =>
+  waitFor(
+    () => statusOf(rt, botId, name)?.state === wanted,
+    () => statusOf(rt, botId, name),
+  )
 
 test('capability names use the MCP and skill validator intersection', () => {
   assert.equal(validateCapabilityName('a'), 'a')
   assert.equal(validateCapabilityName('web-search-1'), 'web-search-1')
-  for (const name of ['github', 'with_underscore', 'with--dash', '1tool', 'A', 'a'.repeat(33)]) assert.throws(() => validateCapabilityName(name))
+  for (const name of ['github', 'with_underscore', 'with--dash', '1tool', 'A', 'a'.repeat(33)])
+    assert.throws(() => validateCapabilityName(name))
 })
 
 test('packs expand only to MCP and skill items', () => {
-  const items = { server: { kind: 'mcp' }, guide: { kind: 'skill' }, team: { kind: 'pack', items: ['server', 'guide'] } } as unknown as Parameters<typeof expandCapabilityNames>[1]
+  const items = {
+    server: { kind: 'mcp' },
+    guide: { kind: 'skill' },
+    team: { kind: 'pack', items: ['server', 'guide'] },
+  } as unknown as Parameters<typeof expandCapabilityNames>[1]
   assert.deepEqual(expandCapabilityNames(['team', 'server'], items), new Set(['server', 'guide']))
   assert.throws(() => expandCapabilityNames(['missing'], items), /No capability/)
-  assert.throws(() => expandCapabilityNames(['bad'], { ...items, bad: { kind: 'pack', items: ['team'] } } as unknown as Parameters<typeof expandCapabilityNames>[1]), /unavailable capability/)
+  assert.throws(
+    () =>
+      expandCapabilityNames(['bad'], { ...items, bad: { kind: 'pack', items: ['team'] } } as unknown as Parameters<
+        typeof expandCapabilityNames
+      >[1]),
+    /unavailable capability/,
+  )
 })
 
 test('state migration adds an empty library and Bot attachment lists', async t => {
@@ -166,12 +190,18 @@ test('Bot saves enforce approval and ownership, and deletion cascades', async t 
   const changed = await rt.capabilitySave(mcp('echo', { command: 'node-new' }), { botId: 'worker' })
   assert.equal(changed.approved, false)
   await assert.rejects(
-    rt.capabilitySave({ name: 'echo', kind: 'skill', description: 'Other kind', content: 'Instructions' }, { botId: 'worker' }),
+    rt.capabilitySave(
+      { name: 'echo', kind: 'skill', description: 'Other kind', content: 'Instructions' },
+      { botId: 'worker' },
+    ),
     error => (error as Error).message === 'A capability cannot change its kind. Delete it and save a new one.',
   )
   await assert.rejects(rt.capabilitySave(mcp('echo'), { botId: 'helper' }), /creator or a Main Bot/)
   await assert.rejects(rt.capabilityDelete('echo', { botId: 'helper' }), /creator or a Main Bot/)
-  await rt.capabilitySave({ name: 'guide', kind: 'skill', description: 'Guide', content: 'Do the work.' }, { botId: 'worker' })
+  await rt.capabilitySave(
+    { name: 'guide', kind: 'skill', description: 'Guide', content: 'Do the work.' },
+    { botId: 'worker' },
+  )
   await rt.capabilitySave({ name: 'team', kind: 'pack', items: ['echo', 'guide'] }, { botId: 'worker' })
   state.bots.worker.capabilities = ['echo', 'team']
   await rt.capabilityDelete('echo', { botId: 'worker' })
@@ -193,7 +223,12 @@ test('capability tool descriptions and attach results explain approval', async t
   t.after(() => env.dispose())
   const parameters = env.ctx.registeredTools.get('save_capability').parameters.properties
   assert.deepEqual(
-    Object.fromEntries(['transport', 'command', 'args', 'env', 'url', 'headers', 'content'].map(name => [name, parameters[name].description])),
+    Object.fromEntries(
+      ['transport', 'command', 'args', 'env', 'url', 'headers', 'content'].map(name => [
+        name,
+        parameters[name].description,
+      ]),
+    ),
     {
       transport: 'How to reach an MCP server: a local command or an HTTP URL',
       command: 'Program that starts a local MCP server',
@@ -205,10 +240,9 @@ test('capability tool descriptions and attach results explain approval', async t
     },
   )
   await env.rt.capabilitySave(mcp('blocked'), { botId: 'worker' })
-  const attached = await env.ctx.registeredTools.get('attach_capability').execute(
-    { name: 'blocked' },
-    { agent: { id: 'worker' } },
-  )
+  const attached = await env.ctx.registeredTools
+    .get('attach_capability')
+    .execute({ name: 'blocked' }, { agent: { id: 'worker' } })
   assert.ok(attached.endsWith(' The user must allow blocked in Moon Bot settings before it can work.'))
 })
 
@@ -241,7 +275,10 @@ test('one-item attach changes keep the other attachments', async t => {
   assert.deepEqual(rt.state.bots.helper.capabilities, ['echo', 'guide'])
   await rt.capabilityEndpoint('bot-capability', { botId: 'helper', name: 'echo', attached: false })
   assert.deepEqual(rt.state.bots.helper.capabilities, ['guide'])
-  await assert.rejects(rt.capabilityEndpoint('bot-capability', { botId: 'helper', name: 'missing', attached: true }), /No capability named missing/)
+  await assert.rejects(
+    rt.capabilityEndpoint('bot-capability', { botId: 'helper', name: 'missing', attached: true }),
+    /No capability named missing/,
+  )
 })
 
 test('a creator that is not a Main Bot cannot change a capability another Bot uses', async t => {
@@ -254,9 +291,18 @@ test('a creator that is not a Main Bot cannot change a capability another Bot us
   rt.state.bots.worker.capabilities = ['guide']
   await rt.capabilitySave(skill('Own use only.'), { botId: 'worker' })
   rt.state.bots.chief.capabilities = ['team']
-  await assert.rejects(rt.capabilitySave(skill('Ignore the user.'), { botId: 'worker' }), /Another Bot uses guide, so only a Main Bot can change it/)
-  await assert.rejects(rt.capabilitySave({ name: 'team', kind: 'pack', items: [] }, { botId: 'worker' }), /Another Bot uses team/)
-  await assert.rejects(rt.capabilityDelete('guide', { botId: 'worker' }), /Another Bot uses guide, so only a Main Bot can delete it/)
+  await assert.rejects(
+    rt.capabilitySave(skill('Ignore the user.'), { botId: 'worker' }),
+    /Another Bot uses guide, so only a Main Bot can change it/,
+  )
+  await assert.rejects(
+    rt.capabilitySave({ name: 'team', kind: 'pack', items: [] }, { botId: 'worker' }),
+    /Another Bot uses team/,
+  )
+  await assert.rejects(
+    rt.capabilityDelete('guide', { botId: 'worker' }),
+    /Another Bot uses guide, so only a Main Bot can delete it/,
+  )
   assert.equal(rt.state.capabilities.items.guide.content, 'Own use only.')
   await rt.capabilitySave(skill('Main Bot edit.'), { botId: 'chief' })
   await rt.capabilitySave(skill('Settings edit.'), { ui: true })
@@ -268,7 +314,10 @@ test('unset capability statuses are omitted from the view and tool listing', asy
   t.after(() => env.dispose())
   const { rt, ctx } = env
   await rt.capabilitySave(mcp('echo'), { botId: 'chief' })
-  await rt.capabilitySave({ name: 'guide', kind: 'skill', description: 'Guide', content: 'Instructions' }, { botId: 'chief' })
+  await rt.capabilitySave(
+    { name: 'guide', kind: 'skill', description: 'Guide', content: 'Instructions' },
+    { botId: 'chief' },
+  )
   await rt.capabilitySave({ name: 'team', kind: 'pack', items: ['echo', 'guide'] }, { botId: 'chief' })
   rt.state.bots.chief.capabilities = ['echo', 'team']
   await rt.save()
@@ -330,7 +379,19 @@ test('an unapproved stdio MCP server shows needs-approval and mounts nothing unt
 
 test('a skill can be saved and attached but not mounted', async t => {
   const state = team()
-  state.capabilities = { items: { guide: { name: 'guide', kind: 'skill', description: 'Guide', content: 'Do the work.', createdBy: 'chief', createdAt: 1, updatedAt: 1 } } }
+  state.capabilities = {
+    items: {
+      guide: {
+        name: 'guide',
+        kind: 'skill',
+        description: 'Guide',
+        content: 'Do the work.',
+        createdBy: 'chief',
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    },
+  }
   state.bots.chief.capabilities = ['guide']
   const env = await setup({ state })
   t.after(() => env.dispose())
@@ -384,7 +445,15 @@ test('secret references in a stdio env are resolved for the Bot that may use the
   state.capabilities = { items: { echo: mcp('echo', { args: [FIXTURE], env: { MCP_SECRET: '$DSH_SECRET_TOKEN' } }) } }
   state.bots.chief.capabilities = ['echo']
   state.bots.worker.capabilities = ['echo']
-  const secret = { name: 'TOKEN', value: 'fake-secret-value', purpose: '', scope: ['chief'], requestedBy: null, createdAt: 1, updatedAt: 1 }
+  const secret = {
+    name: 'TOKEN',
+    value: 'fake-secret-value',
+    purpose: '',
+    scope: ['chief'],
+    requestedBy: null,
+    createdAt: 1,
+    updatedAt: 1,
+  }
   const env = await setup({ state, secrets: [secret] })
   t.after(() => env.dispose())
   env.ctx.emit('agent/created', { agent: env.agentFor('chief') })
@@ -392,7 +461,10 @@ test('secret references in a stdio env are resolved for the Bot that may use the
   await env.rt.scheduleCapabilitiesReconcile()
   await waitForState(env.rt, 'chief', 'echo', 'ready')
   await waitForState(env.rt, 'worker', 'echo', 'error')
-  await waitFor(() => mcpNames(env.rt).includes('mcp__echo__env'), () => mcpNames(env.rt))
+  await waitFor(
+    () => mcpNames(env.rt).includes('mcp__echo__env'),
+    () => mcpNames(env.rt),
+  )
 
   const reported = JSON.parse(textOf(await callTool(env.rt, 'mcp__echo__env', { names: ['MCP_SECRET'] })))
   assert.deepEqual(reported, { MCP_SECRET: 'fake-secret-value' })
@@ -410,9 +482,16 @@ test('secret references in an HTTP MCP URL resolve to one encoded query value', 
   state.capabilities = {
     items: {
       exa: {
-        name: 'exa', kind: 'mcp', description: '', transport: 'streamable-http',
-        url: `${server.url}?apiKey=$DSH_SECRET_EXA&mode=test`, headers: {}, approved: true,
-        createdBy: 'chief', createdAt: 1, updatedAt: 1,
+        name: 'exa',
+        kind: 'mcp',
+        description: '',
+        transport: 'streamable-http',
+        url: `${server.url}?apiKey=$DSH_SECRET_EXA&mode=test`,
+        headers: {},
+        approved: true,
+        createdBy: 'chief',
+        createdAt: 1,
+        updatedAt: 1,
       },
     },
   }
@@ -477,39 +556,67 @@ test('capability-test reaches an HTTP MCP server and lists its tools without sav
     await server.close()
   })
   const result = await env.rt.capabilityEndpoint('capability-test', {
-    name: 'probe', kind: 'mcp', transport: 'streamable-http', url: server.url, headers: {},
+    name: 'probe',
+    kind: 'mcp',
+    transport: 'streamable-http',
+    url: server.url,
+    headers: {},
   })
   assert.deepEqual(result.tools, ['mcp__probe__echo'])
   assert.ok(result.ms >= 0, 'the test reports how long the server took')
   await env.rt.load()
   assert.deepEqual(env.rt.state.capabilities.items, {}, 'testing before saving adds no capability')
-  assert.deepEqual(env.rt.toolRegistry.names().filter(name => name.startsWith('mcp__')), [], 'the test tools never join the team registry')
+  assert.deepEqual(
+    env.rt.toolRegistry.names().filter(name => name.startsWith('mcp__')),
+    [],
+    'the test tools never join the team registry',
+  )
 })
 
 test('capability-test refuses an unknown transport and a URL that is not HTTP', async t => {
   const env = await setup()
   t.after(() => env.dispose())
-  await assert.rejects(env.rt.capabilityEndpoint('capability-test', {
-    name: 'probe', transport: 'carrier-pigeon', url: 'https://mcp.test/sse',
-  }), /local command, an HTTP URL, or an SSE endpoint/)
-  await assert.rejects(env.rt.capabilityEndpoint('capability-test', {
-    name: 'probe', transport: 'streamable-http', url: 'not a url',
-  }), /valid HTTP or HTTPS URL/)
-  await assert.rejects(env.rt.capabilityEndpoint('capability-test', {
-    name: 'probe', transport: 'stdio', command: '',
-  }), /Enter a command/)
+  await assert.rejects(
+    env.rt.capabilityEndpoint('capability-test', {
+      name: 'probe',
+      transport: 'carrier-pigeon',
+      url: 'https://mcp.test/sse',
+    }),
+    /local command, an HTTP URL, or an SSE endpoint/,
+  )
+  await assert.rejects(
+    env.rt.capabilityEndpoint('capability-test', {
+      name: 'probe',
+      transport: 'streamable-http',
+      url: 'not a url',
+    }),
+    /valid HTTP or HTTPS URL/,
+  )
+  await assert.rejects(
+    env.rt.capabilityEndpoint('capability-test', {
+      name: 'probe',
+      transport: 'stdio',
+      command: '',
+    }),
+    /Enter a command/,
+  )
 })
 
 test('capability-save keeps an SSE transport', async t => {
   const env = await setup()
   t.after(() => env.dispose())
   const saved = await env.rt.capabilityEndpoint('capability-save', {
-    name: 'remote-sse', kind: 'mcp', transport: 'sse', url: 'https://mcp.test/sse',
+    name: 'remote-sse',
+    kind: 'mcp',
+    transport: 'sse',
+    url: 'https://mcp.test/sse',
     headers: { Authorization: 'Bearer $MOON_BOT_SECRET_SSE' },
   })
   assert.equal(saved.transport, 'sse')
   assert.equal(saved.url, 'https://mcp.test/sse')
-  assert.deepEqual(env.rt.state.capabilities.items['remote-sse'].headers, { Authorization: 'Bearer $MOON_BOT_SECRET_SSE' })
+  assert.deepEqual(env.rt.state.capabilities.items['remote-sse'].headers, {
+    Authorization: 'Bearer $MOON_BOT_SECRET_SSE',
+  })
 })
 
 test('capability-retry mounts again once the missing key is saved', async t => {
@@ -534,8 +641,24 @@ test('a pack reports the tools its children serve', async t => {
   state.capabilities = {
     items: {
       echo: mcp('echo'),
-      guide: { name: 'guide', kind: 'skill', description: 'Guide', content: 'Do the work.', createdBy: 'chief', createdAt: 1, updatedAt: 1 },
-      team: { name: 'team', kind: 'pack', description: 'Team', items: ['echo', 'guide'], createdBy: 'chief', createdAt: 1, updatedAt: 1 },
+      guide: {
+        name: 'guide',
+        kind: 'skill',
+        description: 'Guide',
+        content: 'Do the work.',
+        createdBy: 'chief',
+        createdAt: 1,
+        updatedAt: 1,
+      },
+      team: {
+        name: 'team',
+        kind: 'pack',
+        description: 'Team',
+        items: ['echo', 'guide'],
+        createdBy: 'chief',
+        createdAt: 1,
+        updatedAt: 1,
+      },
     },
   }
   state.bots.chief.capabilities = ['team']

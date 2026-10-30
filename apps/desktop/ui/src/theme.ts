@@ -1,7 +1,12 @@
 // The team's theme, painted the way the plugin host paints it (core/src/client/
 // client-install.ts): the chosen theme's tokens on `html body`, the id on
 // `body[data-bt-theme]` for the rules that switch on it, and Moon when nothing is chosen.
-import { allThemes, resolveThemeId, themeCss, type ThemeDefinition } from '../../../../packages/core/src/client/themes.ts'
+import {
+  allThemes,
+  resolveThemeId,
+  themeCss,
+  type ThemeDefinition,
+} from '../../../../packages/core/src/client/themes.ts'
 
 /** The theme a window with no saved choice paints. */
 export const DEFAULT_THEME = 'moon'
@@ -19,7 +24,7 @@ export function themeIdOf(prefs: ThemePrefs | undefined): string {
   return resolveThemeId(themes, saved === '' ? DEFAULT_THEME : saved)
 }
 
-let painted: { style: HTMLStyleElement, id: string } | undefined
+let painted: { style: HTMLStyleElement; id: string } | undefined
 
 /** Paints the theme; calling it again with another id replaces the previous tokens. */
 export function applyTheme(prefs: ThemePrefs | undefined): string {
@@ -47,8 +52,12 @@ export function applyTheme(prefs: ThemePrefs | undefined): string {
 /** The system's light or dark mode, which the Bot views read as a body attribute. */
 export function followSystemAppearance(): () => void {
   const dark = matchMedia('(prefers-color-scheme: dark)')
-  const paint = (): void => { document.body.toggleAttribute('data-bt-dark', dark.matches) }
+  const paint = (): void => {
+    document.body.toggleAttribute('data-bt-dark', dark.matches)
+  }
   paint()
   dark.addEventListener('change', paint)
-  return () => { dark.removeEventListener('change', paint) }
+  return () => {
+    dark.removeEventListener('change', paint)
+  }
 }

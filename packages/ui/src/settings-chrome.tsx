@@ -1,92 +1,130 @@
-import { createElement as h, useRef, useState } from 'react';
-import type React from 'react';
-import type { ReactNode } from 'react';
-import { SPRING_SHAPE, SPRING_TAP, spring } from './spring.ts';
+import { createElement as h, useRef, useState } from 'react'
+import type React from 'react'
+import type { ReactNode } from 'react'
+import { SPRING_SHAPE, SPRING_TAP, spring } from './spring.ts'
 
 export interface InlineTextProps {
-    label: string;
-    value?: string | null | undefined;
-    placeholder?: string | undefined;
-    required?: boolean | undefined;
-    maxLength?: number | undefined;
-    multiline?: boolean | undefined;
-    onSave: (next: string) => unknown;
+  label: string
+  value?: string | null | undefined
+  placeholder?: string | undefined
+  required?: boolean | undefined
+  maxLength?: number | undefined
+  multiline?: boolean | undefined
+  onSave: (next: string) => unknown
 }
 export interface RowProps {
-    label: ReactNode;
-    hint?: ReactNode;
-    stack?: boolean | undefined;
-    children?: ReactNode;
+  label: ReactNode
+  hint?: ReactNode
+  stack?: boolean | undefined
+  children?: ReactNode
 }
 export interface CardProps {
-    title?: ReactNode;
-    children?: ReactNode;
+  title?: ReactNode
+  children?: ReactNode
 }
 export interface SwitchProps {
-    on: boolean;
-    label: string;
-    disabled?: boolean | undefined;
-    onChange: (on: boolean) => void;
+  on: boolean
+  label: string
+  disabled?: boolean | undefined
+  onChange: (on: boolean) => void
 }
 export interface SwitchRowProps {
-    label: string;
-    hint?: string | undefined;
-    on: boolean;
-    disabled?: boolean | undefined;
-    onChange: (on: boolean) => void;
+  label: string
+  hint?: string | undefined
+  on: boolean
+  disabled?: boolean | undefined
+  onChange: (on: boolean) => void
 }
 
 // Settings save on blur or Enter, with no Save button; Escape puts the
 // saved value back. A required field never saves empty.
-export function InlineText({ label, value, placeholder, required = false, maxLength, multiline = false, onSave }: InlineTextProps) {
-    const [draft, setDraft] = useState<string | null>(null);
-    const reverting = useRef(false);
-    const commit = (): void => {
-        const next = draft?.trim();
-        setDraft(null);
-        if (reverting.current) {
-            reverting.current = false;
-            return;
-        }
-        if (next === undefined || next === (value ?? '') || (required && next === ''))
-            return;
-        void onSave(next);
-    };
-    const shared = {
-        className: multiline ? 'bt-bs-input bt-bs-area' : 'bt-bs-input',
-        value: draft ?? value ?? '',
-        placeholder,
-        maxLength,
-        required,
-        'aria-label': label,
-        spellCheck: false,
-        onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setDraft(event.target.value),
-        onBlur: commit,
-        onKeyDown: (event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-            if (event.key === 'Escape') {
-                event.stopPropagation();
-                reverting.current = true;
-                event.currentTarget.blur();
-            }
-            if (event.key === 'Enter' && !multiline && !event.nativeEvent.isComposing)
-                event.currentTarget.blur();
-        },
-    };
-    return multiline ? <textarea {...shared}/> : <input {...shared}/>;
+export function InlineText({
+  label,
+  value,
+  placeholder,
+  required = false,
+  maxLength,
+  multiline = false,
+  onSave,
+}: InlineTextProps) {
+  const [draft, setDraft] = useState<string | null>(null)
+  const reverting = useRef(false)
+  const commit = (): void => {
+    const next = draft?.trim()
+    setDraft(null)
+    if (reverting.current) {
+      reverting.current = false
+      return
+    }
+    if (next === undefined || next === (value ?? '') || (required && next === '')) return
+    void onSave(next)
+  }
+  const shared = {
+    className: multiline ? 'bt-bs-input bt-bs-area' : 'bt-bs-input',
+    value: draft ?? value ?? '',
+    placeholder,
+    maxLength,
+    required,
+    'aria-label': label,
+    spellCheck: false,
+    onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setDraft(event.target.value),
+    onBlur: commit,
+    onKeyDown: (event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      if (event.key === 'Escape') {
+        event.stopPropagation()
+        reverting.current = true
+        event.currentTarget.blur()
+      }
+      if (event.key === 'Enter' && !multiline && !event.nativeEvent.isComposing) event.currentTarget.blur()
+    },
+  }
+  return multiline ? <textarea {...shared} /> : <input {...shared} />
 }
 // One labelled card row with its control on the right, or below when `stack`.
 export function Row({ label, hint, stack = false, children }: RowProps) {
-    return <label className={stack ? 'bt-set-row bt-bs-row bt-bs-stack' : 'bt-set-row bt-bs-row'}><span className='bt-set-copy'><span className='bt-bs-label'>{label}</span>{hint ? <span className='bt-set-hint'>{hint}</span> : null}</span>{children}</label>;
+  return (
+    <label className={stack ? 'bt-set-row bt-bs-row bt-bs-stack' : 'bt-set-row bt-bs-row'}>
+      <span className='bt-set-copy'>
+        <span className='bt-bs-label'>{label}</span>
+        {hint ? <span className='bt-set-hint'>{hint}</span> : null}
+      </span>
+      {children}
+    </label>
+  )
 }
 export function Card({ title, children }: CardProps) {
-    return <section className='bt-set-section'>{title ? <h3>{title}</h3> : null}<div className='bt-set-card'>{children}</div></section>;
+  return (
+    <section className='bt-set-section'>
+      {title ? <h3>{title}</h3> : null}
+      <div className='bt-set-card'>{children}</div>
+    </section>
+  )
 }
 export function Switch({ on, label, disabled, onChange }: SwitchProps) {
-    return <button type='button' role='switch' className='bt-switch' aria-checked={on} aria-label={label} disabled={disabled} onClick={() => onChange(!on)}><span className='bt-switch-knob' aria-hidden/></button>;
+  return (
+    <button
+      type='button'
+      role='switch'
+      className='bt-switch'
+      aria-checked={on}
+      aria-label={label}
+      disabled={disabled}
+      onClick={() => onChange(!on)}>
+      <span className='bt-switch-knob' aria-hidden />
+    </button>
+  )
 }
 // A row with a switch. Not a label: a click on the copy must not flip it twice.
 export function SwitchRow({ label, hint, on, disabled, onChange }: SwitchRowProps) {
-    return <div className='bt-set-row bt-bs-row'><span className='bt-set-copy'><span className='bt-bs-label'>{label}</span>{hint ? <span className='bt-set-hint'>{hint}</span> : null}</span><Switch on={on} label={label} disabled={disabled} onChange={onChange} /></div>;
+  return (
+    <div className='bt-set-row bt-bs-row'>
+      <span className='bt-set-copy'>
+        <span className='bt-bs-label'>{label}</span>
+        {hint ? <span className='bt-set-hint'>{hint}</span> : null}
+      </span>
+      <Switch on={on} label={label} disabled={disabled} onChange={onChange} />
+    </div>
+  )
 }
 
 // Chrome styles for Row/Card/Switch/InlineText. Card/row shells also live in design/panels;
@@ -112,4 +150,4 @@ label.bt-bs-row{cursor:text}
 .bt-switch:active:not(:disabled) .bt-switch-knob{width:21px}
 .bt-switch[aria-checked=true]:active:not(:disabled) .bt-switch-knob{transform:translateX(11px)}
 @media (prefers-reduced-motion:reduce){.bt-switch,.bt-switch-knob{transition:none}}
-`;
+`

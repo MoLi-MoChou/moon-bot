@@ -14,11 +14,21 @@ test('a long tool Turn shows its reasoning once, on the last step, in order', ()
 })
 
 test('the row sits on the last step with reasoning, next to the reply', () => {
-  const steps = [step(1, [{ kind: 'text', text: 'Looking' }, tool]), step(2, [think('B'), tool]), step(3, [think('C'), { kind: 'text', text: 'Done' }])]
-  assert.deepEqual(steps.map(current => turnReasoning(steps, current)), ['', '', 'B\n\nC'])
+  const steps = [
+    step(1, [{ kind: 'text', text: 'Looking' }, tool]),
+    step(2, [think('B'), tool]),
+    step(3, [think('C'), { kind: 'text', text: 'Done' }]),
+  ]
+  assert.deepEqual(
+    steps.map(current => turnReasoning(steps, current)),
+    ['', '', 'B\n\nC'],
+  )
   // A Turn whose only reasoning step came first keeps the row there.
   const early = [step(1, [think('B'), tool]), step(2, [tool]), step(3, [{ kind: 'text', text: 'Done' }])]
-  assert.deepEqual(early.map(current => turnReasoning(early, current)), ['B', '', ''])
+  assert.deepEqual(
+    early.map(current => turnReasoning(early, current)),
+    ['B', '', ''],
+  )
 })
 
 test('reasoning still in progress shows while its step thinks', () => {

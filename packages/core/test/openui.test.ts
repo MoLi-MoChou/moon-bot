@@ -12,29 +12,48 @@ import { checkShownView } from 'moon-bot-contracts'
 import { createRuntime } from '../index.js'
 import { fakeContext } from './fake-ctx.ts'
 
-const spec = (elements: Record<string, unknown>, root?: string) => ({ ...(root === undefined ? {} : { root }), elements })
+const spec = (elements: Record<string, unknown>, root?: string) => ({
+  ...(root === undefined ? {} : { root }),
+  elements,
+})
 
 test('a dashboard spec lowers onto the existing cards', () => {
-  const lowered = lowerOpenUi(spec({
-    root: { type: 'Stack', children: ['title', 'cpu', 'rows'] },
-    title: { type: 'Text', props: { text: 'Cluster health' } },
-    cpu: { type: 'Metric', props: { label: 'CPU', value: 42, tone: 'warn' } },
-    rows: { type: 'Table', props: { columns: [{ key: 'pod', label: 'Pod' }], rows: [{ pod: 'api-1' }] } },
-  }, 'root'))
+  const lowered = lowerOpenUi(
+    spec(
+      {
+        root: { type: 'Stack', children: ['title', 'cpu', 'rows'] },
+        title: { type: 'Text', props: { text: 'Cluster health' } },
+        cpu: { type: 'Metric', props: { label: 'CPU', value: 42, tone: 'warn' } },
+        rows: { type: 'Table', props: { columns: [{ key: 'pod', label: 'Pod' }], rows: [{ pod: 'api-1' }] } },
+      },
+      'root',
+    ),
+  )
   assert.ok('view' in lowered)
   if (!('view' in lowered)) return
   assert.equal(lowered.view.type, 'stack')
   const children = lowered.view.type === 'stack' ? lowered.view.children : []
-  assert.deepEqual(children.map(child => child.type), ['text', 'metric', 'table'])
+  assert.deepEqual(
+    children.map(child => child.type),
+    ['text', 'metric', 'table'],
+  )
   assert.deepEqual(children[1], { type: 'metric', label: 'CPU', value: 42, tone: 'warn' })
   // The lowered card passes the same validator as any other blueprint.
   assert.equal(checkShownView('Cluster', lowered.view).interactive, false)
 })
 
 test('an interaction lowers to a card whose answer must come back through view-reply', () => {
-  const lowered = lowerOpenUi(spec({
-    pick: { type: 'Actions', props: { id: 'pick', options: [{ label: 'Retry the deploy', description: 'again' }, { label: 'Hold' }] } },
-  }, 'pick'))
+  const lowered = lowerOpenUi(
+    spec(
+      {
+        pick: {
+          type: 'Actions',
+          props: { id: 'pick', options: [{ label: 'Retry the deploy', description: 'again' }, { label: 'Hold' }] },
+        },
+      },
+      'pick',
+    ),
+  )
   assert.ok('view' in lowered)
   if (!('view' in lowered)) return
   assert.deepEqual(lowered.view, {
@@ -47,11 +66,16 @@ test('an interaction lowers to a card whose answer must come back through view-r
 })
 
 test('an unknown node degrades to text and never throws', () => {
-  const lowered = lowerOpenUi(spec({
-    root: { type: 'Stack', children: ['weird', 'note'] },
-    weird: { type: 'QuantumChart', props: { text: 'still shows something' } },
-    note: { type: 'Text', props: { text: 'and keeps its sibling' } },
-  }, 'root'))
+  const lowered = lowerOpenUi(
+    spec(
+      {
+        root: { type: 'Stack', children: ['weird', 'note'] },
+        weird: { type: 'QuantumChart', props: { text: 'still shows something' } },
+        note: { type: 'Text', props: { text: 'and keeps its sibling' } },
+      },
+      'root',
+    ),
+  )
   assert.ok('view' in lowered)
   if (!('view' in lowered)) return
   assert.equal(lowered.view.type, 'stack')
@@ -65,23 +89,55 @@ test('an unknown node degrades to text and never throws', () => {
   assert.deepEqual(lowerOpenUi({ root: 'x' }), { error: 'An OpenUI spec needs an `elements` map.' })
 })
 
-test('show_view shows a lowered OpenUI card, and a bad spec as a readable line', async (t) => {
-  const scene = async (): Promise<{ tool: (name: string, args: Record<string, unknown>) => Promise<unknown>, views: () => Record<string, unknown> }> => {
+test('show_view shows a lowered OpenUI card, and a bad spec as a readable line', async t => {
+  const scene = async (): Promise<{
+    tool: (name: string, args: Record<string, unknown>) => Promise<unknown>
+    views: () => Record<string, unknown>
+  }> => {
     const home = mkdtempSync(join(tmpdir(), 'ds-bot-openui-'))
     t.after(() => rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }))
-    writeFileSync(join(home, 'state.json'), JSON.stringify({
-      version: 1, mainBotIds: ['a'], bots: { a: { id: 'a', name: 'Chief', role: 'Boss', sessionId: 'a', createdAt: 1 } },
-      rooms: {}, agents: {}, exchanges: [], exchangeTurns: {}, questions: {}, prefs: {}, revision: 0,
-    }))
+    writeFileSync(
+      join(home, 'state.json'),
+      JSON.stringify({
+        version: 1,
+        mainBotIds: ['a'],
+        bots: { a: { id: 'a', name: 'Chief', role: 'Boss', sessionId: 'a', createdAt: 1 } },
+        rooms: {},
+        agents: {},
+        exchanges: [],
+        exchangeTurns: {},
+        questions: {},
+        prefs: {},
+        revision: 0,
+      }),
+    )
     const ctx = fakeContext()
     Object.assign(ctx, {
       llm: { listProviders: () => [], listModels: async () => [], resolveModelInfo: async () => ({}) },
-      workspaceRegistry: { get: () => undefined, resolveByPath: async () => undefined, create: async path => ({ id: 'w1', path }), archiveSession: async () => {} },
-      sessionController: { create: async () => ({ sessionId: 's1' }), resolveAgent: async sessionId => ({ agent: { session: { id: sessionId }, calls: [], inbox: { nextStep: [], nextTurn: [], remove: () => false }, followup() {}, steer() {}, cancel() {} } }), selectModel: async () => {} },
+      workspaceRegistry: {
+        get: () => undefined,
+        resolveByPath: async () => undefined,
+        create: async path => ({ id: 'w1', path }),
+        archiveSession: async () => {},
+      },
+      sessionController: {
+        create: async () => ({ sessionId: 's1' }),
+        resolveAgent: async sessionId => ({
+          agent: {
+            session: { id: sessionId },
+            calls: [],
+            inbox: { nextStep: [], nextTurn: [], remove: () => false },
+            followup() {},
+            steer() {},
+            cancel() {},
+          },
+        }),
+        selectModel: async () => {},
+      },
       sessionTitle: { rename: async () => {} },
       sessions: { flush: async () => {} },
     })
-    const rt = createRuntime(ctx, { home }) as unknown as { state: Record<string, unknown>, load(): Promise<void> }
+    const rt = createRuntime(ctx, { home }) as unknown as { state: Record<string, unknown>; load(): Promise<void> }
     await rt.load()
     return {
       tool: (name, args) => ctx.registeredTools.get(name).execute(args, { agent: { id: 'a' } }) as Promise<unknown>,
@@ -101,9 +157,12 @@ test('show_view shows a lowered OpenUI card, and a bad spec as a readable line',
   // through view-reply, and the page itself can approve nothing.
   await shown.tool('show_view', {
     title: 'Pick',
-    view: spec({ pick: { type: 'Actions', props: { id: 'pick', options: [{ label: 'Retry' }, { label: 'Hold' }] } } }, 'pick'),
+    view: spec(
+      { pick: { type: 'Actions', props: { id: 'pick', options: [{ label: 'Retry' }, { label: 'Hold' }] } } },
+      'pick',
+    ),
   })
-  const card = shown.views().a as { title: string, view: { type: string, id?: string } } | undefined
+  const card = shown.views().a as { title: string; view: { type: string; id?: string } } | undefined
   assert.equal(card?.title, 'Pick')
   assert.deepEqual([card?.view.type, card?.view.id], ['options', 'pick'])
 

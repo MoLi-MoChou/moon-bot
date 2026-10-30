@@ -18,7 +18,10 @@ export function lowered(baseline, found) {
       const next = lowered(value, found?.[key])
       if (Object.keys(value).length === 0 || Object.keys(next).length > 0) out[key] = next
     } else if (typeof value === 'number') {
-      const next = Math.min(value, typeof found === 'object' && found !== null && typeof found[key] === 'number' ? found[key] : 0)
+      const next = Math.min(
+        value,
+        typeof found === 'object' && found !== null && typeof found[key] === 'number' ? found[key] : 0,
+      )
       if (next > 0) out[key] = next
     }
   }
@@ -45,10 +48,7 @@ function walk(baseline, found, path, onNumber) {
     onNumber(lines, path, typeof baseline === 'number' ? baseline : 0, typeof found === 'number' ? found : 0)
     return lines
   }
-  const keys = new Set([
-    ...Object.keys(baseline ?? {}),
-    ...Object.keys(found ?? {}),
-  ])
+  const keys = new Set([...Object.keys(baseline ?? {}), ...Object.keys(found ?? {})])
   for (const key of keys) lines.push(...walk(baseline?.[key], found?.[key], [...path, key], onNumber))
   return lines
 }
@@ -67,8 +67,13 @@ export function drops(baseline, found) {
   })
 }
 
-export const sorted = item => (item !== null && typeof item === 'object'
-  ? Object.fromEntries(Object.entries(item).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)).map(([key, value]) => [key, sorted(value)]))
-  : item)
+export const sorted = item =>
+  item !== null && typeof item === 'object'
+    ? Object.fromEntries(
+        Object.entries(item)
+          .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+          .map(([key, value]) => [key, sorted(value)]),
+      )
+    : item
 
 export const format = item => `${JSON.stringify(sorted(item), null, 2)}\n`

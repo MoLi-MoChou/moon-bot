@@ -35,7 +35,9 @@ export function addAlwaysAllow({ work, shownSession, raise }: AlwaysAllowOptions
         try {
           if (entry?.botId !== undefined) await raise(entry.botId, preset)
           else console.warn('moon-bot: always-allow found no waiting approval', place, waiting)
-        } catch (error) { console.warn('moon-bot: always-allow could not save the permission', error) }
+        } catch (error) {
+          console.warn('moon-bot: always-allow could not save the permission', error)
+        }
         once.click()
       })
       once.before(always)

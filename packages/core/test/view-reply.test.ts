@@ -13,11 +13,25 @@ const TEAM = {
   bots: {
     chief: { id: 'chief', name: 'Chief', role: 'Lead', sessionId: 'chief', createdAt: 1 },
     writer: {
-      id: 'writer', name: 'Writer', role: 'Write', sessionId: 'writer-now', createdAt: 2,
+      id: 'writer',
+      name: 'Writer',
+      role: 'Write',
+      sessionId: 'writer-now',
+      createdAt: 2,
       segments: [{ sessionId: 'writer-old', endedAt: 1 }],
     },
   },
-  rooms: { r1: { id: 'r1', name: 'Ops', members: ['writer'], mode: 'admin', admin: 'writer', named: true, sessions: { writer: 'writer-group' } } },
+  rooms: {
+    r1: {
+      id: 'r1',
+      name: 'Ops',
+      members: ['writer'],
+      mode: 'admin',
+      admin: 'writer',
+      named: true,
+      sessions: { writer: 'writer-group' },
+    },
+  },
   agents: {},
   exchanges: [],
   exchangeTurns: {},
@@ -36,18 +50,34 @@ function start() {
   const sent = []
   let flushError
   Object.assign(ctx, {
-    workspaceRegistry: { get: () => undefined, resolveByPath: async () => undefined, create: async path => ({ id: 'w1', path }), archiveSession: async () => {} },
+    workspaceRegistry: {
+      get: () => undefined,
+      resolveByPath: async () => undefined,
+      create: async path => ({ id: 'w1', path }),
+      archiveSession: async () => {},
+    },
     sessionController: {
       create: async () => ({ sessionId: 's1' }),
-      resolveAgent: async sessionId => ({ agent: { session: { id: sessionId }, followup(message) { sent.push({ sessionId, message }) } } }),
+      resolveAgent: async sessionId => ({
+        agent: {
+          session: { id: sessionId },
+          followup(message) {
+            sent.push({ sessionId, message })
+          },
+        },
+      }),
       selectModel: async () => {},
     },
     sessionTitle: { rename: async () => {} },
-    sessions: { flush: async () => { if (flushError !== undefined) throw flushError } },
+    sessions: {
+      flush: async () => {
+        if (flushError !== undefined) throw flushError
+      },
+    },
   })
   let route
   const register = ctx.connection.fetch.register
-  ctx.connection.fetch.register = (options) => {
+  ctx.connection.fetch.register = options => {
     route = options
     return register(options)
   }
@@ -61,24 +91,44 @@ function start() {
   const show = async (sessionId, args, callId = 'call-1') => {
     let concluded = false
     const text = await ctx.registeredTools.get('show_view').execute(args, {
-      agent: { id: sessionId }, callId, concludeTurn() { concluded = true },
+      agent: { id: sessionId },
+      callId,
+      concludeTurn() {
+        concluded = true
+      },
     })
     return { text, concluded }
   }
-  const call = async (endpoint, payload) => (await route.fetch(new Request('http://localhost/api/bot', {
-    method: 'POST', body: JSON.stringify({ endpoint, payload }),
-  }))).json()
+  const call = async (endpoint, payload) =>
+    (
+      await route.fetch(
+        new Request('http://localhost/api/bot', {
+          method: 'POST',
+          body: JSON.stringify({ endpoint, payload }),
+        }),
+      )
+    ).json()
   const team = async () => (await call('state', {})).value
   return {
-    ctx, emit, show, call, team, sent,
-    failFlush(error) { flushError = error },
-    stop: async () => { await ctx.dispose(); rmSync(home, { recursive: true, force: true, maxRetries: 5 }) },
+    ctx,
+    emit,
+    show,
+    call,
+    team,
+    sent,
+    failFlush(error) {
+      flushError = error
+    },
+    stop: async () => {
+      await ctx.dispose()
+      rmSync(home, { recursive: true, force: true, maxRetries: 5 })
+    },
   }
 }
 
 const text = value => [{ type: 'text', text: value }]
 
-test('show_view registers an interactive card, refuses a group and a display-only wait, and leaves a display-only card unregistered', async (t) => {
+test('show_view registers an interactive card, refuses a group and a display-only wait, and leaves a display-only card unregistered', async t => {
   const { ctx, emit, show, team, stop } = start()
   t.after(stop)
   await ctx.registeredTools.get('list_bots').execute({}, { agent: { id: 'chief' } })
@@ -87,7 +137,10 @@ test('show_view registers an interactive card, refuses a group and a display-onl
   assert.equal(group.text, 'View cards only work in your own chat. In a group, ask in your message instead.')
   assert.equal(group.concluded, false)
   const stranger = await show('outsider', { title: 'Pick', view: CHOICES })
-  assert.match(stranger.text, /^Only Bots on the team can use show_view\. Use ask_user_question if it is available in this session, or ask the user in your reply\.$/)
+  assert.match(
+    stranger.text,
+    /^Only Bots on the team can use show_view\. Use ask_user_question if it is available in this session, or ask the user in your reply\.$/,
+  )
   assert.equal(stranger.concluded, false)
 
   const waiting = await show('writer-now', { title: 'Meter', view: METER, await_reply: true })
@@ -97,14 +150,20 @@ test('show_view registers an interactive card, refuses a group and a display-onl
 
   // An interactive card cannot be told not to wait: refused, nothing stored.
   const skipped = await show('writer-now', { title: 'Pick', view: CHOICES, await_reply: false })
-  assert.equal(skipped.text, 'This view has controls to submit, so it waits for the user\'s answer; call show_view without await_reply: false.')
+  assert.equal(
+    skipped.text,
+    "This view has controls to submit, so it waits for the user's answer; call show_view without await_reply: false.",
+  )
   assert.equal(skipped.concluded, false)
   assert.equal((await team()).views['writer-now'], undefined)
 
   // `__proto__` is no id: the answer object would lose the value to its prototype.
   const protoCall = await show('writer-now', { title: 'Pick', view: { ...CHOICES, id: '__proto__' } })
   assert.equal(protoCall.text, 'view.id: "__proto__" cannot be an id')
-  const protoField = await show('writer-now', { title: 'Ask', view: { type: 'form', id: 'ask', fields: [{ id: '__proto__', label: 'Name' }] } })
+  const protoField = await show('writer-now', {
+    title: 'Ask',
+    view: { type: 'form', id: 'ask', fields: [{ id: '__proto__', label: 'Name' }] },
+  })
   assert.equal(protoField.text, 'view.fields[0].id: "__proto__" cannot be an id')
   assert.equal((await team()).views['writer-now'], undefined)
 
@@ -114,12 +173,14 @@ test('show_view registers an interactive card, refuses a group and a display-onl
   assert.equal((await team()).views['writer-now'], undefined)
 
   // A question card and a view card in the same chat do not replace each other.
-  await ctx.registeredTools.get('ask_user').execute(
-    { question: 'Which name?', options: [{ label: 'Lookout' }] },
-    { agent: { id: 'writer-now' }, callId: 'q-call', concludeTurn() {} },
-  )
+  await ctx.registeredTools
+    .get('ask_user')
+    .execute(
+      { question: 'Which name?', options: [{ label: 'Lookout' }] },
+      { agent: { id: 'writer-now' }, callId: 'q-call', concludeTurn() {} },
+    )
   const asked = await show('writer-now', { title: 'Pick', view: CHOICES })
-  assert.equal(asked.text, 'The view is on screen; the user\'s answer arrives as their next message.')
+  assert.equal(asked.text, "The view is on screen; the user's answer arrives as their next message.")
   assert.equal(asked.concluded, true)
   const open = await team()
   assert.equal(open.questions['writer-now'].question, 'Which name?')
@@ -132,7 +193,10 @@ test('show_view registers an interactive card, refuses a group and a display-onl
   // A hidden Bot-to-Bot turn keeps the card but not the call.
   emit('writer-now', 'turn/end', { turn: 1, reason: { kind: 'completed' } })
   emit('writer-now', 'turn/start', { turn: 2 })
-  emit('writer-now', 'user/message', { content: text('[Message from Chief]\nAsk them'), source: { kind: 'bot', role: 'request', senderSessionId: 'chief', senderName: 'Chief', exchangeId: 'x1', hop: 0 } })
+  emit('writer-now', 'user/message', {
+    content: text('[Message from Chief]\nAsk them'),
+    source: { kind: 'bot', role: 'request', senderSessionId: 'chief', senderName: 'Chief', exchangeId: 'x1', hop: 0 },
+  })
   const hidden = await show('writer-now', { title: 'Pick', view: CHOICES }, 'call-hidden')
   assert.equal(hidden.concluded, true)
   assert.equal((await team()).views['writer-now'].callId, undefined)
@@ -143,30 +207,45 @@ test('show_view registers an interactive card, refuses a group and a display-onl
   const exact = await show('writer-now', { title: 'x'.repeat(room), view: METER, await_reply: false })
   assert.equal(exact.text, 'The view is on screen.')
   const over = await show('writer-now', { title: `${'x'.repeat(room)}y`, view: METER })
-  assert.equal(over.text, `The view is ${viewBytes(`${'x'.repeat(room)}y`, METER)} bytes; the limit is ${VIEW_BYTE_LIMIT}.`)
+  assert.equal(
+    over.text,
+    `The view is ${viewBytes(`${'x'.repeat(room)}y`, METER)} bytes; the limit is ${VIEW_BYTE_LIMIT}.`,
+  )
   assert.equal(over.concluded, false)
   assert.equal((await team()).views['writer-now'].title, 'Pick')
   assert.ok(body.length > 0)
 })
 
-test('view-reply claims the card, refuses a stale or invalid answer, and restores the card when queueing fails', async (t) => {
+test('view-reply claims the card, refuses a stale or invalid answer, and restores the card when queueing fails', async t => {
   const { ctx, show, call, team, sent, failFlush, stop } = start()
   t.after(stop)
   await ctx.registeredTools.get('list_bots').execute({}, { agent: { id: 'chief' } })
-  await ctx.registeredTools.get('ask_user').execute(
-    { question: 'Keep me', options: [{ label: 'Yes' }] },
-    { agent: { id: 'writer-now' }, callId: 'q-call', concludeTurn() {} },
-  )
+  await ctx.registeredTools
+    .get('ask_user')
+    .execute(
+      { question: 'Keep me', options: [{ label: 'Yes' }] },
+      { agent: { id: 'writer-now' }, callId: 'q-call', concludeTurn() {} },
+    )
   await show('writer-now', { title: 'Pick', view: CHOICES }, 'call-view')
   const pending = (await team()).views['writer-now']
 
-  const stale = await call('view-reply', { sessionId: 'writer-now', viewId: 'gone', action: 'pick', values: { selected: ['A'] } })
+  const stale = await call('view-reply', {
+    sessionId: 'writer-now',
+    viewId: 'gone',
+    action: 'pick',
+    values: { selected: ['A'] },
+  })
   assert.equal(stale.ok, false)
   assert.equal(stale.error.code, 'bot/stale')
   assert.equal(stale.error.message, 'This view is no longer open')
   assert.equal((await team()).views['writer-now'].id, pending.id)
 
-  const invalid = await call('view-reply', { sessionId: 'writer-now', viewId: pending.id, action: 'pick', values: { selected: [] } })
+  const invalid = await call('view-reply', {
+    sessionId: 'writer-now',
+    viewId: pending.id,
+    action: 'pick',
+    values: { selected: [] },
+  })
   assert.equal(invalid.ok, false)
   assert.equal(invalid.error.code, 'bot/invalid')
   assert.match(invalid.error.message, /select at least one option/)
@@ -174,7 +253,12 @@ test('view-reply claims the card, refuses a stale or invalid answer, and restore
   assert.equal(sent.length, 0)
 
   failFlush(new Error('flush failed'))
-  const failed = await call('view-reply', { sessionId: 'writer', viewId: pending.id, action: 'pick', values: { selected: ['B', 'A'] } })
+  const failed = await call('view-reply', {
+    sessionId: 'writer',
+    viewId: pending.id,
+    action: 'pick',
+    values: { selected: ['B', 'A'] },
+  })
   assert.equal(failed.ok, false)
   assert.match(failed.error.message, /flush failed/)
   assert.equal(sent.length, 1)
@@ -183,7 +267,12 @@ test('view-reply claims the card, refuses a stale or invalid answer, and restore
 
   failFlush(undefined)
   // A Bot id, and an earlier part, both mean the current part.
-  const answered = await call('view-reply', { sessionId: 'writer-old', viewId: pending.id, action: 'pick', values: { selected: ['B', 'nope'] } })
+  const answered = await call('view-reply', {
+    sessionId: 'writer-old',
+    viewId: pending.id,
+    action: 'pick',
+    values: { selected: ['B', 'nope'] },
+  })
   assert.equal(answered.ok, true)
   assert.equal((await team()).views['writer-now'], undefined)
   // The question card is a different store; answering the view does not claim it.
@@ -201,18 +290,25 @@ test('view-reply claims the card, refuses a stale or invalid answer, and restore
   assert.equal(payload.views[0].title, 'Pick')
   assert.deepEqual(payload.views[0].view, CHOICES)
 
-  const again = await call('view-reply', { sessionId: 'writer-now', viewId: pending.id, action: 'pick', values: { selected: ['A'] } })
+  const again = await call('view-reply', {
+    sessionId: 'writer-now',
+    viewId: pending.id,
+    action: 'pick',
+    values: { selected: ['A'] },
+  })
   assert.equal(again.error.message, 'This view is no longer open')
 })
 
-test('dismiss-view drops the open view and leaves a question card alone', async (t) => {
+test('dismiss-view drops the open view and leaves a question card alone', async t => {
   const { ctx, show, call, team, stop } = start()
   t.after(stop)
   await ctx.registeredTools.get('list_bots').execute({}, { agent: { id: 'chief' } })
-  await ctx.registeredTools.get('ask_user').execute(
-    { question: 'Keep me', options: [{ label: 'Yes' }] },
-    { agent: { id: 'writer-now' }, callId: 'q-call', concludeTurn() {} },
-  )
+  await ctx.registeredTools
+    .get('ask_user')
+    .execute(
+      { question: 'Keep me', options: [{ label: 'Yes' }] },
+      { agent: { id: 'writer-now' }, callId: 'q-call', concludeTurn() {} },
+    )
   await show('writer-now', { title: 'Pick', view: CHOICES })
   assert.equal((await call('dismiss-view', { sessionId: 'writer-now' })).ok, true)
   const open = await team()
@@ -221,14 +317,16 @@ test('dismiss-view drops the open view and leaves a question card alone', async 
   assert.equal((await call('dismiss-view', { sessionId: 'writer-now' })).ok, true)
 })
 
-test('a user message drops the open question and the open view together', async (t) => {
+test('a user message drops the open question and the open view together', async t => {
   const { ctx, emit, show, team, stop } = start()
   t.after(stop)
   await ctx.registeredTools.get('list_bots').execute({}, { agent: { id: 'chief' } })
-  await ctx.registeredTools.get('ask_user').execute(
-    { question: 'Which name?', options: [{ label: 'Lookout' }] },
-    { agent: { id: 'writer-now' }, callId: 'q-call', concludeTurn() {} },
-  )
+  await ctx.registeredTools
+    .get('ask_user')
+    .execute(
+      { question: 'Which name?', options: [{ label: 'Lookout' }] },
+      { agent: { id: 'writer-now' }, callId: 'q-call', concludeTurn() {} },
+    )
   await show('writer-now', { title: 'Pick', view: CHOICES })
   assert.equal((await team()).questions['writer-now'].question, 'Which name?')
   assert.equal((await team()).views['writer-now'].title, 'Pick')

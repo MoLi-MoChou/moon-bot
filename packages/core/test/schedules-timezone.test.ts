@@ -13,14 +13,20 @@ const FROM = Date.parse('2026-10-29T23:00:00Z')
 
 test('a named zone is honoured exactly', () => {
   // 08:00 in Shanghai on the 30th is 00:00 UTC that day.
-  assert.equal(nextRunOf({ daily: { time: '08:00', time_zone: 'Asia/Shanghai' } }, FROM), Date.parse('2026-10-30T00:00:00Z'))
+  assert.equal(
+    nextRunOf({ daily: { time: '08:00', time_zone: 'Asia/Shanghai' } }, FROM),
+    Date.parse('2026-10-30T00:00:00Z'),
+  )
   // 08:00 in UTC is 08:00 UTC.
   assert.equal(nextRunOf({ daily: { time: '08:00', time_zone: 'UTC' } }, FROM), Date.parse('2026-10-30T08:00:00Z'))
   // 08:00 in New York, still on daylight time on this date, is 12:00 UTC.
-  assert.equal(nextRunOf({ daily: { time: '08:00', time_zone: 'America/New_York' } }, FROM), Date.parse('2026-10-30T12:00:00Z'))
+  assert.equal(
+    nextRunOf({ daily: { time: '08:00', time_zone: 'America/New_York' } }, FROM),
+    Date.parse('2026-10-30T12:00:00Z'),
+  )
 })
 
-test('with no zone the host\'s own zone decides, which is what the user reads', () => {
+test("with no zone the host's own zone decides, which is what the user reads", () => {
   // The container runs with TZ set; a reminder set for "8am" must mean 8am there, not UTC.
   // This is the same answer a named zone gives, so the two agree for the host's own zone.
   const hostZone = Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -78,24 +84,44 @@ test('a reminder created without a zone keeps the host zone, not UTC', async () 
   const { fakeContext } = await import('./fake-ctx.ts')
   const created = []
   const scheduler = {
-    async create(_sessionId, input) { created.push(input) },
-    async list() { return [] },
-    async delete() { return true },
-    async catalog() { return [] },
+    async create(_sessionId, input) {
+      created.push(input)
+    },
+    async list() {
+      return []
+    },
+    async delete() {
+      return true
+    },
+    async catalog() {
+      return []
+    },
   }
   const ctx = fakeContext({ services: { schedule: scheduler } })
   const bot = { id: 'b1', name: 'Writer', sessionId: 'b1' }
   const rt = {
-    ctx, config: {}, home: '/tmp/nonexistent-moon-bot-test',
+    ctx,
+    config: {},
+    home: '/tmp/nonexistent-moon-bot-test',
     state: { bots: { b1: bot }, rooms: {}, mainBotIds: [] },
-    botOf: id => (id === 'b1' ? bot : undefined), chatOf: () => 'b1', roomOf: () => undefined,
-    chatOwners: new Map([['b1', 'b1']]), groupOwners: new Map(), pastOwners: new Map(),
-    isBotSession: () => true, readOnly: () => undefined, warn: () => undefined,
-    on: () => undefined, registerTool: () => undefined,
+    botOf: id => (id === 'b1' ? bot : undefined),
+    chatOf: () => 'b1',
+    roomOf: () => undefined,
+    chatOwners: new Map([['b1', 'b1']]),
+    groupOwners: new Map(),
+    pastOwners: new Map(),
+    isBotSession: () => true,
+    readOnly: () => undefined,
+    warn: () => undefined,
+    on: () => undefined,
+    registerTool: () => undefined,
   }
   install(rt as never)
   await rt.scheduleEndpoint('schedule-create', {
-    target: 'b1', title: 'Morning', prompt: 'go', when: { kind: 'daily', time: '08:00' },
+    target: 'b1',
+    title: 'Morning',
+    prompt: 'go',
+    when: { kind: 'daily', time: '08:00' },
   })
   assert.equal(created.length, 1)
   assert.equal(created[0].daily.time_zone, undefined, 'no zone means the host zone, not UTC')
@@ -106,22 +132,44 @@ test('an explicit zone survives the selector', async () => {
   const { fakeContext } = await import('./fake-ctx.ts')
   const created = []
   const scheduler = {
-    async create(_sessionId, input) { created.push(input) },
-    async list() { return [] }, async delete() { return true }, async catalog() { return [] },
+    async create(_sessionId, input) {
+      created.push(input)
+    },
+    async list() {
+      return []
+    },
+    async delete() {
+      return true
+    },
+    async catalog() {
+      return []
+    },
   }
   const ctx = fakeContext({ services: { schedule: scheduler } })
   const bot = { id: 'b1', name: 'Writer', sessionId: 'b1' }
   const rt = {
-    ctx, config: {}, home: '/tmp/nonexistent-moon-bot-test',
+    ctx,
+    config: {},
+    home: '/tmp/nonexistent-moon-bot-test',
     state: { bots: { b1: bot }, rooms: {}, mainBotIds: [] },
-    botOf: id => (id === 'b1' ? bot : undefined), chatOf: () => 'b1', roomOf: () => undefined,
-    chatOwners: new Map([['b1', 'b1']]), groupOwners: new Map(), pastOwners: new Map(),
-    isBotSession: () => true, readOnly: () => undefined, warn: () => undefined,
-    on: () => undefined, registerTool: () => undefined,
+    botOf: id => (id === 'b1' ? bot : undefined),
+    chatOf: () => 'b1',
+    roomOf: () => undefined,
+    chatOwners: new Map([['b1', 'b1']]),
+    groupOwners: new Map(),
+    pastOwners: new Map(),
+    isBotSession: () => true,
+    readOnly: () => undefined,
+    warn: () => undefined,
+    on: () => undefined,
+    registerTool: () => undefined,
   }
   install(rt as never)
   await rt.scheduleEndpoint('schedule-create', {
-    target: 'b1', title: 'Morning', prompt: 'go', when: { kind: 'daily', time: '08:00', timeZone: 'America/New_York' },
+    target: 'b1',
+    title: 'Morning',
+    prompt: 'go',
+    when: { kind: 'daily', time: '08:00', timeZone: 'America/New_York' },
   })
   assert.equal(created[0].daily.time_zone, 'America/New_York')
 })

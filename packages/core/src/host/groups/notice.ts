@@ -8,8 +8,10 @@ import { escapeRegExp } from '../text.ts'
 import { mentionSpans, speakerOf } from 'moon-bot-contracts'
 import { failureLine as failureLineImpl, failureSay as failureSayImpl } from '../turns/failure.ts'
 
-export const ROOM_REPLY = 'Reply with your message for the group, no name prefix: in a discussion, one or two short messages. When you are asked to do something, do it now with your tools. The group does not wait for you and sees what you write while you work: say what you will do, write again only when something matters, and end with the result, never a promise to do it later. Reply [PASS] to stay silent when you have nothing new to add or the message is for someone else.'
-export const ROOM_CALLS = 'Writing "@Name" calls that member next, to answer or to do what you ask; when it finishes work you gave it, you answer its result. To only mention a member, write its name without "@".'
+export const ROOM_REPLY =
+  'Reply with your message for the group, no name prefix: in a discussion, one or two short messages. When you are asked to do something, do it now with your tools. The group does not wait for you and sees what you write while you work: say what you will do, write again only when something matters, and end with the result, never a promise to do it later. Reply [PASS] to stay silent when you have nothing new to add or the message is for someone else.'
+export const ROOM_CALLS =
+  'Writing "@Name" calls that member next, to answer or to do what you ask; when it finishes work you gave it, you answer its result. To only mention a member, write its name without "@".'
 
 // The mention rule reads a missing speaker name as the user, so null is its absence.
 const speakerOfLine = (line: RoomLine): string | undefined | null => {
@@ -21,19 +23,26 @@ const speakerOfLine = (line: RoomLine): string | undefined | null => {
 
 // `text` is what to show of a message line, by default what the log keeps of it.
 export const lineText = (line: RoomLine, text: string = line.text): string => {
-  if (line.kind === 'lookup') return `[${speakerOfLine(line)} looked up its own chat${line.text ? ` for "${line.text}"` : ''}]`
-  if (line.kind === 'resumed') return `[${speakerOfLine(line)}'s work here was cut off when Moon Bot restarted; it is picking it back up and posts when done]`
-  if (line.kind === 'cut') return `[${speakerOfLine(line)}'s work here was cut off by a restart again, so it stopped; ask it to go on if it still matters]`
+  if (line.kind === 'lookup')
+    return `[${speakerOfLine(line)} looked up its own chat${line.text ? ` for "${line.text}"` : ''}]`
+  if (line.kind === 'resumed')
+    return `[${speakerOfLine(line)}'s work here was cut off when Moon Bot restarted; it is picking it back up and posts when done]`
+  if (line.kind === 'cut')
+    return `[${speakerOfLine(line)}'s work here was cut off by a restart again, so it stopped; ask it to go on if it still matters]`
   if (line.kind === 'stopped') return `[The user stopped ${speakerOfLine(line)}'s work here]`
   if (line.kind === 'done') return `[${speakerOfLine(line)} finished the work it was asked for]`
   return `${speakerOfLine(line)}: ${text}`
 }
-export const transcript = (lines: readonly RoomLine[], textOfLine: (line: RoomLine) => string = line => line.text): string =>
-  lines.map(line => lineText(line, textOfLine(line))).join('\n')
+export const transcript = (
+  lines: readonly RoomLine[],
+  textOfLine: (line: RoomLine) => string = line => line.text,
+): string => lines.map(line => lineText(line, textOfLine(line))).join('\n')
 
 // Models often echo the transcript format ("Name: …") despite the instruction.
-export const stripOwnName = (name: string, text: string): string => text.replace(new RegExp(`^\\s*\\**${escapeRegExp(name)}\\**\\s*[:：]\\s*`), '').trim()
-export const isPass = (text: string): boolean => text === '' || /^\s*[[【(（]\s*pass\s*[\]】)）]|^\s*pass\s*[.。!！]?\s*$/i.test(text)
+export const stripOwnName = (name: string, text: string): string =>
+  text.replace(new RegExp(`^\\s*\\**${escapeRegExp(name)}\\**\\s*[:：]\\s*`), '').trim()
+export const isPass = (text: string): boolean =>
+  text === '' || /^\s*[[【(（]\s*pass\s*[\]】)）]|^\s*pass\s*[.。!！]?\s*$/i.test(text)
 
 // Who "@" calls, in order, by the same rule the bubbles draw. `references` are the
 // round's referenced conversations: each one's "@label" is a reference, not a call.
@@ -64,9 +73,10 @@ export const mentionsIn = <T extends MentionMember>(
 }
 
 // What the user referenced in this round, for a member that has not been shown it yet.
-export const referenceNote = (references: readonly { readonly text: string }[] | undefined): string => (references?.length
-  ? `Conversations the user referenced in this round:\n\n${references.map(reference => reference.text).join('\n\n')}`
-  : '')
+export const referenceNote = (references: readonly { readonly text: string }[] | undefined): string =>
+  references?.length
+    ? `Conversations the user referenced in this round:\n\n${references.map(reference => reference.text).join('\n\n')}`
+    : ''
 
 export const slotLabel = (slot: GroupSlot): string => {
   if (slot.status === 'speaking') return `${slot.name} (you, now)`
@@ -80,20 +90,29 @@ export const slotLabel = (slot: GroupSlot): string => {
   return slot.name
 }
 
-export const adminNote = (room: GroupRoom): string => [
-  'You are this group\'s admin.',
-  room.mode === 'admin' ? 'Plain messages come to you first: answer them, or call the members who should answer with @Name.' : '',
-  '"@all" calls every member. When the user asks, change the group with update_group.',
-].filter(Boolean).join(' ')
+export const adminNote = (room: GroupRoom): string =>
+  [
+    "You are this group's admin.",
+    room.mode === 'admin'
+      ? 'Plain messages come to you first: answer them, or call the members who should answer with @Name.'
+      : '',
+    '"@all" calls every member. When the user asks, change the group with update_group.',
+  ]
+    .filter(Boolean)
+    .join(' ')
 
 // The opening turn of a group the user just made without a first message.
-export const roomKickoff = (language: string | undefined): string => `The user just created this group and has not written yet. Greet the user in one short message and ask what they want this group to work on. Do not call members with @ yet, and do not reply [PASS]. No name prefix. Write in ${language ?? 'the user\'s language if known; otherwise Chinese'}.`
+export const roomKickoff = (language: string | undefined): string =>
+  `The user just created this group and has not written yet. Greet the user in one short message and ask what they want this group to work on. Do not call members with @ yet, and do not reply [PASS]. No name prefix. Write in ${language ?? "the user's language if known; otherwise Chinese"}.`
 
 // the host cannot open the Session at all: it is gone, or its stored log is corrupt. the host
 // reports a corrupt log only in the message of a generic failure.
 export const lostSession = (error: unknown): boolean => {
-  const cause: { readonly code?: unknown; readonly message?: unknown } = error !== null && typeof error === 'object' ? error : {}
-  return cause.code === 'session/not-found' || /\bis corrupt\b|\bcorrupt session log\b/i.test(String(cause.message ?? ''))
+  const cause: { readonly code?: unknown; readonly message?: unknown } =
+    error !== null && typeof error === 'object' ? error : {}
+  return (
+    cause.code === 'session/not-found' || /\bis corrupt\b|\bcorrupt session log\b/i.test(String(cause.message ?? ''))
+  )
 }
 export const fileLine = (file: AttachmentRef): string => `[File "${file.name}" (${file.bytes} bytes) attached]`
 

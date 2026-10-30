@@ -15,13 +15,11 @@ const core = resolve(app, '..', '..', 'packages', 'core')
 
 if (typeof electron !== 'string') throw new Error('rebuild-native: electron version is missing')
 
-const result = spawnSync(process.execPath, [
-  rebuild,
-  '--version', electron,
-  '--module-dir', core,
-  '--only', 'better-sqlite3',
-  '--force',
-], { cwd: app, stdio: 'inherit' })
+const result = spawnSync(
+  process.execPath,
+  [rebuild, '--version', electron, '--module-dir', core, '--only', 'better-sqlite3', '--force'],
+  { cwd: app, stdio: 'inherit' },
+)
 
 if (result.error) throw result.error
 if (result.status !== 0) process.exit(result.status ?? 1)

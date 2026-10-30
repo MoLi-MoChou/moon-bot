@@ -22,5 +22,4 @@ export const WIDGET_CSS = `
 .bt-widget-progress-fill{height:100%;border-radius:inherit;background:var(--bt-accent)}
 .bt-q-raised .bt-widget-stack{padding:0 16px 14px}
 .bt-q-raised .bt-widget-stack>.bt-q-list{padding:0}
-`;
-
+`

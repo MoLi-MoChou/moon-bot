@@ -19,7 +19,8 @@ export interface TurnFailure {
 
 // The fields a thrown value carries; the host raises its own error shapes, so they are read
 // structurally at this boundary rather than assumed.
-const failureOf = (error: unknown): FailureText => (error !== null && typeof error === 'object' ? error as FailureText : {})
+const failureOf = (error: unknown): FailureText =>
+  error !== null && typeof error === 'object' ? (error as FailureText) : {}
 
 // Like the host's own error row, an AUTH failure loses its message: providers may echo part of
 // the key.
@@ -35,7 +36,8 @@ export function turnFailure(error: unknown): TurnFailure {
   }
 }
 
-export const failureLine = (failure: FailureText): string => `${failure.code}${failure.status ? ` ${failure.status}` : ''}${failure.message ? `: ${failure.message.slice(0, 200)}` : ''}`
+export const failureLine = (failure: FailureText): string =>
+  `${failure.code}${failure.status ? ` ${failure.status}` : ''}${failure.message ? `: ${failure.message.slice(0, 200)}` : ''}`
 
 // A model failure said so a person can read it: the chat line a failed member leaves in
 // its group must not show a raw code. The code stays in failureLine, for the logs and the

@@ -81,7 +81,12 @@ export class StdioTransport implements AcpTransport {
     const child = this.child
     this.child?.kill()
     this.finish()
-    if (child !== undefined && child.exitCode === null && child.signalCode === null) this.gone = new Promise((resolve) => { child.once('close', () => { resolve() }) })
+    if (child !== undefined && child.exitCode === null && child.signalCode === null)
+      this.gone = new Promise(resolve => {
+        child.once('close', () => {
+          resolve()
+        })
+      })
   }
 
   exited(): Promise<void> {

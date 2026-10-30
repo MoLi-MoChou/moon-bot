@@ -18,11 +18,19 @@ function deps(over: Partial<CompactDeps> = {}): CompactDeps & { readonly calls: 
     running: () => false,
     unread: () => false,
     switching: () => false,
-    resolve: async () => { calls.push('resolve'); return { id: 's', session: { id: 's' } } as never },
+    resolve: async () => {
+      calls.push('resolve')
+      return { id: 's', session: { id: 's' } } as never
+    },
     lines: async () => LINES,
-    prepare: () => { calls.push('prepare') },
+    prepare: () => {
+      calls.push('prepare')
+    },
     engine: () => true,
-    condense: async () => { calls.push('condense'); return true },
+    condense: async () => {
+      calls.push('condense')
+      return true
+    },
     ...over,
   }
 }
@@ -53,10 +61,15 @@ test('no engine and a condense that does not make room never claim success', asy
 
 test('a second ask while the first is still condensing is refused', async () => {
   let release: (value: boolean) => void = () => {}
-  const gate = new Promise<boolean>(resolve => { release = resolve })
+  const gate = new Promise<boolean>(resolve => {
+    release = resolve
+  })
   let started = false
   const input = deps({
-    condense: () => { started = true; return gate },
+    condense: () => {
+      started = true
+      return gate
+    },
   })
   const compact = createContextCompact(input)
   const first = compact('s')
@@ -87,14 +100,20 @@ function start(compaction?: { compactNow: () => Promise<unknown> }) {
   const services: Record<string, unknown> = {
     tokenMeter: { measure: () => ({ totalTokens: 10 }) },
   }
-  if (compaction !== undefined) services.compaction = { summarize() {}, compactIfNeeded: async () => null, compactNow: compaction.compactNow, compactRegion: async () => {} }
+  if (compaction !== undefined)
+    services.compaction = {
+      summarize() {},
+      compactIfNeeded: async () => null,
+      compactNow: compaction.compactNow,
+      compactRegion: async () => {},
+    }
   const ctx = fakeContext({ services })
   ctx.sessionController = {
     resolveAgent: async (sessionId: string) => ({ agent: { id: sessionId, session: { id: sessionId, seq: 2 } } }),
   }
   const routes: Record<string, { fetch: (request: Request) => Promise<Response> }> = {}
   const register = ctx.connection.fetch.register
-  ctx.connection.fetch.register = (options: { path: string, fetch: (request: Request) => Promise<Response> }) => {
+  ctx.connection.fetch.register = (options: { path: string; fetch: (request: Request) => Promise<Response> }) => {
     routes[options.path] = options
     return register(options)
   }
@@ -103,10 +122,17 @@ function start(compaction?: { compactNow: () => Promise<unknown> }) {
     unreadOf: (sessionId: string) => readonly unknown[]
   }
   const call = async (endpoint: string, payload?: unknown) => {
-    const response = await routes['/api/bot']!.fetch(new Request('http://localhost/api/bot', {
-      method: 'POST', body: JSON.stringify({ endpoint, payload }),
-    }))
-    return response.json() as Promise<{ ok: boolean, value?: { compacted?: boolean, reason?: string }, error?: { code?: string } }>
+    const response = await routes['/api/bot']!.fetch(
+      new Request('http://localhost/api/bot', {
+        method: 'POST',
+        body: JSON.stringify({ endpoint, payload }),
+      }),
+    )
+    return response.json() as Promise<{
+      ok: boolean
+      value?: { compacted?: boolean; reason?: string }
+      error?: { code?: string }
+    }>
   }
   const stop = async () => {
     await ctx.dispose()
@@ -115,9 +141,14 @@ function start(compaction?: { compactNow: () => Promise<unknown> }) {
   return { rt, call, stop }
 }
 
-test('the endpoint refuses a running turn and an unread delivery without condensing', async (t) => {
+test('the endpoint refuses a running turn and an unread delivery without condensing', async t => {
   let condensed = 0
-  const { rt, call, stop } = start({ compactNow: async () => { condensed += 1; return {} } })
+  const { rt, call, stop } = start({
+    compactNow: async () => {
+      condensed += 1
+      return {}
+    },
+  })
   t.after(stop)
   await call('state')
   rt.live.set('m1c', { turn: true })
@@ -131,7 +162,7 @@ test('the endpoint refuses a running turn and an unread delivery without condens
   assert.equal((await call('context-compact', { botId: 'nobody' })).error?.code, 'bot/not-found')
 })
 
-test('without a compaction engine the endpoint says so, and with one it condenses in place', async (t) => {
+test('without a compaction engine the endpoint says so, and with one it condenses in place', async t => {
   const bare = start()
   t.after(bare.stop)
   await bare.call('state')
@@ -139,7 +170,12 @@ test('without a compaction engine the endpoint says so, and with one it condense
   assert.deepEqual(refused.value, { compacted: false, reason: COMPACT_REASONS['no-engine'] })
 
   let condensed = 0
-  const wired = start({ compactNow: async () => { condensed += 1; return {} } })
+  const wired = start({
+    compactNow: async () => {
+      condensed += 1
+      return {}
+    },
+  })
   t.after(wired.stop)
   await wired.call('state')
   const done = await wired.call('context-compact', { botId: 'm1' })

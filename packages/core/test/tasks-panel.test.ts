@@ -29,7 +29,10 @@ interface View {
 
 interface Panel {
   tasksView(): Promise<View>
-  noteTurn(sessionId: string, event: { readonly type?: string; readonly turn?: unknown; readonly reason?: unknown }): void
+  noteTurn(
+    sessionId: string,
+    event: { readonly type?: string; readonly turn?: unknown; readonly reason?: unknown },
+  ): void
   stopTask(sessionId: string): Promise<boolean>
   removeQueued(sessionId: string, id: string): Promise<boolean>
 }
@@ -40,7 +43,10 @@ interface Options {
   readonly work?: Record<string, { readonly since?: number; readonly tool?: string; readonly roomId?: string }>
   readonly agent?: (sessionId: string) => AgentStub | undefined
   readonly approvals?: readonly { readonly sessionId: string }[]
-  readonly waiting?: Record<string, { readonly bots: readonly string[]; readonly rooms: readonly string[]; readonly for: readonly string[] }>
+  readonly waiting?: Record<
+    string,
+    { readonly bots: readonly string[]; readonly rooms: readonly string[]; readonly for: readonly string[] }
+  >
   readonly parked?: readonly { readonly sessionId: string; readonly botId: string; readonly roomId?: string }[]
   readonly cancels?: { readonly kind: string }[]
 }
@@ -52,7 +58,7 @@ function panel(options: Options = {}): Panel {
     botOf: (id: string) => ({ id, name: `Bot ${id}` }),
     roomOf: () => undefined,
     chatOf: (botId: string) => `chat:${botId}`,
-    selfOf: (sessionId: string) => sessionId.startsWith('chat:') ? sessionId.slice(5) : undefined,
+    selfOf: (sessionId: string) => (sessionId.startsWith('chat:') ? sessionId.slice(5) : undefined),
     workView: () => options.work ?? {},
     workOf: () => undefined,
     workAsker: () => undefined,
@@ -62,7 +68,14 @@ function panel(options: Options = {}): Panel {
     resolveAgent: async (sessionId: string) => {
       const agent = options.agent?.(sessionId)
       if (agent === undefined || options.cancels === undefined) return agent
-      return { inbox: agent.inbox, cancel: agent.cancel ?? ((cause: { readonly kind: string }) => { options.cancels?.push(cause) }) }
+      return {
+        inbox: agent.inbox,
+        cancel:
+          agent.cancel ??
+          ((cause: { readonly kind: string }) => {
+            options.cancels?.push(cause)
+          }),
+      }
     },
   }
   install(rt as never)
@@ -166,7 +179,9 @@ test('no agent, no inbox, or a failed resolve leaves the row and drops the queue
     work: { b1: { since: 1_000 } },
     live: { 'chat:b1': { turn: 1 } },
   })
-  ;(rt as unknown as { resolveAgent(): Promise<never> }).resolveAgent = async () => { throw new Error('gone') }
+  ;(rt as unknown as { resolveAgent(): Promise<never> }).resolveAgent = async () => {
+    throw new Error('gone')
+  }
   const failed = await rt.tasksView()
   assert.equal(failed.running[0]?.queued, undefined)
 })
@@ -232,7 +247,15 @@ test('a running turn lists each queued preview, and a turn that has not started 
   const view = await panel({
     work: { b1: { since: 1_000 } },
     live: { 'chat:b1': { turn: 4 } },
-    agent: () => ({ inbox: { nextTurn: [queuedMessage('a', `${'y'.repeat(130)}\nrest`), queuedMessage('b', 'second'), { content: [{ type: 'text', text: 'no id' }] }] } }),
+    agent: () => ({
+      inbox: {
+        nextTurn: [
+          queuedMessage('a', `${'y'.repeat(130)}\nrest`),
+          queuedMessage('b', 'second'),
+          { content: [{ type: 'text', text: 'no id' }] },
+        ],
+      },
+    }),
   }).tasksView()
   assert.equal(view.running[0]?.queued, 3)
   assert.equal(view.running[0]?.queue?.[0]?.id, 'a')
@@ -271,12 +294,15 @@ test('removing a queued Bot request tells its sender; a user line and a missing 
     warn: (template: string, ...args: readonly unknown[]) => void
     closeWork: (id: string, name: string, text: string) => string
   }
-  host.deliver = async (args) => { delivered.push(args); return 'ok' }
+  host.deliver = async args => {
+    delivered.push(args)
+    return 'ok'
+  }
   host.warn = () => {}
   host.closeWork = () => 'work-1'
   assert.equal(await rt.removeQueued('chat:b1', 'missing'), false)
   assert.equal(await rt.removeQueued('chat:b1', 'user-1'), true)
-  assert.equal(delivered.length, 0, 'the user\'s own line is not announced')
+  assert.equal(delivered.length, 0, "the user's own line is not announced")
   assert.equal(await rt.removeQueued('chat:b1', 'q1'), true)
   assert.equal(delivered.length, 1)
   assert.equal(delivered[0]?.toId, 'b2')

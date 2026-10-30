@@ -1,4 +1,4 @@
-import type { ConnectorCatalogEntry } from '../connector-catalog.ts';
+import type { ConnectorCatalogEntry } from '../connector-catalog.ts'
 
 export const DOCS_CONNECTORS: readonly ConnectorCatalogEntry[] = [
   {
@@ -25,7 +25,9 @@ export const DOCS_CONNECTORS: readonly ConnectorCatalogEntry[] = [
     command: 'npx',
     args: ['-y', '@notionhq/mcp-server'],
     env: { NOTION_API_KEY: '$MOON_BOT_SECRET_NOTION_API_KEY' },
-    secrets: [{ name: 'NOTION_API_KEY', label: 'Notion integration token', url: 'https://www.notion.so/my-integrations' }],
+    secrets: [
+      { name: 'NOTION_API_KEY', label: 'Notion integration token', url: 'https://www.notion.so/my-integrations' },
+    ],
     website: 'https://notion.so',
   },
   {
@@ -48,11 +50,19 @@ export const DOCS_CONNECTORS: readonly ConnectorCatalogEntry[] = [
     transport: 'stdio',
     command: 'npx',
     args: ['-y', 'jira-mcp-server'],
-    env: { JIRA_HOST: '$MOON_BOT_SECRET_JIRA_HOST', JIRA_EMAIL: '$MOON_BOT_SECRET_JIRA_EMAIL', JIRA_API_TOKEN: '$MOON_BOT_SECRET_JIRA_API_TOKEN' },
+    env: {
+      JIRA_HOST: '$MOON_BOT_SECRET_JIRA_HOST',
+      JIRA_EMAIL: '$MOON_BOT_SECRET_JIRA_EMAIL',
+      JIRA_API_TOKEN: '$MOON_BOT_SECRET_JIRA_API_TOKEN',
+    },
     secrets: [
       { name: 'JIRA_HOST', label: 'Jira Host (e.g. your-org.atlassian.net)' },
       { name: 'JIRA_EMAIL', label: 'Jira User Email' },
-      { name: 'JIRA_API_TOKEN', label: 'Jira API Token', url: 'https://id.atlassian.com/manage-profile/security/api-tokens' },
+      {
+        name: 'JIRA_API_TOKEN',
+        label: 'Jira API Token',
+        url: 'https://id.atlassian.com/manage-profile/security/api-tokens',
+      },
     ],
     website: 'https://www.atlassian.com/software/jira',
   },
@@ -64,11 +74,19 @@ export const DOCS_CONNECTORS: readonly ConnectorCatalogEntry[] = [
     transport: 'stdio',
     command: 'npx',
     args: ['-y', 'confluence-mcp-server'],
-    env: { CONFLUENCE_HOST: '$MOON_BOT_SECRET_CONFLUENCE_HOST', CONFLUENCE_EMAIL: '$MOON_BOT_SECRET_CONFLUENCE_EMAIL', CONFLUENCE_API_TOKEN: '$MOON_BOT_SECRET_CONFLUENCE_API_TOKEN' },
+    env: {
+      CONFLUENCE_HOST: '$MOON_BOT_SECRET_CONFLUENCE_HOST',
+      CONFLUENCE_EMAIL: '$MOON_BOT_SECRET_CONFLUENCE_EMAIL',
+      CONFLUENCE_API_TOKEN: '$MOON_BOT_SECRET_CONFLUENCE_API_TOKEN',
+    },
     secrets: [
       { name: 'CONFLUENCE_HOST', label: 'Confluence Host (e.g. your-org.atlassian.net)' },
       { name: 'CONFLUENCE_EMAIL', label: 'Confluence User Email' },
-      { name: 'CONFLUENCE_API_TOKEN', label: 'Confluence API Token', url: 'https://id.atlassian.com/manage-profile/security/api-tokens' },
+      {
+        name: 'CONFLUENCE_API_TOKEN',
+        label: 'Confluence API Token',
+        url: 'https://id.atlassian.com/manage-profile/security/api-tokens',
+      },
     ],
     website: 'https://www.atlassian.com/software/confluence',
   },
@@ -112,7 +130,9 @@ export const DOCS_CONNECTORS: readonly ConnectorCatalogEntry[] = [
     command: 'npx',
     args: ['-y', 'airtable-mcp'],
     env: { AIRTABLE_API_KEY: '$MOON_BOT_SECRET_AIRTABLE_API_KEY' },
-    secrets: [{ name: 'AIRTABLE_API_KEY', label: 'Airtable Personal Access Token', url: 'https://airtable.com/create/tokens' }],
+    secrets: [
+      { name: 'AIRTABLE_API_KEY', label: 'Airtable Personal Access Token', url: 'https://airtable.com/create/tokens' },
+    ],
     website: 'https://airtable.com',
   },
   {
@@ -139,7 +159,13 @@ export const DOCS_CONNECTORS: readonly ConnectorCatalogEntry[] = [
     command: 'npx',
     args: ['-y', 'asana-mcp-server'],
     env: { ASANA_ACCESS_TOKEN: '$MOON_BOT_SECRET_ASANA_ACCESS_TOKEN' },
-    secrets: [{ name: 'ASANA_ACCESS_TOKEN', label: 'Asana Personal Access Token', url: 'https://app.asana.com/-/developer_console' }],
+    secrets: [
+      {
+        name: 'ASANA_ACCESS_TOKEN',
+        label: 'Asana Personal Access Token',
+        url: 'https://app.asana.com/-/developer_console',
+      },
+    ],
     website: 'https://asana.com',
   },
   {
@@ -151,7 +177,9 @@ export const DOCS_CONNECTORS: readonly ConnectorCatalogEntry[] = [
     command: 'npx',
     args: ['-y', '@upstash/context7-mcp'],
     env: { CONTEXT7_API_KEY: '$MOON_BOT_SECRET_CONTEXT7_API_KEY' },
-    secrets: [{ name: 'CONTEXT7_API_KEY', label: 'Context7 API key', url: 'https://context7.com/dashboard', optional: true }],
+    secrets: [
+      { name: 'CONTEXT7_API_KEY', label: 'Context7 API key', url: 'https://context7.com/dashboard', optional: true },
+    ],
     website: 'https://context7.com',
   },
-];
+]

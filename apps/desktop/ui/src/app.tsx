@@ -1,6 +1,17 @@
 // The window's frame: the team sidebar, the conversation, the overlays and the toast —
 // the same Bot views the plugin host draws, around Moon Bot's own service.
-import { Component, createElement as h, Fragment, useEffect, useMemo, useRef, useState, type ErrorInfo, type ReactElement, type ReactNode } from 'react'
+import {
+  Component,
+  createElement as h,
+  Fragment,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ErrorInfo,
+  type ReactElement,
+  type ReactNode,
+} from 'react'
 import { ErrorToast } from '../../../../packages/core/src/client/feedback.tsx'
 import { HeaderPill } from '../../../../packages/core/src/client/header.tsx'
 import { t } from '../../../../packages/core/src/client/i18n.ts'
@@ -80,7 +91,9 @@ interface ContainProps {
   readonly children?: ReactNode
   readonly onError: (error: unknown) => void
 }
-interface ContainState { failed: boolean }
+interface ContainState {
+  failed: boolean
+}
 
 class Contain extends Component<ContainProps, ContainState> {
   private failedAt = 0
@@ -90,7 +103,9 @@ class Contain extends Component<ContainProps, ContainState> {
     this.state = { failed: false }
   }
 
-  static getDerivedStateFromError(): ContainState { return { failed: true } }
+  static getDerivedStateFromError(): ContainState {
+    return { failed: true }
+  }
 
   override componentDidCatch(error: Error, _info: ErrorInfo): void {
     this.props.onError(error)
@@ -98,7 +113,9 @@ class Contain extends Component<ContainProps, ContainState> {
     this.failedAt = Date.now()
   }
 
-  override render(): ReactNode { return this.state.failed ? null : this.props.children }
+  override render(): ReactNode {
+    return this.state.failed ? null : this.props.children
+  }
 }
 
 export function App(): ReactElement {
@@ -126,7 +143,9 @@ export function App(): ReactElement {
   // wide window, so the drawer always opens on the expanded list.
   const sidebar = wide || narrow
   // The drawer never outlives the breakpoint that opened it.
-  useEffect(() => { if (!narrow) setDrawer(false) }, [narrow])
+  useEffect(() => {
+    if (!narrow) setDrawer(false)
+  }, [narrow])
   // The part behind the drawer is inert, so focus cannot leave it; opening and closing
   // move focus with it.
   useEffect(() => {
@@ -161,46 +180,95 @@ export function App(): ReactElement {
     actions.closeOverlay()
     actions.reportError(error instanceof Error ? error : new Error(String(error)), 'overlay')
   }
-  return <div className='mb-frame' data-rail={sidebar ? undefined : ''} data-drawer={narrow && drawer ? '' : undefined}>
-    <aside ref={side} id='mb-sidebar' className='mb-side' tabIndex={-1} onClick={(event) => {
-      if (!narrow || !drawer || !(event.target instanceof Element)) return
-      // Any seat that navigates or opens a layer hands the phone over to it.
-      if (event.target.closest('button,a,[role=button]') !== null) setDrawer(false)
-    }}>
-      <div className='mb-band' />
-      <div className='mb-side-list'>
-        {sidebar ? null : <button type='button' className='mb-expand' aria-label={t('Expand sidebar')} title={t('Expand sidebar')} onClick={() => { actions.toggleSidebar() }}>
-          <BrandMark size={22} />
-        </button>}
-        <TeamSidebar {...asViews<Parameters<typeof TeamSidebar>[0]>({ ...views, wide: sidebar })} />
-      </div>
-      <div className='mb-side-foot'>
-        <button type='button' className='mb-settings' title={t('Settings')} onClick={() => { actions.openSettings() }}>
-          <YouAvatar />
+  return (
+    <div className='mb-frame' data-rail={sidebar ? undefined : ''} data-drawer={narrow && drawer ? '' : undefined}>
+      <aside
+        ref={side}
+        id='mb-sidebar'
+        className='mb-side'
+        tabIndex={-1}
+        onClick={event => {
+          if (!narrow || !drawer || !(event.target instanceof Element)) return
+          // Any seat that navigates or opens a layer hands the phone over to it.
+          if (event.target.closest('button,a,[role=button]') !== null) setDrawer(false)
+        }}>
+        <div className='mb-band' />
+        <div className='mb-side-list'>
+          {sidebar ? null : (
+            <button
+              type='button'
+              className='mb-expand'
+              aria-label={t('Expand sidebar')}
+              title={t('Expand sidebar')}
+              onClick={() => {
+                actions.toggleSidebar()
+              }}>
+              <BrandMark size={22} />
+            </button>
+          )}
+          <TeamSidebar {...asViews<Parameters<typeof TeamSidebar>[0]>({ ...views, wide: sidebar })} />
+        </div>
+        <div className='mb-side-foot'>
+          <button
+            type='button'
+            className='mb-settings'
+            title={t('Settings')}
+            onClick={() => {
+              actions.openSettings()
+            }}>
+            <YouAvatar />
+          </button>
+        </div>
+      </aside>
+      {narrow && drawer ? (
+        <div
+          className='mb-scrim'
+          aria-hidden
+          onClick={() => {
+            setDrawer(false)
+          }}
+        />
+      ) : null}
+      {/* The details panel makes room by giving the shell's `_centerCol` column a right margin. */}
+      <main ref={main} className='mb-main dsb_centerCol'>
+        <div className='mb-band' />
+        {/* On a phone this is the only way to the sidebar; a wide window keeps its column. */}
+        <button
+          ref={menu}
+          type='button'
+          className='mb-menu'
+          aria-label={drawer ? t('Collapse sidebar') : t('Expand sidebar')}
+          title={drawer ? t('Collapse sidebar') : t('Expand sidebar')}
+          aria-expanded={drawer}
+          aria-controls='mb-sidebar'
+          onClick={() => {
+            setDrawer(value => !value)
+          }}>
+          <SidebarIcon />
         </button>
-      </div>
-    </aside>
-    {narrow && drawer ? <div className='mb-scrim' aria-hidden onClick={() => { setDrawer(false) }} /> : null}
-    {/* The details panel makes room by giving the shell's `_centerCol` column a right margin. */}
-    <main ref={main} className='mb-main dsb_centerCol'>
-      <div className='mb-band' />
-      {/* On a phone this is the only way to the sidebar; a wide window keeps its column. */}
-      <button ref={menu} type='button' className='mb-menu' aria-label={drawer ? t('Collapse sidebar') : t('Expand sidebar')} title={drawer ? t('Collapse sidebar') : t('Expand sidebar')} aria-expanded={drawer} aria-controls='mb-sidebar' onClick={() => { setDrawer(value => !value) }}>
-        <SidebarIcon />
-      </button>
-      {shown !== null
-        ? h(Fragment, { key: shown },
-          <div className='mb-head'>
-            <HeaderPill {...asViews<Parameters<typeof HeaderPill>[0]>({ ...views, sessionId: shown, useSession: team.sessionHook(shown) })} />
-          </div>,
-          <Chat sessionId={shown} team={team} />)
-        : null}
-    </main>
-    <Contain onError={closeOverlays}>
-      <Overlays {...asViews<Parameters<typeof Overlays>[0]>(views)} />
-    </Contain>
-    <ErrorToast {...asViews<Parameters<typeof ErrorToast>[0]>(views)} />
-  </div>
+        {shown !== null
+          ? h(
+              Fragment,
+              { key: shown },
+              <div className='mb-head'>
+                <HeaderPill
+                  {...asViews<Parameters<typeof HeaderPill>[0]>({
+                    ...views,
+                    sessionId: shown,
+                    useSession: team.sessionHook(shown),
+                  })}
+                />
+              </div>,
+              <Chat sessionId={shown} team={team} />,
+            )
+          : null}
+      </main>
+      <Contain onError={closeOverlays}>
+        <Overlays {...asViews<Parameters<typeof Overlays>[0]>(views)} />
+      </Contain>
+      <ErrorToast {...asViews<Parameters<typeof ErrorToast>[0]>(views)} />
+    </div>
+  )
 }
 
 // `createTeam` takes no arguments, but `useMemo` would call it with a render's props.

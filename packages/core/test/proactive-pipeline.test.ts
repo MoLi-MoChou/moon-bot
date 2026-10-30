@@ -23,7 +23,10 @@ const deps = (over = {}) => {
 }
 
 const request = (over = {}) => ({
-  subscriptionId: 's1', botId: 'b1', sessionId: 'b1', triggerSource: 'schedule' as const,
+  subscriptionId: 's1',
+  botId: 'b1',
+  sessionId: 'b1',
+  triggerSource: 'schedule' as const,
   readOnly: false,
   candidates: {
     topics: 'my work',
@@ -32,8 +35,12 @@ const request = (over = {}) => ({
     alreadySaid: [],
   },
   screen: {
-    deliveredToday: 0, dailyCap: 1, earlier: [], mentionedRecently: false,
-    localTime: '09:00', quiet: { from: '22:00', to: '08:00' },
+    deliveredToday: 0,
+    dailyCap: 1,
+    earlier: [],
+    mentionedRecently: false,
+    localTime: '09:00',
+    quiet: { from: '22:00', to: '08:00' },
   },
   ...over,
 })
@@ -56,7 +63,10 @@ test('a capped subscription produces a candidate and a drop verdict, so it can b
 test('the screen still runs on a manual run, so the panel shows why something would not send', async () => {
   // A read-only run lists candidates instead of delivering them, but the reasons matter:
   // they are what tells the user whether the subscription is any good.
-  const outcome = await runOnce(request({ readOnly: true, screen: { ...request().screen, mentionedRecently: true } }), deps())
+  const outcome = await runOnce(
+    request({ readOnly: true, screen: { ...request().screen, mentionedRecently: true } }),
+    deps(),
+  )
   assert.equal(outcome.kind, 'prepared')
   if (outcome.kind !== 'prepared') return
   assert.deepEqual(outcome.verdict, { kind: 'drop', reason: 'mentioned-recently' })
@@ -64,10 +74,15 @@ test('the screen still runs on a manual run, so the panel shows why something wo
 
 test('a failed preparation is silent apart from a log line', async () => {
   const logged = []
-  const outcome = await runOnce(request(), deps({
-    ask: async () => { throw new Error('the model refused') },
-    log: (message, ...rest) => logged.push([message, ...rest]),
-  }))
+  const outcome = await runOnce(
+    request(),
+    deps({
+      ask: async () => {
+        throw new Error('the model refused')
+      },
+      log: (message, ...rest) => logged.push([message, ...rest]),
+    }),
+  )
   assert.deepEqual(outcome, { kind: 'failed', reason: 'the model refused' })
   assert.equal(logged.length, 1)
   assert.match(String(logged[0]?.[0]), /prep failed/)
@@ -80,9 +95,15 @@ test('a model that answers nothing is "nothing", not a failure', async () => {
 
 test('an empty day never reaches the model', async () => {
   let asked = false
-  const outcome = await runOnce(request({ candidates: { ...request().candidates, memory: [], messages: [] } }), deps({
-    ask: async () => { asked = true; return candidateJson },
-  }))
+  const outcome = await runOnce(
+    request({ candidates: { ...request().candidates, memory: [], messages: [] } }),
+    deps({
+      ask: async () => {
+        asked = true
+        return candidateJson
+      },
+    }),
+  )
   assert.deepEqual(outcome, { kind: 'nothing' })
   assert.equal(asked, false)
 })
@@ -97,14 +118,30 @@ test('quiet hours turn a long-lived candidate into a delay, not a drop', async (
 test('the soft judgement runs only on a candidate the hard rules allowed', async () => {
   // Asking about a candidate that is already dropped would spend a request to learn nothing.
   let judged = 0
-  await runOnce(request(), deps({ judgeAsk: async () => { judged += 1; return 'INTERRUPT' } }))
+  await runOnce(
+    request(),
+    deps({
+      judgeAsk: async () => {
+        judged += 1
+        return 'INTERRUPT'
+      },
+    }),
+  )
   assert.equal(judged, 1)
   judged = 0
-  await runOnce(request({ screen: { ...request().screen, deliveredToday: 1 } }), deps({ judgeAsk: async () => { judged += 1; return 'INTERRUPT' } }))
+  await runOnce(
+    request({ screen: { ...request().screen, deliveredToday: 1 } }),
+    deps({
+      judgeAsk: async () => {
+        judged += 1
+        return 'INTERRUPT'
+      },
+    }),
+  )
   assert.equal(judged, 0, 'a capped candidate must not reach the judge')
 })
 
-test('a candidate the judge turns down becomes a drop with the judge\'s reason', async () => {
+test("a candidate the judge turns down becomes a drop with the judge's reason", async () => {
   const outcome = await runOnce(request(), deps({ judgeAsk: async () => 'DROP: only restates yesterday' }))
   assert.equal(outcome.kind, 'prepared')
   if (outcome.kind !== 'prepared') return
@@ -113,7 +150,14 @@ test('a candidate the judge turns down becomes a drop with the judge\'s reason',
 })
 
 test('a judge that fails drops the candidate instead of sending it', async () => {
-  const outcome = await runOnce(request(), deps({ judgeAsk: async () => { throw new Error('offline') } }))
+  const outcome = await runOnce(
+    request(),
+    deps({
+      judgeAsk: async () => {
+        throw new Error('offline')
+      },
+    }),
+  )
   assert.equal(outcome.kind, 'prepared')
   if (outcome.kind !== 'prepared') return
   assert.equal(outcome.verdict.kind, 'drop')

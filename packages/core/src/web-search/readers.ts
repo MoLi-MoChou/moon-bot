@@ -17,28 +17,45 @@ export interface ReadOutcome {
 export function readMessages(body: unknown): ReadOutcome {
   const root = isRecord(body) ? body : undefined
   const blocks = arrayOf(root?.content) ?? []
-  const results = blocks.filter((block): block is Record<string, unknown> =>
-    isRecord(block) && block.type === 'web_search_tool_result')
+  const results = blocks.filter(
+    (block): block is Record<string, unknown> => isRecord(block) && block.type === 'web_search_tool_result',
+  )
   const excerpts = new Map<string, string>()
   for (const block of blocks) {
     if (!isRecord(block) || block.type !== 'text' || !Array.isArray(block.citations)) continue
     for (const cite of block.citations) {
       // The cited text is kept as written; only blank excerpts are skipped.
-      if (isRecord(cite) && typeof cite.url === 'string' && isText(cite.cited_text) && !excerpts.has(cite.url)) excerpts.set(cite.url, cite.cited_text)
+      if (isRecord(cite) && typeof cite.url === 'string' && isText(cite.cited_text) && !excerpts.has(cite.url))
+        excerpts.set(cite.url, cite.cited_text)
     }
   }
-  const sources = dedupe(results.flatMap(block => arrayOf(block.content) ?? [])
-    .filter((item): item is Record<string, unknown> => isRecord(item) && item.type === 'web_search_result')
-    .map(item => sourceOf(item.url, item.title,
-      (typeof item.url === 'string' ? excerpts.get(item.url) : undefined) ?? (typeof item.content === 'string' ? item.content : undefined),
-      item.page_age)))
-  const failed = results.map(block => block.content)
-    .find((content): content is Record<string, unknown> => isRecord(content) && content.type === 'web_search_tool_result_error')
+  const sources = dedupe(
+    results
+      .flatMap(block => arrayOf(block.content) ?? [])
+      .filter((item): item is Record<string, unknown> => isRecord(item) && item.type === 'web_search_result')
+      .map(item =>
+        sourceOf(
+          item.url,
+          item.title,
+          (typeof item.url === 'string' ? excerpts.get(item.url) : undefined) ??
+            (typeof item.content === 'string' ? item.content : undefined),
+          item.page_age,
+        ),
+      ),
+  )
+  const failed = results
+    .map(block => block.content)
+    .find(
+      (content): content is Record<string, unknown> =>
+        isRecord(content) && content.type === 'web_search_tool_result_error',
+    )
   return {
     ran: results.length > 0 || blocks.some(block => isRecord(block) && block.type === 'server_tool_use'),
     cut: root?.stop_reason === 'max_tokens',
     sources,
-    ...sources.length === 0 && failed !== undefined ? { error: `web search failed: ${String(failed.error_code ?? 'unknown error')}` } : {},
+    ...(sources.length === 0 && failed !== undefined
+      ? { error: `web search failed: ${String(failed.error_code ?? 'unknown error')}` }
+      : {}),
   }
 }
 
@@ -46,7 +63,9 @@ export function readMessages(body: unknown): ReadOutcome {
 export function readResponses(body: unknown): ReadOutcome {
   const root = isRecord(body) ? body : undefined
   const output = arrayOf(root?.output) ?? []
-  const calls = output.filter((item): item is Record<string, unknown> => isRecord(item) && item.type === 'web_search_call')
+  const calls = output.filter(
+    (item): item is Record<string, unknown> => isRecord(item) && item.type === 'web_search_call',
+  )
   const found: (Source | undefined)[] = []
   for (const call of calls) {
     const action = isRecord(call.action) ? call.action : undefined
@@ -80,9 +99,11 @@ export function readGemini(body: unknown): ReadOutcome {
   return {
     ran: candidates.some(candidate => isRecord(candidate) && isRecord(candidate.groundingMetadata)),
     cut: candidates.some(candidate => isRecord(candidate) && candidate.finishReason === 'MAX_TOKENS'),
-    sources: dedupe(candidates
-      .flatMap(chunksOf)
-      .map(chunk => (isRecord(chunk) && isRecord(chunk.web) ? sourceOf(chunk.web.uri, chunk.web.title) : undefined))),
+    sources: dedupe(
+      candidates
+        .flatMap(chunksOf)
+        .map(chunk => (isRecord(chunk) && isRecord(chunk.web) ? sourceOf(chunk.web.uri, chunk.web.title) : undefined)),
+    ),
   }
 }
 
@@ -91,7 +112,17 @@ const TITLE_KEYS = ['title', 'name', 'site_name']
 const SNIPPET_KEYS = ['snippet', 'summary', 'content', 'description', 'cited_text', 'text']
 const DATE_KEYS = ['published_date', 'publish_date', 'publish_time', 'page_age', 'date', 'last_updated']
 // Media links are not results, and a response that echoes the request's tools is not a search.
-const NOT_SOURCES = new Set(['image_url', 'images', 'image', 'icon', 'favicon', 'logo', 'logo_url', 'thumbnail', 'tools'])
+const NOT_SOURCES = new Set([
+  'image_url',
+  'images',
+  'image',
+  'icon',
+  'favicon',
+  'logo',
+  'logo_url',
+  'thumbnail',
+  'tools',
+])
 const SEARCH_MARK = /search|grounding|citation/i
 const firstText = (record: Record<string, unknown>, keys: readonly string[]): unknown =>
   keys.map(key => record[key]).find(value => isText(value))
@@ -101,10 +132,16 @@ export function findSources(body: unknown): readonly Source[] {
   const found: (Source | undefined)[] = []
   const visit = (value: unknown, depth: number): void => {
     if (depth > 16) return
-    if (Array.isArray(value)) { for (const item of value) visit(item, depth + 1); return }
+    if (Array.isArray(value)) {
+      for (const item of value) visit(item, depth + 1)
+      return
+    }
     if (!isRecord(value)) return
     const url = URL_KEYS.map(key => httpUrl(value[key])).find(Boolean)
-    if (url !== undefined) found.push(sourceOf(url, firstText(value, TITLE_KEYS), firstText(value, SNIPPET_KEYS), firstText(value, DATE_KEYS)))
+    if (url !== undefined)
+      found.push(
+        sourceOf(url, firstText(value, TITLE_KEYS), firstText(value, SNIPPET_KEYS), firstText(value, DATE_KEYS)),
+      )
     for (const [key, child] of Object.entries(value)) if (!NOT_SOURCES.has(key)) visit(child, depth + 1)
   }
   visit(body, 0)
@@ -117,10 +154,14 @@ export function showsSearch(body: unknown): boolean {
     if (depth > 16) return false
     if (Array.isArray(value)) return value.some(item => visit(item, depth + 1))
     if (!isRecord(value)) return false
-    return Object.entries(value).some(([key, child]) => !NOT_SOURCES.has(key) && (
-      SEARCH_MARK.test(key) || key === 'results'
-      || (key === 'type' && typeof child === 'string' && SEARCH_MARK.test(child))
-      || visit(child, depth + 1)))
+    return Object.entries(value).some(
+      ([key, child]) =>
+        !NOT_SOURCES.has(key) &&
+        (SEARCH_MARK.test(key) ||
+          key === 'results' ||
+          (key === 'type' && typeof child === 'string' && SEARCH_MARK.test(child)) ||
+          visit(child, depth + 1)),
+    )
   }
   return visit(body, 0)
 }

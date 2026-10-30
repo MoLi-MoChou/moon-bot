@@ -1,4 +1,4 @@
-import type { ConnectorCatalogEntry } from '../connector-catalog.ts';
+import type { ConnectorCatalogEntry } from '../connector-catalog.ts'
 
 export const CLOUD_CONNECTORS: readonly ConnectorCatalogEntry[] = [
   {
@@ -9,9 +9,16 @@ export const CLOUD_CONNECTORS: readonly ConnectorCatalogEntry[] = [
     transport: 'stdio',
     command: 'npx',
     args: ['-y', '@cloudflare/mcp-server-cloudflare'],
-    env: { CLOUDFLARE_API_TOKEN: '$MOON_BOT_SECRET_CLOUDFLARE_API_TOKEN', CLOUDFLARE_ACCOUNT_ID: '$MOON_BOT_SECRET_CLOUDFLARE_ACCOUNT_ID' },
+    env: {
+      CLOUDFLARE_API_TOKEN: '$MOON_BOT_SECRET_CLOUDFLARE_API_TOKEN',
+      CLOUDFLARE_ACCOUNT_ID: '$MOON_BOT_SECRET_CLOUDFLARE_ACCOUNT_ID',
+    },
     secrets: [
-      { name: 'CLOUDFLARE_API_TOKEN', label: 'Cloudflare API Token', url: 'https://dash.cloudflare.com/profile/api-tokens' },
+      {
+        name: 'CLOUDFLARE_API_TOKEN',
+        label: 'Cloudflare API Token',
+        url: 'https://dash.cloudflare.com/profile/api-tokens',
+      },
       { name: 'CLOUDFLARE_ACCOUNT_ID', label: 'Cloudflare Account ID' },
     ],
     website: 'https://www.cloudflare.com',
@@ -24,7 +31,11 @@ export const CLOUD_CONNECTORS: readonly ConnectorCatalogEntry[] = [
     transport: 'stdio',
     command: 'npx',
     args: ['-y', 'mcp-server-aws'],
-    env: { AWS_ACCESS_KEY_ID: '$MOON_BOT_SECRET_AWS_ACCESS_KEY_ID', AWS_SECRET_ACCESS_KEY: '$MOON_BOT_SECRET_AWS_SECRET_ACCESS_KEY', AWS_REGION: '$MOON_BOT_SECRET_AWS_REGION' },
+    env: {
+      AWS_ACCESS_KEY_ID: '$MOON_BOT_SECRET_AWS_ACCESS_KEY_ID',
+      AWS_SECRET_ACCESS_KEY: '$MOON_BOT_SECRET_AWS_SECRET_ACCESS_KEY',
+      AWS_REGION: '$MOON_BOT_SECRET_AWS_REGION',
+    },
     secrets: [
       { name: 'AWS_ACCESS_KEY_ID', label: 'AWS Access Key ID' },
       { name: 'AWS_SECRET_ACCESS_KEY', label: 'AWS Secret Access Key' },
@@ -89,7 +100,13 @@ export const CLOUD_CONNECTORS: readonly ConnectorCatalogEntry[] = [
     command: 'npx',
     args: ['-y', 'mcp-server-digitalocean'],
     env: { DO_API_TOKEN: '$MOON_BOT_SECRET_DO_API_TOKEN' },
-    secrets: [{ name: 'DO_API_TOKEN', label: 'DigitalOcean Personal Access Token', url: 'https://cloud.digitalocean.com/account/api/tokens' }],
+    secrets: [
+      {
+        name: 'DO_API_TOKEN',
+        label: 'DigitalOcean Personal Access Token',
+        url: 'https://cloud.digitalocean.com/account/api/tokens',
+      },
+    ],
     website: 'https://www.digitalocean.com',
   },
   {
@@ -107,4 +124,4 @@ export const CLOUD_CONNECTORS: readonly ConnectorCatalogEntry[] = [
     ],
     website: 'https://qdrant.tech',
   },
-];
+]

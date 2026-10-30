@@ -5,14 +5,23 @@ import { RoomSchema } from 'moon-bot-contracts'
 
 test('a room saved before archivedAt exists is not archived', () => {
   const room = RoomSchema.parse({
-    id: 'r1', name: 'Ops', members: ['a', 'b'], admin: null, mode: 'everyone', createdAt: 1,
+    id: 'r1',
+    name: 'Ops',
+    members: ['a', 'b'],
+    admin: null,
+    mode: 'everyone',
+    createdAt: 1,
   })
   assert.equal(room.archivedAt, undefined)
 })
 
 test('archiving marks a group and restoring clears the mark without dropping its record', async () => {
   const room = {
-    id: 'r1', name: 'Ops', members: ['a', 'b'], log: [{ text: 'hi', seq: 1 }], sessions: { a: 'ga' },
+    id: 'r1',
+    name: 'Ops',
+    members: ['a', 'b'],
+    log: [{ text: 'hi', seq: 1 }],
+    sessions: { a: 'ga' },
   }
   const state = { rooms: { r1: room } }
   let saved = 0
@@ -20,7 +29,9 @@ test('archiving marks a group and restoring clears the mark without dropping its
     ctx: {} as never,
     rt: {
       roomOf: (id: string | undefined) => (id === undefined ? undefined : state.rooms[id as 'r1']),
-      save: async () => { saved += 1 },
+      save: async () => {
+        saved += 1
+      },
       warn: () => {},
       roomProgress: new Map(),
       roomInbox: new Map(),
@@ -58,8 +69,26 @@ const seed = () => ({
     a: { id: 'a', name: 'Chief', role: 'Boss', sessionId: 'a', createdAt: 1 },
     b: { id: 'b', name: 'Writer', role: 'Write', sessionId: 'b', createdAt: 2 },
   },
-  rooms: { r1: { id: 'r1', name: 'Ops', members: ['a', 'b'], mode: 'admin', admin: 'b', named: true, sessions: { b: 'gb' }, log: [{ who: 'User', text: 'Keep this', seq: 1 }], seen: { a: 0 }, seq: 1 } },
-  agents: {}, exchanges: [], exchangeTurns: {}, questions: {}, prefs: {}, revision: 0,
+  rooms: {
+    r1: {
+      id: 'r1',
+      name: 'Ops',
+      members: ['a', 'b'],
+      mode: 'admin',
+      admin: 'b',
+      named: true,
+      sessions: { b: 'gb' },
+      log: [{ who: 'User', text: 'Keep this', seq: 1 }],
+      seen: { a: 0 },
+      seq: 1,
+    },
+  },
+  agents: {},
+  exchanges: [],
+  exchangeTurns: {},
+  questions: {},
+  prefs: {},
+  revision: 0,
 })
 
 async function startHost() {
@@ -73,23 +102,48 @@ async function startHost() {
   const ctx = fakeContext()
   Object.assign(ctx, {
     llm: { listProviders: () => [], listModels: async () => [], resolveModelInfo: async () => ({}) },
-    workspaceRegistry: { get: () => undefined, resolveByPath: async () => undefined, create: async path => ({ id: 'w1', path }), archiveSession: async () => {} },
-    sessionController: { create: async () => ({ sessionId: 's1' }), resolveAgent: async sessionId => ({ agent: { id: sessionId, session: { id: sessionId }, followup() {}, steer() {}, cancel() {} } }), selectModel: async () => {} },
+    workspaceRegistry: {
+      get: () => undefined,
+      resolveByPath: async () => undefined,
+      create: async path => ({ id: 'w1', path }),
+      archiveSession: async () => {},
+    },
+    sessionController: {
+      create: async () => ({ sessionId: 's1' }),
+      resolveAgent: async sessionId => ({
+        agent: { id: sessionId, session: { id: sessionId }, followup() {}, steer() {}, cancel() {} },
+      }),
+      selectModel: async () => {},
+    },
     sessionTitle: { rename: async () => {} },
     sessions: { flush: async () => {} },
   })
   let route
   const register = ctx.connection.fetch.register
-  ctx.connection.fetch.register = (options) => { route = options; return register(options) }
+  ctx.connection.fetch.register = options => {
+    route = options
+    return register(options)
+  }
   apply(ctx, { home })
-  const call = async (endpoint, payload) => (await route.fetch(new Request('http://localhost/api/bot', { method: 'POST', body: JSON.stringify({ endpoint, payload }) }))).json()
-  const tool = (name, args, sessionId) => ctx.registeredTools.get(name).execute(args, { agent: { id: sessionId }, callId: 'c1', signal: new AbortController().signal })
-  const stop = async () => { await ctx.dispose(); rmSync(home, { recursive: true, force: true, maxRetries: 5 }) }
+  const call = async (endpoint, payload) =>
+    (
+      await route.fetch(
+        new Request('http://localhost/api/bot', { method: 'POST', body: JSON.stringify({ endpoint, payload }) }),
+      )
+    ).json()
+  const tool = (name, args, sessionId) =>
+    ctx.registeredTools
+      .get(name)
+      .execute(args, { agent: { id: sessionId }, callId: 'c1', signal: new AbortController().signal })
+  const stop = async () => {
+    await ctx.dispose()
+    rmSync(home, { recursive: true, force: true, maxRetries: 5 })
+  }
   await tool('list_bots', {}, 'a')
   return { call, tool, stop }
 }
 
-test('archiving a group through the host stops new rounds and keeps its record', async (t) => {
+test('archiving a group through the host stops new rounds and keeps its record', async t => {
   const host = await startHost()
   t.after(host.stop)
   const archived = await host.call('archive-room', { id: 'r1', archived: true })

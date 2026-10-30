@@ -133,7 +133,12 @@ export interface SessionPage {
 /** A Session's page address: its own id, or a subagent read through its parent. */
 export type SessionAddress =
   | { readonly kind: 'session'; readonly sessionId: string }
-  | { readonly kind: 'subagent'; readonly parentSessionId: string; readonly childSessionId: string; readonly mode?: string }
+  | {
+      readonly kind: 'subagent'
+      readonly parentSessionId: string
+      readonly childSessionId: string
+      readonly mode?: string
+    }
 
 /** A listing row's projection block; only a 'sequenced' block shares the log's seq. */
 export interface SessionProjectionHint {
@@ -163,28 +168,42 @@ export interface SessionProjections {
 
 export interface SessionController {
   create(options: SessionCreateOptions): Promise<{ readonly sessionId: string }>
-  resolveAgent(sessionId: string): Promise<
-    { readonly agent: Agent } | { readonly error: { readonly code?: string; readonly message?: string } }
-  >
+  resolveAgent(
+    sessionId: string,
+  ): Promise<{ readonly agent: Agent } | { readonly error: { readonly code?: string; readonly message?: string } }>
   /** Every Session the host knows, including archived parts and subagents. */
   list(options: Readonly<Record<string, unknown>>, signal?: AbortSignal): Promise<SessionListing>
   /** A Session's projection watermark; null once the Session is gone. */
-  projections(options: { readonly sessionId: string }, signal?: AbortSignal): Promise<SessionProjections | null | undefined>
-  page(options: {
-    readonly address: SessionAddress
-    readonly throughSeq?: number
-    readonly beforeSeq?: number
-    readonly maxMessages?: number
-  }, signal?: AbortSignal): Promise<SessionPage>
-  selectModel(options: { readonly sessionId: string; readonly provider: string; readonly model: string; readonly reasoningEffort?: string }): Promise<{ readonly selected?: ModelSelection }>
-  /** Admit one prompt after explicitly resuming its Session. */
-  prompt(request: {
-    readonly requestId: string
+  projections(
+    options: { readonly sessionId: string },
+    signal?: AbortSignal,
+  ): Promise<SessionProjections | null | undefined>
+  page(
+    options: {
+      readonly address: SessionAddress
+      readonly throughSeq?: number
+      readonly beforeSeq?: number
+      readonly maxMessages?: number
+    },
+    signal?: AbortSignal,
+  ): Promise<SessionPage>
+  selectModel(options: {
     readonly sessionId: string
-    readonly mode: 'queue' | 'steer'
-    readonly content: readonly MessageContentBlock[]
-    readonly clientTimeZone?: string
-  }, signal?: AbortSignal): Promise<{ readonly accepted: true }>
+    readonly provider: string
+    readonly model: string
+    readonly reasoningEffort?: string
+  }): Promise<{ readonly selected?: ModelSelection }>
+  /** Admit one prompt after explicitly resuming its Session. */
+  prompt(
+    request: {
+      readonly requestId: string
+      readonly sessionId: string
+      readonly mode: 'queue' | 'steer'
+      readonly content: readonly MessageContentBlock[]
+      readonly clientTimeZone?: string
+    },
+    signal?: AbortSignal,
+  ): Promise<{ readonly accepted: true }>
 }
 
 export interface SessionsService {
@@ -244,7 +263,7 @@ export interface LlmTextBlock {
 export interface ToolRunContext {
   readonly name?: string | undefined
   readonly callId?: string | undefined
-  readonly agent?: { readonly id?: string, readonly session?: unknown, readonly [key: string]: unknown } | undefined
+  readonly agent?: { readonly id?: string; readonly session?: unknown; readonly [key: string]: unknown } | undefined
   readonly signal?: AbortSignal | undefined
   concludeTurn?(): void
   readonly [key: string]: unknown

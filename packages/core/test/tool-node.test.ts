@@ -21,8 +21,16 @@ test('a running call is read from its own name and raw arguments', () => {
 })
 
 test('a node with an argument reader uses the reader', () => {
-  const reader = { text: key => (key === 'to' ? 'Coder' : undefined), value: key => (key === 'to' ? 'Coder' : undefined) }
-  const root = { kind: 'tool-result', name: 'message_bot', args: reader, call: { name: 'message_bot', argsRaw: '{"to":"Other"}' } }
+  const reader = {
+    text: key => (key === 'to' ? 'Coder' : undefined),
+    value: key => (key === 'to' ? 'Coder' : undefined),
+  }
+  const root = {
+    kind: 'tool-result',
+    name: 'message_bot',
+    args: reader,
+    call: { name: 'message_bot', argsRaw: '{"to":"Other"}' },
+  }
   assert.equal(toolName(root), 'message_bot')
   assert.equal(toolArgs(root).text('to'), 'Coder')
   assert.equal(toolArgs(root).value('to'), 'Coder')
@@ -37,9 +45,14 @@ test('an empty name falls back to the call, and unreadable arguments read as abs
 })
 
 const relay = (time, role = 'request', over = {}) => ({
-  time, source: { kind: 'bot', role, senderSessionId: 'session-sender', ...over },
+  time,
+  source: { kind: 'bot', role, senderSessionId: 'session-sender', ...over },
 })
-const stepAt = (step, time, text = 'some text') => ({ step, time, blocks: text === null ? [{ kind: 'tool-call' }] : [{ kind: 'text', text }] })
+const stepAt = (step, time, text = 'some text') => ({
+  step,
+  time,
+  blocks: text === null ? [{ kind: 'tool-call' }] : [{ kind: 'text', text }],
+})
 
 test('a relay between steps attaches to the step that follows it only', () => {
   const steps = [stepAt(1, 10), stepAt(2, 20), stepAt(3, 30)]
@@ -75,7 +88,14 @@ test('a relay sharing the previous step’s time attaches to the next step', () 
 })
 
 test('relayPart puts the line in the step’s first cell', () => {
-  const thinking = { step: 1, time: 10, blocks: [{ kind: 'reasoning', text: 'thought' }, { kind: 'text', text: 'reply' }] }
+  const thinking = {
+    step: 1,
+    time: 10,
+    blocks: [
+      { kind: 'reasoning', text: 'thought' },
+      { kind: 'text', text: 'reply' },
+    ],
+  }
   const plain = { step: 2, time: 20, blocks: [{ kind: 'text', text: 'reply' }] }
   const blank = { step: 3, time: 30, blocks: [{ kind: 'reasoning', text: '  ' }] }
   assert.equal(relayPart(thinking, 'reasoning'), true)

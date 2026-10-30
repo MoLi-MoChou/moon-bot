@@ -52,14 +52,21 @@ export function useMenuKeys(menuRef: RefObject<HTMLElement | null>, isOpen: bool
     const raf = requestAnimationFrame(() => {
       const menu = menuRef.current
       if (menu === null || menu.contains(document.activeElement)) return
-      const target = menu.querySelector<HTMLElement>('button[aria-checked="true"]:not(:disabled), button[role^="menuitem"]:not(:disabled)')
+      const target = menu.querySelector<HTMLElement>(
+        'button[aria-checked="true"]:not(:disabled), button[role^="menuitem"]:not(:disabled)',
+      )
       target?.focus()
     })
     const onKey = (event: KeyboardEvent): void => {
       if (event.defaultPrevented || event.isComposing || event.altKey || event.ctrlKey || event.metaKey) return
       const menu = menuRef.current
       if (menu === null) return
-      if (event.target instanceof HTMLElement && menu.contains(event.target) && event.target.matches('input,textarea,[contenteditable]')) return
+      if (
+        event.target instanceof HTMLElement &&
+        menu.contains(event.target) &&
+        event.target.matches('input,textarea,[contenteditable]')
+      )
+        return
       if (stepMenuFocus(menu, event.key)) {
         event.preventDefault()
         event.stopPropagation()

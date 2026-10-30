@@ -48,7 +48,9 @@ export class BuiltinRuntime implements AgentRuntime {
     // One turn per session: a caller that arrives mid-turn waits, and its events flow
     // only when its own turn runs — each delivery answers its own trigger.
     if (state.running) {
-      await new Promise<void>(resolve => { state.queue.push({ resolve }) })
+      await new Promise<void>(resolve => {
+        state.queue.push({ resolve })
+      })
     }
     yield* this.pump(input)
     // The next waiter's turn starts as this generator's last act; its own events were
@@ -59,7 +61,10 @@ export class BuiltinRuntime implements AgentRuntime {
   async steer(sessionId: string, message: TurnMessage): Promise<boolean> {
     const state = this.sessions.get(sessionId)
     if (state === undefined || !state.running || state.agent === undefined) return false
-    const blocks = message.content.map(block => ({ type: 'text' as const, text: block.type === 'text' ? block.text : JSON.stringify(block) }))
+    const blocks = message.content.map(block => ({
+      type: 'text' as const,
+      text: block.type === 'text' ? block.text : JSON.stringify(block),
+    }))
     state.agent.steer({ role: 'user', content: blocks, timestamp: Date.now() })
     this.options.emit(sessionId, { type: 'user/message', content: message.content, source: message.source })
     return true
@@ -74,7 +79,8 @@ export class BuiltinRuntime implements AgentRuntime {
 
   private stateOf(sessionId: string): SessionState {
     let state = this.sessions.get(sessionId)
-    if (state === undefined) this.sessions.set(sessionId, state = { turns: 0, running: false, queue: [], agent: undefined })
+    if (state === undefined)
+      this.sessions.set(sessionId, (state = { turns: 0, running: false, queue: [], agent: undefined }))
     return state
   }
 
@@ -110,7 +116,9 @@ export class BuiltinRuntime implements AgentRuntime {
         while (pending.length > 0) yield pending.shift() as EngineEvent
         return
       }
-      await new Promise<void>(resolve => { wake = resolve })
+      await new Promise<void>(resolve => {
+        wake = resolve
+      })
     }
   }
 
@@ -125,14 +133,25 @@ export class BuiltinRuntime implements AgentRuntime {
       // fails before the model answers still leaves the user's own line in the chat. The
       // history is read first, or the trigger it already carries replays twice.
       const history = await services.transcript.history(input.sessionId)
-      await services.transcript.append(input.sessionId, { role: 'user', content: input.message.content, turn, ...(input.message.source !== undefined ? { source: input.message.source } : {}), at: Date.now() })
+      await services.transcript.append(input.sessionId, {
+        role: 'user',
+        content: input.message.content,
+        turn,
+        ...(input.message.source !== undefined ? { source: input.message.source } : {}),
+        at: Date.now(),
+      })
       const resolved = await services.models.resolve(input.sessionId, input.config)
       if (resolved === undefined) {
-        await this.endFailed(input.sessionId, turn, { code: 'NO-MODEL', message: 'no model is set for this Bot' }, collect)
+        await this.endFailed(
+          input.sessionId,
+          turn,
+          { code: 'NO-MODEL', message: 'no model is set for this Bot' },
+          collect,
+        )
         return
       }
       const triggerText = input.message.content
-        .map(block => block.type === 'text' ? block.text : '')
+        .map(block => (block.type === 'text' ? block.text : ''))
         .filter(text => text !== '')
         .join(' ')
       const [base, frozen, dynamic] = await Promise.all([
@@ -141,16 +160,25 @@ export class BuiltinRuntime implements AgentRuntime {
         services.prompt.dynamic?.(input.sessionId, triggerText) ?? Promise.resolve(undefined),
       ])
       const agent = await buildAgent({
-        sessionId: input.sessionId, services, config: input.config,
-        basePrompt: base, frozenPrompt: frozen, dynamicPrompt: dynamic,
-        history, resolved, callbacks: { onEvent: collect },
+        sessionId: input.sessionId,
+        services,
+        config: input.config,
+        basePrompt: base,
+        frozenPrompt: frozen,
+        dynamicPrompt: dynamic,
+        history,
+        resolved,
+        callbacks: { onEvent: collect },
       })
       state.agent = agent
       const before = agent.state.messages.length
       try {
         // One user message carries the turn's trigger; text blocks stay text, other
         // blocks ride as their JSON stand-in (the host keeps the originals).
-        const blocks = input.message.content.map(block => ({ type: 'text' as const, text: block.type === 'text' ? block.text : JSON.stringify(block) }))
+        const blocks = input.message.content.map(block => ({
+          type: 'text' as const,
+          text: block.type === 'text' ? block.text : JSON.stringify(block),
+        }))
         await agent.prompt([{ role: 'user', content: blocks, timestamp: Date.now() }])
       } finally {
         // Whatever the run's fate, what was said is the transcript now. Each kernel
@@ -162,13 +190,17 @@ export class BuiltinRuntime implements AgentRuntime {
             role: message.role,
             content: contentOfPi(message as { content: readonly unknown[] }),
             turn,
-            ...(message.role === 'assistant' && 'stopReason' in message ? { stopReason: String((message as { stopReason?: unknown }).stopReason ?? '') } : {}),
+            ...(message.role === 'assistant' && 'stopReason' in message
+              ? { stopReason: String((message as { stopReason?: unknown }).stopReason ?? '') }
+              : {}),
             raw: message,
             at: Date.now(),
           })
         }
       }
-      const last = [...agent.state.messages].reverse().find(message => message.role === 'assistant') as { stopReason?: string | undefined; errorMessage?: string | undefined } | undefined
+      const last = [...agent.state.messages].reverse().find(message => message.role === 'assistant') as
+        | { stopReason?: string | undefined; errorMessage?: string | undefined }
+        | undefined
       const end = endEventOf(turn, last, state.cancelReason)
       if (end.type === 'turn/end' && end.reason.kind === 'error') {
         await this.noteFailure(input.sessionId, turn, end.reason.error)
@@ -192,9 +224,14 @@ export class BuiltinRuntime implements AgentRuntime {
     try {
       await this.options.services.transcript.append(sessionId, {
         role: 'system',
-        content: failure.message === undefined || failure.message === '' ? [] : [{ type: 'text', text: failure.message }],
+        content:
+          failure.message === undefined || failure.message === '' ? [] : [{ type: 'text', text: failure.message }],
         turn,
-        source: { kind: 'turn-error', ...(failure.code !== undefined ? { code: failure.code } : {}), ...(failure.status !== undefined ? { status: failure.status } : {}) },
+        source: {
+          kind: 'turn-error',
+          ...(failure.code !== undefined ? { code: failure.code } : {}),
+          ...(failure.status !== undefined ? { status: failure.status } : {}),
+        },
         at: Date.now(),
       })
     } catch {
@@ -202,7 +239,12 @@ export class BuiltinRuntime implements AgentRuntime {
     }
   }
 
-  private async endFailed(sessionId: string, turn: number, failure: CallFailure, collect: (event: EngineEvent) => void): Promise<void> {
+  private async endFailed(
+    sessionId: string,
+    turn: number,
+    failure: CallFailure,
+    collect: (event: EngineEvent) => void,
+  ): Promise<void> {
     await this.noteFailure(sessionId, turn, failure)
     collect({ type: 'turn/end', turn, reason: { kind: 'error', error: failure } })
   }

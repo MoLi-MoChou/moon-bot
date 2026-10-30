@@ -16,7 +16,7 @@ const asDataUrl = (mime, bytes) => `data:${mime};base64,${bytes.toString('base64
 const pngUrl = asDataUrl('image/png', PNG)
 const jpegUrl = asDataUrl('image/jpeg', JPEG)
 
-const tempDir = (t) => {
+const tempDir = t => {
   const dir = mkdtempSync(join(tmpdir(), 'ds-bot-avatar-'))
   t.after(() => rmSync(dir, { recursive: true, force: true }))
   return dir
@@ -34,7 +34,7 @@ test('a data URL is stored under the type its bytes really are', async () => {
   assert.equal(await readAvatar(`data:image/png;base64, ${PNG.toString('base64')}\n`), pngUrl)
 })
 
-test('a local image file is read, and a relative path starts in baseDir', async (t) => {
+test('a local image file is read, and a relative path starts in baseDir', async t => {
   const dir = tempDir(t)
   writeFileSync(join(dir, 'photo.png'), PNG)
   assert.equal(await readAvatar(join(dir, 'photo.png')), pngUrl)
@@ -45,31 +45,34 @@ test('a local image file is read, and a relative path starts in baseDir', async 
 })
 
 test('a path starting with ~ expands to the home folder', async () => {
-  await assert.rejects(readAvatar('~'), (error) => {
+  await assert.rejects(readAvatar('~'), error => {
     assert.match((error as Error).message, /is not an image file/)
     assert.ok((error as Error).message.includes(homedir()), 'the expanded home path is shown')
     return true
   })
   const missing = 'ds-bot-avatar-does-not-exist.png'
-  await assert.rejects(readAvatar(`~/${missing}`), (error) => {
+  await assert.rejects(readAvatar(`~/${missing}`), error => {
     assert.ok((error as Error).message.includes(join(homedir(), missing)))
     return true
   })
 })
 
-test('a missing file, a folder, and a non-image file are refused', async (t) => {
+test('a missing file, a folder, and a non-image file are refused', async t => {
   const dir = tempDir(t)
   await assert.rejects(readAvatar(join(dir, 'missing.png')), /There is no image file at .*missing\.png/)
   await assert.rejects(readAvatar(dir), /is not an image file/)
   writeFileSync(join(dir, 'notes.png'), 'this is not an image')
-  await assert.rejects(readAvatar(join(dir, 'notes.png')), /The avatar must be a PNG, JPEG, WebP, or GIF image\. Use a square image; 256x256 is recommended/)
+  await assert.rejects(
+    readAvatar(join(dir, 'notes.png')),
+    /The avatar must be a PNG, JPEG, WebP, or GIF image\. Use a square image; 256x256 is recommended/,
+  )
 })
 
-test('an image over the limit is refused with the limit in the message', async (t) => {
+test('an image over the limit is refused with the limit in the message', async t => {
   const huge = Buffer.concat([PNG.subarray(0, 8), Buffer.alloc(200_000)])
   const dir = tempDir(t)
   writeFileSync(join(dir, 'huge.png'), huge)
-  const expected = (error) => {
+  const expected = error => {
     assert.match(error.message, /too large: 200008 bytes/)
     assert.match(error.message, /119982 bytes/)
     assert.match(error.message, /256x256/)
@@ -102,7 +105,10 @@ test('an empty value or a link is refused', async () => {
   await assert.rejects(readAvatar('ftp://example.com/photo.png'), /must be a local image path or a data URL/)
   await assert.rejects(readAvatar('file:///tmp/photo.png'), /must be a local image path or a data URL/)
   // A link is never fetched, so it reaches nothing on this machine or its network.
-  await assert.rejects(readAvatar('http://127.0.0.1:1/photo.png'), /not downloaded here.*pass its path, or pass a data URL/)
+  await assert.rejects(
+    readAvatar('http://127.0.0.1:1/photo.png'),
+    /not downloaded here.*pass its path, or pass a data URL/,
+  )
   await assert.rejects(readAvatar('HTTPS://example.com/photo.png'), /not downloaded here/)
   // Nor is a network path opened, which on Windows connects and signs in to that host.
   await assert.rejects(readAvatar('\\\\host.example\\share\\photo.png'), /network path is not read here/)

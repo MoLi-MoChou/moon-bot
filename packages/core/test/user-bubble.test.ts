@@ -15,12 +15,18 @@ function rulesWith(pattern) {
   for (const match of bundle.matchAll(pattern)) {
     const open = bundle.lastIndexOf('{', match.index)
     const close = bundle.indexOf('}', match.index)
-    const start = Math.max(bundle.lastIndexOf('}', open), bundle.lastIndexOf('\n', open), bundle.lastIndexOf('`', open)) + 1
+    const start =
+      Math.max(bundle.lastIndexOf('}', open), bundle.lastIndexOf('\n', open), bundle.lastIndexOf('`', open)) + 1
     rules.push({ selector: bundle.slice(start, open).trim(), body: bundle.slice(open + 1, close) })
   }
   return rules
 }
-const declared = (body, property) => body.split(';').map(item => item.trim()).find(item => item.startsWith(`${property}:`))?.slice(property.length + 1)
+const declared = (body, property) =>
+  body
+    .split(';')
+    .map(item => item.trim())
+    .find(item => item.startsWith(`${property}:`))
+    ?.slice(property.length + 1)
 const surface = body => declared(body, 'background') ?? declared(body, 'background-color')
 const ruleFor = selector => {
   const rule = rulesWith(/color:var\(--bt-user-ink\)/g).find(item => item.selector.startsWith(selector))
@@ -46,24 +52,50 @@ test('the app leaves the host bubble variables to the host and its skins', () =>
   assert.doesNotMatch(bundle, /--dsw-specific-bubble/)
   assert.doesNotMatch(bundle, /conversationTokens|installBubbleTokens/)
   for (const [id, theme] of Object.entries(allThemes())) {
-    assert.deepEqual(Object.keys(shellTokens(theme)).filter(name => name.includes('bubble')), [], id)
+    assert.deepEqual(
+      Object.keys(shellTokens(theme)).filter(name => name.includes('bubble')),
+      [],
+      id,
+    )
   }
 })
 
 const themeVars = (theme, dark) => {
-  const block = themeCss(theme).split('\n').find(line => line.startsWith(dark ? 'html body[data-bt-dark]{' : 'html body{'))
-  return Object.fromEntries(block.slice(block.indexOf('{') + 1, -1).split(';').map(item => item.split(':')))
+  const block = themeCss(theme)
+    .split('\n')
+    .find(line => line.startsWith(dark ? 'html body[data-bt-dark]{' : 'html body{'))
+  return Object.fromEntries(
+    block
+      .slice(block.indexOf('{') + 1, -1)
+      .split(';')
+      .map(item => item.split(':')),
+  )
 }
 const parse = color => {
   if (/^#[0-9a-f]{6}$/i.test(color)) return { hex: color.toLowerCase(), alpha: 1 }
-  const parts = color.match(/^rgba?\(([^)]+)\)$/)[1].split(',').map(Number)
-  return { hex: `#${parts.slice(0, 3).map(part => part.toString(16).padStart(2, '0')).join('')}`, alpha: parts[3] ?? 1 }
+  const parts = color
+    .match(/^rgba?\(([^)]+)\)$/)[1]
+    .split(',')
+    .map(Number)
+  return {
+    hex: `#${parts
+      .slice(0, 3)
+      .map(part => part.toString(16).padStart(2, '0'))
+      .join('')}`,
+    alpha: parts[3] ?? 1,
+  }
 }
 const over = (top, under) => {
   const { hex, alpha } = parse(top)
   if (alpha === 1) return hex
   const channel = (color, index) => parseInt(color.slice(index, index + 2), 16)
-  return `#${[1, 3, 5].map(index => Math.round(channel(hex, index) * alpha + channel(under, index) * (1 - alpha)).toString(16).padStart(2, '0')).join('')}`
+  return `#${[1, 3, 5]
+    .map(index =>
+      Math.round(channel(hex, index) * alpha + channel(under, index) * (1 - alpha))
+        .toString(16)
+        .padStart(2, '0'),
+    )
+    .join('')}`
 }
 const contrast = (ink, paper) => {
   const [a, b] = [luminance(ink), luminance(paper)].sort((x, y) => y - x)
@@ -84,8 +116,15 @@ test('the user ink reads on the user surface in every built-in theme and mode', 
 // of the two inks reads better: white on Tangerine was 2.89:1, near-black is 6.38:1.
 // The variables themeCss sets for one mode.
 const varsOf = (theme, accent, dark) => {
-  const block = themeCss(theme, accent).split('\n').find(line => line.startsWith(dark ? 'html body[data-bt-dark]{' : 'html body{'))
-  return Object.fromEntries(block.slice(block.indexOf('{') + 1, -1).split(';').map(item => item.split(':')))
+  const block = themeCss(theme, accent)
+    .split('\n')
+    .find(line => line.startsWith(dark ? 'html body[data-bt-dark]{' : 'html body{'))
+  return Object.fromEntries(
+    block
+      .slice(block.indexOf('{') + 1, -1)
+      .split(';')
+      .map(item => item.split(':')),
+  )
 }
 
 test('the accent ink is the more readable of the two inks for every accent', () => {
@@ -94,13 +133,18 @@ test('the accent ink is the more readable of the two inks for every accent', () 
     for (const dark of [false, true]) cases.push([`${id} ${dark ? 'dark' : 'light'}`, allThemes()[id], undefined, dark])
   }
   for (const ink of ACCENT_INKS) {
-    for (const dark of [false, true]) cases.push([`${ink} ${dark ? 'dark' : 'light'}`, allThemes().deepseek, INKS[ink][0], dark])
+    for (const dark of [false, true])
+      cases.push([`${ink} ${dark ? 'dark' : 'light'}`, allThemes().deepseek, INKS[ink][0], dark])
   }
   for (const [name, theme, accent, dark] of cases) {
     const vars = varsOf(theme, accent, dark)
-    const paper = vars['--bt-accent'], ink = vars['--bt-accent-ink']
+    const paper = vars['--bt-accent'],
+      ink = vars['--bt-accent-ink']
     const other = ink === '#ffffff' ? '#141414' : '#ffffff'
-    assert.ok(contrast(ink, paper) >= contrast(other, paper), `${name}: ${ink} on ${paper} is ${contrast(ink, paper).toFixed(2)}:1, ${other} would be ${contrast(other, paper).toFixed(2)}:1`)
+    assert.ok(
+      contrast(ink, paper) >= contrast(other, paper),
+      `${name}: ${ink} on ${paper} is ${contrast(ink, paper).toFixed(2)}:1, ${other} would be ${contrast(other, paper).toFixed(2)}:1`,
+    )
   }
 })
 
@@ -127,10 +171,11 @@ test('a preset accent takes its dark value in dark mode; a custom accent stays t
 // places. Every danger color reads --bt-danger, which the base sheet sets once.
 test('every danger color reads --bt-danger, which the base sheet sets once', () => {
   assert.equal([...bundle.matchAll(/--bt-danger:#e02135/g)].length, 1)
-  const allowed = before => before.endsWith('--bt-danger:') // the one value
-    || before.endsWith('var(--bt-danger,') // feedback.js: its toast shows without the base sheet too
-    || before.endsWith('.bt-voice-end:hover{background:') // recording reds: not decided yet
-    || /FF3E51['"],\s*['"]$/i.test(before) // the red Bot color, not a danger color
+  const allowed = before =>
+    before.endsWith('--bt-danger:') || // the one value
+    before.endsWith('var(--bt-danger,') || // feedback.js: its toast shows without the base sheet too
+    before.endsWith('.bt-voice-end:hover{background:') || // recording reds: not decided yet
+    /FF3E51['"],\s*['"]$/i.test(before) // the red Bot color, not a danger color
   const loose = [...bundle.matchAll(/#e02135|#c21d2e/gi)]
     .map(match => bundle.slice(Math.max(0, match.index - 40), match.index))
     .filter(before => !allowed(before))

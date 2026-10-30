@@ -4,7 +4,11 @@ import { termQuery } from '../src/host/chat-index.ts'
 import { canonicalHeadings, cardText, historyEntry, questionReply, readReply, replyText } from '../src/host/parts.ts'
 
 test('cardText shows a question card as the user saw it', () => {
-  const card = { question: ' Start where? ', detail: 'pick one', options: [{ label: 'Plan' }, { label: ' ' }, { label: 'Draft' }] }
+  const card = {
+    question: ' Start where? ',
+    detail: 'pick one',
+    options: [{ label: 'Plan' }, { label: ' ' }, { label: 'Draft' }],
+  }
   assert.equal(cardText(card), '[Question card] Start where? (pick one)\nOptions: Plan / Draft')
   assert.equal(cardText(JSON.stringify({ question: 'Q', options: [{ label: 'A' }] })), '[Question card] Q\nOptions: A')
   assert.equal(cardText('{not json'), '')
@@ -16,22 +20,66 @@ test('cardText shows a question card as the user saw it', () => {
 const said = (text, source) => ({ type: 'user/message', data: { content: [{ type: 'text', text }], source } })
 
 test('historyEntry keeps answers, user and Bot messages, and skips setup', () => {
-  assert.deepEqual(historyEntry({ type: 'assistant/message', data: { message: { content: [{ type: 'text', text: 'Hi' }] } } }, false), { answer: true, text: 'Hi' })
+  assert.deepEqual(
+    historyEntry({ type: 'assistant/message', data: { message: { content: [{ type: 'text', text: 'Hi' }] } } }, false),
+    { answer: true, text: 'Hi' },
+  )
   assert.equal(historyEntry({ type: 'assistant/message', data: { message: { content: [] } } }, false), undefined)
   const ask = { type: 'tool/call', data: { name: 'ask_user', arguments: { question: 'Q', options: [{ label: 'A' }] } } }
   assert.deepEqual(historyEntry(ask, false), { answer: true, text: '[Question card] Q\nOptions: A' })
   assert.equal(historyEntry(ask, true), undefined)
-  const asked = { type: 'tool/ptc-dispatch-start', data: { parentCallId: 'k1', subCallId: 'k1:ptc:1', name: 'ask_user', arguments: { question: 'Q', options: [{ label: 'A' }] } } }
+  const asked = {
+    type: 'tool/ptc-dispatch-start',
+    data: {
+      parentCallId: 'k1',
+      subCallId: 'k1:ptc:1',
+      name: 'ask_user',
+      arguments: { question: 'Q', options: [{ label: 'A' }] },
+    },
+  }
   assert.deepEqual(historyEntry(asked, false), { answer: true, text: '[Question card] Q\nOptions: A' })
   assert.equal(historyEntry(asked, true), undefined)
   assert.equal(historyEntry({ ...asked, type: 'tool/ptc-dispatch' }, false), undefined)
-  assert.deepEqual(historyEntry(said('hello', { kind: 'user' }), false), { answer: false, who: 'user', text: 'hello', keepAnswers: true })
-  assert.deepEqual(historyEntry(said('[Reply from W]\nok', { kind: 'bot', role: 'reply' }), false), { answer: false, who: 'bot', text: '[Reply from W]\nok', keepAnswers: true })
-  assert.deepEqual(historyEntry(said('[Bot team setup]\nhi', { kind: 'bot', role: 'kickoff' }), false), { answer: false, who: 'bot', text: '', keepAnswers: false })
-  assert.deepEqual(historyEntry(said('[Handoff · part 2]', { kind: 'bot', handoff: true }), false), { answer: false, who: 'bot', text: '', keepAnswers: false })
-  assert.deepEqual(historyEntry(said('[Handoff · part 2]', { kind: 'bot', handoff: true, resume: true }), false), { answer: false, who: 'bot', text: '', keepAnswers: true })
-  assert.deepEqual(historyEntry(said('[Group chat "G" · new message]', { kind: 'bot', role: 'room' }), false), { answer: false, who: 'bot', text: '', keepAnswers: false })
-  assert.equal(historyEntry(said('[Group chat "G" · new message]', { kind: 'bot', role: 'room' }), true).text, '[Group chat "G" · new message]')
+  assert.deepEqual(historyEntry(said('hello', { kind: 'user' }), false), {
+    answer: false,
+    who: 'user',
+    text: 'hello',
+    keepAnswers: true,
+  })
+  assert.deepEqual(historyEntry(said('[Reply from W]\nok', { kind: 'bot', role: 'reply' }), false), {
+    answer: false,
+    who: 'bot',
+    text: '[Reply from W]\nok',
+    keepAnswers: true,
+  })
+  assert.deepEqual(historyEntry(said('[Bot team setup]\nhi', { kind: 'bot', role: 'kickoff' }), false), {
+    answer: false,
+    who: 'bot',
+    text: '',
+    keepAnswers: false,
+  })
+  assert.deepEqual(historyEntry(said('[Handoff · part 2]', { kind: 'bot', handoff: true }), false), {
+    answer: false,
+    who: 'bot',
+    text: '',
+    keepAnswers: false,
+  })
+  assert.deepEqual(historyEntry(said('[Handoff · part 2]', { kind: 'bot', handoff: true, resume: true }), false), {
+    answer: false,
+    who: 'bot',
+    text: '',
+    keepAnswers: true,
+  })
+  assert.deepEqual(historyEntry(said('[Group chat "G" · new message]', { kind: 'bot', role: 'room' }), false), {
+    answer: false,
+    who: 'bot',
+    text: '',
+    keepAnswers: false,
+  })
+  assert.equal(
+    historyEntry(said('[Group chat "G" · new message]', { kind: 'bot', role: 'room' }), true).text,
+    '[Group chat "G" · new message]',
+  )
   assert.equal(historyEntry(said('time: now', { kind: 'plugin' }), false), undefined)
 })
 
@@ -48,7 +96,13 @@ test('termQuery matches long words with FTS5 and short ones with LIKE', () => {
 })
 
 test('a card answer carries its question, so it reads on its own', () => {
-  const question = { id: 'q1', callId: 'call-1', question: 'Start where?', options: [{ label: 'Plan' }, { label: 'Draft' }], multiSelect: false }
+  const question = {
+    id: 'q1',
+    callId: 'call-1',
+    question: 'Start where?',
+    options: [{ label: 'Plan' }, { label: 'Draft' }],
+    multiSelect: false,
+  }
   const reply = questionReply(question, { selected: ['Draft', 'Plan'], custom: '  ' })
   assert.deepEqual(reply.source, { kind: 'user-question-reply', callId: 'call-1', outcome: 'answered' })
   const payload = JSON.parse(reply.text)
@@ -56,11 +110,16 @@ test('a card answer carries its question, so it reads on its own', () => {
   assert.deepEqual(payload.answers, [{ id: 'q1', selected: ['Draft'] }])
   assert.equal(replyText(reply.text), '[Answer to question card] Start where?\nAnswer: Draft')
   const event = { type: 'user/message', data: { source: reply.source, content: [{ type: 'text', text: reply.text }] } }
-  assert.deepEqual(historyEntry(event, false), { answer: false, who: 'user', text: '[Answer to question card] Start where?\nAnswer: Draft', keepAnswers: true })
+  assert.deepEqual(historyEntry(event, false), {
+    answer: false,
+    who: 'user',
+    text: '[Answer to question card] Start where?\nAnswer: Draft',
+    keepAnswers: true,
+  })
   assert.deepEqual(readReply(reply.text).questions[0].options, question.options)
 })
 
-test('a card answer keeps several picks and the user\'s own words', () => {
+test("a card answer keeps several picks and the user's own words", () => {
   const question = { id: 'q1', question: 'Which?', options: [{ label: 'A' }, { label: 'B' }], multiSelect: true }
   const reply = questionReply(question, { selected: ['A', 'B', 'Z'], custom: 'also C' })
   assert.equal(reply.source.callId, 'q1')
@@ -73,7 +132,10 @@ test('canonicalHeadings restores translated note headings only when every headin
   const names = ['Goals', 'Next step']
   assert.equal(canonicalHeadings('## 目标\n- a\n## 下一步\n- b', names), '## Goals\n- a\n## Next step\n- b')
   assert.equal(canonicalHeadings('## 目标\n- a', names), '## 目标\n- a')
-  assert.equal(canonicalHeadings('## Goals\n- a\n## Next step\n- b\n## extra', names), '## Goals\n- a\n## Next step\n- b\n## extra')
+  assert.equal(
+    canonicalHeadings('## Goals\n- a\n## Next step\n- b\n## extra', names),
+    '## Goals\n- a\n## Next step\n- b\n## extra',
+  )
 })
 
 test('canonicalHeadings keeps a note whose known headings are repeated or out of order', () => {
@@ -82,5 +144,8 @@ test('canonicalHeadings keeps a note whose known headings are repeated or out of
   assert.equal(canonicalHeadings(repeated, names), repeated)
   const swapped = '## Progress\n- b\n## 目标\n- a\n## 决定\n- c'
   assert.equal(canonicalHeadings(swapped, names), swapped)
-  assert.equal(canonicalHeadings('## 目标\n- a\n## Progress\n- b\n## 决定\n- c', names), '## Goals\n- a\n## Progress\n- b\n## Decisions\n- c')
+  assert.equal(
+    canonicalHeadings('## 目标\n- a\n## Progress\n- b\n## 决定\n- c', names),
+    '## Goals\n- a\n## Progress\n- b\n## Decisions\n- c',
+  )
 })

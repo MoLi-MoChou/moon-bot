@@ -7,7 +7,9 @@ import { after, test } from 'node:test'
 import { hostPort } from '../src/host-port.ts'
 
 const root = mkdtempSync(join(tmpdir(), 'ds-bot-app-port-'))
-after(() => { rmSync(root, { recursive: true, force: true }) })
+after(() => {
+  rmSync(root, { recursive: true, force: true })
+})
 
 test('picks a free port once and keeps it', async () => {
   const file = join(root, 'keep', 'host-port.json')
@@ -17,10 +19,14 @@ test('picks a free port once and keeps it', async () => {
   assert.equal(await hostPort(file), port)
 })
 
-test('moves to another port when the saved one is taken', async (t) => {
+test('moves to another port when the saved one is taken', async t => {
   const server = createServer()
-  await new Promise((resolve) => { server.listen(0, '127.0.0.1', resolve) })
-  t.after(() => { server.close() })
+  await new Promise(resolve => {
+    server.listen(0, '127.0.0.1', resolve)
+  })
+  t.after(() => {
+    server.close()
+  })
   const taken = server.address().port
   const file = join(root, 'taken.json')
   writeFileSync(file, JSON.stringify({ port: taken }))

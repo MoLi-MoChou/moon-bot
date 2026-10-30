@@ -7,7 +7,13 @@ import { fail, invalid, ok } from './envelope.ts'
 import type { ChannelRuntime } from '../channel.ts'
 
 interface RelayAdmin {
-  invitesView(): readonly { readonly agentId: string; readonly createdAt: number; readonly revokedAt: number | null; readonly lastSeenAt: number | null; readonly online: boolean }[]
+  invitesView(): readonly {
+    readonly agentId: string
+    readonly createdAt: number
+    readonly revokedAt: number | null
+    readonly lastSeenAt: number | null
+    readonly online: boolean
+  }[]
   inviteCreate(agentId: string): { readonly agentId: string; readonly token: string }
   inviteRevoke(agentId: string): boolean
 }
@@ -21,14 +27,16 @@ export function relayHandlers(rt: ChannelRuntime): ChannelHandlers {
       if (admin === undefined) return fail('The relay is not running', 'bot/unavailable')
       return ok({ invites: admin.invitesView() })
     },
-    'relay-invite-create': async (body) => {
+    'relay-invite-create': async body => {
       const admin = registry()
       if (admin === undefined) return fail('The relay is not running', 'bot/unavailable')
-      const agentId = String(body.agentId ?? '').trim().slice(0, 120)
+      const agentId = String(body.agentId ?? '')
+        .trim()
+        .slice(0, 120)
       if (agentId === '') throw invalid('a remote agent needs a name')
       return ok(admin.inviteCreate(agentId))
     },
-    'relay-invite-revoke': async (body) => {
+    'relay-invite-revoke': async body => {
       const admin = registry()
       if (admin === undefined) return fail('The relay is not running', 'bot/unavailable')
       admin.inviteRevoke(String(body.agentId ?? ''))

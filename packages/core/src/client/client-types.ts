@@ -70,7 +70,7 @@ export interface ClientRosterSnapshot {
   rooms: ClientRoom[]
   agents: ClientAgent[]
   exchangeTurns: Record<string, number[]>
-  questions: Record<string, { id: string, callId?: string | undefined } | undefined>
+  questions: Record<string, { id: string; callId?: string | undefined } | undefined>
   secrets: readonly ClientSecret[]
   capabilities: unknown[]
   capabilityStatuses: Record<string, unknown>

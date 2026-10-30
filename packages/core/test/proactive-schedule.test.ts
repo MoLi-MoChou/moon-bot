@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { dueAt, pollDue } from '../src/host/proactive/schedule.ts'
 
-const at = (iso) => Date.parse(iso)
+const at = iso => Date.parse(iso)
 
 test('a daily subscription is due once its time has passed today', () => {
   const subscription = { id: 's1', botId: 'b1', when: JSON.stringify({ daily: { time: '08:00', time_zone: 'UTC' } }) }
@@ -46,12 +46,21 @@ test('a poll fires each due subscription once and moves it forward', async () =>
     pipeline: { ask: async () => 'NOTHING', newId: () => 'c1', now: () => 120_000, log: () => undefined },
     send: { send: () => true, record: () => undefined, live: () => true },
     contextOf: async () => ({
-      topics: 'x', dailyCap: 1, sessionId: 'b1', quietFrom: null, quietTo: null,
-      memory: [], messages: [], earlier: [], alreadySaid: [], deliveredToday: 0, mentionedRecently: false,
+      topics: 'x',
+      dailyCap: 1,
+      sessionId: 'b1',
+      quietFrom: null,
+      quietTo: null,
+      memory: [],
+      messages: [],
+      earlier: [],
+      alreadySaid: [],
+      deliveredToday: 0,
+      mentionedRecently: false,
     }),
     localTime: () => '09:00',
     localDayStart: () => 0,
-    log: (message) => fired.push(message),
+    log: message => fired.push(message),
   }
   const ran = await pollDue(deps)
   assert.deepEqual(ran, ['s1'])
@@ -61,7 +70,9 @@ test('a poll fires each due subscription once and moves it forward', async () =>
 test('a subscription that is not due is not touched', async () => {
   const noted = []
   const deps = {
-    dueSubscriptions: () => [{ id: 's1', botId: 'b1', when: JSON.stringify({ daily: { time: '08:00', time_zone: 'UTC' } }) }],
+    dueSubscriptions: () => [
+      { id: 's1', botId: 'b1', when: JSON.stringify({ daily: { time: '08:00', time_zone: 'UTC' } }) },
+    ],
     lastFiredAt: () => at('2026-10-29T08:00:00Z'),
     noteFired: (id, when) => noted.push({ id, when }),
     now: () => at('2026-10-29T09:00:00Z'),
@@ -83,12 +94,27 @@ test('a subscription that fails is still marked fired, so it does not retry ever
     lastFiredAt: () => 0,
     noteFired: (id, when) => noted.push({ id, when }),
     now: () => 120_000,
-    pipeline: { ask: async () => { throw new Error('offline') }, newId: () => 'c1', now: () => 0, log: () => undefined },
+    pipeline: {
+      ask: async () => {
+        throw new Error('offline')
+      },
+      newId: () => 'c1',
+      now: () => 0,
+      log: () => undefined,
+    },
     send: { send: () => true, record: () => undefined, live: () => true },
     contextOf: async () => ({
-      topics: 'x', dailyCap: 1, sessionId: 'b1', quietFrom: null, quietTo: null,
-      memory: [{ topic: null, text: 'a', added: null }], messages: [], earlier: [], alreadySaid: [],
-      deliveredToday: 0, mentionedRecently: false,
+      topics: 'x',
+      dailyCap: 1,
+      sessionId: 'b1',
+      quietFrom: null,
+      quietTo: null,
+      memory: [{ topic: null, text: 'a', added: null }],
+      messages: [],
+      earlier: [],
+      alreadySaid: [],
+      deliveredToday: 0,
+      mentionedRecently: false,
     }),
     localTime: () => '09:00',
     localDayStart: () => 0,

@@ -8,7 +8,9 @@ import { apply } from '../index.js'
 import { TEAM_TOOLS } from '../src/host/constants.ts'
 import { fakeContext } from './fake-ctx.ts'
 
-const flush = async () => { for (let index = 0; index < 8; index += 1) await Promise.resolve() }
+const flush = async () => {
+  for (let index = 0; index < 8; index += 1) await Promise.resolve()
+}
 
 // Enough of the dsh services for the roster and the agents module; tool restrict
 // calls and archived Sessions are recorded for the assertions.
@@ -28,26 +30,31 @@ function start(team, { config = {} } = {}) {
     workspaceRegistry: {
       get: id => workspaces.get(id),
       resolveByPath: async path => [...workspaces.values()].find(workspace => workspace.path === path),
-      create: async (path) => {
+      create: async path => {
         const workspace = { id: `w${workspaces.size + 1}`, path }
         workspaces.set(workspace.id, workspace)
         return workspace
       },
-      archiveSession: async (sessionId) => {
+      archiveSession: async sessionId => {
         if (failArchive.on) throw new Error('session is running')
         archived.push(sessionId)
       },
     },
     sessionController: {
-      create: async (options) => {
+      create: async options => {
         created.push(options)
         return { sessionId: `s${++sessions}` }
       },
-      resolveAgent: async (sessionId) => {
+      resolveAgent: async sessionId => {
         const agent = {
           session: { id: sessionId },
           ctx: {
-            tools: { restrict: (filter) => { restricted.push({ sessionId, filter }); return () => {} } },
+            tools: {
+              restrict: filter => {
+                restricted.push({ sessionId, filter })
+                return () => {}
+              },
+            },
             effect: execute => execute(),
           },
           followup() {},
@@ -56,18 +63,24 @@ function start(team, { config = {} } = {}) {
       },
       selectModel: async () => {},
     },
-    sessionTitle: { rename: async (session, title) => { renamed.push({ id: session.id, title }) } },
+    sessionTitle: {
+      rename: async (session, title) => {
+        renamed.push({ id: session.id, title })
+      },
+    },
     sessions: { flush: async () => {} },
   })
   let route
   const register = ctx.connection.fetch.register
-  ctx.connection.fetch.register = (options) => {
+  ctx.connection.fetch.register = options => {
     route = options
     return register(options)
   }
   apply(ctx, { home, ...config })
   const call = async (endpoint, payload?) => {
-    const response = await route.fetch(new Request('http://localhost/api/bot', { method: 'POST', body: JSON.stringify({ endpoint, payload }) }))
+    const response = await route.fetch(
+      new Request('http://localhost/api/bot', { method: 'POST', body: JSON.stringify({ endpoint, payload }) }),
+    )
     return response.json()
   }
   const createdAgents = payload => (ctx.listeners.get('agent/created') ?? []).map(listener => listener(payload))
@@ -89,7 +102,7 @@ const TEAM = {
   questions: {},
 }
 
-test('add-agent creates one record with a first Session in the DS Bot workspace', async (t) => {
+test('add-agent creates one record with a first Session in the DS Bot workspace', async t => {
   const { call, stop, created } = start(TEAM)
   t.after(stop)
   await call('state', {})
@@ -97,13 +110,16 @@ test('add-agent creates one record with a first Session in the DS Bot workspace'
   assert.equal(agent.name, 'Agent')
   assert.equal(agent.sessions.length, 1)
   const view = (await call('state', {})).value
-  assert.deepEqual(view.agents.map(entry => entry.id), [agent.id])
+  assert.deepEqual(
+    view.agents.map(entry => entry.id),
+    [agent.id],
+  )
   // The Session was created in the workspace the Bots live in.
   const workspaceId = view.workspaceId
   assert.equal(created.at(-1).workspaceId, workspaceId)
 })
 
-test('a team holds at most one Agent', async (t) => {
+test('a team holds at most one Agent', async t => {
   const { call, stop } = start(TEAM)
   t.after(stop)
   await call('state', {})
@@ -113,7 +129,7 @@ test('a team holds at most one Agent', async (t) => {
   assert.equal(again.error.message, 'The team already has an Agent')
 })
 
-test('agent-session appends Sessions; agent-archive removes one and archives it', async (t) => {
+test('agent-session appends Sessions; agent-archive removes one and archives it', async t => {
   const { call, stop, archived } = start(TEAM)
   t.after(stop)
   await call('state', {})
@@ -126,7 +142,7 @@ test('agent-session appends Sessions; agent-archive removes one and archives it'
   assert.deepEqual(archived, [second.sessionId])
 })
 
-test('a failed archive keeps the Session in the Agent and answers with the error', async (t) => {
+test('a failed archive keeps the Session in the Agent and answers with the error', async t => {
   const { call, stop, archived, failArchive } = start(TEAM)
   t.after(stop)
   await call('state', {})
@@ -142,19 +158,25 @@ test('a failed archive keeps the Session in the Agent and answers with the error
   assert.equal((await call('agent-archive', { agentId: agent.id, sessionId: second.sessionId })).ok, true)
 })
 
-test('agent-rename retitles an owned Session and refuses others', async (t) => {
+test('agent-rename retitles an owned Session and refuses others', async t => {
   const { call, stop, renamed } = start(TEAM)
   t.after(stop)
   await call('state', {})
   const agent = (await call('add-agent')).value
-  assert.equal((await call('agent-rename', { agentId: agent.id, sessionId: agent.sessions[0], title: '  Scratch  ' })).ok, true)
+  assert.equal(
+    (await call('agent-rename', { agentId: agent.id, sessionId: agent.sessions[0], title: '  Scratch  ' })).ok,
+    true,
+  )
   assert.deepEqual(renamed.at(-1), { id: agent.sessions[0], title: 'Scratch' })
-  assert.equal((await call('agent-rename', { agentId: agent.id, sessionId: agent.sessions[0], title: '   ' })).ok, false)
+  assert.equal(
+    (await call('agent-rename', { agentId: agent.id, sessionId: agent.sessions[0], title: '   ' })).ok,
+    false,
+  )
   // A Bot's Session cannot be renamed through the agent endpoint.
   assert.equal((await call('agent-rename', { agentId: agent.id, sessionId: 'm1', title: 'x' })).ok, false)
 })
 
-test('remove-agent keeps the Agent with the Sessions it could not archive', async (t) => {
+test('remove-agent keeps the Agent with the Sessions it could not archive', async t => {
   const { call, stop, archived, failArchive } = start(TEAM)
   t.after(stop)
   await call('state', {})
@@ -171,7 +193,7 @@ test('remove-agent keeps the Agent with the Sessions it could not archive', asyn
   assert.equal((await call('state', {})).value.agents.length, 0)
 })
 
-test('remove-agent archives every Session and drops the record', async (t) => {
+test('remove-agent archives every Session and drops the record', async t => {
   const { call, stop, archived } = start(TEAM)
   t.after(stop)
   await call('state', {})
@@ -182,7 +204,7 @@ test('remove-agent archives every Session and drops the record', async (t) => {
   assert.deepEqual([...archived].sort(), [agent.sessions[0], second.sessionId].sort())
 })
 
-test('agents survive a state reload', async (t) => {
+test('agents survive a state reload', async t => {
   const { call, stop, home } = start(TEAM)
   await call('state', {})
   const agent = (await call('add-agent')).value
@@ -192,24 +214,27 @@ test('agents survive a state reload', async (t) => {
   const again = start(JSON.parse(saved))
   t.after(again.stop)
   const view = (await again.call('state', {})).value
-  assert.deepEqual(view.agents.map(entry => entry.id), [agent.id])
+  assert.deepEqual(
+    view.agents.map(entry => entry.id),
+    [agent.id],
+  )
 })
 
-test('a corrupt agents field resets instead of crashing the view', async (t) => {
+test('a corrupt agents field resets instead of crashing the view', async t => {
   const { call, stop } = start({ ...TEAM, agents: 'junk' })
   t.after(stop)
   const view = (await call('state', {})).value
   assert.deepEqual(view.agents, [])
 })
 
-test('TEAM_TOOLS names exactly the tools the host registers', async (t) => {
+test('TEAM_TOOLS names exactly the tools the host registers', async t => {
   // read_browser registers only in the Desktop profile; the flag stands in for it.
   const { stop, ctx } = start(TEAM, { config: { browser: true } })
   t.after(stop)
   assert.deepEqual([...ctx.registeredTools.keys()].sort(), [...TEAM_TOOLS].sort())
 })
 
-test('agent-session honors a known workspace and falls back to the team workspace', async (t) => {
+test('agent-session honors a known workspace and falls back to the team workspace', async t => {
   const { call, stop, created, ctx } = start(TEAM)
   t.after(stop)
   await call('state', {})
@@ -222,7 +247,7 @@ test('agent-session honors a known workspace and falls back to the team workspac
   assert.equal(created.at(-1).workspaceId, other.id)
 })
 
-test('agent-adopt takes an unowned Session and refuses team-owned ones', async (t) => {
+test('agent-adopt takes an unowned Session and refuses team-owned ones', async t => {
   const { call, stop, restricted } = start(TEAM)
   t.after(stop)
   await call('state', {})
@@ -240,19 +265,31 @@ test('agent-adopt takes an unowned Session and refuses team-owned ones', async (
   assert.equal((await call('agent-adopt', { agentId: 'none', sessionId: 'fresh2' })).error.message, 'Unknown Agent')
 })
 
-test('team tools are restricted on Agent Sessions but not on Bot Sessions', async (t) => {
+test('team tools are restricted on Agent Sessions but not on Bot Sessions', async t => {
   const { call, stop, restricted: all, createdAgents } = start(TEAM)
   t.after(stop)
   // Moon Bot patch: a Bot Session's own LEAN mask (group and schedule tools) is not the
   // team tools mask this test is about.
-  const restricted = new Proxy(all, { get: (target, key) => Reflect.get(target.filter(entry => !(entry.sessionId === 'm1' && entry.filter.deny.every(name => LEAN_HIDDEN_TOOLS.includes(name)))), key) })
+  const restricted = new Proxy(all, {
+    get: (target, key) =>
+      Reflect.get(
+        target.filter(
+          entry => !(entry.sessionId === 'm1' && entry.filter.deny.every(name => LEAN_HIDDEN_TOOLS.includes(name))),
+        ),
+        key,
+      ),
+  })
   await call('state', {})
   // A Bot resolving its agent triggers agent/created but owns no team tools mask.
   createdAgents({
     agent: {
       session: { id: 'm1' },
       ctx: {
-        tools: { restrict: filter => { restricted.push({ sessionId: 'm1', filter }) } },
+        tools: {
+          restrict: filter => {
+            restricted.push({ sessionId: 'm1', filter })
+          },
+        },
         effect: execute => execute(),
       },
     },
@@ -268,7 +305,11 @@ test('team tools are restricted on Agent Sessions but not on Bot Sessions', asyn
   const listener = {
     session: { id: agent.sessions[0] },
     ctx: {
-      tools: { restrict: filter => { restricted.push({ sessionId: agent.sessions[0], filter }) } },
+      tools: {
+        restrict: filter => {
+          restricted.push({ sessionId: agent.sessions[0], filter })
+        },
+      },
       effect: execute => execute(),
     },
   }
@@ -277,5 +318,8 @@ test('team tools are restricted on Agent Sessions but not on Bot Sessions', asyn
   // The listener path resolves through rt.load() + the session index; because the
   // fake resolveAgent is not consulted here, the WeakSet does not know this agent
   // object, so the event does restrict — but still only for the agent session.
-  assert.equal(restricted.every(entry => entry.sessionId === agent.sessions[0]), true)
+  assert.equal(
+    restricted.every(entry => entry.sessionId === agent.sessions[0]),
+    true,
+  )
 })

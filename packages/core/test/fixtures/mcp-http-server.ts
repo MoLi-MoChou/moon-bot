@@ -15,11 +15,13 @@ export interface TestMcpHttpServer {
   close(): Promise<void>
 }
 
-const TOOLS = [{
-  name: 'echo',
-  description: 'Return the supplied text.',
-  inputSchema: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'] },
-}]
+const TOOLS = [
+  {
+    name: 'echo',
+    description: 'Return the supplied text.',
+    inputSchema: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'] },
+  },
+]
 
 const readBody = async (request: AsyncIterable<Buffer | string>): Promise<string> => {
   let body = ''
@@ -46,7 +48,9 @@ export async function startMcpHttpServer(): Promise<TestMcpHttpServer> {
     }
     void (async () => {
       let body: JsonRpcBody
-      try { body = JSON.parse(await readBody(request)) as JsonRpcBody } catch {
+      try {
+        body = JSON.parse(await readBody(request)) as JsonRpcBody
+      } catch {
         response.writeHead(400).end()
         return
       }
@@ -67,11 +71,13 @@ export async function startMcpHttpServer(): Promise<TestMcpHttpServer> {
       } else if (body.method === 'tools/call') {
         result = { content: [{ type: 'text', text: String(body.params?.arguments?.text ?? '') }] }
       } else {
-        response.writeHead(200, { 'content-type': 'application/json' })
+        response
+          .writeHead(200, { 'content-type': 'application/json' })
           .end(JSON.stringify({ jsonrpc: '2.0', id: body.id, error: { code: -32601, message: 'Method not found' } }))
         return
       }
-      response.writeHead(200, { 'content-type': 'application/json' })
+      response
+        .writeHead(200, { 'content-type': 'application/json' })
         .end(JSON.stringify({ jsonrpc: '2.0', id: body.id, result }))
     })()
   })
@@ -87,7 +93,10 @@ export async function startMcpHttpServer(): Promise<TestMcpHttpServer> {
     async close() {
       server.closeAllConnections()
       await new Promise<void>((resolve, reject) => {
-        server.close(error => { if (error) reject(error); else resolve() })
+        server.close(error => {
+          if (error) reject(error)
+          else resolve()
+        })
       })
     },
   }

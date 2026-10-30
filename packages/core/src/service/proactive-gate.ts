@@ -33,7 +33,7 @@ export function preAuthGate(runtime: HostRuntime, store: Store, sessionId: strin
       id: stored.id,
       subscriptionId: stored.subscriptionId,
       purpose: stored.purpose,
-      when: JSON.parse(stored.when) as { kind: 'no-progress', minutes: number },
+      when: JSON.parse(stored.when) as { kind: 'no-progress'; minutes: number },
       scope: { tools: stored.tools, dailyCap: stored.dailyCap },
       prohibitions: stored.prohibitions,
       respectQuietHours: stored.respectQuietHours,

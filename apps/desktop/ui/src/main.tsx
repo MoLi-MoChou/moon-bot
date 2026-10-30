@@ -12,7 +12,8 @@ import './app.css'
 installLocale(createLocale(navigator.language))
 document.documentElement.lang = navigator.language
 // macOS puts the window buttons at the band's left end, over the sidebar (app.css).
-const platform = (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData?.platform ?? navigator.platform
+const platform =
+  (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData?.platform ?? navigator.platform
 if (/mac/iu.test(platform)) document.documentElement.dataset.mac = ''
 
 installSheets()

@@ -17,7 +17,8 @@ export async function replaceFile(temp: string, path: string, check: () => void 
     try {
       return await rename(temp, path)
     } catch (error) {
-      const code = error !== null && typeof error === 'object' && 'code' in error ? String((error as { code?: unknown }).code) : ''
+      const code =
+        error !== null && typeof error === 'object' && 'code' in error ? String((error as { code?: unknown }).code) : ''
       if (process.platform !== 'win32' || attempt >= TRIES || !BUSY.has(code)) throw error
       await new Promise(resolve => setTimeout(resolve, WAIT_MS * attempt))
       check()

@@ -43,7 +43,12 @@ export const canUse = (secret: SecretScopeHolder | undefined, botId: string | un
 }
 
 export function normalizeName(raw: unknown): string {
-  return String(raw ?? '').trim().replace(/^\$(env:)?/i, '').replace(/^(?:MOON_BOT|DSH)_SECRET_/i, '').replace(/[\s-]+/g, '_').toUpperCase()
+  return String(raw ?? '')
+    .trim()
+    .replace(/^\$(env:)?/i, '')
+    .replace(/^(?:MOON_BOT|DSH)_SECRET_/i, '')
+    .replace(/[\s-]+/g, '_')
+    .toUpperCase()
 }
 
 // encodeURIComponent leaves ' as is, but new URL() turns it into %27 in a query, so the
@@ -74,7 +79,12 @@ export function redactor(entries: Iterable<RedactableSecret>): Redact {
   const labels = new Map<string, string>()
   for (const [value, label] of pairs) if (!labels.has(value)) labels.set(value, label)
   const quote = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const pattern = new RegExp(pairs.map(([value, , short]) => (short ? `(?<![\\p{L}\\p{N}])${quote(value)}(?![\\p{L}\\p{N}])` : quote(value))).join('|'), 'gu')
+  const pattern = new RegExp(
+    pairs
+      .map(([value, , short]) => (short ? `(?<![\\p{L}\\p{N}])${quote(value)}(?![\\p{L}\\p{N}])` : quote(value)))
+      .join('|'),
+    'gu',
+  )
   return (text: string): string => {
     if (typeof text !== 'string' || !pairs.some(([value]) => text.includes(value))) return text
     return text.replace(pattern, match => labels.get(match) ?? match)
@@ -86,7 +96,7 @@ export function redactDeep<T>(value: T, redact: Redact): T {
   if (typeof value === 'string') return redact(value) as T
   if (Array.isArray(value)) {
     let changed = false
-    const next = (value as readonly unknown[]).map((item) => {
+    const next = (value as readonly unknown[]).map(item => {
       const replaced = redactDeep(item, redact)
       if (replaced !== item) changed = true
       return replaced

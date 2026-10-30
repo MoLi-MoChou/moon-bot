@@ -45,11 +45,19 @@ const CHECK_TIMEOUT_MS = 15_000
 const INSECURE = 'GitHub addresses must start with https://'
 
 // Asks GitHub who the token belongs to. Any token GitHub accepts passes.
-export async function signIn(token: string, { api = DEFAULTS.api, fetch: request = fetch }: SignInOptions = {}): Promise<{ readonly login: string }> {
+export async function signIn(
+  token: string,
+  { api = DEFAULTS.api, fetch: request = fetch }: SignInOptions = {},
+): Promise<{ readonly login: string }> {
   let response
   try {
     response = await request(`${api.replace(/\/$/, '')}/user`, {
-      headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'moon-bot', 'X-GitHub-Api-Version': '2022-11-28' },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/vnd.github+json',
+        'User-Agent': 'moon-bot',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
       signal: AbortSignal.timeout(CHECK_TIMEOUT_MS),
     })
   } catch {
@@ -88,7 +96,10 @@ export function install(rt: HostRuntime): void {
 
   // The MCP client wraps the server's answer (a 401, say) as the cause.
   const reason = (error: unknown): string => {
-    const text = [error, (error as { readonly cause?: unknown } | undefined)?.cause].filter(Boolean).map(part => String((part as { readonly message?: unknown } | undefined)?.message ?? part)).join(': ')
+    const text = [error, (error as { readonly cause?: unknown } | undefined)?.cause]
+      .filter(Boolean)
+      .map(part => String((part as { readonly message?: unknown } | undefined)?.message ?? part))
+      .join(': ')
     return rt.redactSecrets(text || 'error').slice(0, 300)
   }
 
@@ -135,17 +146,26 @@ export function install(rt: HostRuntime): void {
 
   // One change at a time; `force` connects again even when the token is the same.
   const sync = (force = false): Promise<unknown> => {
-    queue = queue.then(() => reconcile(force)).catch((error: unknown) => { rt.warn('moon-bot: connectors: %s', reason(error)) })
+    queue = queue
+      .then(() => reconcile(force))
+      .catch((error: unknown) => {
+        rt.warn('moon-bot: connectors: %s', reason(error))
+      })
     return queue
   }
 
-  const connectorsView = (): readonly Record<string, unknown>[] => options === null ? [] : [{
-    id: GITHUB,
-    name: 'GitHub',
-    state: status.state,
-    ...(status.state === 'error' ? { error: status.error } : {}),
-    account: rt.secretValue(GITHUB_SECRET) !== undefined ? state.connectors?.[GITHUB]?.login ?? null : null,
-  }]
+  const connectorsView = (): readonly Record<string, unknown>[] =>
+    options === null
+      ? []
+      : [
+          {
+            id: GITHUB,
+            name: 'GitHub',
+            state: status.state,
+            ...(status.state === 'error' ? { error: status.error } : {}),
+            account: rt.secretValue(GITHUB_SECRET) !== undefined ? (state.connectors?.[GITHUB]?.login ?? null) : null,
+          },
+        ]
 
   const known = (id: unknown): void => {
     if (options === null || id !== GITHUB) throw new Error('No such connector')
@@ -162,7 +182,12 @@ export function install(rt: HostRuntime): void {
       await rt.loadSecrets()
       const kept = rt.secretValue(GITHUB_SECRET) !== undefined
       const { login } = await signIn(token, { api: settings.api })
-      await rt.secretEndpoint('secret-set', { name: GITHUB_SECRET, value: token, purpose: 'GitHub connector', ...(kept ? {} : { scope: [] }) })
+      await rt.secretEndpoint('secret-set', {
+        name: GITHUB_SECRET,
+        value: token,
+        purpose: 'GitHub connector',
+        ...(kept ? {} : { scope: [] }),
+      })
       state.connectors = { ...state.connectors, [GITHUB]: { login, connectedAt: Date.now() } }
       await rt.save()
       await sync()
@@ -202,5 +227,11 @@ export function install(rt: HostRuntime): void {
     }
   }, 'moon-bot: connectors')
 
-  Object.assign(rt, { connectorsView, connectorEndpoint, secretsChanged: () => { void sync() } })
+  Object.assign(rt, {
+    connectorsView,
+    connectorEndpoint,
+    secretsChanged: () => {
+      void sync()
+    },
+  })
 }

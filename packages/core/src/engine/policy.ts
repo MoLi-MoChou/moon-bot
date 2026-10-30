@@ -78,7 +78,10 @@ export interface PolicyLedger {
 }
 
 /** The decision the engine's gate hands back, in the gate's own vocabulary. */
-export type PolicyDecision = { readonly kind: 'allow' } | { readonly kind: 'deny', readonly reason: string } | { readonly kind: 'approval', readonly reason: string }
+export type PolicyDecision =
+  | { readonly kind: 'allow' }
+  | { readonly kind: 'deny'; readonly reason: string }
+  | { readonly kind: 'approval'; readonly reason: string }
 
 export class PolicyEngine {
   private readonly ledger: PolicyLedger | undefined
@@ -103,9 +106,10 @@ export class PolicyEngine {
     if (spent <= cap) return { kind: 'allow' }
     return {
       kind: 'approval',
-      reason: rule.level === 4
-        ? `${tool} changes things that do not come back; the user decides`
-        : `${tool} has run ${String(spent - 1)} times today; the user decides whether it goes on`,
+      reason:
+        rule.level === 4
+          ? `${tool} changes things that do not come back; the user decides`
+          : `${tool} has run ${String(spent - 1)} times today; the user decides whether it goes on`,
     }
   }
 

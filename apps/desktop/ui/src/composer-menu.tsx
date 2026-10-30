@@ -4,8 +4,14 @@ import { BotAvatar } from '../../../../packages/core/src/client/mark.tsx'
 import type { MarkBot } from '../../../../packages/core/src/client/mark.tsx'
 import type { ClientBot } from '../../../../packages/core/src/client/client-types.ts'
 import {
-  CalendarIcon, GearIcon, MemoryIcon, MicIcon,
-  PeopleIcon, PlugIcon, PlusIcon, SlidersIcon,
+  CalendarIcon,
+  GearIcon,
+  MemoryIcon,
+  MicIcon,
+  PeopleIcon,
+  PlugIcon,
+  PlusIcon,
+  SlidersIcon,
 } from '../../../../packages/core/src/client/icons.tsx'
 import { t } from '../../../../packages/core/src/client/i18n.ts'
 import type { Team } from './team.ts'
@@ -122,7 +128,9 @@ export function ComposerMenu({
         badge: t('New chat'),
         subtitle: t('Start a fresh conversation part, keeping past messages saved'),
         icon: <PlusIcon />,
-        onSelect: () => { actions.openNewChat('own') },
+        onSelect: () => {
+          actions.openNewChat('own')
+        },
       },
       {
         id: 'cmd:settings',
@@ -130,7 +138,9 @@ export function ComposerMenu({
         badge: t('Settings'),
         subtitle: t('Adjust preferences, theme appearance, and language'),
         icon: <GearIcon />,
-        onSelect: () => { actions.openSettings('general') },
+        onSelect: () => {
+          actions.openSettings('general')
+        },
       },
       {
         id: 'cmd:models',
@@ -138,7 +148,9 @@ export function ComposerMenu({
         badge: t('Models'),
         subtitle: t('Configure AI models, API keys, and providers'),
         icon: <SlidersIcon />,
-        onSelect: () => { actions.openSettings('models') },
+        onSelect: () => {
+          actions.openSettings('models')
+        },
       },
       {
         id: 'cmd:connectors',
@@ -146,7 +158,9 @@ export function ComposerMenu({
         badge: t('Market'),
         subtitle: t('Manage ACP agent connectors, MCP tools, and plugins'),
         icon: <PlugIcon />,
-        onSelect: () => { actions.openConnectors() },
+        onSelect: () => {
+          actions.openConnectors()
+        },
       },
       {
         id: 'cmd:tasks',
@@ -154,7 +168,9 @@ export function ComposerMenu({
         badge: t('Schedules'),
         subtitle: t('View and manage periodic tasks, reminders, and schedules'),
         icon: <CalendarIcon />,
-        onSelect: () => { actions.openSettings('schedules') },
+        onSelect: () => {
+          actions.openSettings('schedules')
+        },
       },
       {
         id: 'cmd:memory',
@@ -162,7 +178,9 @@ export function ComposerMenu({
         badge: t('Memory'),
         subtitle: t('Search and review what this Bot has remembered'),
         icon: <MemoryIcon />,
-        onSelect: () => { actions.openMemory(sessionId) },
+        onSelect: () => {
+          actions.openMemory(sessionId)
+        },
       },
       {
         id: 'cmd:voice',
@@ -170,7 +188,9 @@ export function ComposerMenu({
         badge: t('Voice'),
         subtitle: t('Start voice chat or audio dictation'),
         icon: <MicIcon size={16} />,
-        onSelect: () => { actions.openVoice(sessionId) },
+        onSelect: () => {
+          actions.openVoice(sessionId)
+        },
       },
     ]
 
@@ -197,20 +217,40 @@ export function ComposerMenu({
 
   if (items.length === 0) return null
 
-  return <div ref={menuRef} className='mb-trigger-menu' role='listbox' aria-label={trigger.kind === 'mention' ? t('Mentions') : t('Commands')}>
-    <div className='mb-trigger-head'>{trigger.kind === 'mention' ? t('Mention Bot') : t('Quick Commands')}</div>
-    {items.map((item, index) => {
-      const isActive = index === activeIndex
-      return <button key={item.id} type='button' className='mb-trigger-item' data-active={isActive} data-index={index} role='option' aria-selected={isActive} onMouseEnter={() => onActiveIndexChange(index)} onMouseDown={(e: React.MouseEvent) => {
-          e.preventDefault()
-          onPick(item)
-        }}>
-        <span className='mb-trigger-icon'>{item.icon}</span>
-        <span className='mb-trigger-info'>
-          <span className='mb-trigger-title'>{item.title}{item.badge ? <span className='mb-trigger-badge'>{item.badge}</span> : null}</span>
-          {item.subtitle ? <span className='mb-trigger-sub'>{item.subtitle}</span> : null}
-        </span>
-      </button>
-    })}
-  </div>
+  return (
+    <div
+      ref={menuRef}
+      className='mb-trigger-menu'
+      role='listbox'
+      aria-label={trigger.kind === 'mention' ? t('Mentions') : t('Commands')}>
+      <div className='mb-trigger-head'>{trigger.kind === 'mention' ? t('Mention Bot') : t('Quick Commands')}</div>
+      {items.map((item, index) => {
+        const isActive = index === activeIndex
+        return (
+          <button
+            key={item.id}
+            type='button'
+            className='mb-trigger-item'
+            data-active={isActive}
+            data-index={index}
+            role='option'
+            aria-selected={isActive}
+            onMouseEnter={() => onActiveIndexChange(index)}
+            onMouseDown={(e: React.MouseEvent) => {
+              e.preventDefault()
+              onPick(item)
+            }}>
+            <span className='mb-trigger-icon'>{item.icon}</span>
+            <span className='mb-trigger-info'>
+              <span className='mb-trigger-title'>
+                {item.title}
+                {item.badge ? <span className='mb-trigger-badge'>{item.badge}</span> : null}
+              </span>
+              {item.subtitle ? <span className='mb-trigger-sub'>{item.subtitle}</span> : null}
+            </span>
+          </button>
+        )
+      })}
+    </div>
+  )
 }

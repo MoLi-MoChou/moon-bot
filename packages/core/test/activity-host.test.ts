@@ -21,9 +21,15 @@ const el = (attrs = {}, ...children) => {
     let cursor = n
     for (let index = parts.length - 1; index >= 0; index--) {
       const part = parts[index]
-      if (part === '>') { const attr = parts[--index].slice(1, -1); cursor = cursor.parentElement; if (!cursor || !has(cursor, attr)) return false; continue }
+      if (part === '>') {
+        const attr = parts[--index].slice(1, -1)
+        cursor = cursor.parentElement
+        if (!cursor || !has(cursor, attr)) return false
+        continue
+      }
       const attr = part.slice(1, -1)
-      do cursor = cursor.parentElement; while (cursor && !has(cursor, attr))
+      do cursor = cursor.parentElement
+      while (cursor && !has(cursor, attr))
       if (!cursor) return false
     }
     return true
@@ -31,7 +37,12 @@ const el = (attrs = {}, ...children) => {
   Object.assign(node, {
     all,
     getAttribute: name => node.attrs[name] ?? null,
-    closest: (sel) => { const alts = sel.split(',').map(s => s.trim().slice(1, -1)); let n = node; while (n && !alts.some(a => has(n, a))) n = n.parentElement; return n },
+    closest: sel => {
+      const alts = sel.split(',').map(s => s.trim().slice(1, -1))
+      let n = node
+      while (n && !alts.some(a => has(n, a))) n = n.parentElement
+      return n
+    },
     querySelectorAll: sel => all().filter(n => matches(n, sel)),
     querySelector: sel => all().find(n => matches(n, sel)) ?? null,
   })
@@ -40,17 +51,28 @@ const el = (attrs = {}, ...children) => {
 
 const bundle = await build({
   entryPoints: [fileURLToPath(new URL('../src/client/activity-row.tsx', import.meta.url))],
-  bundle: true, format: 'cjs', platform: 'node', write: false,
+  bundle: true,
+  format: 'cjs',
+  platform: 'node',
+  write: false,
   external: ['react', 'react-dom'],
 })
-const module = { exports: {} as { runningSlot: (doc: unknown) => unknown, flowRows: (column: unknown) => { attrs: Record<string, unknown> }[] } }
+const module = {
+  exports: {} as {
+    runningSlot: (doc: unknown) => unknown
+    flowRows: (column: unknown) => { attrs: Record<string, unknown> }[]
+  },
+}
 runInNewContext(bundle.outputFiles[0].text, {
-  module, exports: module.exports, setTimeout, clearTimeout,
+  module,
+  exports: module.exports,
+  setTimeout,
+  clearTimeout,
   require: name => ({ react: { createElement: () => null }, 'react-dom': { createPortal: () => null } })[name] ?? {},
 })
 const { runningSlot, flowRows } = module.exports
 
-test('the activity row finds the running status inside DSH\'s slot wrapper', () => {
+test("the activity row finds the running status inside DSH's slot wrapper", () => {
   const running = el({ 'data-chat-running': '' })
   const doc = el({}, el({ 'data-chat-flow': '' }, el({ 'data-chat-flow-key': '1' }), el({ 'data-slot': 'x' }, running)))
   assert.equal(runningSlot(doc), running)
@@ -71,5 +93,10 @@ test('transcript rows are found wrapped or not, but not rows nested in a row', (
   const a = el({ 'data-chat-flow-key': 'a' }, nested)
   const b = el({ 'data-chat-flow-key': 'b' })
   const column = el({ 'data-chat-flow': '' }, a, el({ 'data-slot': 'y' }, b))
-  assert.equal(flowRows(column).map(row => row.attrs['data-chat-flow-key']).join(), 'a,b')
+  assert.equal(
+    flowRows(column)
+      .map(row => row.attrs['data-chat-flow-key'])
+      .join(),
+    'a,b',
+  )
 })

@@ -13,14 +13,14 @@ export const ZH = {
   'New…': '新建',
   'Collapse sidebar': '收起侧边栏',
   'Expand sidebar': '展开侧边栏',
-  'Animation': '动画',
+  Animation: '动画',
   'Reconnecting…': '正在重连…',
   'Chats stay saved; this window catches up when the connection is back.': '对话都还在，连上后这个窗口会自动跟上。',
   'Back online. Catching up…': '连接恢复了，正在刷新…',
   'Bot animation': 'Bot 动画',
-  'Quiet': '安静',
-  'Normal': '正常',
-  'Lively': '活泼',
+  Quiet: '安静',
+  Normal: '正常',
+  Lively: '活泼',
   Settings: '设置',
   Usage: '用量',
   Account: '账户',
@@ -54,7 +54,7 @@ export const ZH = {
   'Restore group': '恢复群聊',
   'Stops new rounds. The chat, members and memory stay.': '不再开始新的轮次。聊天、成员和记忆都还在。',
   'The group returns to the sidebar and can speak again.': '群回到侧栏，可以继续发言。',
-  'Archived': '已归档',
+  Archived: '已归档',
   'This group chat is archived': '这个群聊已归档',
   "Open {name}'s chat": '打开 {name} 的对话',
   'New Bot': '新 Bot',
@@ -72,7 +72,8 @@ export const ZH = {
 
   'Start the conversation over': '重新开始这段对话',
 
-  'Clears what it can see of this chat. Earlier parts stay in the history.': '清掉它在这段对话里能看到的上下文。更早的分段仍保留在历史里。',
+  'Clears what it can see of this chat. Earlier parts stay in the history.':
+    '清掉它在这段对话里能看到的上下文。更早的分段仍保留在历史里。',
 
   'Delete the conversation history': '删除对话历史',
 
@@ -80,15 +81,18 @@ export const ZH = {
 
   'Restore its default settings': '恢复默认设置',
 
-  'Role, instructions, model, thinking level, permission preset, avatar and working folder.': '角色、指令、模型、思考强度、权限预设、头像和工作文件夹。',
+  'Role, instructions, model, thinking level, permission preset, avatar and working folder.':
+    '角色、指令、模型、思考强度、权限预设、头像和工作文件夹。',
 
-  'Everything this Bot remembered — facts about you, decisions, preferences — is deleted. It cannot be recovered.': '这个 Bot 记住的一切——关于你的事实、决定、偏好——都会被删除，无法恢复。',
+  'Everything this Bot remembered — facts about you, decisions, preferences — is deleted. It cannot be recovered.':
+    '这个 Bot 记住的一切——关于你的事实、决定、偏好——都会被删除，无法恢复。',
 
   'The conversation it reads next turn is empty, as if you had just met.': '它下一轮读到的对话是空的，就像你们刚认识。',
 
   'The messages are deleted, not archived. The chat shows as empty.': '消息会被删除而不是归档，聊天会显示为空。',
 
-  'Those settings go back to the defaults. Its name stays, and it stays in its groups.': '这些设置回到默认值。名字保留，它在群里的位置也保留。',
+  'Those settings go back to the defaults. Its name stays, and it stays in its groups.':
+    '这些设置回到默认值。名字保留，它在群里的位置也保留。',
 
   'Pick at least one thing to reset.': '至少要选一项要重置的内容。',
 
@@ -106,11 +110,13 @@ export const ZH = {
 
   'This host does not send them.': '这个主机不发送主动消息。',
 
-  'A Bot can come back to something on its own, within limits you set. It stays silent unless you turn this on.': '在你能设的范围内，Bot 可以自己回来找你一件事。不开这个，它就永远保持沉默。',
+  'A Bot can come back to something on its own, within limits you set. It stays silent unless you turn this on.':
+    '在你能设的范围内，Bot 可以自己回来找你一件事。不开这个，它就永远保持沉默。',
 
   'Nothing set up yet': '还没有设置',
 
-  'Add one below and the Bot will start looking for things worth telling you.': '在下面加一条，Bot 就会开始留意值得告诉你的事。',
+  'Add one below and the Bot will start looking for things worth telling you.':
+    '在下面加一条，Bot 就会开始留意值得告诉你的事。',
 
   'What should it keep an eye on?': '让它留意什么？',
 
@@ -125,10 +131,6 @@ export const ZH = {
   'Turn on proactive messages': '开启主动消息',
 
   'Add a subscription': '加一条订阅',
-
-
-
-
 
   'At most {count} a day': '每天最多 {count} 条',
 
@@ -171,7 +173,8 @@ export const ZH = {
 
   'Standing permission': '常驻授权',
 
-  'A rule lets this Bot act on its own within limits you write down here. Outside them it can only suggest.': '规则让这个 Bot 在你写下的范围内自己动手。超出范围它只能建议。',
+  'A rule lets this Bot act on its own within limits you write down here. Outside them it can only suggest.':
+    '规则让这个 Bot 在你写下的范围内自己动手。超出范围它只能建议。',
 
   'No standing permission': '没有常驻授权',
 
@@ -189,11 +192,13 @@ export const ZH = {
 
   'Also during quiet hours': '安静时段也可以动手',
 
-  'Without this, the rule waits until the quiet hours end — even for a rescue.': '不开这一项，规则会等到安静时段结束——即使是要救急。',
+  'Without this, the rule waits until the quiet hours end — even for a rescue.':
+    '不开这一项，规则会等到安静时段结束——即使是要救急。',
 
   'This rule will be able to act at 3 in the morning without asking you.': '这条规则将可以在凌晨三点不经你同意就动手。',
 
-  'Anything that spends money or cannot be undone always asks, whatever a rule says.': '花钱和不可撤销的动作永远会先问你，规则写了也不行。',
+  'Anything that spends money or cannot be undone always asks, whatever a rule says.':
+    '花钱和不可撤销的动作永远会先问你，规则写了也不行。',
 
   'May use: {tools}': '可以用：{tools}',
 
@@ -237,7 +242,8 @@ export const ZH = {
 
   'Brought up on its own': '它自己提起的',
 
-  'Last 7 days: {prepared} prepared, {delivered} sent ({rate}%), {rejected} dropped. {disabled} subscriptions off.': '最近 7 天：准备 {prepared} 条，发出 {delivered} 条（{rate}%），丢弃 {rejected} 条，关闭 {disabled} 条订阅。',
+  'Last 7 days: {prepared} prepared, {delivered} sent ({rate}%), {rejected} dropped. {disabled} subscriptions off.':
+    '最近 7 天：准备 {prepared} 条，发出 {delivered} 条（{rate}%），丢弃 {rejected} 条，关闭 {disabled} 条订阅。',
 
   // Sidebar and account menu
   'Bot list': 'Bot 列表',
@@ -298,7 +304,8 @@ export const ZH = {
   'Custom connectors': '自定义连接器',
   'Installed capabilities': '已安装的能力',
   'Add custom connector': '添加自定义连接器',
-  'Any MCP server you type yourself. Market installs also appear as capabilities; this list edits them in place.': '你自己填写的 MCP 服务。市场安装的也会作为能力出现；这里可以直接编辑它们。',
+  'Any MCP server you type yourself. Market installs also appear as capabilities; this list edits them in place.':
+    '你自己填写的 MCP 服务。市场安装的也会作为能力出现；这里可以直接编辑它们。',
   'No custom connectors yet': '还没有自定义连接器',
   'Add any MCP server by command, HTTP URL, or SSE endpoint.': '用命令、HTTP URL 或 SSE 端点添加任何 MCP 服务。',
 
@@ -330,15 +337,18 @@ export const ZH = {
   'Used by': '使用它的 Bot',
   'Not enabled for any Bot yet.': '还没有为任何 Bot 启用。',
   'Choose a Bot': '选择 Bot',
-  'Delete {name}? Bots using it lose its tools, packs that include it drop it, and saved keys stay. This cannot be undone.': '删除 {name}？使用它的 Bot 会失去这些工具，包含它的能力包会移除它，已保存的密钥会保留。此操作无法撤销。',
+  'Delete {name}? Bots using it lose its tools, packs that include it drop it, and saved keys stay. This cannot be undone.':
+    '删除 {name}？使用它的 Bot 会失去这些工具，包含它的能力包会移除它，已保存的密钥会保留。此操作无法撤销。',
   'Deleting…': '正在删除…',
   'MCP servers': 'MCP 服务',
   Skills: '技能',
   Packs: '能力包',
   'Browse connector market': '浏览连接器市场',
-  'Save a capability once here, then turn it on for each Bot in the Bot’s settings.': '在这里保存一次能力，然后到各个 Bot 的设置里为它启用。',
+  'Save a capability once here, then turn it on for each Bot in the Bot’s settings.':
+    '在这里保存一次能力，然后到各个 Bot 的设置里为它启用。',
   'No capabilities yet': '还没有能力',
-  'Install one from the connector market, or save an MCP server, a skill, or a pack of them yourself.': '从连接器市场安装一个，或者自己保存 MCP 服务、技能或能力包。',
+  'Install one from the connector market, or save an MCP server, a skill, or a pack of them yourself.':
+    '从连接器市场安装一个，或者自己保存 MCP 服务、技能或能力包。',
   'Search capabilities…': '搜索能力…',
   'Search capabilities': '搜索能力',
   'No capabilities match “{query}”': '没有匹配「{query}」的能力',
@@ -349,12 +359,15 @@ export const ZH = {
   'Needs approval. Open Capabilities to allow it.': '需要批准。到「能力」页允许它。',
   'Connected. The server offers no tools.': '已连接。这个服务没有提供工具。',
   'Connected. {count} tools found.': '已连接，找到 {count} 个工具。',
-  'Change everything except the name. The Bot reconnects on its next turn.': '除名称外都可以改。Bot 下次回合会重新连接。',
+  'Change everything except the name. The Bot reconnects on its next turn.':
+    '除名称外都可以改。Bot 下次回合会重新连接。',
   'Connect any community or custom MCP server by command or URL.': '用命令或 URL 连接任何社区或自定义 MCP 服务。',
   'Saved as {name}': '将保存为 {name}',
   '--flag': '--flag',
-  'Runs {command}. Moon Bot asks before a local command first starts.': '运行 {command}。本地命令第一次启动前 Moon Bot 会询问你。',
-  'The fields changed since the last test. Test again before saving if you want the result to count.': '上次测试后字段有改动。想以测试结果为准的话，请重新测试再保存。',
+  'Runs {command}. Moon Bot asks before a local command first starts.':
+    '运行 {command}。本地命令第一次启动前 Moon Bot 会询问你。',
+  'The fields changed since the last test. Test again before saving if you want the result to count.':
+    '上次测试后字段有改动。想以测试结果为准的话，请重新测试再保存。',
   'Testing…': '正在测试…',
   'Test connection': '测试连接',
   'Add connector': '添加连接器',
@@ -364,27 +377,34 @@ export const ZH = {
   'Not enabled for any Bot.': '还没有为任何 Bot 启用。',
   'Connecting to the server…': '正在连接服务…',
   SSE: 'SSE',
-  'Delete {name}? It is removed from {count} Bots, its tools stop working, and saved keys stay. This cannot be undone.': '删除 {name}？它会从 {count} 个 Bot 中移除，相关工具停止工作，已保存的密钥会保留。此操作无法撤销。',
+  'Delete {name}? It is removed from {count} Bots, its tools stop working, and saved keys stay. This cannot be undone.':
+    '删除 {name}？它会从 {count} 个 Bot 中移除，相关工具停止工作，已保存的密钥会保留。此操作无法撤销。',
   'Retrying…': '正在重试…',
   'Turn off for all Bots': '为所有 Bot 关闭',
   'Enter a name.': '请输入名称。',
   '"github" is reserved for the GitHub connector.': '"github" 是 GitHub 连接器保留的名称。',
-  'Use lowercase letters, digits, and single hyphens, starting with a letter.': '请用小写字母、数字和单个连字符，并以字母开头。',
+  'Use lowercase letters, digits, and single hyphens, starting with a letter.':
+    '请用小写字母、数字和单个连字符，并以字母开头。',
   'A capability with this name already exists.': '已经有同名的能力了。',
   'Enter the command that starts the server.': '请输入启动服务的命令。',
-  'Use a JSON object, such as {"API_KEY": "$MOON_BOT_SECRET_MY_KEY"}.': '请用 JSON 对象，例如 {"API_KEY": "$MOON_BOT_SECRET_MY_KEY"}。',
+  'Use a JSON object, such as {"API_KEY": "$MOON_BOT_SECRET_MY_KEY"}.':
+    '请用 JSON 对象，例如 {"API_KEY": "$MOON_BOT_SECRET_MY_KEY"}。',
   'Enter a full HTTP or HTTPS URL.': '请输入完整的 HTTP 或 HTTPS URL。',
-  'Use a JSON object, such as {"Authorization": "Bearer $MOON_BOT_SECRET_MY_KEY"}.': '请用 JSON 对象，例如 {"Authorization": "Bearer $MOON_BOT_SECRET_MY_KEY"}。',
+  'Use a JSON object, such as {"Authorization": "Bearer $MOON_BOT_SECRET_MY_KEY"}.':
+    '请用 JSON 对象，例如 {"Authorization": "Bearer $MOON_BOT_SECRET_MY_KEY"}。',
   'Write the skill instructions.': '请写技能说明。',
   'Enter a name with letters or digits.': '请输入包含字母或数字的名称。',
   'Keep the name to 32 characters or fewer.': '名称请控制在 32 个字符以内。',
   'Classic Agent mode': '经典 Agent 模式',
-  'Switch': '切换',
+  Switch: '切换',
   'Switch to classic Agent mode': '切换经典 Agent 模式',
   '{model} is not available anymore. Pick another model for me.': '{model} 已经不可用了。给我换一个模型吧。',
-  "Hi, I'm {name}. I don't have a model yet. How do you want to set one up?": '你好，我是 {name}。我还没有可用的模型。你想怎么配置？',
-  "Hi, I'm {name}. Pick a model for me first. You can change it later in my details.": '你好，我是 {name}。先给我选一个模型吧，以后可以在我的详情里换。',
-  "Hi, I'm {name}. I need a {provider} API key before I can start.": '你好，我是 {name}。开始之前，我需要一个 {provider} API key。',
+  "Hi, I'm {name}. I don't have a model yet. How do you want to set one up?":
+    '你好，我是 {name}。我还没有可用的模型。你想怎么配置？',
+  "Hi, I'm {name}. Pick a model for me first. You can change it later in my details.":
+    '你好，我是 {name}。先给我选一个模型吧，以后可以在我的详情里换。',
+  "Hi, I'm {name}. I need a {provider} API key before I can start.":
+    '你好，我是 {name}。开始之前，我需要一个 {provider} API key。',
   '{provider} API key': '{provider} API key',
   'Enter the API key': '请填入 API key',
   'Paste only the key, not a NAME=value line': '只粘贴 key 本身，不要带「名字=」',
@@ -401,7 +421,8 @@ export const ZH = {
   'Key set outside Moon Bot': 'key 在 Moon Bot 之外设置',
   'No models': '没有模型',
   '{count} models': '{count} 个模型',
-  'This key comes from outside Moon Bot, such as an environment variable, and cannot be changed here.': '这个 key 来自 Moon Bot 之外（例如环境变量），这里改不了。',
+  'This key comes from outside Moon Bot, such as an environment variable, and cannot be changed here.':
+    '这个 key 来自 Moon Bot 之外（例如环境变量），这里改不了。',
   'and {count} more': '还有 {count} 个',
   'Remove {name}? Bots on its models need another model.': '删除 {name}？用它的模型的 Bot 要换一个模型。',
   'Remove provider': '删除服务商',
@@ -426,10 +447,11 @@ export const ZH = {
   'Model ids, separated by commas': '模型 ID，用逗号分隔',
   'Enter the endpoint as an http or https address': '接口地址要以 http 或 https 开头',
   'Every model needs an id': '每个模型都要有 ID',
-  'A provider id is lowercase letters, digits and dashes, starting with a letter': '服务商 ID 只能用小写字母、数字和短横线，并以字母开头',
+  'A provider id is lowercase letters, digits and dashes, starting with a letter':
+    '服务商 ID 只能用小写字母、数字和短横线，并以字母开头',
   'Add at least one model': '至少添加一个模型',
   'Two models have the same id': '有两个模型的 ID 相同',
-  'Mode': '模式',
+  Mode: '模式',
   'Sign in to DeepSeek': '登录 DeepSeek 账号',
   'Enter a DeepSeek API key': '填入 DeepSeek API key',
   'Open settings to set up a custom model': '打开设置配置自定义模型',
@@ -480,8 +502,10 @@ export const ZH = {
   'Remove {name} from the group': '把 {name} 移出群聊',
   'Remove from group': '移出群聊',
   'Add member': '添加成员',
-  '{name} leads this group: it can call members with @Name, change the group, and post here.': '{name} 主持这个群：可以用 @名字 点名成员、修改群设置、在群里发言。',
-  'No admin yet. An admin can call members with @Name, change the group, and post here.': '还没有管理员。管理员可以用 @名字 点名成员、修改群设置、在群里发言。',
+  '{name} leads this group: it can call members with @Name, change the group, and post here.':
+    '{name} 主持这个群：可以用 @名字 点名成员、修改群设置、在群里发言。',
+  'No admin yet. An admin can call members with @Name, change the group, and post here.':
+    '还没有管理员。管理员可以用 @名字 点名成员、修改群设置、在群里发言。',
   'Who answers': '谁来回答',
   'Choose an admin first': '先选一个管理员',
   '@mentions always pick who answers.': '@提及总是指定由谁回答。',
@@ -502,7 +526,8 @@ export const ZH = {
   'Rename {name}': '重命名 {name}',
   Rename: '重命名',
   'Add instructions in Bot settings': '在 Bot 设置里添加说明',
-  'No scheduled tasks yet. To add one, tell the Bot in its chat what to do and when.': '还没有定时任务。要添加，在对话里告诉 Bot 做什么、什么时候做。',
+  'No scheduled tasks yet. To add one, tell the Bot in its chat what to do and when.':
+    '还没有定时任务。要添加，在对话里告诉 Bot 做什么、什么时候做。',
   'The browser is in the desktop app.': '浏览器在桌面版应用里。',
   'New tab': '新标签页',
   'Close tab': '关闭标签页',
@@ -523,10 +548,12 @@ export const ZH = {
   'Built-in': '内置运行时',
   'ACP agent': 'ACP Agent',
   'ACP command': 'ACP 命令',
-  'Executable available on this computer, for example opencode or claude.': '填写这台电脑上可用的命令，例如 opencode 或 claude。',
+  'Executable available on this computer, for example opencode or claude.':
+    '填写这台电脑上可用的命令，例如 opencode 或 claude。',
   'ACP arguments': 'ACP 参数',
   'One argument per line.': '每行一个参数。',
-  'No compatible local ACP agents detected. Install one and refresh the Bot settings.': '没有检测到可用的本机 ACP Agent。安装后刷新 Bot 设置。',
+  'No compatible local ACP agents detected. Install one and refresh the Bot settings.':
+    '没有检测到可用的本机 ACP Agent。安装后刷新 Bot 设置。',
   'Detected but not supported': '已检测到但暂不支持',
   'Current configuration': '当前配置',
   'File changes': '文件变更',
@@ -539,7 +566,8 @@ export const ZH = {
   'Remote agents': '远程 Agent',
   Tasks: '任务',
   'Nobody is working right now.': '现在没有 Bot 在干活。',
-  'Running turns, waiting handoffs and recently finished work show up here.': '正在跑的回合、在等交接的，以及刚做完的，都会出现在这里。',
+  'Running turns, waiting handoffs and recently finished work show up here.':
+    '正在跑的回合、在等交接的，以及刚做完的，都会出现在这里。',
   'No tasks match these filters.': '没有符合这些筛选的任务。',
   'Switching to a new session': '正在换新会话',
   'Running {tool}': '正在跑 {tool}',
@@ -558,7 +586,7 @@ export const ZH = {
   'Waiting for your approval': '等你批准',
   'Engine busy': '引擎忙',
   'Cut off by a restart': '重启时被掐断',
-  'Continue': '继续',
+  Continue: '继续',
   'That turn is not waiting to continue.': '这个回合不在等继续。',
   'Filter by state': '按状态筛选',
   'All states': '所有状态',
@@ -573,13 +601,14 @@ export const ZH = {
   'Name it, e.g. kai-laptop': '起个名字，如 kai-laptop',
   'Agent name': 'Agent 名称',
   'Create invite': '创建邀请码',
-  'The agent on the other machine runs one command to join; it needs no open port.': '对方电脑上跑一条命令即可接入，不需要开放端口。',
+  'The agent on the other machine runs one command to join; it needs no open port.':
+    '对方电脑上跑一条命令即可接入，不需要开放端口。',
   'Copy it now — it is shown once.': '现在就复制——它只显示这一次。',
   'Copy command': '复制命令',
   'Invited agents': '已邀请的 Agent',
   'No remote agents yet.': '还没有远程 Agent。',
-  'Revoked': '已吊销',
-  'Revoke': '吊销',
+  Revoked: '已吊销',
+  Revoke: '吊销',
   'Loading…': '加载中…',
   'Last seen {when}': '上次在线 {when}',
   'Remote agent': '远程 Agent',
@@ -610,7 +639,8 @@ export const ZH = {
   'Runs a local command; Moon Bot asks before it first starts.': '运行一条本机命令；首次启动前 Moon Bot 会征求同意。',
   'Connects to the service over HTTPS.': '通过 HTTPS 连接云端服务。',
   'Errors, issues, releases and debugging for your projects.': '项目的报错、Issue、发布与调试。',
-  'Drives a real browser: open pages, click, fill, and read what is there.': '驱动真实浏览器：打开页面、点击、填写、读取内容。',
+  'Drives a real browser: open pages, click, fill, and read what is there.':
+    '驱动真实浏览器：打开页面、点击、填写、读取内容。',
   'Up-to-date documentation for libraries, fetched while the Bot works.': 'Bot 工作时实时获取的最新库文档。',
   'Fetches web pages and turns them into text the model reads well.': '抓取网页并转成模型易读的文本。',
   'A persistent graph of nodes and relations the team can write and query.': '团队可读写查询的持久化知识图谱。',
@@ -626,7 +656,8 @@ export const ZH = {
   'AI & Reasoning': 'AI与深度思考',
   'Custom MCP': '自定义 MCP',
   'Custom MCP server': '自定义 MCP 连接器',
-  'Enter any command or HTTP endpoint to connect any community or custom MCP server.': '输入启动命令或云端 HTTP 地址，即可接入社区或任意自建 MCP 服务。',
+  'Enter any command or HTTP endpoint to connect any community or custom MCP server.':
+    '输入启动命令或云端 HTTP 地址，即可接入社区或任意自建 MCP 服务。',
   'Please fill in the name and command or URL.': '请填写名称以及启动命令或服务 URL。',
   'Local command (stdio)': '本地命令 (stdio)',
   'HTTP server (streamable-http)': 'HTTP 服务 (streamable-http)',
@@ -640,9 +671,11 @@ export const ZH = {
   Local: '本机',
   Cloud: '云端',
   'Official website': '官方网站',
-  'This connector is already installed as a capability. Installing again will update its configuration.': '该连接器已作为能力添加。再次安装将更新其配置。',
+  'This connector is already installed as a capability. Installing again will update its configuration.':
+    '该连接器已作为能力添加。再次安装将更新其配置。',
   GitLab: 'GitLab',
-  'Projects, issues, merge requests, and CI/CD pipelines on GitLab.': 'GitLab 上的项目、Issue、合并请求和 CI/CD 流水线。',
+  'Projects, issues, merge requests, and CI/CD pipelines on GitLab.':
+    'GitLab 上的项目、Issue、合并请求和 CI/CD 流水线。',
   'GitLab access token': 'GitLab 访问令牌',
   Docker: 'Docker',
   'Manage containers, images, volumes, and inspect running services.': '管理容器、镜像、数据卷并检查正在运行的服务。',
@@ -650,12 +683,15 @@ export const ZH = {
   'Real-time web search and local queries via Brave Search API.': '通过 Brave Search API 进行实时网页搜索和本地查询。',
   'Brave Search API key': 'Brave Search API Key',
   Tavily: 'Tavily',
-  'Search engine optimized for AI agents and LLMs with instant answers.': '专为 AI Agent 和大模型优化的搜索引擎，提供即时精准结果。',
+  'Search engine optimized for AI agents and LLMs with instant answers.':
+    '专为 AI Agent 和大模型优化的搜索引擎，提供即时精准结果。',
   'Tavily API key': 'Tavily API Key',
   Puppeteer: 'Puppeteer',
-  'Browser automation to capture screenshots, scrape content and interact.': '浏览器自动化，支持截屏、抓取网页内容及界面交互。',
+  'Browser automation to capture screenshots, scrape content and interact.':
+    '浏览器自动化，支持截屏、抓取网页内容及界面交互。',
   Slack: 'Slack',
-  'Read and post messages, channels, threads, and user info in Slack.': '在 Slack 中读取和发送消息、管理频道、主题与用户信息。',
+  'Read and post messages, channels, threads, and user info in Slack.':
+    '在 Slack 中读取和发送消息、管理频道、主题与用户信息。',
   'Slack Bot token (xoxb-...)': 'Slack Bot 令牌 (xoxb-...)',
   'Slack Team ID': 'Slack 团队 ID',
   Notion: 'Notion',
@@ -665,15 +701,19 @@ export const ZH = {
   'Manage issues, projects, cycles and team workflows in Linear.': '在 Linear 中管理 Issue、项目、周期和团队工作流。',
   'Linear API key': 'Linear API Key',
   'Google Drive': 'Google Drive',
-  'Search, read documents, spreadsheets, and files in Google Drive.': '在 Google Drive 中搜索和读取文档、电子表格及文件。',
+  'Search, read documents, spreadsheets, and files in Google Drive.':
+    '在 Google Drive 中搜索和读取文档、电子表格及文件。',
   PostgreSQL: 'PostgreSQL',
-  'Inspect schemas, tables, relationships, and run read queries on PostgreSQL.': '查看 PostgreSQL 数据库架构、表、外键关系并执行只读查询。',
+  'Inspect schemas, tables, relationships, and run read queries on PostgreSQL.':
+    '查看 PostgreSQL 数据库架构、表、外键关系并执行只读查询。',
   'PostgreSQL connection URL (postgresql://...)': 'PostgreSQL 连接 URL (postgresql://...)',
   SQLite: 'SQLite',
-  'Query SQLite databases, inspect schemas, and analyze local database files.': '查询 SQLite 数据库、检查表结构并分析本地数据库文件。',
+  'Query SQLite databases, inspect schemas, and analyze local database files.':
+    '查询 SQLite 数据库、检查表结构并分析本地数据库文件。',
   'Path to SQLite database file': 'SQLite 数据库文件路径',
   Filesystem: '本地文件系统',
-  'Secure file access to explore directories, read and manage local files.': '安全的文件访问支持，浏览目录、读取和管理本地项目文件。',
+  'Secure file access to explore directories, read and manage local files.':
+    '安全的文件访问支持，浏览目录、读取和管理本地项目文件。',
   'Allowed root folder path (e.g. /path/to/project)': '允许访问的根目录路径（如 /path/to/project）',
   'Avatar editor': '形象编辑',
   'Avatar source': '形象来源',
@@ -706,22 +746,23 @@ export const ZH = {
   'Click again to delete. Its chats are archived.': '再点一次删除，它的对话会归档。',
   'Removes the Bot from the team.': '把这个 Bot 从团队里移除。',
   'Pick a model and {name} can start.': '选好模型，{name} 就能开始工作。',
-  'Permissions': '权限',
+  Permissions: '权限',
   'Read only': '仅可查看',
-  'Workspace': '工作区内修改',
+  Workspace: '工作区内修改',
   'Full access': '完全权限',
   'Rate limited, retrying in {seconds}s': '请求受限，{seconds}s 后重试',
   'Request failed, retrying in {seconds}s': '请求失败，{seconds}s 后重试',
   'Model retry': '模型请求重试',
   'The web version updates when its server is redeployed.': '网页版随服务器重新部署更新。',
   'Full process': '查看完整过程',
-  'Retried': '已重试',
+  Retried: '已重试',
   'Retry cancelled': '重试已取消',
   'Always allow for this Bot': '始终允许此 Bot',
   'Saves this permission for the Bot, so it stops asking': '把该权限保存到这个 Bot，之后不再询问',
   'Same for every member': '全员统一',
   "Replaces each member's own permissions in this group.": '在这个群里代替各成员自己的权限。',
-  'The only Main Bot. To hand the role to another Bot, use Main Bot on the Bots page.': '这是唯一的主 Bot。要把主 Bot 交给别的 Bot，请到「Bot」页的主 Bot 里换。',
+  'The only Main Bot. To hand the role to another Bot, use Main Bot on the Bots page.':
+    '这是唯一的主 Bot。要把主 Bot 交给别的 Bot，请到「Bot」页的主 Bot 里换。',
   Change: '更换',
   'Can create and change Bots, and runs every group chat.': '可以创建和修改 Bot，并管理所有群聊。',
   Sidebar: '侧栏',
@@ -763,18 +804,55 @@ export const ZH = {
   'Manage models': '管理模型',
 
   // Shapes
-  Whale: '鲸鱼', Star: '星星', Moon: '月亮', Wave: '声波', Squircle: '圆角方', Bull: '牛角', Blossom: '花朵',
-  Gumdrop: '软糖', Peanut: '花生', Bubbles: '泡泡', Saucer: '飞碟', Sprout: '嫩芽', Bunny: '兔子',
-  Kitty: '小猫', Beacon: '灯塔', Plus: '加号', Magnet: '磁铁', Acorn: '橡果', Pebbles: '石子', Cushion: '靠垫',
-  Ring: '圆环', Gem: '宝石',
+  Whale: '鲸鱼',
+  Star: '星星',
+  Moon: '月亮',
+  Wave: '声波',
+  Squircle: '圆角方',
+  Bull: '牛角',
+  Blossom: '花朵',
+  Gumdrop: '软糖',
+  Peanut: '花生',
+  Bubbles: '泡泡',
+  Saucer: '飞碟',
+  Sprout: '嫩芽',
+  Bunny: '兔子',
+  Kitty: '小猫',
+  Beacon: '灯塔',
+  Plus: '加号',
+  Magnet: '磁铁',
+  Acorn: '橡果',
+  Pebbles: '石子',
+  Cushion: '靠垫',
+  Ring: '圆环',
+  Gem: '宝石',
 
   // Colors
-  Black: '黑', Brown: '棕', Red: '红', Orange: '橙', Yellow: '黄', Green: '绿', Cyan: '青', Blue: '蓝',
-  Violet: '紫', Magenta: '品红', Gray: '灰', Aurora: '极光', Deepseek: 'DeepSeek 蓝', Charcoal: '炭黑',
-  Graphite: '石墨', Rose: '玫瑰', Sky: '天蓝', Tangerine: '橘', Cobalt: '钴蓝',
+  Black: '黑',
+  Brown: '棕',
+  Red: '红',
+  Orange: '橙',
+  Yellow: '黄',
+  Green: '绿',
+  Cyan: '青',
+  Blue: '蓝',
+  Violet: '紫',
+  Magenta: '品红',
+  Gray: '灰',
+  Aurora: '极光',
+  Deepseek: 'DeepSeek 蓝',
+  Charcoal: '炭黑',
+  Graphite: '石墨',
+  Rose: '玫瑰',
+  Sky: '天蓝',
+  Tangerine: '橘',
+  Cobalt: '钴蓝',
 
   // Themes
-  DeepSeek: 'DeepSeek', Mono: '黑白', Paper: '纸张', Moonlight: '月光',
+  DeepSeek: 'DeepSeek',
+  Mono: '黑白',
+  Paper: '纸张',
+  Moonlight: '月光',
 
   // Settings dialog
   General: '通用',
@@ -789,7 +867,8 @@ export const ZH = {
   'Theme accent': '主题强调色',
   'Custom accent': '自定义强调色',
   'Bots · {count}': 'Bot · {count}',
-  'First in the sidebar. Pick another Bot to hand it the role; {name} then stops being a Main Bot.': '排在侧栏最上面。选另一个 Bot 就会把主 Bot 交给它，{name} 随之不再是主 Bot。',
+  'First in the sidebar. Pick another Bot to hand it the role; {name} then stops being a Main Bot.':
+    '排在侧栏最上面。选另一个 Bot 就会把主 Bot 交给它，{name} 随之不再是主 Bot。',
   'Choose a Bot…': '选择一个 Bot…',
   'Also a Main Bot.': '也是主 Bot。',
   'Move to first': '移到最前',
@@ -804,7 +883,7 @@ export const ZH = {
   'Scheduled tasks are turned off for this Bot.': '这个 Bot 的定时任务没有打开。',
   'Open settings': '打开设置',
   'Advanced settings': '高级设置',
-  'Agent': 'Agent',
+  Agent: 'Agent',
   'Settings pages': '设置页面',
   'Back to Bots': '返回 Bot 列表',
   'Close settings': '关闭设置',
@@ -838,7 +917,8 @@ export const ZH = {
   'Updating Moon Bot…': '正在更新 Moon Bot…',
   'Moon Bot {version} is installed. Restart to use it.': 'Moon Bot {version} 已安装，重启后生效',
   'Moon Bot update': 'Moon Bot 更新',
-  'Add a provider and a model in Moon Bot first, or pick one in the Bot\'s chat later.': '先在 Moon Bot 里添加服务商和模型，稍后也可以在 Bot 的聊天里选择。',
+  "Add a provider and a model in Moon Bot first, or pick one in the Bot's chat later.":
+    '先在 Moon Bot 里添加服务商和模型，稍后也可以在 Bot 的聊天里选择。',
   'No models are set up yet.': '还没有设置模型。',
   'Models, providers, and the rest of Moon Bot': '模型、服务商，以及 Moon Bot 的其他设置',
   'Moon Bot is up to date': 'Moon Bot 已是最新版本',
@@ -884,9 +964,11 @@ export const ZH = {
   'Condense this chat': '压缩这段对话',
   'Condensing…': '正在压缩…',
   'This chat was condensed.': '这段对话已压缩。',
-  'Another window is using this team, so this chat was not condensed.': '另一个窗口正在使用这个团队，所以这段对话没有压缩。',
+  'Another window is using this team, so this chat was not condensed.':
+    '另一个窗口正在使用这个团队，所以这段对话没有压缩。',
   'This chat is in the middle of a turn, so it was not condensed.': '这段对话正在回合中，所以没有压缩。',
-  'This chat still has a message waiting to be read, so it was not condensed.': '这段对话还有没读的消息，所以没有压缩。',
+  'This chat still has a message waiting to be read, so it was not condensed.':
+    '这段对话还有没读的消息，所以没有压缩。',
   'This chat is moving to a new part, so it was not condensed.': '这段对话正在换段，所以没有压缩。',
   'This chat was busy, so it was not condensed.': '这段对话正忙，所以没有压缩。',
   'This chat has no way to condense in place.': '这段对话没法在原地压缩。',
@@ -904,7 +986,8 @@ export const ZH = {
   'Message actions': '消息操作',
   Download: '下载',
   'Download as .zip': '打包下载 .zip',
-  'This file type has no preview. Download it to open it on your computer.': '这种文件暂时不能预览，下载后可在电脑上打开。',
+  'This file type has no preview. Download it to open it on your computer.':
+    '这种文件暂时不能预览，下载后可在电脑上打开。',
   'What can be previewed': '哪些文件可以预览',
   'Delivered files': '交付的文件',
   'Large file. The download may take a while.': '文件较大，下载可能需要等待。',
@@ -953,11 +1036,14 @@ export const ZH = {
   'Downloading {percent}%': '正在下载 {percent}%',
   'Unpacking…': '正在解压…',
   'Download failed.': '下载失败。',
-  'Downloaded in the background the first time it is needed (about 70 MB).': '安装包里不带，启动后在后台下载（约 70 MB）。',
+  'Downloaded in the background the first time it is needed (about 70 MB).':
+    '安装包里不带，启动后在后台下载（约 70 MB）。',
   'Download now': '立即下载',
-  'The portable exe does not update itself: download the new one from the releases page and replace this file. Your data stays.': '便携版不会自动更新：请到发布页下载新版替换这个文件，数据会保留。',
+  'The portable exe does not update itself: download the new one from the releases page and replace this file. Your data stays.':
+    '便携版不会自动更新：请到发布页下载新版替换这个文件，数据会保留。',
   'Updates work in the installed app.': '安装后的应用才会自动更新。',
-  'This package updates through its package manager; the AppImage and Windows installer update themselves.': '这个安装包请用系统包管理器更新；AppImage 和 Windows 安装版会自动更新。',
+  'This package updates through its package manager; the AppImage and Windows installer update themselves.':
+    '这个安装包请用系统包管理器更新；AppImage 和 Windows 安装版会自动更新。',
   Tool: '工具',
   Running: '进行中',
   Failed: '失败',
@@ -1072,7 +1158,8 @@ export const ZH = {
   '{name} needs a key': '{name} 需要一个密钥',
   'Saved for {scope}': '已保存，可用范围：{scope}',
   'Value of {name}': '{name} 的值',
-  "{bot} never sees the value. It reaches {bot}'s shell as ": '{bot} 永远看不到这个值。它会作为下面的环境变量进入 {bot} 的 shell：',
+  "{bot} never sees the value. It reaches {bot}'s shell as ":
+    '{bot} 永远看不到这个值。它会作为下面的环境变量进入 {bot} 的 shell：',
   ' At least {count} characters.': ' 至少 {count} 个字符。',
   'At least {count} characters.': '至少 {count} 个字符。',
   'Replace value': '替换值',
@@ -1106,7 +1193,8 @@ export const ZH = {
   Value: '值',
   'New keys are for all Bots; narrow it down afterwards.': '新密钥默认所有 Bot 可用，之后可以收窄。',
   'Save key': '保存密钥',
-  'Keys your Bots asked for. Bots never see the values: they use them as ': '你的 Bot 请求过的密钥。Bot 永远看不到值：它们在 shell 里通过 ',
+  'Keys your Bots asked for. Bots never see the values: they use them as ':
+    '你的 Bot 请求过的密钥。Bot 永远看不到值：它们在 shell 里通过 ',
   ' in their shell, and every value is replaced by ': ' 使用，而且发给模型之前，每个值都会被替换成 ',
   ' before anything goes to a model.': '。',
   'Secrets · {count}': '密钥 · {count}',
@@ -1131,9 +1219,11 @@ export const ZH = {
   'The summary is out of date: {reason}': '摘要不是最新的：{reason}',
   'The summary could not be written: {reason}': '摘要没能生成：{reason}',
   '{name} has not saved anything yet': '{name} 还没有记住任何内容',
-  'Bots keep lasting preferences, decisions, and what you ask them to remember. Tell {name} below, or in its chat.': 'Bot 会记住长期的偏好、做过的决定，以及你让它记住的事。可以在下面告诉 {name}，也可以在对话里说。',
+  'Bots keep lasting preferences, decisions, and what you ask them to remember. Tell {name} below, or in its chat.':
+    'Bot 会记住长期的偏好、做过的决定，以及你让它记住的事。可以在下面告诉 {name}，也可以在对话里说。',
   'Nothing is saved for this group yet': '这个群还没有记住任何内容',
-  'A group keeps the decisions, rules, and facts its work needs, for its members to read here. Tell it below, or in the group.': '群会记住工作需要的决定、规则和事实，只有群成员在这个群里会读。可以在下面告诉它，也可以在群里说。',
+  'A group keeps the decisions, rules, and facts its work needs, for its members to read here. Tell it below, or in the group.':
+    '群会记住工作需要的决定、规则和事实，只有群成员在这个群里会读。可以在下面告诉它，也可以在群里说。',
   'Team memory': '团队记忆',
   'Every Bot reads it': '所有 Bot 都会读',
   'Group memory': '群记忆',
@@ -1183,7 +1273,8 @@ export const ZH = {
   'Search or enter address': '搜索或输入网址',
   'This page didn’t load': '页面没有加载出来',
   'Try again': '重试',
-  'Open a page here and {name} can read it with you. Logins and cookies stay with {name}; other Bots never see them.': '在这里打开网页，{name} 就能和你一起读。登录状态和 cookie 只属于 {name}，其他 Bot 看不到。',
+  'Open a page here and {name} can read it with you. Logins and cookies stay with {name}; other Bots never see them.':
+    '在这里打开网页，{name} 就能和你一起读。登录状态和 cookie 只属于 {name}，其他 Bot 看不到。',
   'Only http and https addresses open here.': '这里只能打开 http 和 https 地址。',
   'The page crashed.': '页面崩溃了。',
   'The browser blocked the new window.': '浏览器拦截了新窗口。',
@@ -1284,7 +1375,8 @@ export const ZH = {
   'Version {version}': '版本 {version}',
   'Star Moon Bot on GitHub': '在 GitHub 上给 Moon Bot 点 Star',
   '{count} stars': '{count} 个 Star',
-  'If Moon Bot helps you, a star on GitHub helps more people find it.': '如果 Moon Bot 对你有用，欢迎在 GitHub 上点个 Star，让更多人看到它。',
+  'If Moon Bot helps you, a star on GitHub helps more people find it.':
+    '如果 Moon Bot 对你有用，欢迎在 GitHub 上点个 Star，让更多人看到它。',
   Updates: '更新',
   Runtime: '运行时',
   'Check for updates': '检查更新',
@@ -1304,26 +1396,34 @@ export const ZH = {
   Feedback: '反馈',
   'Report a problem': '报告问题',
   'What happened?': '发生了什么？',
-  'What you did, what you expected, and what happened instead. It goes into the issue.': '你做了什么、期望什么、实际发生了什么。会写进 issue。',
+  'What you did, what you expected, and what happened instead. It goes into the issue.':
+    '你做了什么、期望什么、实际发生了什么。会写进 issue。',
   'For example: I asked Writer in the group chat and it showed an error.': '例如：我在群聊里问 Writer，它显示出错了。',
   Diagnostics: '诊断信息',
-  'Versions, system, models, and the latest errors. Saved keys, tokens, and your home folder are hidden.': '版本、系统、模型和最近的错误。已保存的密钥、令牌和你的用户目录都已隐藏。',
+  'Versions, system, models, and the latest errors. Saved keys, tokens, and your home folder are hidden.':
+    '版本、系统、模型和最近的错误。已保存的密钥、令牌和你的用户目录都已隐藏。',
   Show: '查看',
   Hide: '收起',
   'GitHub issue': 'GitHub issue',
-  'Opens a new issue in the Moon Bot repository with all of this filled in. Nothing is sent until you submit it there.': '在 Moon Bot 仓库新建一个 issue，并填好以上内容。你在 GitHub 上提交之前，什么都不会发出。',
+  'Opens a new issue in the Moon Bot repository with all of this filled in. Nothing is sent until you submit it there.':
+    '在 Moon Bot 仓库新建一个 issue，并填好以上内容。你在 GitHub 上提交之前，什么都不会发出。',
   'Report on GitHub': '在 GitHub 上报告',
   'Copied the diagnostics.': '已复制诊断信息。',
   'Could not copy. Select the text below and copy it.': '无法复制。请选中下面的文字手动复制。',
-  'Opened a new GitHub issue with the diagnostics filled in. Check it before you submit.': '已打开新的 GitHub issue，诊断信息已填好。提交前请检查一遍。',
-  'Opened a new GitHub issue. The diagnostics are long, so they are on the clipboard: paste them into the issue.': '已打开新的 GitHub issue。诊断信息太长，已复制到剪贴板，请粘贴到 issue 里。',
-  'Opened a new GitHub issue. Copy the diagnostics below into it.': '已打开新的 GitHub issue。请把下面的诊断信息复制进去。',
-  'Downloaded the log. Keys, tokens, and your home folder are hidden in it.': '已下载日志。里面的密钥、令牌和用户目录都已隐藏。',
+  'Opened a new GitHub issue with the diagnostics filled in. Check it before you submit.':
+    '已打开新的 GitHub issue，诊断信息已填好。提交前请检查一遍。',
+  'Opened a new GitHub issue. The diagnostics are long, so they are on the clipboard: paste them into the issue.':
+    '已打开新的 GitHub issue。诊断信息太长，已复制到剪贴板，请粘贴到 issue 里。',
+  'Opened a new GitHub issue. Copy the diagnostics below into it.':
+    '已打开新的 GitHub issue。请把下面的诊断信息复制进去。',
+  'Downloaded the log. Keys, tokens, and your home folder are hidden in it.':
+    '已下载日志。里面的密钥、令牌和用户目录都已隐藏。',
   'Cleared the error log.': '已清空错误日志。',
   'Recent errors': '最近的错误',
   'Recent errors · {count}': '最近的错误 · {count}',
   'No errors recorded.': '没有错误记录。',
-  'Failed model calls and Moon Bot problems show here, newest first.': '模型调用失败和 Moon Bot 的问题会显示在这里，最新的在前。',
+  'Failed model calls and Moon Bot problems show here, newest first.':
+    '模型调用失败和 Moon Bot 的问题会显示在这里，最新的在前。',
   'Model call': '模型调用',
   'This window': '这个窗口',
   'Error log': '错误日志',
@@ -1431,23 +1531,28 @@ export const ZH = {
   'Some folders are not shown.': '还有一些文件夹没有显示。',
   'Enter an address': '输入网址',
   'Hi, I’m {name}': '你好，我是 {name}',
-  'I lead your Bot team. Tell me what you need, or ask me to set up a Bot for a job.': '我负责你的 Bot 团队。直接告诉我你要做什么，或者让我为某个任务创建一个 Bot。',
+  'I lead your Bot team. Tell me what you need, or ask me to set up a Bot for a job.':
+    '我负责你的 Bot 团队。直接告诉我你要做什么，或者让我为某个任务创建一个 Bot。',
   'Start a chat with {name}': '开始和 {name} 对话',
-  '{role}. Tell {name} what you need; the work stays in this chat.': '{role}。直接告诉 {name} 你要做什么，相关工作都会留在这段对话里。',
+  '{role}. Tell {name} what you need; the work stays in this chat.':
+    '{role}。直接告诉 {name} 你要做什么，相关工作都会留在这段对话里。',
   'Tell {name} what you need; the work stays in this chat.': '直接告诉 {name} 你要做什么，相关工作都会留在这段对话里。',
   'Welcome to {name}': '欢迎来到「{name}」',
   'Write to everyone here, or call one member with @Name.': '在这里发消息大家都能看到，也可以用 @名字 点名某一位成员。',
   'Messages these Bots send each other show up here.': '这两个 Bot 互相发送的消息会显示在这里。',
   'No files in this folder yet': '这个文件夹里还没有文件',
-  'Files this Bot creates or edits in its working folder show up here.': 'Bot 在工作文件夹里创建或修改的文件会显示在这里。',
+  'Files this Bot creates or edits in its working folder show up here.':
+    'Bot 在工作文件夹里创建或修改的文件会显示在这里。',
   'No working folder is set': '还没有设置工作文件夹',
   'Pick a working folder so this chat can browse and save files.': '选一个工作文件夹，这段对话就能浏览和保存文件。',
   'Open details': '打开详情',
   'Try another name, or clear the search.': '换个名字试试，或者清空搜索。',
   'No results for “{query}”': '没有找到「{query}」的相关结果',
-  'A scheduled task sends a prompt to a Bot or group on its own.': '定时任务会按你设定的时间，自动向 Bot 或群聊发送提示。',
+  'A scheduled task sends a prompt to a Bot or group on its own.':
+    '定时任务会按你设定的时间，自动向 Bot 或群聊发送提示。',
   'Build your Bot team': '组建你的 Bot 团队',
-  'Each Bot has its own chat, instructions and memory. Create one, or ask your Main Bot to set one up.': '每个 Bot 都有独立的对话、指令和记忆。你可以直接创建，也可以让主 Bot 帮你建。',
+  'Each Bot has its own chat, instructions and memory. Create one, or ask your Main Bot to set one up.':
+    '每个 Bot 都有独立的对话、指令和记忆。你可以直接创建，也可以让主 Bot 帮你建。',
 }
 
 // Host errors stay English, since Bots read them too; they are translated where the
@@ -1467,7 +1572,8 @@ const HOST_ZH: Record<string, string> = {
   'Unknown group chat': '找不到这个群聊',
   'No Bot is left in this group chat': '这个群聊里已经没有 Bot 了',
   'That group chat has been deleted': '这个群聊已经删除了',
-  'Hand the admin role to another member instead of leaving the group without one': '请把管理员交给其他成员，不要让群聊没有管理员',
+  'Hand the admin role to another member instead of leaving the group without one':
+    '请把管理员交给其他成员，不要让群聊没有管理员',
   'Hand the admin role to another member before leaving the group': '离开群聊前，请先把管理员交给其他成员',
   'The team needs at least one Main Bot': '团队至少要有一个主 Bot',
   'Only a Main Bot can be replaced': '只能替换主 Bot',
@@ -1478,7 +1584,8 @@ const HOST_ZH: Record<string, string> = {
   'Choose every Bot or a list of Bots': '请选择所有 Bot 或指定的 Bot',
   'This request is gone': '这个请求已经不存在了',
   'This request was already answered': '这个请求已经处理过了',
-  'A name uses capitals, digits, and underscores, and starts with a letter': '名字只能用大写字母、数字和下划线，并以字母开头',
+  'A name uses capitals, digits, and underscores, and starts with a letter':
+    '名字只能用大写字母、数字和下划线，并以字母开头',
   'No such key': '没有这个密钥',
   'Type a question or a change first': '请先输入问题或要改的内容',
   'No model is available. Add one in Settings → Models.': '没有可用的模型，请先在「设置 → 模型」里添加。',

@@ -46,7 +46,32 @@ export const SHEET_GROUPS: readonly SheetGroup[] = [
   { tag: 'conversation', css: CONVERSATION_CSS, parts: ['CONVERSATION_CSS'] },
   { tag: 'secrets', css: SECRET_CSS, parts: ['SECRET_CSS'] },
   { tag: 'providers', css: PROVIDERS_CSS, parts: ['PROVIDERS_CSS'] },
-  { tag: 'models', css: MODEL_CSS + FOLDER_CSS + ENGINE_CSS + SETTINGS_CHROME_CSS + BOT_SETTINGS_CSS + GROUP_SETTINGS_CSS + MARKET_CSS + CAPABILITY_CSS + RELAY_PAGE_CSS + TASKS_CSS, parts: ['MODEL_CSS', 'FOLDER_CSS', 'ENGINE_CSS', 'SETTINGS_CHROME_CSS', 'BOT_SETTINGS_CSS', 'GROUP_SETTINGS_CSS', 'MARKET_CSS', 'CAPABILITY_CSS', 'RELAY_PAGE_CSS', 'TASKS_CSS'] },
+  {
+    tag: 'models',
+    css:
+      MODEL_CSS +
+      FOLDER_CSS +
+      ENGINE_CSS +
+      SETTINGS_CHROME_CSS +
+      BOT_SETTINGS_CSS +
+      GROUP_SETTINGS_CSS +
+      MARKET_CSS +
+      CAPABILITY_CSS +
+      RELAY_PAGE_CSS +
+      TASKS_CSS,
+    parts: [
+      'MODEL_CSS',
+      'FOLDER_CSS',
+      'ENGINE_CSS',
+      'SETTINGS_CHROME_CSS',
+      'BOT_SETTINGS_CSS',
+      'GROUP_SETTINGS_CSS',
+      'MARKET_CSS',
+      'CAPABILITY_CSS',
+      'RELAY_PAGE_CSS',
+      'TASKS_CSS',
+    ],
+  },
   { tag: 'usage', css: USAGE_CSS, parts: ['USAGE_CSS'] },
   { tag: 'schedules', css: SCHEDULE_CSS, parts: ['SCHEDULE_CSS'] },
   { tag: 'feedback', css: FEEDBACK_CSS, parts: ['FEEDBACK_CSS'] },
@@ -56,7 +81,19 @@ export const SHEET_GROUPS: readonly SheetGroup[] = [
   { tag: 'mention-chips', css: MENTION_CHIPS_CSS, parts: ['MENTION_CHIPS_CSS'] },
   { tag: 'widgets', css: WIDGET_CSS, parts: ['WIDGET_CSS'] },
   { tag: 'browser', css: BROWSER_CSS, parts: ['BROWSER_CSS'] },
-  { tag: 'work-process', css: EMPTY_STATE_CSS + WELCOME_CSS + PROCESS_CSS + RETRY_CSS + STARTERS_CSS + FILES_PANEL_CSS + DELIVER_CSS, parts: ['EMPTY_STATE_CSS', 'WELCOME_CSS', 'PROCESS_CSS', 'RETRY_CSS', 'STARTERS_CSS', 'FILES_PANEL_CSS', 'DELIVER_CSS'] },
+  {
+    tag: 'work-process',
+    css: EMPTY_STATE_CSS + WELCOME_CSS + PROCESS_CSS + RETRY_CSS + STARTERS_CSS + FILES_PANEL_CSS + DELIVER_CSS,
+    parts: [
+      'EMPTY_STATE_CSS',
+      'WELCOME_CSS',
+      'PROCESS_CSS',
+      'RETRY_CSS',
+      'STARTERS_CSS',
+      'FILES_PANEL_CSS',
+      'DELIVER_CSS',
+    ],
+  },
   { tag: 'return', css: RETURN_CSS, parts: ['RETURN_CSS'] },
   { tag: 'mobile', css: MOBILE_CSS, parts: ['MOBILE_CSS'] },
 ]

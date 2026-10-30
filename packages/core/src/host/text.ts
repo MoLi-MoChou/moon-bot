@@ -4,7 +4,7 @@ import { COLORS, EXTRA_COLORS, LEGACY_COLORS, OWN_CHAT_LINE_MAX } from './consta
 
 /** A color id saved under its legacy name reads as the current one. */
 export const currentColor = (color: string | undefined): string | undefined =>
-  (typeof color === 'string' && Object.hasOwn(LEGACY_COLORS, color) ? LEGACY_COLORS[color] : color)
+  typeof color === 'string' && Object.hasOwn(LEGACY_COLORS, color) ? LEGACY_COLORS[color] : color
 
 /** Whether `color` names a Bot color: a palette id or a `#rrggbb` ink. */
 export const isColor = (color: unknown): color is string =>
@@ -23,16 +23,24 @@ interface ContentBlock {
 }
 
 /** The text of a message's content blocks, joined and trimmed. */
-export const textOf = (content: unknown): string => (Array.isArray(content) ? content : [])
-  .filter((block): block is ContentBlock => block !== null && typeof block === 'object')
-  .filter(block => block.type === 'text' && typeof block.text === 'string')
-  .map(block => block.text as string)
-  .join('\n')
-  .trim()
+export const textOf = (content: unknown): string =>
+  (Array.isArray(content) ? content : [])
+    .filter((block): block is ContentBlock => block !== null && typeof block === 'object')
+    .filter(block => block.type === 'text' && typeof block.text === 'string')
+    .map(block => block.text as string)
+    .join('\n')
+    .trim()
 
-export const normalize = (value: unknown): string => String(value ?? '').trim().toLowerCase()
+export const normalize = (value: unknown): string =>
+  String(value ?? '')
+    .trim()
+    .toLowerCase()
 
-export const unquote = (text: unknown): string => String(text ?? '').trim().replace(/^["'“”「『《]+|["'“”」』》]+$/g, '').trim()
+export const unquote = (text: unknown): string =>
+  String(text ?? '')
+    .trim()
+    .replace(/^["'“”「『《]+|["'“”」』》]+$/g, '')
+    .trim()
 
 export const escapeRegExp = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
@@ -50,7 +58,8 @@ export const estimateTokens = (text: string): number => {
   return Math.ceil(tokens)
 }
 
-export const clip = (text: string, max: number, rest: string): string => (text.length > max ? `${text.slice(0, max)}… (cut; ${rest})` : text)
+export const clip = (text: string, max: number, rest: string): string =>
+  text.length > max ? `${text.slice(0, max)}… (cut; ${rest})` : text
 
 /** The first `max` UTF-16 units of a text, never half of a character. */
 export const headOf = (text: string, max: number): string => {
@@ -65,7 +74,11 @@ export type Clock = (time: number | undefined) => string
 export const createClock = (timeZone?: string): Clock => {
   const clockFormat = new Intl.DateTimeFormat('en-CA', {
     ...(timeZone !== undefined ? { timeZone } : {}),
-    month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
   })
   return time => (Number.isFinite(time) ? clockFormat.format(time).replace(',', '') : '?')
 }

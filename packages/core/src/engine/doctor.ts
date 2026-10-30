@@ -73,17 +73,26 @@ const report = (id: string, steps: readonly DoctorStep[], passed?: boolean): Doc
   return { id, ok: passed ?? filled.every(step => step.status === 'ok'), steps: filled }
 }
 
-const versionStep = (version: string, failure?: string): DoctorStep => (
-  version === '' ? { name: 'version', status: 'fail', detail: failure ?? 'no version output' } : { name: 'version', status: 'ok', detail: version }
-)
+const versionStep = (version: string, failure?: string): DoctorStep =>
+  version === ''
+    ? { name: 'version', status: 'fail', detail: failure ?? 'no version output' }
+    : { name: 'version', status: 'ok', detail: version }
 
 /** Walk executable → version → handshake → one session. Never sends a prompt. */
-export async function examine(subject: DoctorSubject, probe: DoctorProbe, options: DoctorOptions): Promise<DoctorReport> {
+export async function examine(
+  subject: DoctorSubject,
+  probe: DoctorProbe,
+  options: DoctorOptions,
+): Promise<DoctorReport> {
   if (subject.kind === 'builtin') {
-    return report(subject.id, [
-      { name: 'executable', status: 'ok', detail: 'built-in engine' },
-      ...skipFrom('version', 'not an external process'),
-    ], true)
+    return report(
+      subject.id,
+      [
+        { name: 'executable', status: 'ok', detail: 'built-in engine' },
+        ...skipFrom('version', 'not an external process'),
+      ],
+      true,
+    )
   }
   if (subject.onDemand === true) {
     const version = subject.version?.trim() ?? ''
@@ -124,10 +133,17 @@ export async function examine(subject: DoctorSubject, probe: DoctorProbe, option
     }
   }
   try {
-    const facts = await probe.handshake(subject.command?.trim() || path, subject.args ?? [], options.cwd, options.timeoutMs ?? TIMEOUT_MS)
+    const facts = await probe.handshake(
+      subject.command?.trim() || path,
+      subject.args ?? [],
+      options.cwd,
+      options.timeoutMs ?? TIMEOUT_MS,
+    )
     steps.push({ name: 'handshake', status: 'ok', detail: facts.agent?.trim() || 'initialized' })
-    if (facts.methods.includes('session/prompt')) steps.push({ name: 'session', status: 'fail', detail: 'doctor must not send a prompt' })
-    else if (facts.sessionId === undefined || facts.sessionId.trim() === '') steps.push({ name: 'session', status: 'fail', detail: 'no session id' })
+    if (facts.methods.includes('session/prompt'))
+      steps.push({ name: 'session', status: 'fail', detail: 'doctor must not send a prompt' })
+    else if (facts.sessionId === undefined || facts.sessionId.trim() === '')
+      steps.push({ name: 'session', status: 'fail', detail: 'no session id' })
     else steps.push({ name: 'session', status: 'ok', detail: facts.sessionId })
   } catch (error) {
     const failed = error instanceof DoctorStepError ? error.step : 'handshake'
@@ -144,5 +160,7 @@ export async function examine(subject: DoctorSubject, probe: DoctorProbe, option
 
 /** One tab-separated line per check, in walk order. */
 export function formatDoctor(result: DoctorReport): string {
-  return result.steps.map(step => `${step.name}\t${step.status}${step.detail === undefined ? '' : `\t${step.detail}`}`).join('\n')
+  return result.steps
+    .map(step => `${step.name}\t${step.status}${step.detail === undefined ? '' : `\t${step.detail}`}`)
+    .join('\n')
 }

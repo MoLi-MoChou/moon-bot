@@ -34,7 +34,15 @@ const team = () => ({
   whaleStored: true,
 })
 
-const secret = (name: string, value: string, scope: string | readonly string[] = 'all') => ({ name, value, purpose: '', scope, requestedBy: null, createdAt: 1, updatedAt: 1 })
+const secret = (name: string, value: string, scope: string | readonly string[] = 'all') => ({
+  name,
+  value,
+  purpose: '',
+  scope,
+  requestedBy: null,
+  createdAt: 1,
+  updatedAt: 1,
+})
 
 function fakeAgent(sessionId: string) {
   const disposers: (() => void)[] = []
@@ -45,12 +53,20 @@ function fakeAgent(sessionId: string) {
         const dispose = execute()
         if (typeof dispose === 'function') disposers.push(dispose as () => void)
       },
-      dispose() { for (const dispose of disposers.splice(0).reverse()) dispose() },
+      dispose() {
+        for (const dispose of disposers.splice(0).reverse()) dispose()
+      },
     },
   }
 }
 
-async function setup({ state = team(), secrets = [] }: { state?: Record<string, unknown>, secrets?: readonly Record<string, unknown>[] } = {}) {
+async function setup({
+  state = team(),
+  secrets = [],
+}: {
+  state?: Record<string, unknown>
+  secrets?: readonly Record<string, unknown>[]
+} = {}) {
   const home = mkdtempSync(join(tmpdir(), 'dsb-stdio-secrets-'))
   writeFileSync(join(home, 'state.json'), JSON.stringify(state))
   if (secrets.length > 0) writeFileSync(join(home, 'secrets.json'), JSON.stringify({ secrets }))
@@ -83,7 +99,7 @@ async function setup({ state = team(), secrets = [] }: { state?: Record<string, 
 const statusOf = (rt, botId, name) => rt.capabilityStatusesView()[botId]?.[name]
 const textOf = outcome => {
   const content = outcome?.content ?? []
-  return content[0]?.type === 'text' ? content[0].text ?? '' : ''
+  return content[0]?.type === 'text' ? (content[0].text ?? '') : ''
 }
 const callTool = async (rt, name) => {
   const definition = rt.toolRegistry.definitions([name])[0]
@@ -96,26 +112,47 @@ const waitForState = async (rt, botId, name, wanted) => {
     if (statusOf(rt, botId, name)?.state === wanted) return
     await new Promise(resolve => setTimeout(resolve, 25))
   }
-  assert.fail(`timed out waiting for ${botId}.${name} to be ${wanted}; observed: ${JSON.stringify(statusOf(rt, botId, name))}`)
+  assert.fail(
+    `timed out waiting for ${botId}.${name} to be ${wanted}; observed: ${JSON.stringify(statusOf(rt, botId, name))}`,
+  )
 }
 
 // Saves a stdio MCP capability, allows it, attaches it to `botId`, and mounts it on that
 // Bot's Agent — the same path the service uses when a Bot's Agent is created.
-async function mountStdio(env, { name, args, env: envMap, botId = 'chief' }: { name: string, args: readonly string[], env: Record<string, string>, botId?: string }) {
+async function mountStdio(
+  env,
+  {
+    name,
+    args,
+    env: envMap,
+    botId = 'chief',
+  }: { name: string; args: readonly string[]; env: Record<string, string>; botId?: string },
+) {
   const { ctx, rt } = env
-  await rt.capabilitySave({ name, kind: 'mcp', description: '', transport: 'stdio', command: process.execPath, args, env: envMap }, { botId })
+  await rt.capabilitySave(
+    { name, kind: 'mcp', description: '', transport: 'stdio', command: process.execPath, args, env: envMap },
+    { botId },
+  )
   await rt.capabilityEndpoint('capability-approve', { name })
   await rt.changeCapabilityAttachment('attach', { name }, botId)
   ctx.emit('agent/created', { agent: env.agentFor(botId) })
   await rt.scheduleCapabilitiesReconcile()
 }
 
-test('stdio MCP args resolve secret references like env does, and the child process sees the values', async (t) => {
-  const env = await setup({ secrets: [secret('MCP_TOKEN', 'fake-dummy-secret-125'), secret('MCP_REGION', 'fake-region-125')] })
+test('stdio MCP args resolve secret references like env does, and the child process sees the values', async t => {
+  const env = await setup({
+    secrets: [secret('MCP_TOKEN', 'fake-dummy-secret-125'), secret('MCP_REGION', 'fake-region-125')],
+  })
   t.after(() => env.dispose())
   await mountStdio(env, {
     name: 'echo',
-    args: [FIXTURE, '--token', '$DSH_SECRET_MCP_TOKEN', 'pre$DSH_SECRET_MCP_TOKEN/$DSH_SECRET_MCP_REGION-post', 'plain'],
+    args: [
+      FIXTURE,
+      '--token',
+      '$DSH_SECRET_MCP_TOKEN',
+      'pre$DSH_SECRET_MCP_TOKEN/$DSH_SECRET_MCP_REGION-post',
+      'plain',
+    ],
     env: { MCP_TEST_ENV: '$DSH_SECRET_MCP_REGION' },
   })
   await waitForState(env.rt, 'chief', 'echo', 'ready')
@@ -132,8 +169,10 @@ test('stdio MCP args resolve secret references like env does, and the child proc
   assert.equal(env.rt.capabilityStatusesView().chief.echo.state, 'ready')
 })
 
-test('a missing or forbidden secret in stdio args keeps the server from starting, without leaking values', async (t) => {
-  const env = await setup({ secrets: [secret('MCP_TOKEN', 'fake-dummy-secret-125', ['chief']), secret('OTHER_KEY', 'other-secret-125')] })
+test('a missing or forbidden secret in stdio args keeps the server from starting, without leaking values', async t => {
+  const env = await setup({
+    secrets: [secret('MCP_TOKEN', 'fake-dummy-secret-125', ['chief']), secret('OTHER_KEY', 'other-secret-125')],
+  })
   t.after(() => env.dispose())
   // MCP_TOKEN is scoped to chief, so worker's mount must fail before the process starts.
   await mountStdio(env, { name: 'denied', args: [FIXTURE, '$DSH_SECRET_MCP_TOKEN'], env: {}, botId: 'worker' })
@@ -142,12 +181,18 @@ test('a missing or forbidden secret in stdio args keeps the server from starting
   assert.match(denied.error, /MCP_TOKEN/)
   assert.equal(denied.error.includes('fake-dummy-secret-125'), false)
   assert.equal(denied.error.includes('other-secret-125'), false)
-  assert.equal(env.rt.toolRegistry.names().some(name => name.startsWith('mcp__denied__')), false)
+  assert.equal(
+    env.rt.toolRegistry.names().some(name => name.startsWith('mcp__denied__')),
+    false,
+  )
   // A name that is not saved at all fails the same way.
   await mountStdio(env, { name: 'missing', args: [FIXTURE, 'x$DSH_SECRET_NO_SUCH_KEY'], env: {}, botId: 'chief' })
   await waitForState(env.rt, 'chief', 'missing', 'error')
   const missing = statusOf(env.rt, 'chief', 'missing')
   assert.match(missing.error, /NO_SUCH_KEY/)
   assert.equal(missing.error.includes('other-secret-125'), false)
-  assert.equal(env.rt.toolRegistry.names().some(name => name.startsWith('mcp__missing__')), false)
+  assert.equal(
+    env.rt.toolRegistry.names().some(name => name.startsWith('mcp__missing__')),
+    false,
+  )
 })

@@ -1,4 +1,4 @@
-import type { ConnectorCatalogEntry } from '../connector-catalog.ts';
+import type { ConnectorCatalogEntry } from '../connector-catalog.ts'
 
 export const SOCIAL_CONNECTORS: readonly ConnectorCatalogEntry[] = [
   {
@@ -10,7 +10,9 @@ export const SOCIAL_CONNECTORS: readonly ConnectorCatalogEntry[] = [
     command: 'npx',
     args: ['-y', 'discord-mcp-server'],
     env: { DISCORD_BOT_TOKEN: '$MOON_BOT_SECRET_DISCORD_BOT_TOKEN' },
-    secrets: [{ name: 'DISCORD_BOT_TOKEN', label: 'Discord Bot Token', url: 'https://discord.com/developers/applications' }],
+    secrets: [
+      { name: 'DISCORD_BOT_TOKEN', label: 'Discord Bot Token', url: 'https://discord.com/developers/applications' },
+    ],
     website: 'https://discord.com',
   },
   {
@@ -34,7 +36,13 @@ export const SOCIAL_CONNECTORS: readonly ConnectorCatalogEntry[] = [
     command: 'npx',
     args: ['-y', 'twitter-mcp'],
     env: { TWITTER_BEARER_TOKEN: '$MOON_BOT_SECRET_TWITTER_BEARER_TOKEN' },
-    secrets: [{ name: 'TWITTER_BEARER_TOKEN', label: 'X (Twitter) Bearer Token', url: 'https://developer.x.com/en/portal/dashboard' }],
+    secrets: [
+      {
+        name: 'TWITTER_BEARER_TOKEN',
+        label: 'X (Twitter) Bearer Token',
+        url: 'https://developer.x.com/en/portal/dashboard',
+      },
+    ],
     website: 'https://x.com',
   },
   {
@@ -45,7 +53,10 @@ export const SOCIAL_CONNECTORS: readonly ConnectorCatalogEntry[] = [
     transport: 'stdio',
     command: 'npx',
     args: ['-y', 'reddit-mcp'],
-    env: { REDDIT_CLIENT_ID: '$MOON_BOT_SECRET_REDDIT_CLIENT_ID', REDDIT_CLIENT_SECRET: '$MOON_BOT_SECRET_REDDIT_CLIENT_SECRET' },
+    env: {
+      REDDIT_CLIENT_ID: '$MOON_BOT_SECRET_REDDIT_CLIENT_ID',
+      REDDIT_CLIENT_SECRET: '$MOON_BOT_SECRET_REDDIT_CLIENT_SECRET',
+    },
     secrets: [
       { name: 'REDDIT_CLIENT_ID', label: 'Reddit App Client ID' },
       { name: 'REDDIT_CLIENT_SECRET', label: 'Reddit App Client Secret' },
@@ -61,7 +72,13 @@ export const SOCIAL_CONNECTORS: readonly ConnectorCatalogEntry[] = [
     command: 'npx',
     args: ['-y', 'youtube-mcp'],
     env: { YOUTUBE_API_KEY: '$MOON_BOT_SECRET_YOUTUBE_API_KEY' },
-    secrets: [{ name: 'YOUTUBE_API_KEY', label: 'YouTube Data API v3 Key', url: 'https://console.cloud.google.com/apis/credentials' }],
+    secrets: [
+      {
+        name: 'YOUTUBE_API_KEY',
+        label: 'YouTube Data API v3 Key',
+        url: 'https://console.cloud.google.com/apis/credentials',
+      },
+    ],
     website: 'https://www.youtube.com',
   },
   {
@@ -72,7 +89,10 @@ export const SOCIAL_CONNECTORS: readonly ConnectorCatalogEntry[] = [
     transport: 'stdio',
     command: 'npx',
     args: ['-y', 'spotify-mcp'],
-    env: { SPOTIFY_CLIENT_ID: '$MOON_BOT_SECRET_SPOTIFY_CLIENT_ID', SPOTIFY_CLIENT_SECRET: '$MOON_BOT_SECRET_SPOTIFY_CLIENT_SECRET' },
+    env: {
+      SPOTIFY_CLIENT_ID: '$MOON_BOT_SECRET_SPOTIFY_CLIENT_ID',
+      SPOTIFY_CLIENT_SECRET: '$MOON_BOT_SECRET_SPOTIFY_CLIENT_SECRET',
+    },
     secrets: [
       { name: 'SPOTIFY_CLIENT_ID', label: 'Spotify Client ID' },
       { name: 'SPOTIFY_CLIENT_SECRET', label: 'Spotify Client Secret' },
@@ -87,7 +107,10 @@ export const SOCIAL_CONNECTORS: readonly ConnectorCatalogEntry[] = [
     transport: 'stdio',
     command: 'npx',
     args: ['-y', 'twilio-mcp'],
-    env: { TWILIO_ACCOUNT_SID: '$MOON_BOT_SECRET_TWILIO_ACCOUNT_SID', TWILIO_AUTH_TOKEN: '$MOON_BOT_SECRET_TWILIO_AUTH_TOKEN' },
+    env: {
+      TWILIO_ACCOUNT_SID: '$MOON_BOT_SECRET_TWILIO_ACCOUNT_SID',
+      TWILIO_AUTH_TOKEN: '$MOON_BOT_SECRET_TWILIO_AUTH_TOKEN',
+    },
     secrets: [
       { name: 'TWILIO_ACCOUNT_SID', label: 'Twilio Account SID' },
       { name: 'TWILIO_AUTH_TOKEN', label: 'Twilio Auth Token', url: 'https://console.twilio.com' },
@@ -103,7 +126,9 @@ export const SOCIAL_CONNECTORS: readonly ConnectorCatalogEntry[] = [
     command: 'npx',
     args: ['-y', 'sendgrid-mcp'],
     env: { SENDGRID_API_KEY: '$MOON_BOT_SECRET_SENDGRID_API_KEY' },
-    secrets: [{ name: 'SENDGRID_API_KEY', label: 'SendGrid API Key', url: 'https://app.sendgrid.com/settings/api_keys' }],
+    secrets: [
+      { name: 'SENDGRID_API_KEY', label: 'SendGrid API Key', url: 'https://app.sendgrid.com/settings/api_keys' },
+    ],
     website: 'https://sendgrid.com',
   },
-];
+]

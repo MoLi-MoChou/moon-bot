@@ -1,4 +1,4 @@
-import type { ConnectorCatalogEntry } from '../connector-catalog.ts';
+import type { ConnectorCatalogEntry } from '../connector-catalog.ts'
 
 export const DEV_CONNECTORS: readonly ConnectorCatalogEntry[] = [
   {
@@ -9,7 +9,9 @@ export const DEV_CONNECTORS: readonly ConnectorCatalogEntry[] = [
     transport: 'streamable-http',
     url: 'https://mcp.sentry.dev/mcp',
     headers: { Authorization: 'Bearer $MOON_BOT_SECRET_SENTRY_ACCESS_TOKEN' },
-    secrets: [{ name: 'SENTRY_ACCESS_TOKEN', label: 'Sentry access token', url: 'https://sentry.io/settings/auth-tokens/' }],
+    secrets: [
+      { name: 'SENTRY_ACCESS_TOKEN', label: 'Sentry access token', url: 'https://sentry.io/settings/auth-tokens/' },
+    ],
     website: 'https://sentry.io',
   },
   {
@@ -21,7 +23,13 @@ export const DEV_CONNECTORS: readonly ConnectorCatalogEntry[] = [
     command: 'npx',
     args: ['-y', '@modelcontextprotocol/server-github'],
     env: { GITHUB_PERSONAL_ACCESS_TOKEN: '$MOON_BOT_SECRET_GITHUB_PERSONAL_ACCESS_TOKEN' },
-    secrets: [{ name: 'GITHUB_PERSONAL_ACCESS_TOKEN', label: 'GitHub Personal Access Token', url: 'https://github.com/settings/tokens' }],
+    secrets: [
+      {
+        name: 'GITHUB_PERSONAL_ACCESS_TOKEN',
+        label: 'GitHub Personal Access Token',
+        url: 'https://github.com/settings/tokens',
+      },
+    ],
     website: 'https://github.com',
   },
   {
@@ -33,7 +41,13 @@ export const DEV_CONNECTORS: readonly ConnectorCatalogEntry[] = [
     command: 'npx',
     args: ['-y', '@modelcontextprotocol/server-gitlab'],
     env: { GITLAB_PERSONAL_ACCESS_TOKEN: '$MOON_BOT_SECRET_GITLAB_ACCESS_TOKEN' },
-    secrets: [{ name: 'GITLAB_ACCESS_TOKEN', label: 'GitLab access token', url: 'https://gitlab.com/-/user_settings/personal_access_tokens' }],
+    secrets: [
+      {
+        name: 'GITLAB_ACCESS_TOKEN',
+        label: 'GitLab access token',
+        url: 'https://gitlab.com/-/user_settings/personal_access_tokens',
+      },
+    ],
     website: 'https://gitlab.com',
   },
   {
@@ -96,8 +110,16 @@ export const DEV_CONNECTORS: readonly ConnectorCatalogEntry[] = [
     args: ['-y', 'datadog-mcp-server'],
     env: { DATADOG_API_KEY: '$MOON_BOT_SECRET_DATADOG_API_KEY', DATADOG_APP_KEY: '$MOON_BOT_SECRET_DATADOG_APP_KEY' },
     secrets: [
-      { name: 'DATADOG_API_KEY', label: 'Datadog API Key', url: 'https://app.datadoghq.com/organization-settings/api-keys' },
-      { name: 'DATADOG_APP_KEY', label: 'Datadog Application Key', url: 'https://app.datadoghq.com/organization-settings/application-keys' },
+      {
+        name: 'DATADOG_API_KEY',
+        label: 'Datadog API Key',
+        url: 'https://app.datadoghq.com/organization-settings/api-keys',
+      },
+      {
+        name: 'DATADOG_APP_KEY',
+        label: 'Datadog Application Key',
+        url: 'https://app.datadoghq.com/organization-settings/application-keys',
+      },
     ],
     website: 'https://www.datadoghq.com',
   },
@@ -125,7 +147,9 @@ export const DEV_CONNECTORS: readonly ConnectorCatalogEntry[] = [
     command: 'npx',
     args: ['-y', 'postman-mcp-server'],
     env: { POSTMAN_API_KEY: '$MOON_BOT_SECRET_POSTMAN_API_KEY' },
-    secrets: [{ name: 'POSTMAN_API_KEY', label: 'Postman API Key', url: 'https://web.postman.co/settings/me/api-keys' }],
+    secrets: [
+      { name: 'POSTMAN_API_KEY', label: 'Postman API Key', url: 'https://web.postman.co/settings/me/api-keys' },
+    ],
     website: 'https://www.postman.com',
   },
   {
@@ -138,4 +162,4 @@ export const DEV_CONNECTORS: readonly ConnectorCatalogEntry[] = [
     args: ['-y', 'mcp-server-terraform'],
     website: 'https://www.terraform.io',
   },
-];
+]

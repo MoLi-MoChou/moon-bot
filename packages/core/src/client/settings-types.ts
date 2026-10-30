@@ -117,18 +117,34 @@ export interface SettingsActions extends FolderMenuActions, SecretActions, Conne
   preAuthList?: ((botId: string) => Promise<readonly Record<string, unknown>[]>) | undefined
   preAuthWrite?: ((input: Record<string, unknown>) => Promise<unknown>) | undefined
   preAuthRevoke?: ((id: string) => Promise<unknown>) | undefined
-  resetBot?: ((id: string, parts: Record<string, boolean>) => Promise<{ readonly done: readonly string[]; readonly failed: readonly { readonly part: string; readonly reason: string }[] } | undefined>) | undefined
+  resetBot?:
+    | ((
+        id: string,
+        parts: Record<string, boolean>,
+      ) => Promise<
+        | {
+            readonly done: readonly string[]
+            readonly failed: readonly { readonly part: string; readonly reason: string }[]
+          }
+        | undefined
+      >)
+    | undefined
   openSession: (id: string) => void
   createBot: (payload: Record<string, unknown>) => Promise<{ id: string }>
   closeOverlay: () => void
   setTeamWorkspace: (path: string) => Promise<{ team: string }>
   refreshModels?: (() => Promise<unknown>) | undefined
-  refreshEngines?: (() => Promise<{ engines: readonly SettingsEngineOption[]; of: Readonly<Record<string, string>> }>) | undefined
+  refreshEngines?:
+    | (() => Promise<{ engines: readonly SettingsEngineOption[]; of: Readonly<Record<string, string>> }>)
+    | undefined
   providers?: (() => Promise<unknown>) | undefined
   openShellSettingsPanel?: ((page?: string) => void) | undefined
   setSurface?: ((mode: string) => void) | undefined
   usage: UsagePageProps['actions']['usage']
-  diagnostics: (input: { readonly client: Record<string, string>; readonly clientErrors: unknown }) => Promise<DiagnosticsReport>
+  diagnostics: (input: {
+    readonly client: Record<string, string>
+    readonly clientErrors: unknown
+  }) => Promise<DiagnosticsReport>
   diagnosticsLog: () => Promise<string>
   diagnosticsClear: () => Promise<unknown>
   dismissToast: (token: string) => void
@@ -140,7 +156,12 @@ export interface SettingsActions extends FolderMenuActions, SecretActions, Conne
   openAppUpdates: (version?: string) => void
   repoStars: () => Promise<number>
   // The schedule service: a task added from the Bot settings form, and one deleted.
-  scheduleCreate: (input: { target: string; title: string; prompt: string; when: Record<string, unknown> }) => Promise<unknown>
+  scheduleCreate: (input: {
+    target: string
+    title: string
+    prompt: string
+    when: Record<string, unknown>
+  }) => Promise<unknown>
   scheduleDelete: (sessionId: string, id: string) => Promise<unknown>
 }
 export type RunWork = (work: Promise<unknown>) => Promise<boolean>
@@ -154,7 +175,10 @@ export type {
   SwitchRowProps,
 } from 'moon-bot-ui'
 
-export interface CharacterLook { shape: string; color: string }
+export interface CharacterLook {
+  shape: string
+  color: string
+}
 export interface CharacterGridProps {
   look: CharacterLook
   hasPhoto?: boolean | undefined

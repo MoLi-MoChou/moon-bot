@@ -21,13 +21,17 @@ const port = 9300 + Math.floor(Math.random() * 600)
 // A terminal inside an Electron-based editor may set ELECTRON_RUN_AS_NODE, which turns the app into plain Node.
 const { ELECTRON_RUN_AS_NODE: _runAsNode, ...env } = process.env
 const child = spawn(electron, [root, `--remote-debugging-port=${String(port)}`], { stdio: 'inherit', env })
-const exited = new Promise((done) => { child.once('exit', (code, signal) => { done({ code, signal }) }) })
+const exited = new Promise(done => {
+  child.once('exit', (code, signal) => {
+    done({ code, signal })
+  })
+})
 
 async function appPage(deadline) {
   while (Date.now() < deadline) {
     try {
       const targets = await (await fetch(`http://127.0.0.1:${String(port)}/json/list`)).json()
-      const page = targets.find((target) => target.type === 'page' && /^http:\/\/127\.0\.0\.1:\d+\//u.test(target.url))
+      const page = targets.find(target => target.type === 'page' && /^http:\/\/127\.0\.0\.1:\d+\//u.test(target.url))
       if (page) return page
     } catch {
       // The debugging port is not listening yet.
@@ -41,7 +45,7 @@ function devtools(url) {
   const socket = new WebSocket(url)
   const pending = new Map()
   let next = 1
-  socket.addEventListener('message', (event) => {
+  socket.addEventListener('message', event => {
     const message = JSON.parse(String(event.data))
     const entry = pending.get(message.id)
     if (entry === undefined) return
@@ -53,12 +57,19 @@ function devtools(url) {
     socket.addEventListener('open', done, { once: true })
     socket.addEventListener('error', reject, { once: true })
   })
-  const call = (method, params = {}) => new Promise((done, reject) => {
-    const id = next++
-    pending.set(id, { resolve: done, reject })
-    socket.send(JSON.stringify({ id, method, params }))
-  })
-  return { opened, call, close: () => { socket.close() } }
+  const call = (method, params = {}) =>
+    new Promise((done, reject) => {
+      const id = next++
+      pending.set(id, { resolve: done, reject })
+      socket.send(JSON.stringify({ id, method, params }))
+    })
+  return {
+    opened,
+    call,
+    close: () => {
+      socket.close()
+    },
+  }
 }
 
 try {
@@ -69,7 +80,8 @@ try {
   const { data } = await cdp.call('Page.captureScreenshot', { format: 'png' })
   writeFileSync(resolve(out), Buffer.from(data, 'base64'))
   const { result } = await cdp.call('Runtime.evaluate', {
-    expression: 'JSON.stringify({ title: document.title, text: document.body.innerText.slice(0, 600) })', returnByValue: true,
+    expression: 'JSON.stringify({ title: document.title, text: document.body.innerText.slice(0, 600) })',
+    returnByValue: true,
   })
   console.log(`shot: saved ${resolve(out)}`)
   console.log(`shot: page ${String(result.value)}`)

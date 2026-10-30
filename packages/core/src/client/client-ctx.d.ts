@@ -145,7 +145,10 @@ export interface SlotService {
 /** One Session's composer controller, as the chat references drive it. */
 export interface TriggerController {
   readonly launcher: { getSnapshot(): unknown }
-  toggleSource(source: string, options: { trigger: string; query: string; quoted: boolean; position: string; span: unknown }): void
+  toggleSource(
+    source: string,
+    options: { trigger: string; query: string; quoted: boolean; position: string; span: unknown },
+  ): void
 }
 export interface InputTriggersService {
   sessionOf(context: unknown): TriggerController | undefined
@@ -175,8 +178,14 @@ export interface ClientContext extends EffectScope {
   get(service: 'sidebarRight'): SidebarRightService | undefined
   get(service: 'remote.speech'): SpeechRemote | undefined
   get(service: 'pluginNavigation'): PluginNavigation | undefined
-  inject(names: readonly ['shortcuts'], run: (scope: EffectScope & { readonly shortcuts: ShortcutsService }) => void | Disposer): PluginFiber
-  inject(names: readonly ['inputTriggers'], run: (scope: EffectScope & { readonly inputTriggers: InputTriggersService }) => void | Disposer): PluginFiber
+  inject(
+    names: readonly ['shortcuts'],
+    run: (scope: EffectScope & { readonly shortcuts: ShortcutsService }) => void | Disposer,
+  ): PluginFiber
+  inject(
+    names: readonly ['inputTriggers'],
+    run: (scope: EffectScope & { readonly inputTriggers: InputTriggersService }) => void | Disposer,
+  ): PluginFiber
   readonly sessions: SessionsService
   readonly uiWorkspace: { openSession(target: string): void }
   readonly uiConversation: { binding(binding: SessionBinding): { target(name: 'chat'): ChatTarget } }

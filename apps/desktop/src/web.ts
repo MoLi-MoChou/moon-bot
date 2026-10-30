@@ -19,7 +19,8 @@ import { loginPage } from './web-login.ts'
 const here = dirname(fileURLToPath(import.meta.url))
 const env = process.env
 // MOON_BOT_* settings; the MOCHOU_* and DSH_BOT_* names from before the renames still work.
-const setting = (name: string): string | undefined => env[`MOON_BOT_${name}`] ?? env[`MOCHOU_${name}`] ?? env[`DSH_BOT_${name}`]
+const setting = (name: string): string | undefined =>
+  env[`MOON_BOT_${name}`] ?? env[`MOCHOU_${name}`] ?? env[`DSH_BOT_${name}`]
 // New installs keep their data in ~/.moon-bot; one made before a rename keeps its
 // ~/.mochou or ~/.dsh-bot.
 const defaultData = (): string => {
@@ -67,7 +68,8 @@ async function main(): Promise<void> {
   // other origin is refused here, so the service's cross-site protection still holds.
   const upstreamHeaders = (req: IncomingMessage): Record<string, string | string[] | undefined> | undefined => {
     const origin = req.headers.origin
-    if (origin !== undefined && origin !== `http://${req.headers.host}` && origin !== `https://${req.headers.host}`) return undefined
+    if (origin !== undefined && origin !== `http://${req.headers.host}` && origin !== `https://${req.headers.host}`)
+      return undefined
     const headers: Record<string, string | string[] | undefined> = { ...req.headers, host: local }
     if (origin !== undefined) headers.origin = target.origin
     if (typeof req.headers.referer === 'string' && /^https?:\/\//.test(req.headers.referer)) {
@@ -79,53 +81,86 @@ async function main(): Promise<void> {
 
   const forward = (req: IncomingMessage, res: ServerResponse): void => {
     const headers = upstreamHeaders(req)
-    if (headers === undefined) { res.writeHead(403).end('Cross-origin request refused'); return }
-    const upstream = httpRequest({ hostname: target.hostname, port: target.port, method: req.method, path: req.url, headers }, (answer) => {
-      // An unauthenticated page load gets the password page instead of the service's bare 401.
-      if (answer.statusCode === 401 && req.method === 'GET' && (req.headers.accept ?? '').includes('text/html')) {
-        answer.resume()
-        res.writeHead(302, { location: '/login' }).end()
-        return
-      }
-      res.writeHead(answer.statusCode ?? 502, answer.headers)
-      answer.pipe(res)
+    if (headers === undefined) {
+      res.writeHead(403).end('Cross-origin request refused')
+      return
+    }
+    const upstream = httpRequest(
+      { hostname: target.hostname, port: target.port, method: req.method, path: req.url, headers },
+      answer => {
+        // An unauthenticated page load gets the password page instead of the service's bare 401.
+        if (answer.statusCode === 401 && req.method === 'GET' && (req.headers.accept ?? '').includes('text/html')) {
+          answer.resume()
+          res.writeHead(302, { location: '/login' }).end()
+          return
+        }
+        res.writeHead(answer.statusCode ?? 502, answer.headers)
+        answer.pipe(res)
+      },
+    )
+    upstream.on('error', () => {
+      if (!res.headersSent) res.writeHead(502).end('Host unavailable')
     })
-    upstream.on('error', () => { if (!res.headersSent) res.writeHead(502).end('Host unavailable') })
     req.pipe(upstream)
   }
 
   // Sign in through the service, so that the browser gets the cookie the service itself checks.
-  const exchange = (given: string): Promise<{ cookie?: string[] | undefined; wait: boolean }> => new Promise((resolve) => {
-    const body = JSON.stringify({ password: given })
-    const call = httpRequest({
-      hostname: target.hostname, port: target.port, method: 'POST', path: '/login',
-      headers: { 'content-type': 'application/json', 'content-length': Buffer.byteLength(body) },
-    }, (answer) => {
-      answer.resume()
-      resolve({ cookie: answer.headers['set-cookie'], wait: answer.statusCode === 429 })
+  const exchange = (given: string): Promise<{ cookie?: string[] | undefined; wait: boolean }> =>
+    new Promise(resolve => {
+      const body = JSON.stringify({ password: given })
+      const call = httpRequest(
+        {
+          hostname: target.hostname,
+          port: target.port,
+          method: 'POST',
+          path: '/login',
+          headers: { 'content-type': 'application/json', 'content-length': Buffer.byteLength(body) },
+        },
+        answer => {
+          answer.resume()
+          resolve({ cookie: answer.headers['set-cookie'], wait: answer.statusCode === 429 })
+        },
+      )
+      call.on('error', () => resolve({ wait: false }))
+      call.end(body)
     })
-    call.on('error', () => resolve({ wait: false }))
-    call.end(body)
-  })
 
   const server = createServer((req, res) => {
     const url = new URL(req.url ?? '/', 'http://x')
     if (url.pathname === '/login' && req.method === 'GET') {
-      if (!password) { res.writeHead(302, { location: '/' }).end(); return }
-      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' }).end(loginPage({ error: url.searchParams.has('wrong'), wait: url.searchParams.has('wait') }))
+      if (!password) {
+        res.writeHead(302, { location: '/' }).end()
+        return
+      }
+      res
+        .writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' })
+        .end(loginPage({ error: url.searchParams.has('wrong'), wait: url.searchParams.has('wait') }))
       return
     }
     if (url.pathname === '/login' && req.method === 'POST') {
       const ip = req.socket.remoteAddress ?? '?'
       let body = ''
-      req.on('data', (chunk: Buffer) => { body += chunk; if (body.length > 4096) req.destroy() })
+      req.on('data', (chunk: Buffer) => {
+        body += chunk
+        if (body.length > 4096) req.destroy()
+      })
       req.on('end', () => {
-        if (blocked(ip)) { res.writeHead(303, { location: '/login?wait' }).end(); return }
+        if (blocked(ip)) {
+          res.writeHead(303, { location: '/login?wait' }).end()
+          return
+        }
         const given = new URLSearchParams(body).get('password') ?? ''
-        if (!passwordOk(given)) { failures.get(ip)?.push(Date.now()); res.writeHead(303, { location: '/login?wrong' }).end(); return }
+        if (!passwordOk(given)) {
+          failures.get(ip)?.push(Date.now())
+          res.writeHead(303, { location: '/login?wrong' }).end()
+          return
+        }
         failures.delete(ip)
         void exchange(given).then(({ cookie, wait }) => {
-          if (cookie === undefined) { res.writeHead(303, { location: wait ? '/login?wait' : '/login?wrong' }).end(); return }
+          if (cookie === undefined) {
+            res.writeHead(303, { location: wait ? '/login?wait' : '/login?wrong' }).end()
+            return
+          }
           res.writeHead(303, { location: '/', 'set-cookie': cookie }).end()
         })
       })
@@ -134,11 +169,20 @@ async function main(): Promise<void> {
     forward(req, res)
   })
   server.listen(port, bind, () => {
-    console.log(`moon-bot web: http://${bind.includes(':') ? `[${bind}]` : bind}:${String(port)}/${password ? 'login' : ''}`)
+    console.log(
+      `moon-bot web: http://${bind.includes(':') ? `[${bind}]` : bind}:${String(port)}/${password ? 'login' : ''}`,
+    )
   })
-  const stop = async (): Promise<void> => { server.close(); await service.close().catch(() => {}); process.exit(0) }
+  const stop = async (): Promise<void> => {
+    server.close()
+    await service.close().catch(() => {})
+    process.exit(0)
+  }
   process.once('SIGINT', stop)
   process.once('SIGTERM', stop)
 }
 
-void main().catch((error: unknown) => { console.error(error); process.exit(1) })
+void main().catch((error: unknown) => {
+  console.error(error)
+  process.exit(1)
+})

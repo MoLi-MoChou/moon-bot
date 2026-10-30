@@ -24,7 +24,10 @@ function env(over = {}) {
       ...(over.deps ?? {}),
     },
     send: {
-      send: (sessionId, text, source) => { handed.push({ sessionId, text, source }); return true },
+      send: (sessionId, text, source) => {
+        handed.push({ sessionId, text, source })
+        return true
+      },
       record: (id, decision, reason) => recorded.push({ id, decision, ...(reason === undefined ? {} : { reason }) }),
       live: () => true,
       ...(over.send ?? {}),
@@ -33,7 +36,10 @@ function env(over = {}) {
 }
 
 const request = (over = {}) => ({
-  subscriptionId: 's1', botId: 'b1', sessionId: 'b1', triggerSource: 'schedule' as const,
+  subscriptionId: 's1',
+  botId: 'b1',
+  sessionId: 'b1',
+  triggerSource: 'schedule' as const,
   readOnly: false,
   candidates: {
     topics: 'my work',
@@ -42,8 +48,12 @@ const request = (over = {}) => ({
     alreadySaid: [],
   },
   screen: {
-    deliveredToday: 0, dailyCap: 1, earlier: [], mentionedRecently: false,
-    localTime: '09:00', quiet: { from: '22:00', to: '08:00' },
+    deliveredToday: 0,
+    dailyCap: 1,
+    earlier: [],
+    mentionedRecently: false,
+    localTime: '09:00',
+    quiet: { from: '22:00', to: '08:00' },
   },
   ...over,
 })
@@ -91,7 +101,13 @@ test('nothing prepared means nothing recorded and nothing sent', async () => {
 })
 
 test('a preparation failure records nothing: there was no candidate to judge', async () => {
-  const e = env({ deps: { ask: async () => { throw new Error('offline') } } })
+  const e = env({
+    deps: {
+      ask: async () => {
+        throw new Error('offline')
+      },
+    },
+  })
   const outcome = await deliverOnce(request(), e.deps, e.send)
   assert.equal(outcome.kind, 'failed')
   assert.equal(e.recorded.length, 0)

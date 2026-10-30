@@ -34,7 +34,12 @@ export interface ProgressDeps extends TriggerDeps {
  * A conversation never seen to move is not stale: the hook only speaks about silence it
  * actually observed, not about silence it arrived too late to see.
  */
-export function staleSince(watched: Watched, lastActivityAt: number | undefined, now: number, busy: boolean): number | undefined {
+export function staleSince(
+  watched: Watched,
+  lastActivityAt: number | undefined,
+  now: number,
+  busy: boolean,
+): number | undefined {
   if (busy) return undefined
   if (lastActivityAt === undefined) return undefined
   const still = now - lastActivityAt
@@ -51,7 +56,8 @@ export async function pollProgress(deps: ProgressDeps): Promise<readonly string[
   const fired: string[] = []
   for (const watched of deps.watched()) {
     if (watched.minutes <= 0) continue
-    if (staleSince(watched, deps.lastActivityAt(watched.sessionId), now, deps.busy(watched.sessionId)) === undefined) continue
+    if (staleSince(watched, deps.lastActivityAt(watched.sessionId), now, deps.busy(watched.sessionId)) === undefined)
+      continue
     // Marked before the run so a slow run cannot be started twice by the next tick.
     deps.noteFired(watched.subscriptionId, now)
     try {
@@ -59,7 +65,11 @@ export async function pollProgress(deps: ProgressDeps): Promise<readonly string[
       deps.log('moon-bot: no-progress hook for %s: %s', watched.subscriptionId, outcome)
       fired.push(watched.subscriptionId)
     } catch (error) {
-      deps.log('moon-bot: no-progress hook for %s threw: %s', watched.subscriptionId, error instanceof Error ? error.message : error)
+      deps.log(
+        'moon-bot: no-progress hook for %s threw: %s',
+        watched.subscriptionId,
+        error instanceof Error ? error.message : error,
+      )
       fired.push(watched.subscriptionId)
     }
   }
@@ -92,11 +102,18 @@ export function startProgressPoll(deps: ProgressDeps): () => void {
   let stopped = false
   let timer: ReturnType<typeof setTimeout> | undefined
   const tick = (): void => {
-    void pollProgress(deps).catch((error: unknown) => {
-      deps.log('moon-bot: no-progress poll failed: %s', error instanceof Error ? error.message : error)
-    }).finally(() => { if (!stopped) timer = setTimeout(tick, PROGRESS_POLL_MS) })
+    void pollProgress(deps)
+      .catch((error: unknown) => {
+        deps.log('moon-bot: no-progress poll failed: %s', error instanceof Error ? error.message : error)
+      })
+      .finally(() => {
+        if (!stopped) timer = setTimeout(tick, PROGRESS_POLL_MS)
+      })
   }
   timer = setTimeout(tick, PROGRESS_POLL_MS)
   timer.unref?.()
-  return () => { stopped = true; clearTimeout(timer) }
+  return () => {
+    stopped = true
+    clearTimeout(timer)
+  }
 }

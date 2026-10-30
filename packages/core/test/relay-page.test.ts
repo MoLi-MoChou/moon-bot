@@ -9,23 +9,35 @@ import { build } from 'esbuild'
 
 const bundle = await build({
   entryPoints: [fileURLToPath(new URL('../src/client/relay-page.tsx', import.meta.url))],
-  bundle: true, format: 'cjs', platform: 'node', write: false,
+  bundle: true,
+  format: 'cjs',
+  platform: 'node',
+  write: false,
   external: ['react', 'react-dom'],
 })
-const module = { exports: {} as {
-  connectCommand: (origin: { protocol: string, host: string }, token: string) => string
-  RelayPage: (props: Record<string, unknown>) => unknown
-} }
+const module = {
+  exports: {} as {
+    connectCommand: (origin: { protocol: string; host: string }, token: string) => string
+    RelayPage: (props: Record<string, unknown>) => unknown
+  },
+}
 runInNewContext(bundle.outputFiles[0].text, {
-  module, exports: module.exports,
+  module,
+  exports: module.exports,
   require: name => {
     const platform = {
       react: {
-        createElement: (type: unknown, props: unknown, ...children: unknown[]) => ({ type, props: (props ?? {}) as Record<string, unknown>, children: children.flat(Infinity) }),
+        createElement: (type: unknown, props: unknown, ...children: unknown[]) => ({
+          type,
+          props: (props ?? {}) as Record<string, unknown>,
+          children: children.flat(Infinity),
+        }),
         Fragment: 'fragment',
         useState: (initial: unknown) => [initial, () => {}],
         // A mount runs its effect once, so the load call is observable.
-        useEffect: (run: () => unknown) => { run() },
+        useEffect: (run: () => unknown) => {
+          run()
+        },
       },
       'react-dom': { createPortal: (node: unknown) => node },
     }
@@ -51,13 +63,27 @@ test('the copied command follows the page scheme and names this deployment', () 
 
 test('the page renders the create form and waits for the invite list', () => {
   const calls: string[] = []
-  const page = RelayPage({ relay: {
-    relayInvites: () => { calls.push('invites'); return new Promise(() => {}) },
-    relayInviteCreate: () => { calls.push('create'); return new Promise(() => {}) },
-    relayInviteRevoke: () => { calls.push('revoke'); return new Promise(() => {}) },
-  } }) as Record<string, unknown>
+  const page = RelayPage({
+    relay: {
+      relayInvites: () => {
+        calls.push('invites')
+        return new Promise(() => {})
+      },
+      relayInviteCreate: () => {
+        calls.push('create')
+        return new Promise(() => {})
+      },
+      relayInviteRevoke: () => {
+        calls.push('revoke')
+        return new Promise(() => {})
+      },
+    },
+  }) as Record<string, unknown>
   const buttons = nodes(page, node => node.type === 'button')
-  assert.ok(buttons.some(button => JSON.stringify(button.children).includes('Create invite')), 'the create button is there')
+  assert.ok(
+    buttons.some(button => JSON.stringify(button.children).includes('Create invite')),
+    'the create button is there',
+  )
   const inputs = nodes(page, node => node.type === 'input')
   assert.equal(inputs.length, 1, 'one name field')
   assert.deepEqual(calls, ['invites'], 'the list loads on mount, nothing else fires')

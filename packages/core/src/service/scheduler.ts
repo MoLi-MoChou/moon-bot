@@ -10,9 +10,15 @@ import type { Store } from '../store/db.ts'
 export interface ScheduleSpec {
   readonly at?: string | undefined
   readonly every_seconds?: number | undefined
-  readonly daily?: { readonly time: string | undefined, readonly time_zone: string | undefined } | undefined
-  readonly weekly?: { readonly time: string | undefined, readonly time_zone: string | undefined, readonly weekdays: readonly number[] | undefined } | undefined
-  readonly cron?: { readonly expression: string | undefined, readonly time_zone: string | undefined } | undefined
+  readonly daily?: { readonly time: string | undefined; readonly time_zone: string | undefined } | undefined
+  readonly weekly?:
+    | {
+        readonly time: string | undefined
+        readonly time_zone: string | undefined
+        readonly weekdays: readonly number[] | undefined
+      }
+    | undefined
+  readonly cron?: { readonly expression: string | undefined; readonly time_zone: string | undefined } | undefined
 }
 
 export interface ScheduleTask {
@@ -64,8 +70,12 @@ const cronNext = (expression: string, zone: string | undefined, from: number): n
 const specOf = (payload: Readonly<Record<string, unknown>>): ScheduleSpec => ({
   ...(typeof payload.at === 'string' ? { at: payload.at } : {}),
   ...(typeof payload.every_seconds === 'number' ? { every_seconds: payload.every_seconds } : {}),
-  ...(payload.daily !== null && typeof payload.daily === 'object' ? { daily: payload.daily as ScheduleSpec['daily'] } : {}),
-  ...(payload.weekly !== null && typeof payload.weekly === 'object' ? { weekly: payload.weekly as ScheduleSpec['weekly'] } : {}),
+  ...(payload.daily !== null && typeof payload.daily === 'object'
+    ? { daily: payload.daily as ScheduleSpec['daily'] }
+    : {}),
+  ...(payload.weekly !== null && typeof payload.weekly === 'object'
+    ? { weekly: payload.weekly as ScheduleSpec['weekly'] }
+    : {}),
   ...(payload.cron !== null && typeof payload.cron === 'object' ? { cron: payload.cron as ScheduleSpec['cron'] } : {}),
 })
 
@@ -82,10 +92,15 @@ export class TaskScheduler {
 
   /** Starts the poll; the disposer stops it. Due-but-unclaimed work from a restart is picked up by the first tick. */
   start(): () => void {
-    this.timer = setInterval(() => { void this.tick().catch(() => {}) }, POLL_MS)
+    this.timer = setInterval(() => {
+      void this.tick().catch(() => {})
+    }, POLL_MS)
     this.timer.unref?.()
     void this.tick().catch(() => {})
-    return () => { if (this.timer !== undefined) clearInterval(this.timer); this.timer = undefined }
+    return () => {
+      if (this.timer !== undefined) clearInterval(this.timer)
+      this.timer = undefined
+    }
   }
 
   /** Fires everything due, once each. */
@@ -100,7 +115,8 @@ export class TaskScheduler {
       } finally {
         const spec = specOf(payload)
         const again = nextRunOf(spec, Date.now())
-        if (again !== undefined && again > Date.now()) this.store.tasks.finish(task.id, { state: 'pending', nextRunAt: again })
+        if (again !== undefined && again > Date.now())
+          this.store.tasks.finish(task.id, { state: 'pending', nextRunAt: again })
         else this.store.tasks.finish(task.id, { state: 'done', result: { at: Date.now() } })
       }
     }
@@ -109,13 +125,16 @@ export class TaskScheduler {
   // The ScheduleService face ------------------------------------------------
 
   async catalog(): Promise<readonly Record<string, unknown>[]> {
-    return this.store.tasks.list().filter(task => task.kind === 'schedule' && task.ownerSession !== null).map(task => ({
-      id: task.id,
-      sessionId: task.ownerSession,
-      ...(task.state === 'paused' ? { paused: true } : {}),
-      ...(task.lastResult !== null && task.state === 'done' ? { lastRun: task.lastResult } : {}),
-      ...(task.payload as Readonly<Record<string, unknown>>),
-    }))
+    return this.store.tasks
+      .list()
+      .filter(task => task.kind === 'schedule' && task.ownerSession !== null)
+      .map(task => ({
+        id: task.id,
+        sessionId: task.ownerSession,
+        ...(task.state === 'paused' ? { paused: true } : {}),
+        ...(task.lastResult !== null && task.state === 'done' ? { lastRun: task.lastResult } : {}),
+        ...(task.payload as Readonly<Record<string, unknown>>),
+      }))
   }
 
   async create(sessionId: string, request: ScheduleTask & ScheduleSpec): Promise<void> {
@@ -129,9 +148,10 @@ export class TaskScheduler {
     })
   }
 
-  async delete(query: { sessionId: string, id: string }): Promise<void> {
+  async delete(query: { sessionId: string; id: string }): Promise<void> {
     const task = this.store.tasks.task(query.id)
-    if (task === undefined || task.ownerSession !== query.sessionId) throw Object.assign(new Error('No such task'), { code: 'bot/not-found' })
+    if (task === undefined || task.ownerSession !== query.sessionId)
+      throw Object.assign(new Error('No such task'), { code: 'bot/not-found' })
     this.store.tasks.remove(query.id)
   }
 

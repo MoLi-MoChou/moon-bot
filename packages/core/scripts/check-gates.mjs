@@ -2,7 +2,8 @@
 // Migration gates that oxlint cannot express.
 //
 //  1. Layer boundaries: shared/contracts (`packages/contracts` or fixture `src/shared`) may import only `zod` and its own files — never
-//     React/Fastify/SQLite/Electron or client/host/engine/store/service; client may not
+//     React/Fastify/SQLite/Electron or client/host/engine/store/service; packages/ui (kit) may use
+//     React but not host/engine/store/service/client or Fastify/SQLite/Electron; client may not
 //     import host; host may not import client.
 //  2. Size: every logical .js/.ts/.tsx file under src is at most 350 lines. Data and
 //     third-party files are exempt; the list of legacy files is explicit below.
@@ -110,6 +111,10 @@ function sourceFiles() {
   if (contracts !== undefined) {
     files.push(...walk(contracts).filter(file => SOURCE_EXTENSIONS.has(file.slice(file.lastIndexOf('.')))))
   }
+  const ui = uiSrc()
+  if (ui !== undefined) {
+    files.push(...walk(ui).filter(file => SOURCE_EXTENSIONS.has(file.slice(file.lastIndexOf('.')))))
+  }
   return files
 }
 
@@ -119,6 +124,13 @@ function relPath(file) {
     const relC = relative(contracts, file)
     if (relC !== '' && !relC.startsWith('..') && !isAbsolute(relC)) {
       return `../contracts/src/${relC.split(sep).join('/')}`
+    }
+  }
+  const ui = uiSrc()
+  if (ui !== undefined) {
+    const relU = relative(ui, file)
+    if (relU !== '' && !relU.startsWith('..') && !isAbsolute(relU)) {
+      return `../ui/src/${relU.split(sep).join('/')}`
     }
   }
   return relative(root, file).split(sep).join('/')
@@ -132,11 +144,22 @@ function contractsSrc() {
   return existsSync(candidate) ? candidate : undefined
 }
 
+function uiSrc() {
+  if (customRoot) return undefined
+  const candidate = join(dirname(root), 'ui', 'src')
+  return existsSync(candidate) ? candidate : undefined
+}
+
 function layerOfPath(file) {
   const contracts = contractsSrc()
   if (contracts !== undefined) {
     const relC = relative(contracts, file)
     if (relC !== '' && !relC.startsWith('..') && !isAbsolute(relC)) return 'shared'
+  }
+  const ui = uiSrc()
+  if (ui !== undefined) {
+    const relU = relative(ui, file)
+    if (relU !== '' && !relU.startsWith('..') && !isAbsolute(relU)) return 'ui'
   }
   const rel = relative(sourceRoot, file)
   if (rel === '' || rel.startsWith('..') || isAbsolute(rel)) return undefined
@@ -255,6 +278,22 @@ function boundaryViolation(layer, file, specifier) {
   // UI (client) never reaches into it, and it never reaches into the UI.
   if (layer === 'client' && target === 'service') return 'client may not import service'
   if (layer === 'service' && target === 'client') return 'service may not import client'
+  if (layer === 'ui') {
+    if (specifier === 'react' || specifier.startsWith('react/') || specifier === 'react-dom' || specifier.startsWith('react-dom/')) return undefined
+    if (specifier === 'moon-bot-ui' || specifier.startsWith('moon-bot-ui/')) return undefined
+    if (SHARED_FORBIDDEN_PACKAGE.test(specifier) && !/^react(?:-dom)?(?:\/|$)/.test(specifier)) {
+      return `ui kit may not import ${specifier.split('/')[0]}`
+    }
+    if (target === 'ui' || target === undefined) {
+      // Relative climbs into client/host/… are caught via target; bare moon-bot-core blocked below.
+      if (specifier === 'moon-bot-core' || specifier.startsWith('moon-bot-core/')) return 'ui kit may not import moon-bot-core'
+      return undefined
+    }
+    if (target === 'host' || target === 'client' || target === 'engine' || target === 'store' || target === 'service' || target === 'shared') {
+      return `ui kit may not import ${target}`
+    }
+    return undefined
+  }
   if (layer !== 'shared') return undefined
   if (specifier === 'zod' || specifier.startsWith('zod/')) return undefined
   if (SHARED_FORBIDDEN_PACKAGE.test(specifier)) {
@@ -415,9 +454,13 @@ const INTRINSIC_H = /(?<![\w$.])h\(\s*(['"])([a-z][a-z0-9-]*)\1/g
 function clientRoots() {
   const roots = [join(root, 'src', 'client')]
   // Fixtures keep the historical app/ui layout under the fixture root. The real checkout
-  // keeps the window at apps/desktop/ui beside packages/core.
+  // keeps the window at apps/desktop/ui beside packages/core, and the kit at packages/ui.
   if (customRoot) roots.push(join(root, 'app', 'ui', 'src'))
-  else roots.push(join(dirname(root), '..', 'apps', 'desktop', 'ui', 'src'))
+  else {
+    roots.push(join(dirname(root), '..', 'apps', 'desktop', 'ui', 'src'))
+    const ui = uiSrc()
+    if (ui !== undefined) roots.push(ui)
+  }
   return roots.filter(dir => existsSync(dir))
 }
 

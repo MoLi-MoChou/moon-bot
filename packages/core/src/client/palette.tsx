@@ -5,7 +5,7 @@ import { currentPart, stripHeader } from './text.ts';
 import { PlusIcon, SearchIcon, PeopleIcon, CloseIcon, GearIcon } from './icons.tsx';
 import { BotAvatar, RoomAvatar } from './mark.tsx';
 import { useEscape } from './overlay-hooks.ts';
-import { EmptyState } from './kit/index.ts';
+import { EmptyState } from 'moon-bot-ui';
 import { DIALOG_EXIT_MS, QUICK_EDGES, reducedMotion, useFlip, useGlide } from './motion.tsx';
 import type { ReactNode } from 'react';
 import { t } from './i18n.ts';

@@ -7,7 +7,7 @@ import { stripLongNote } from './fold.tsx';
 import { ChatsIcon } from './icons.tsx';
 import { SHEET_EXIT_MS, reducedMotion } from './motion.tsx';
 import { useEscape, usePaneLeft } from './overlay-hooks.ts';
-import { EmptyState } from './kit/index.ts';
+import { EmptyState } from 'moon-bot-ui';
 import { t } from './i18n.ts';
 // One message the two Bots sent each other; a long one carries its length so the rest
 // can be read on request.

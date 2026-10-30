@@ -7,7 +7,7 @@ import { CheckIcon, PlusIcon } from './icons.tsx';
 import { DefaultConnectorLogo } from './connector-logos.tsx';
 import { healthOf, toolsOf } from './capability-library.ts';
 import type { Capability, CapabilityBot, CapabilityStatus } from './capability-types.ts';
-import { Field } from './kit/index.ts';
+import { Field } from 'moon-bot-ui';
 import { blankCustomConnector, commandParts, connectorIdOf, customCapabilityOf, customConnectorErrors, customTestOf, draftFromConnector, type CustomConnectorDraft, type CustomConnectorErrors, type CustomTransport } from './connector-custom.ts';
 
 export interface CustomConnectorActions {

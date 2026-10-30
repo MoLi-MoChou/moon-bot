@@ -7,7 +7,7 @@
 import { createElement as h, useEffect, useState } from 'react';
 import { t } from './i18n.ts';
 import { ClockIcon, PlusIcon } from './icons.tsx';
-import { Card, EmptyState } from './kit/index.ts';
+import { Card, EmptyState } from 'moon-bot-ui';
 import { PreAuthCard, type PreAuthActions } from './proactive-preauth.tsx';
 import { outcomeText, quietLabel } from './proactive-copy.ts';
 

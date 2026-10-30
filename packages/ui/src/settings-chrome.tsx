@@ -1,7 +1,7 @@
 import { createElement as h, useRef, useState } from 'react';
 import type React from 'react';
 import type { ReactNode } from 'react';
-import { SPRING_SHAPE, SPRING_TAP, spring } from '../motion.tsx';
+import { SPRING_SHAPE, SPRING_TAP, spring } from './spring.ts';
 
 export interface InlineTextProps {
     label: string;

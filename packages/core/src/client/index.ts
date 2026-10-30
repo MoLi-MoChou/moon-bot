@@ -20,7 +20,7 @@ import { CONVERSATION_CSS, SHELL_CSS, installCompiledStyles } from './design/ind
 import { MOBILE_CSS } from './design/mobile.ts'
 import { DELIVER_CSS } from './deliver-cards-css.ts'
 import { quietly } from './diagnostics.ts'
-import { EMPTY_STATE_CSS, SETTINGS_CHROME_CSS } from './kit/index.ts'
+import { EMPTY_STATE_CSS, SETTINGS_CHROME_CSS } from 'moon-bot-ui'
 import { ErrorToast, FEEDBACK_CSS } from './feedback.tsx'
 import { installFilesPanel, FILES_PANEL_CSS } from './files-panel.ts'
 import { HeaderPill } from './header.tsx'

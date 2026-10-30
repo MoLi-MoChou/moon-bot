@@ -16,7 +16,7 @@ import { t } from './i18n.ts';
 import { BotResetCard, type ResetActions } from './bot-reset.tsx';
 import { ProactiveCard, type ProactiveActions } from './proactive-page.tsx';
 import type { AvatarEditorProps, BotPatch, BotSettingsFormProps, CharacterGridProps, SettingsActions, SettingsBot, SettingsBotEngine, SettingsEngineOption, SettingsRoster } from './settings-types.ts';
-import { Card, InlineText, Row, SwitchRow } from './kit/index.ts';
+import { Card, InlineText, Row, SwitchRow } from 'moon-bot-ui';
 const capitalize = (word: string): string => word.charAt(0).toUpperCase() + word.slice(1);
 // Uploaded avatars are center-cropped to a small square so state.json stays light.
 export async function avatarImage(file: File): Promise<string> {

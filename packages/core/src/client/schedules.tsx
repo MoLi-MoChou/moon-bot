@@ -5,7 +5,7 @@ import { Fragment, createElement as h, useEffect, useState } from 'react';
 import { BotAvatar, RoomAvatar } from './mark.tsx';
 import { ClockIcon, PlusIcon, TrashIcon } from './icons.tsx';
 import { Segmented } from './motion.tsx';
-import { EmptyState } from './kit/index.ts';
+import { EmptyState } from 'moon-bot-ui';
 import { dateLocale, hostText, t } from './i18n.ts';
 import type { FormEvent, ReactNode } from 'react';
 import type { MarkBot } from './mark.tsx';

@@ -152,7 +152,7 @@ export type {
   CardProps,
   SwitchProps,
   SwitchRowProps,
-} from './kit/index.ts'
+} from 'moon-bot-ui'
 
 export interface CharacterLook { shape: string; color: string }
 export interface CharacterGridProps {

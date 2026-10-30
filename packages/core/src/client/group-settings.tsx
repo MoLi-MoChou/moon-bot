@@ -2,7 +2,7 @@ import { createElement as h, useEffect, useState } from 'react';
 import { isMainOf } from './sources.ts';
 import { PlusIcon, ChevronRightIcon } from './icons.tsx';
 import { AdminStar, BotAvatar, BotMark, RoomAvatar } from './mark.tsx';
-import { Card, Row, InlineText, SwitchRow } from './kit/index.ts';
+import { Card, Row, InlineText, SwitchRow } from 'moon-bot-ui';
 import { Segmented } from './motion.tsx';
 import { FolderMenu } from './folder-menu.tsx';
 import { PermissionPicker } from './permission-picker.tsx';

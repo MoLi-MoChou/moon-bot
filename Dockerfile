@@ -17,7 +17,10 @@ COPY packages/core/package.json packages/core/tsconfig.json packages/core/
 COPY packages/contracts/package.json packages/contracts/tsconfig.json packages/contracts/
 COPY packages/ui/package.json packages/ui/tsconfig.json packages/ui/
 COPY apps/desktop/package.json apps/desktop/vite.config.js apps/desktop/
-COPY apps/connect/package.json apps/connect/
+# connect's prepare builds the CLI; copy its sources so pnpm install can run that script.
+COPY apps/connect/package.json apps/connect/tsconfig.json apps/connect/
+COPY apps/connect/scripts/ apps/connect/scripts/
+COPY apps/connect/src/ apps/connect/src/
 COPY apps/desktop/ui/ apps/desktop/ui/
 # The window compiles the Bot views from core's TypeScript sources (+ contracts + ui kit).
 COPY packages/core/src/ packages/core/src/
@@ -48,7 +51,10 @@ COPY packages/core/package.json packages/core/tsconfig.json packages/core/
 COPY packages/contracts/package.json packages/contracts/tsconfig.json packages/contracts/
 COPY packages/ui/package.json packages/ui/tsconfig.json packages/ui/
 COPY apps/desktop/package.json apps/desktop/
-COPY apps/connect/package.json apps/connect/
+# connect's prepare builds the CLI; copy its sources so pnpm install can run that script.
+COPY apps/connect/package.json apps/connect/tsconfig.json apps/connect/
+COPY apps/connect/scripts/ apps/connect/scripts/
+COPY apps/connect/src/ apps/connect/src/
 # Host/service ship as TypeScript sources; Node will not strip types under node_modules.
 # The build needs the dev dependencies (esbuild, typescript), so the tree installs once
 # whole; a second, production-only install replaces it, and the desktop-only packages

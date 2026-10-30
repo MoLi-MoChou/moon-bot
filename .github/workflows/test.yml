@@ -169,10 +169,13 @@ jobs:
           # beforePack replaces the moon-bot-core workspace link with a file copy; afterPack
           # restores it, but re-link explicitly so the next electron-builder can resolve core's
           # deps (fastify, …) even if a prior pack left a materialized tree behind.
+          # Must use pnpm exec (not npx): electron-builder 26 detects the package manager from
+          # the process environment; npx makes it choose npm, miss pnpm's layout, log
+          # fastify@undefined, and ship an asar without core's runtime deps.
           node --input-type=module -e "import { restoreCoreLink } from './scripts/before-pack.mjs'; await restoreCoreLink()"
           next="$(node -p "const [a, b, c] = require('./package.json').version.split(/[.-]/u); [a, b, Number(c) + 1].join('.')")"
           echo "NEXT_VERSION=$next" >> "$GITHUB_ENV"
-          npx electron-builder --publish never -c.extraMetadata.version="$next" -c.directories.output=dist-next
+          pnpm exec electron-builder --publish never -c.extraMetadata.version="$next" -c.directories.output=dist-next
       - name: Update the installed app and check it
         if: steps.scope.outputs.update == 'true'
         shell: pwsh

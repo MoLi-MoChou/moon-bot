@@ -3,7 +3,6 @@
 // `client-actions.ts`, and the surface's own painters (mentions, theme, registry) in
 // `client-install.ts`.
 
-import { ABOUT_CSS } from './about.tsx'
 import { addAlwaysAllow } from './approval-always.ts'
 import { noticeApprovals } from './approval-notices.ts'
 import { call } from './api.ts'
@@ -11,51 +10,33 @@ import { CHATS_SOURCE, atSources } from './at-menu.ts'
 import type { ChatRefRow, MentionRow } from './at-menu.ts'
 import { createActions } from './client-actions.ts'
 import { createClientState } from './client-boot.ts'
+import { shellStyleInstallers, conversationStyleInstaller, installCompiledStyles } from './index-styles.ts'
 import type { AtMenuSlot, ChatSnapshot, ClientContext, Disposer, SelectionOwner } from './client-ctx.js'
 import { installMentions, installRegistry, installTheme } from './client-install.ts'
 import { AssistantCell, TriggerCell, TurnProcessCell, Nothing, TurnTailCell, ToolCell } from './cells.ts'
-import { ChatWelcome, WELCOME_CSS } from './chat-welcome.tsx'
+import { ChatWelcome } from './chat-welcome.tsx'
 import { ComposerPlus, ComposerVoice, menuIcons } from './composer.tsx'
-import { CONVERSATION_CSS, SHELL_CSS, installCompiledStyles } from './design/index.ts'
-import { MOBILE_CSS } from './design/mobile.ts'
-import { DELIVER_CSS } from './deliver-cards-css.ts'
 import { quietly } from './diagnostics.ts'
-import { EMPTY_STATE_CSS, SETTINGS_CHROME_CSS } from 'moon-bot-ui'
-import { ErrorToast, FEEDBACK_CSS } from './feedback.tsx'
-import { installFilesPanel, FILES_PANEL_CSS } from './files-panel.ts'
+import { ErrorToast } from './feedback.tsx'
+import { installFilesPanel } from './files-panel.ts'
 import { HeaderPill } from './header.tsx'
 import { installHeaderNavigation } from './header-navigation.ts'
 import { installLocale, t } from './i18n.ts'
 import { installImeGuard } from './ime-guard.ts'
-import { MEMBER_CSS, MemberDock } from './member-status.tsx'
-import { MENTION_CHIPS_CSS } from './mention-chips.tsx'
+import { MemberDock } from './member-status.tsx'
 import { ModelChoiceDock, DeepSeekSignIn } from './model-choice.tsx'
-import { MODEL_CSS } from './model-menu-css.ts'
 import { listedOpener } from './open-listed.ts'
 import { Overlays } from './overlays.tsx'
 import { QuestionCard, QuestionDock } from './questions.tsx'
-import { RetryCell, RETRY_CSS } from './retry-cell.tsx'
-import { SCHEDULE_CSS } from './schedules.tsx'
+import { RetryCell } from './retry-cell.tsx'
 import { SecretDock } from './secret-card.tsx'
-import { SECRET_CSS } from './secret-card-css.ts'
-import { TeamSidebar, ConnectPlugins, YouAvatar, AccountLauncher, FooterAccount, BrandMark, BrandName, BotReturn, SIDEBAR_CSS, RETURN_CSS, holdShellShortcuts } from './sidebar.tsx'
-import { StarterChips, STARTERS_CSS } from './starters.tsx'
+import { TeamSidebar, ConnectPlugins, YouAvatar, AccountLauncher, FooterAccount, BrandMark, BrandName, BotReturn, RETURN_CSS, holdShellShortcuts } from './sidebar.tsx'
+import { StarterChips } from './starters.tsx'
 import { freePriority, groupsFor, surfaceGroups } from './surface.ts'
 import { currentPart } from './text.ts'
 import { registry } from './themes.ts'
-import { USER_MESSAGE_CSS, UserMessageCell, canDrawUserMessages } from './user-message.tsx'
-import { USAGE_CSS } from './usage-page-css.ts'
-import { AnsweredReply, WidgetDock, WIDGET_CSS } from './widget-cell.tsx'
-import { BROWSER_CSS } from './browser-pane-css.ts'
-import { BOT_SETTINGS_CSS } from './bot-settings.tsx'
-import { GROUP_SETTINGS_CSS } from './group-settings.tsx'
-import { FOLDER_CSS } from './folder-menu.tsx'
-import { ENGINE_CSS } from './engine-menu.tsx'
-import { MARKET_CSS } from './connector-market.tsx'
-import { CAPABILITY_CSS } from './capability-css.ts'
-import { RELAY_PAGE_CSS } from './relay-page.tsx'
-import { TASKS_CSS } from './tasks-page.tsx'
-import { PROCESS_CSS } from './work-process.tsx'
+import { UserMessageCell, canDrawUserMessages } from './user-message.tsx'
+import { AnsweredReply, WidgetDock } from './widget-cell.tsx'
 
 export const inject = ['sessions', 'uiWorkspace', 'uiConversation', 'slots', 'theme', 'layout']
 
@@ -77,13 +58,29 @@ interface ShadowOptions {
 
 export function apply(ctx: ClientContext): void {
   installImeGuard()
-  ctx.effect(() => installFilesPanel({ call, onPickFolder: () => { const id = mainView(); if (id) actions.showDetails(id) } }), 'moon-bot: workspace file downloads')
+  ctx.effect(
+    () =>
+      installFilesPanel({
+        call,
+        onPickFolder: () => {
+          const id = mainView()
+          if (id) actions.showDetails(id)
+        },
+      }),
+    'moon-bot: workspace file downloads',
+  )
   ctx.effect(() => installLocale(ctx.get('locale')), 'moon-bot: interface copy')
 
   const client = createClientState(ctx)
   ctx.effect(() => installRegistry(ctx), 'moon-bot: registry')
-  ctx.inject(['shortcuts'], scope => { scope.effect(() => holdShellShortcuts(scope.shortcuts), 'moon-bot: settings shortcut') })
-  const after = <T>(promise: Promise<T>): Promise<T> => promise.then(async (value) => { await client.pull().catch(() => {}); return value })
+  ctx.inject(['shortcuts'], scope => {
+    scope.effect(() => holdShellShortcuts(scope.shortcuts), 'moon-bot: settings shortcut')
+  })
+  const after = <T>(promise: Promise<T>): Promise<T> =>
+    promise.then(async value => {
+      await client.pull().catch(() => {})
+      return value
+    })
   // A Bot id, or any part of its chat, opens the Bot's current part.
   const partFor = (id: string): string => {
     const bot = client.roster.getSnapshot().byId?.[id]
@@ -93,29 +90,54 @@ export function apply(ctx: ClientContext): void {
   const show = listedOpener({
     list: ctx.sessions.list,
     refresh: () => Promise.resolve(ctx.sessions.refresh?.()).catch(quietly('refresh sessions')),
-    open: (target) => { client.navigation.expected = target; ctx.uiWorkspace.openSession(target) },
+    open: target => {
+      client.navigation.expected = target
+      ctx.uiWorkspace.openSession(target)
+    },
     current: mainView,
   })
   const atMenu: AtMenuSlot = { current: null }
   const actions = createActions({ ctx, client, after, partFor, show, atMenu })
 
-  const face = (): Face => ({ actions, hooks: {
-    roster: client.roster, ui: client.ui, activity: client.activity, work: client.work, memoryNews: client.memoryNews,
-    registry, turnClock: client.turnClock, live: client.live, cards: client.cards, heldCards: client.heldCards,
-    browserPages: client.browserPages, browserTabs: client.browserTabs, surface: client.surface, update: client.update,
-  } })
+  const face = (): Face => ({
+    actions,
+    hooks: {
+      roster: client.roster,
+      ui: client.ui,
+      activity: client.activity,
+      work: client.work,
+      memoryNews: client.memoryNews,
+      registry,
+      turnClock: client.turnClock,
+      live: client.live,
+      cards: client.cards,
+      heldCards: client.heldCards,
+      browserPages: client.browserPages,
+      browserTabs: client.browserTabs,
+      surface: client.surface,
+      update: client.update,
+    },
+  })
 
-  ctx.effect(() => noticeApprovals({
-    work: client.work,
-    roster: client.roster,
-    shownSession: () => mainView(),
-    openSession: id => actions.openSession(id),
-  }), 'moon-bot: approval notifications')
-  ctx.effect(() => addAlwaysAllow({
-    work: client.work,
-    shownSession: () => mainView(),
-    raise: (botId, permission) => actions.updateBot(botId, { permission }),
-  }), 'moon-bot: always-allow approvals')
+  ctx.effect(
+    () =>
+      noticeApprovals({
+        work: client.work,
+        roster: client.roster,
+        shownSession: () => mainView(),
+        openSession: id => actions.openSession(id),
+      }),
+    'moon-bot: approval notifications',
+  )
+  ctx.effect(
+    () =>
+      addAlwaysAllow({
+        work: client.work,
+        shownSession: () => mainView(),
+        raise: (botId, permission) => actions.updateBot(botId, { permission }),
+      }),
+    'moon-bot: always-allow approvals',
+  )
 
   const assistantFace = (sessionId: string): Face => {
     const binding = ctx.sessions.binding(sessionId)
@@ -126,26 +148,37 @@ export function apply(ctx: ClientContext): void {
       if (snapshot === undefined) throw new Error('moon-bot: Chat target is unavailable')
       return snapshot
     }
-    return { ...face(), keyedHooks: {
-      turnSteps: (turn: number) => nodes().nodes.turnDataSource(Number(turn), 'assistant-step'),
-      turnTools: (turn: number) => nodes().nodes.turnDataSource(Number(turn), 'tool-call'),
-      turnContext: (turn: number) => nodes().nodes.turnDataSource(Number(turn), 'context'),
-    } }
+    return {
+      ...face(),
+      keyedHooks: {
+        turnSteps: (turn: number) => nodes().nodes.turnDataSource(Number(turn), 'assistant-step'),
+        turnTools: (turn: number) => nodes().nodes.turnDataSource(Number(turn), 'tool-call'),
+        turnContext: (turn: number) => nodes().nodes.turnDataSource(Number(turn), 'context'),
+      },
+    }
   }
 
   // A Bot surface owns the cells it shadows. It starts far below the -10 that plugins
   // commonly use and goes below whatever already holds the cell, so a plugin that
   // shadows the same cell neither breaks the install nor shows through.
   const BOT_PRIORITY = -100
-  const shadow = (name: string, options: ShadowOptions, component: unknown): Disposer => ctx.slots.inject(name, () => ctx.slots.register({
-    name, ...options, ...(options.priority === undefined ? {} : { priority: freePriority(ctx.slots.entries(name), options) }),
-  }, component))
+  const shadow = (name: string, options: ShadowOptions, component: unknown): Disposer =>
+    ctx.slots.inject(name, () =>
+      ctx.slots.register(
+        {
+          name,
+          ...options,
+          ...(options.priority === undefined ? {} : { priority: freePriority(ctx.slots.entries(name), options) }),
+        },
+        component,
+      ),
+    )
   const installHeader = (): Disposer => ctx.slots.inject('conversation.session.header', () => installHeaderNavigation(ctx.slots, face, HeaderPill, BOT_PRIORITY))
 
   // The "@" menu's Bot group and the chats "+" references. The composer's controller
   // for a Session is the shell's own, so the chats open at its caret.
   const installAtMenu = (): Disposer => {
-    const fiber = ctx.inject(['inputTriggers'], (scope) => {
+    const fiber = ctx.inject(['inputTriggers'], scope => {
       scope.effect(() => {
         const triggers = scope.inputTriggers
         const controllerOf = (sessionId: string) => {
@@ -163,28 +196,16 @@ export function apply(ctx: ClientContext): void {
         }
       }, 'moon-bot: @ menu')
     })
-    return () => { fiber.dispose() }
+    return () => {
+      fiber.dispose()
+    }
   }
 
   // The shell group paints the team surface around the session; the conversation
   // group re-skins the session itself. Each step returns a disposer from slots.inject,
   // so a surface change withdraws the whole group and the outlets re-render.
   const installShell = (): readonly (() => Disposer | undefined)[] => [
-    () => installCompiledStyles(SHELL_CSS, 'shell'),
-    () => installCompiledStyles(SIDEBAR_CSS, 'sidebar'),
-    () => installCompiledStyles(SECRET_CSS, 'secrets'),
-    () => installCompiledStyles(MODEL_CSS + FOLDER_CSS + ENGINE_CSS + SETTINGS_CHROME_CSS + BOT_SETTINGS_CSS + GROUP_SETTINGS_CSS + MARKET_CSS + CAPABILITY_CSS + RELAY_PAGE_CSS + TASKS_CSS, 'models'),
-    () => installCompiledStyles(USAGE_CSS, 'usage'),
-    () => installCompiledStyles(SCHEDULE_CSS, 'schedules'),
-    () => installCompiledStyles(FEEDBACK_CSS, 'feedback'),
-    () => installCompiledStyles(ABOUT_CSS, 'about'),
-    () => installCompiledStyles(MEMBER_CSS, 'members'),
-    () => installCompiledStyles(USER_MESSAGE_CSS, 'user-messages'),
-    () => installCompiledStyles(MENTION_CHIPS_CSS, 'mention-chips'),
-    () => installCompiledStyles(WIDGET_CSS, 'widgets'),
-    () => installCompiledStyles(EMPTY_STATE_CSS + WELCOME_CSS + PROCESS_CSS + RETRY_CSS + STARTERS_CSS + FILES_PANEL_CSS + DELIVER_CSS, 'work-process'),
-    ...(client.browsers ? [() => installCompiledStyles(BROWSER_CSS, 'browser')] : []),
-    () => installCompiledStyles(MOBILE_CSS, 'mobile'),
+    ...shellStyleInstallers(Boolean(client.browsers)),
     () => installTheme({ ctx, client }),
     () => shadow('sidebar.workspaces', { priority: BOT_PRIORITY, inject: face }, TeamSidebar),
     () => shadow('sidebar.brand.mark', { priority: BOT_PRIORITY }, BrandMark),
@@ -200,7 +221,7 @@ export function apply(ctx: ClientContext): void {
     () => shadow('shell.overlay', { id: 'bot-toast', order: 60, inject: face }, ErrorToast),
   ]
   const installConversation = (): readonly (() => Disposer | undefined)[] => [
-    () => installCompiledStyles(CONVERSATION_CSS, 'conversation'),
+    conversationStyleInstaller(),
     () => installMentions(client),
     () => installAtMenu(),
     installHeader,
@@ -226,10 +247,15 @@ export function apply(ctx: ClientContext): void {
     () => shadow('conversation.composer.dock', { id: 'usage', order: 1, priority: BOT_PRIORITY }, Nothing),
     () => shadow('conversation.input.left', { id: 'bot-plus', order: -100, inject: face }, ComposerPlus),
     () => shadow('conversation.input.right', { id: 'bot-voice', order: 100, inject: face }, ComposerVoice),
-    () => shadow('conversation.composer', {
-      priority: BOT_PRIORITY,
-      select: owner => (owner.pendingInteraction?.kind === 'question' ? owner.pendingInteraction : null),
-    }, QuestionCard),
+    () =>
+      shadow(
+        'conversation.composer',
+        {
+          priority: BOT_PRIORITY,
+          select: owner => (owner.pendingInteraction?.kind === 'question' ? owner.pendingInteraction : null),
+        },
+        QuestionCard,
+      ),
     () => shadow('conversation.input.dock', { id: 'bot-members', order: -120, inject: face }, MemberDock),
     () => shadow('conversation.input.dock', { id: 'bot-model', order: -110, inject: face }, ModelChoiceDock),
     () => shadow('conversation.input.dock', { id: 'bot-question', order: -100, inject: face }, QuestionDock),
@@ -278,31 +304,41 @@ export function apply(ctx: ClientContext): void {
       if (row?.blank !== true && !forkedFromAgent) return
       client.pendingAdopt.set(main, agentId)
       client.setPlain(true)
-      void call('agent-adopt', { agentId, sessionId: main }).then(() => client.pull()).catch((error: unknown) => {
-        client.pendingAdopt.delete(main)
-        console.warn('[moon-bot] agent-adopt', error)
-        // The Session never joined the Agent: the sync puts the team surface
-        // back (a Map delete fires no subscription), and the user hears why.
-        sync()
-        actions.reportError(error instanceof Error ? error : { message: errorText(error) }, 'agent-adopt')
-      })
+      void call('agent-adopt', { agentId, sessionId: main })
+        .then(() => client.pull())
+        .catch((error: unknown) => {
+          client.pendingAdopt.delete(main)
+          console.warn('[moon-bot] agent-adopt', error)
+          // The Session never joined the Agent: the sync puts the team surface
+          // back (a Map delete fires no subscription), and the user hears why.
+          sync()
+          actions.reportError(error instanceof Error ? error : { message: errorText(error) }, 'agent-adopt')
+        })
       // The hero's workspace picker leaves the blank Session it switched away from
       // behind; in another workspace it stays empty forever, so it is archived.
       const next = client.workspaceOf(main)
       if (list.byId?.[String(before)]?.blank === true && next !== undefined && client.workspaceOf(before) !== next) {
-        void call('agent-archive', { agentId, sessionId: before }).then(() => client.pull()).catch(() => {})
+        void call('agent-archive', { agentId, sessionId: before })
+          .then(() => client.pull())
+          .catch(() => {})
       }
     }
     const offList = ctx.sessions.list.subscribe(sync)
     const offRoster = client.roster.subscribe(sync)
     sync()
-    return () => { offList(); offRoster() }
+    return () => {
+      offList()
+      offRoster()
+    }
   }, 'moon-bot: agent surface')
 
   ctx.effect(() => {
-    const groups = surfaceGroups({ shell: installShell, conversation: installConversation }, {
-      onError: (_group, error) => actions.reportError(new Error(t('Bot mode could not be set up here: {error}', { error: errorText(error) })), 'surface'),
-    })
+    const groups = surfaceGroups(
+      { shell: installShell, conversation: installConversation },
+      {
+        onError: (_group, error) => actions.reportError(new Error(t('Bot mode could not be set up here: {error}', { error: errorText(error) })), 'surface'),
+      },
+    )
     const reconcile = (): void => groups.reconcile(groupsFor(client.surface.getSnapshot()))
     reconcile()
     const unsub = client.surface.subscribe(reconcile)

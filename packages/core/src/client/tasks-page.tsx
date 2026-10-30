@@ -1,301 +1,283 @@
-import { Fragment, createElement as h, useEffect, useRef, useState } from 'react';
-import type { TaskHold } from 'moon-bot-contracts';
-import { EmptyState } from 'moon-bot-ui';
-import { t } from './i18n.ts';
-import { TasksIcon } from './icons.tsx';
-import { SPRING_SHAPE } from './motion.tsx';
-import { TaskQueue } from './tasks-queue.tsx';
-import type { TaskQueueItem } from './tasks-queue.tsx';
-// Settings → Tasks and the sidebar's task popover (2026-10-28 tasks-panel): who is
-// working right now, for whom, and for how long; what waits in its queue; what finished
-// lately; and the stop that ends one turn. The rows come from the host's tasks endpoint,
-// which reads the live turns and the queue behind each one — this page only draws them,
-// ticks the clocks once a second, and marks a row stopped the moment the user asks.
-// `useTasks` keeps the polling and the stop state; `TasksBoard` is the one rendering the
-// Settings page and the popover share.
-export interface TaskRunning {
-    sessionId: string;
-    botId: string;
-    botName: string;
-    since: number;
-    roomId?: string;
-    roomName?: string;
-    tool?: string;
-    target?: string;
-    said?: string;
-    switching?: boolean;
-    fromName?: string;
-    /** Messages waiting behind the running turn; the host leaves the field out at zero. */
-    queued?: number;
-    /** Those messages, in order. Absent when the host cannot name them. */
-    queue?: readonly TaskQueueItem[];
-    hold?: TaskHold;
-}
-export interface TaskDone {
-    sessionId: string;
-    botId: string;
-    botName: string;
-    startedAt: number;
-    endedAt: number;
-    reason: string;
-    roomId?: string;
-    roomName?: string;
-    fromName?: string;
-}
-export interface TaskWaiting {
-    botId: string;
-    botName: string;
-    for: readonly string[];
-    /** Set when a restart parked this session and Continue can run it. */
-    sessionId?: string;
-    hold?: TaskHold;
-}
-export interface TasksAnswer {
-    running: readonly TaskRunning[];
-    completed: readonly TaskDone[];
-    waiting: readonly TaskWaiting[];
-}
-export type TaskStateFilter = 'all' | 'running' | 'waiting' | 'completed';
-export interface TaskFilters {
-    readonly state: TaskStateFilter;
-    readonly botId: string;
-}
-export function filterTasks(answer: TasksAnswer, filters: TaskFilters): TasksAnswer {
-    const byBot = (task: { botId: string }): boolean => filters.botId === 'all' || task.botId === filters.botId;
-    const include = (kind: Exclude<TaskStateFilter, 'all'>): boolean => filters.state === 'all' || filters.state === kind;
-    return {
-        running: include('running') ? answer.running.filter(byBot) : [],
-        waiting: include('waiting') ? answer.waiting.filter(byBot) : [],
-        completed: include('completed') ? answer.completed.filter(byBot) : [],
-    };
-}
-/** What `task-stop` answers: whether a running turn was there to cancel. */
-export interface TaskStopAnswer {
-    readonly stopped?: boolean;
-}
-export interface TaskQueueAnswer {
-    readonly removed?: boolean;
-}
-export interface TaskContinueAnswer {
-    readonly continued?: boolean;
-}
-export interface TaskActions {
-    tasks: () => Promise<TasksAnswer>;
-    stopTask: (sessionId: string) => Promise<TaskStopAnswer | undefined>;
-    removeQueued: (sessionId: string, id: string) => Promise<TaskQueueAnswer | undefined>;
-    continueTurn?: ((sessionId: string) => Promise<TaskContinueAnswer | undefined>) | undefined;
-    openSession: (sessionId: string) => void;
-}
-/** mm:ss under an hour, h:mm:ss above it — the panel's clocks. */
-export function elapsed(ms: number): string {
-    const total = Math.max(0, Math.floor(ms / 1000));
-    const hours = Math.floor(total / 3600);
-    const minutes = Math.floor((total % 3600) / 60);
-    const seconds = total % 60;
-    const two = (value: number): string => String(value).padStart(2, '0');
-    return hours > 0 ? `${hours}:${two(minutes)}:${two(seconds)}` : `${minutes}:${two(seconds)}`;
-}
-/** What a row says the Bot is doing, in the interface's words. */
-export function doingText(task: TaskRunning, translate: (key: string, params?: Record<string, unknown>) => string = t): string {
-    if (task.switching === true) return translate('Switching to a new session');
-    if (task.tool !== undefined) return task.target === undefined ? translate('Running {tool}', { tool: task.tool }) : translate('Running {tool} on {target}', { tool: task.tool, target: task.target });
-    if (task.said !== undefined) return task.said;
-    return translate('Working');
-}
-/** Why a finished row ended, saying who ended it: a user's stop and a Main Bot's differ. */
-export function reasonText(reason: string): string {
-    if (reason === 'completed') return t('Finished');
-    if (reason === 'error') return t('Failed');
-    if (reason === 'user') return t('Stopped by you');
-    if (reason === 'hook') return t('Stopped by a Main Bot');
-    // The engine reports a cancelled turn with the abort reason; the panel's Stop is it.
-    if (reason === 'aborted' || reason === 'disposed') return t('Stopped');
-    return t(reason);
-}
-export function holdText(hold: TaskHold | undefined): string | undefined {
-    if (hold === undefined) return undefined;
-    if (hold === 'approval') return t('Waiting for your approval');
-    if (hold === 'queued') return t('Queued');
-    if (hold === 'handoff') return t('Waiting for another Bot');
-    if (hold === 'interrupted') return t('Cut off by a restart');
-    return t('Engine busy');
-}
-/** One running turn: the same Session's next turn starts at a new time, so a stop's
- *  mark belongs to this turn, not to the Session. */
-const turnKey = (task: TaskRunning): string => `${task.sessionId}:${task.since}`;
-export interface TasksState {
-    readonly answer: TasksAnswer | null;
-    readonly now: number;
-    readonly busy: string | null;
-    /** Turns the user just stopped, by Session and start time: they read stopped until gone. */
-    readonly stopped: ReadonlySet<string>;
-    readonly notice: string | null;
-    readonly error: string | null;
-    readonly refresh: () => void;
-    readonly stop: (task: TaskRunning) => void;
-    readonly withdraw?: ((sessionId: string, id: string) => void) | undefined;
-    readonly continueTurn: (sessionId: string) => void;
-}
-/** The endpoint's polling and the stop's feedback, shared by the page and the popover. */
+import { Fragment, createElement as h, useEffect, useRef, useState } from 'react'
+import { EmptyState } from 'moon-bot-ui'
+import { t } from './i18n.ts'
+import { TasksIcon } from './icons.tsx'
+import { SPRING_SHAPE } from './motion.tsx'
+import { TaskQueue } from './tasks-queue.tsx'
+import type { TaskRunning, TasksAnswer, TaskStateFilter, TaskFilters, TaskActions, TasksState, TasksBoardProps } from './tasks-types.ts'
+import { filterTasks, elapsed, doingText, reasonText, holdText, turnKey } from './tasks-helpers.ts'
+export type {
+  TaskRunning,
+  TaskDone,
+  TaskWaiting,
+  TasksAnswer,
+  TaskStateFilter,
+  TaskFilters,
+  TaskActions,
+  TasksState,
+  TasksBoardProps,
+  TaskStopAnswer,
+  TaskQueueAnswer,
+  TaskContinueAnswer,
+} from './tasks-types.ts'
+export { filterTasks, elapsed, doingText, reasonText, holdText } from './tasks-helpers.ts'
+
 export function useTasks(taskActions: TaskActions): TasksState {
-    const [answer, setAnswer] = useState<TasksAnswer | null>(null);
-    const [now, setNow] = useState(() => Date.now());
-    const [busy, setBusy] = useState<string | null>(null);
-    const [stopped, setStopped] = useState<ReadonlySet<string>>(() => new Set());
-    const [notice, setNotice] = useState<string | null>(null);
-    const [error, setError] = useState<string | null>(null);
-    const request = useRef(0);
-    const mounted = useRef(true);
-    const refresh = (): void => {
-        const current = ++request.current;
-        void taskActions.tasks().then(next => {
-            if (!mounted.current || current !== request.current) return;
-            setAnswer(next);
-            // A stopped row leaves with its turn; a turn that starts after it (a queued
-            // message) is a different one and is not marked.
-            setStopped(marked => new Set([...marked].filter(key => (next.running ?? []).some(task => turnKey(task) === key))));
-        }).catch(failure => {
-            if (mounted.current && current === request.current) setError(failure?.message ?? String(failure));
-        });
-    };
-    useEffect(() => {
-        refresh();
-        const poll = setInterval(() => { setNow(Date.now()); refresh(); }, 2000);
-        const tick = setInterval(() => setNow(Date.now()), 1000);
-        return () => { mounted.current = false; clearInterval(poll); clearInterval(tick); };
-    }, []);
-    const stop = (task: TaskRunning): void => {
-        setBusy(task.sessionId);
-        setNotice(null);
-        setError(null);
-        void taskActions.stopTask(task.sessionId).then(result => {
-            // The turn may have ended between the panel's poll and the click; say so
-            // instead of pretending something was stopped.
-            if (result?.stopped === false) {
-                setNotice(t('{name} had already finished, so nothing was stopped.', { name: task.botName }));
-                refresh();
-                return;
-            }
-            setStopped(marked => new Set([...marked, turnKey(task)]));
-            refresh();
-        }).catch(failure => setError(failure?.message ?? String(failure))).finally(() => setBusy(null));
-    };
-    const withdraw = (sessionId: string, id: string): void => {
-        setBusy(`queue:${id}`);
-        setNotice(null);
-        setError(null);
-        void taskActions.removeQueued(sessionId, id).then(result => {
-            if (result?.removed === false) setNotice(t('That message had already started, so it stayed.'));
-            refresh();
-        }).catch(failure => setError(failure?.message ?? String(failure))).finally(() => setBusy(null));
-    };
-    const continueTurn = (sessionId: string): void => {
-        const run = taskActions.continueTurn;
-        if (run === undefined) return;
-        setBusy(`continue:${sessionId}`);
-        setNotice(null);
-        setError(null);
-        void run(sessionId).then(result => {
-            if (result?.continued === false) setNotice(t('That turn is not waiting to continue.'));
-            refresh();
-        }).catch(failure => setError(failure?.message ?? String(failure))).finally(() => setBusy(null));
-    };
-    return { answer, now, busy, stopped, notice, error, refresh, stop, withdraw, continueTurn };
-}
-export interface TasksBoardProps {
-    readonly state: TasksState;
-    readonly onOpen: (sessionId: string) => void;
-    /** Tests pass a starting filter; the live page and popover leave it unset. */
-    readonly initialFilters?: TaskFilters;
+  const [answer, setAnswer] = useState<TasksAnswer | null>(null)
+  const [now, setNow] = useState(() => Date.now())
+  const [busy, setBusy] = useState<string | null>(null)
+  const [stopped, setStopped] = useState<ReadonlySet<string>>(() => new Set())
+  const [notice, setNotice] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const request = useRef(0)
+  const mounted = useRef(true)
+  const refresh = (): void => {
+    const current = ++request.current
+    void taskActions
+      .tasks()
+      .then(next => {
+        if (!mounted.current || current !== request.current) return
+        setAnswer(next)
+        // A stopped row leaves with its turn; a turn that starts after it (a queued
+        // message) is a different one and is not marked.
+        setStopped(marked => new Set([...marked].filter(key => (next.running ?? []).some(task => turnKey(task) === key))))
+      })
+      .catch(failure => {
+        if (mounted.current && current === request.current) setError(failure?.message ?? String(failure))
+      })
+  }
+  useEffect(() => {
+    refresh()
+    const poll = setInterval(() => {
+      setNow(Date.now())
+      refresh()
+    }, 2000)
+    const tick = setInterval(() => setNow(Date.now()), 1000)
+    return () => {
+      mounted.current = false
+      clearInterval(poll)
+      clearInterval(tick)
+    }
+  }, [])
+  const stop = (task: TaskRunning): void => {
+    setBusy(task.sessionId)
+    setNotice(null)
+    setError(null)
+    void taskActions
+      .stopTask(task.sessionId)
+      .then(result => {
+        // The turn may have ended between the panel's poll and the click; say so
+        // instead of pretending something was stopped.
+        if (result?.stopped === false) {
+          setNotice(t('{name} had already finished, so nothing was stopped.', { name: task.botName }))
+          refresh()
+          return
+        }
+        setStopped(marked => new Set([...marked, turnKey(task)]))
+        refresh()
+      })
+      .catch(failure => setError(failure?.message ?? String(failure)))
+      .finally(() => setBusy(null))
+  }
+  const withdraw = (sessionId: string, id: string): void => {
+    setBusy(`queue:${id}`)
+    setNotice(null)
+    setError(null)
+    void taskActions
+      .removeQueued(sessionId, id)
+      .then(result => {
+        if (result?.removed === false) setNotice(t('That message had already started, so it stayed.'))
+        refresh()
+      })
+      .catch(failure => setError(failure?.message ?? String(failure)))
+      .finally(() => setBusy(null))
+  }
+  const continueTurn = (sessionId: string): void => {
+    const run = taskActions.continueTurn
+    if (run === undefined) return
+    setBusy(`continue:${sessionId}`)
+    setNotice(null)
+    setError(null)
+    void run(sessionId)
+      .then(result => {
+        if (result?.continued === false) setNotice(t('That turn is not waiting to continue.'))
+        refresh()
+      })
+      .catch(failure => setError(failure?.message ?? String(failure)))
+      .finally(() => setBusy(null))
+  }
+  return { answer, now, busy, stopped, notice, error, refresh, stop, withdraw, continueTurn }
 }
 /** Who is working, who waits, what finished lately — the sections both surfaces draw. */
 export function TasksBoard({ state, onOpen, initialFilters }: TasksBoardProps) {
-    const { answer, now, busy, stopped, notice, error, stop, withdraw, continueTurn } = state;
-    const [filters, setFilters] = useState<TaskFilters>(initialFilters ?? { state: 'all', botId: 'all' });
-    const running = answer?.running ?? [];
-    const completed = answer?.completed ?? [];
-    const waiting = answer?.waiting ?? [];
-    const bots = [...new Map([...running, ...waiting, ...completed].map(task => [task.botId, task.botName])).entries()];
-    const filtered = filterTasks({ running, waiting, completed }, filters);
-    const shownRunning = filtered.running;
-    const shownWaiting = filtered.waiting;
-    const shownCompleted = filtered.completed;
-    const show = (kind: Exclude<TaskStateFilter, 'all'>): boolean => filters.state === 'all' || filters.state === kind;
-    const hasShelf = running.length + waiting.length + completed.length > 0;
-    const filteredActive = filters.state !== 'all' || filters.botId !== 'all';
-    const shownCount = shownRunning.length + shownWaiting.length + shownCompleted.length;
-    const clearFilters = (): void => { setFilters({ state: 'all', botId: 'all' }); };
-    // Filters stay out of an empty shelf (Library pattern). Keep them when a filter is
-    // already active so the user can clear it after every matching row leaves.
-    const showFilters = hasShelf || filteredActive;
-    return <>
-        {notice !== null ? <div className='bt-tasks-notice' role='status'>{notice}</div> : null}
-        {error !== null ? <div className='bt-connector-error' role='alert'>{error}</div> : null}
-        {showFilters ? <div className='bt-task-filters'>
-            <label><span>{t('Filter by state')}</span><select aria-label={t('Filter by state')} value={filters.state} onChange={event => setFilters(current => ({ ...current, state: event.target.value as TaskStateFilter }))}>
-                <option value='all'>{t('All states')}</option><option value='running'>{t('Running')}</option><option value='waiting'>{t('Waiting')}</option><option value='completed'>{t('Recently finished')}</option>
-            </select></label>
-            <label><span>{t('Filter by Bot')}</span><select aria-label={t('Filter by Bot')} value={filters.botId} onChange={event => setFilters(current => ({ ...current, botId: event.target.value }))}>
-                <option value='all'>{t('All Bots')}</option>{bots.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
-            </select></label>
-        </div> : null}
-        {answer === null ? <div className='bt-set-row'><span className='bt-set-hint'>{t('Loading…')}</span></div>
-            : !hasShelf ? <EmptyState icon={<TasksIcon />} title={t('Nobody is working right now.')} hint={t('Running turns, waiting handoffs and recently finished work show up here.')} />
-            : filteredActive && shownCount === 0 ? <EmptyState icon={<TasksIcon />} title={t('No tasks match these filters.')} action={{ label: t('Clear filters'), onClick: clearFilters }} />
-            : <>
-        {show('running') ? <section className='bt-set-section'><h3>{t('Running')}</h3><div className='bt-set-card'>
-            {shownRunning.length === 0 ? <div className='bt-set-row'><span className='bt-set-hint'>{t('Nobody is working right now.')}</span></div>
-                : shownRunning.map(task => {
-                    const isStopped = stopped.has(turnKey(task));
+  const { answer, now, busy, stopped, notice, error, stop, withdraw, continueTurn } = state
+  const [filters, setFilters] = useState<TaskFilters>(initialFilters ?? { state: 'all', botId: 'all' })
+  const running = answer?.running ?? []
+  const completed = answer?.completed ?? []
+  const waiting = answer?.waiting ?? []
+  const bots = [...new Map([...running, ...waiting, ...completed].map(task => [task.botId, task.botName])).entries()]
+  const filtered = filterTasks({ running, waiting, completed }, filters)
+  const shownRunning = filtered.running
+  const shownWaiting = filtered.waiting
+  const shownCompleted = filtered.completed
+  const show = (kind: Exclude<TaskStateFilter, 'all'>): boolean => filters.state === 'all' || filters.state === kind
+  const hasShelf = running.length + waiting.length + completed.length > 0
+  const filteredActive = filters.state !== 'all' || filters.botId !== 'all'
+  const shownCount = shownRunning.length + shownWaiting.length + shownCompleted.length
+  const clearFilters = (): void => {
+    setFilters({ state: 'all', botId: 'all' })
+  }
+  // Filters stay out of an empty shelf (Library pattern). Keep them when a filter is
+  // already active so the user can clear it after every matching row leaves.
+  const showFilters = hasShelf || filteredActive
+  return (
+    <>
+      {notice !== null ? (
+        <div className='bt-tasks-notice' role='status'>
+          {notice}
+        </div>
+      ) : null}
+      {error !== null ? (
+        <div className='bt-connector-error' role='alert'>
+          {error}
+        </div>
+      ) : null}
+      {showFilters ? (
+        <div className='bt-task-filters'>
+          <label>
+            <span>{t('Filter by state')}</span>
+            <select aria-label={t('Filter by state')} value={filters.state} onChange={event => setFilters(current => ({ ...current, state: event.target.value as TaskStateFilter }))}>
+              <option value='all'>{t('All states')}</option>
+              <option value='running'>{t('Running')}</option>
+              <option value='waiting'>{t('Waiting')}</option>
+              <option value='completed'>{t('Recently finished')}</option>
+            </select>
+          </label>
+          <label>
+            <span>{t('Filter by Bot')}</span>
+            <select aria-label={t('Filter by Bot')} value={filters.botId} onChange={event => setFilters(current => ({ ...current, botId: event.target.value }))}>
+              <option value='all'>{t('All Bots')}</option>
+              {bots.map(([id, name]) => (
+                <option key={id} value={id}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      ) : null}
+      {answer === null ? (
+        <div className='bt-set-row'>
+          <span className='bt-set-hint'>{t('Loading…')}</span>
+        </div>
+      ) : !hasShelf ? (
+        <EmptyState icon={<TasksIcon />} title={t('Nobody is working right now.')} hint={t('Running turns, waiting handoffs and recently finished work show up here.')} />
+      ) : filteredActive && shownCount === 0 ? (
+        <EmptyState icon={<TasksIcon />} title={t('No tasks match these filters.')} action={{ label: t('Clear filters'), onClick: clearFilters }} />
+      ) : (
+        <>
+          {show('running') ? (
+            <section className='bt-set-section'>
+              <h3>{t('Running')}</h3>
+              <div className='bt-set-card'>
+                {shownRunning.length === 0 ? (
+                  <div className='bt-set-row'>
+                    <span className='bt-set-hint'>{t('Nobody is working right now.')}</span>
+                  </div>
+                ) : (
+                  shownRunning.map(task => {
+                    const isStopped = stopped.has(turnKey(task))
                     // The count pill already says how many wait; a second "Queued" hold is noise.
-                    const hold = task.hold === 'queued' ? undefined : task.hold;
-                    return <div key={task.sessionId} className='bt-task-block'>
+                    const hold = task.hold === 'queued' ? undefined : task.hold
+                    return (
+                      <div key={task.sessionId} className='bt-task-block'>
                         <div className='bt-task-row' data-stopped={isStopped || undefined}>
-                        <button type='button' className='bt-task-who' onClick={() => onOpen(task.sessionId)}>
+                          <button type='button' className='bt-task-who' onClick={() => onOpen(task.sessionId)}>
                             <span className='bt-task-name'>{task.botName}</span>
-                            <span className='bt-task-sub'>{doingText(task)}{task.roomName !== undefined ? ` · ${task.roomName}` : ''}</span>
-                        </button>
-                        {task.fromName !== undefined ? <span className='bt-task-from'>{t('for {name}', { name: task.fromName })}</span> : null}
-                        {task.queued !== undefined && task.queued > 0
-                            ? <span className='bt-task-queued' title={t('Messages waiting for the next turn')}>{t('{count} queued', { count: task.queued })}</span>
-                            : null}
-                        {holdText(hold) !== undefined ? <span className='bt-task-hold'>{holdText(hold)}</span> : null}
-                        <span className='bt-task-clock'>{elapsed(now - task.since)}</span>
-                        {isStopped ? <span className='bt-task-state'>{t('Stopped by you')}</span>
-                            : <button type='button' className='bt-soft bt-soft-sm bt-task-stop' disabled={busy === task.sessionId}
-                                title={t('Stop {name}', { name: task.botName })}
-                                aria-label={t('Stop {name}', { name: task.botName })}
-                                onClick={() => stop(task)}>{busy === task.sessionId ? t('Stopping…') : t('Stop')}</button>}
+                            <span className='bt-task-sub'>
+                              {doingText(task)}
+                              {task.roomName !== undefined ? ` · ${task.roomName}` : ''}
+                            </span>
+                          </button>
+                          {task.fromName !== undefined ? <span className='bt-task-from'>{t('for {name}', { name: task.fromName })}</span> : null}
+                          {task.queued !== undefined && task.queued > 0 ? (
+                            <span className='bt-task-queued' title={t('Messages waiting for the next turn')}>
+                              {t('{count} queued', { count: task.queued })}
+                            </span>
+                          ) : null}
+                          {holdText(hold) !== undefined ? <span className='bt-task-hold'>{holdText(hold)}</span> : null}
+                          <span className='bt-task-clock'>{elapsed(now - task.since)}</span>
+                          {isStopped ? (
+                            <span className='bt-task-state'>{t('Stopped by you')}</span>
+                          ) : (
+                            <button type='button' className='bt-soft bt-soft-sm bt-task-stop' disabled={busy === task.sessionId} title={t('Stop {name}', { name: task.botName })} aria-label={t('Stop {name}', { name: task.botName })} onClick={() => stop(task)}>
+                              {busy === task.sessionId ? t('Stopping…') : t('Stop')}
+                            </button>
+                          )}
                         </div>
                         <TaskQueue sessionId={task.sessionId} items={task.queue} busy={busy} onWithdraw={withdraw} />
-                    </div>;
-                })}
-        </div></section> : null}
-        {show('waiting') && shownWaiting.length > 0 ? <section className='bt-set-section'><h3>{t('Waiting for another Bot')}</h3><div className='bt-set-card'>
-            {shownWaiting.map(entry => <div key={`${entry.hold ?? 'wait'}:${entry.sessionId ?? entry.botId}`} className='bt-task-row'>
-                <button type='button' className='bt-task-who' onClick={() => onOpen(entry.sessionId ?? entry.botId)}>
-                    <span className='bt-task-name'>{entry.botName}</span>
-                    <span className='bt-task-sub'>{entry.hold === 'interrupted' ? (entry.for[0] ?? t('Cut off by a restart')) : t('Waiting for {names}', { names: entry.for.join(', ') })}</span>
-                </button>
-                {holdText(entry.hold) !== undefined ? <span className='bt-task-hold'>{holdText(entry.hold)}</span> : null}
-                {entry.hold === 'interrupted' && entry.sessionId !== undefined ? <button type='button' className='bt-soft bt-soft-sm' disabled={busy === `continue:${entry.sessionId}`} onClick={() => continueTurn(entry.sessionId ?? '')}>{t('Continue')}</button> : null}
-            </div>)}
-        </div></section> : null}
-        {show('completed') ? <section className='bt-set-section'><h3>{t('Recently finished')}</h3><div className='bt-set-card'>
-            {shownCompleted.length === 0 ? <div className='bt-set-row'><span className='bt-set-hint'>{t('Nothing has finished yet.')}</span></div>
-                : shownCompleted.map((task, index) => <button key={`${task.sessionId}:${task.endedAt}:${index}`} type='button' className='bt-task-row bt-task-done' onClick={() => onOpen(task.sessionId)}>
-                    <span className='bt-task-who'><span className='bt-task-name'>{task.botName}</span>
-                        <span className='bt-task-sub'>{reasonText(task.reason)}{task.fromName !== undefined ? ` · ${t('for {name}', { name: task.fromName })}` : ''}</span></span>
-                    <span className='bt-task-clock'>{elapsed(task.endedAt - task.startedAt)}</span>
-                </button>)}
-        </div></section> : null}
-            </>}
-    </>;
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+            </section>
+          ) : null}
+          {show('waiting') && shownWaiting.length > 0 ? (
+            <section className='bt-set-section'>
+              <h3>{t('Waiting for another Bot')}</h3>
+              <div className='bt-set-card'>
+                {shownWaiting.map(entry => (
+                  <div key={`${entry.hold ?? 'wait'}:${entry.sessionId ?? entry.botId}`} className='bt-task-row'>
+                    <button type='button' className='bt-task-who' onClick={() => onOpen(entry.sessionId ?? entry.botId)}>
+                      <span className='bt-task-name'>{entry.botName}</span>
+                      <span className='bt-task-sub'>{entry.hold === 'interrupted' ? (entry.for[0] ?? t('Cut off by a restart')) : t('Waiting for {names}', { names: entry.for.join(', ') })}</span>
+                    </button>
+                    {holdText(entry.hold) !== undefined ? <span className='bt-task-hold'>{holdText(entry.hold)}</span> : null}
+                    {entry.hold === 'interrupted' && entry.sessionId !== undefined ? (
+                      <button type='button' className='bt-soft bt-soft-sm' disabled={busy === `continue:${entry.sessionId}`} onClick={() => continueTurn(entry.sessionId ?? '')}>
+                        {t('Continue')}
+                      </button>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
+          {show('completed') ? (
+            <section className='bt-set-section'>
+              <h3>{t('Recently finished')}</h3>
+              <div className='bt-set-card'>
+                {shownCompleted.length === 0 ? (
+                  <div className='bt-set-row'>
+                    <span className='bt-set-hint'>{t('Nothing has finished yet.')}</span>
+                  </div>
+                ) : (
+                  shownCompleted.map((task, index) => (
+                    <button key={`${task.sessionId}:${task.endedAt}:${index}`} type='button' className='bt-task-row bt-task-done' onClick={() => onOpen(task.sessionId)}>
+                      <span className='bt-task-who'>
+                        <span className='bt-task-name'>{task.botName}</span>
+                        <span className='bt-task-sub'>
+                          {reasonText(task.reason)}
+                          {task.fromName !== undefined ? ` · ${t('for {name}', { name: task.fromName })}` : ''}
+                        </span>
+                      </span>
+                      <span className='bt-task-clock'>{elapsed(task.endedAt - task.startedAt)}</span>
+                    </button>
+                  ))
+                )}
+              </div>
+            </section>
+          ) : null}
+        </>
+      )}
+    </>
+  )
 }
 /** Settings → Tasks: the same board as a page. */
 export function TasksPage({ taskActions }: { taskActions: TaskActions }) {
-    const state = useTasks(taskActions);
-    return <TasksBoard state={state} onOpen={taskActions.openSession} />;
+  const state = useTasks(taskActions)
+  return <TasksBoard state={state} onOpen={taskActions.openSession} />
 }
 export const TASKS_CSS = `
 .bt-task-block{display:flex;flex-direction:column;width:100%}
@@ -334,4 +316,4 @@ button.bt-task-who:hover .bt-task-name{color:var(--bt-accent)}
 .bt-tasks-body{flex:1;min-height:0;overflow-y:auto;padding:14px 16px 18px;display:flex;flex-direction:column;gap:16px;scrollbar-width:thin}
 @media (max-width:640px){.bt-task-from{display:none}.bt-tasks{width:100vw;height:100%;max-height:100%;border-radius:0;border:0}.bt-tasks-body{padding:12px 12px 20px}}
 @media (prefers-reduced-motion:reduce){.bt-tasks{animation:bt-fade .12s ease-out!important}}
-`;
+`

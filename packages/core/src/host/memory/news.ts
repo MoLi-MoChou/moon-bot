@@ -5,29 +5,16 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { StoredBot, StoredRoom } from '../runtime.ts'
 import { speakerOf } from 'moon-bot-contracts'
-import type {
-  ApplyInput, Batch, BatchInput, ChangeResult, MemoryLine, MemoryNewsItem, MemoryNewsService, NewsDeps,
-  NoteNews, ReviewStatus, RoomCopy, RoomLine, Seen,
-} from '../memory-types.ts'
-import type { MemoryMetaInput } from './records.ts'
-import {
-  DENIED, GONE, NO_MATCH, cleanEntry, cleanTopic, errorCode, errorMessage, lastIndexWhere, lastWhere,
-  splitMeta,
-} from './records.ts'
-import {
-  REVIEW_CHANGES_MAX, REVIEW_MEMORY_MAX,
-  fitted, parseReview, reviewEntries, reviewLine, reviewRequest, reviewSystem, writtenIn,
-} from './prompt.ts'
-const NEWS_TEXT_MAX = 160
-const REVIEW_READ_MS = 15_000
-const REVIEW_FIRST_LINES = 6
-const REVIEW_CONTEXT_LINES = 4
-const REVIEW_PASSES_MAX = 4
-const clip = (text: string, max: number): string => (text.length > max ? `${text.slice(0, max)} …(cut)` : text)
+import type { ApplyInput, Batch, BatchInput, MemoryLine, MemoryNewsItem, MemoryNewsService, NewsDeps, NoteNews, ReviewStatus, RoomCopy, RoomLine, Seen } from '../memory-types.ts'
+import { cleanEntry, cleanTopic, errorMessage, lastIndexWhere, lastWhere, splitMeta } from './records.ts'
+import { REVIEW_CHANGES_MAX, REVIEW_MEMORY_MAX, fitted, parseReview, reviewEntries, reviewLine, reviewRequest, reviewSystem, writtenIn } from './prompt.ts'
+import { NEWS_TEXT_MAX, REVIEW_READ_MS, REVIEW_FIRST_LINES, REVIEW_CONTEXT_LINES, REVIEW_PASSES_MAX, clip } from './news-helpers.ts'
+import { applyReview } from './news-apply.ts'
 
 /** The memory news digest and, when enabled, the idle-time review. */
 export function createNews({ rt, root, reviewOn, delay, botShot, getStorage }: NewsDeps): MemoryNewsService {
   const { ctx } = rt
+  const apply = (input: ApplyInput): Promise<number> => applyReview({ ...input, getStorage, rt } as ApplyInput & import('./news-apply.ts').ApplyReviewDeps)
   const news = new Map<string, MemoryNewsItem>()
 
   const noteNews: NoteNews = (scope, actor, op, line) => {
@@ -49,7 +36,7 @@ export function createNews({ rt, root, reviewOn, delay, botShot, getStorage }: N
     if (cursors === undefined) {
       try {
         const value: unknown = JSON.parse(readFileSync(cursorsPath, 'utf8'))
-        cursors = value !== null && typeof value === 'object' ? value as Record<string, number> : {}
+        cursors = value !== null && typeof value === 'object' ? (value as Record<string, number>) : {}
       } catch {
         cursors = {}
       }
@@ -80,7 +67,7 @@ export function createNews({ rt, root, reviewOn, delay, botShot, getStorage }: N
       earlier: earlier.reverse(),
       where: 'its own chat with the user',
       // The user's latest line among those the review read.
-      source: (lines) => {
+      source: lines => {
         const said = lastWhere(lines, line => line.who === 'user')
         return said === undefined ? undefined : `part ${at === -1 ? Math.max(parts.length, 1) : at + 1} #${said.seq}`
       },
@@ -113,42 +100,6 @@ export function createNews({ rt, root, reviewOn, delay, botShot, getStorage }: N
 
   // `home` is the memory the review keeps what it finds in: the keeper's own, or its
   // group's. `teamWrites` says whether the keeper may also write the team's.
-  async function applyReview({ keeper, name, home, numbered, changes, source, teamWrites }: ApplyInput): Promise<number> {
-    const store = getStorage()
-    const actor = { id: keeper.id, name: keeper.name, auto: true }
-    const done: ChangeResult[] = []
-    let failed: unknown
-    for (const change of changes) {
-      // A keeper deleted mid-review keeps no more changes, its team ones included.
-      if (rt.botOf(keeper.id) === undefined) return 0
-      // Its role may change mid-review too, so each change asks again.
-      const team = teamWrites()
-      const op = String(change.op ?? '')
-      const topic = op === 'add' && change.topic !== undefined ? cleanTopic(String(change.topic)) : undefined
-      const target = numbered[Number(change.entry) - 1]
-      const scope = op === 'add' ? (change.team === true && team ? store.TEAM : home) : target?.scope === 'team' ? store.TEAM : home
-      const label = store.labelOf(scope, keeper.id)
-      const text = cleanEntry(change.text)
-      const meta: MemoryMetaInput = { source, ...(scope.kind === 'team' ? { by: keeper.name } : {}), added: store.today() }
-      try {
-        if (op !== 'add' && target === undefined) continue
-        if (scope.kind === 'team' && !team) continue
-        if ((op === 'add' || op === 'edit') && store.entryProblem(text) !== undefined) continue
-        if (op === 'add') done.push(await store.addEntry({ scope, topic, text, meta, actor, label }))
-        else if (op === 'edit' && target !== undefined) done.push(await store.replaceEntry({ scope, topic: target.file.topic, match: target.text, text, meta, actor, label }))
-        else if (op === 'remove' && target !== undefined) done.push(await store.removeEntry({ scope, topic: target.file.topic, match: target.text, actor, label }))
-      } catch (failure) {
-        if (errorCode(failure) === GONE) return 0
-        rt.warn('moon-bot: memory review of %s left out a change: %s', name, errorMessage(failure))
-        if (errorCode(failure) !== NO_MATCH && errorCode(failure) !== DENIED) failed ??= failure
-      }
-    }
-    // A full file or a failed write is no reason to pass the lines: the next
-    // review reads them again, and its request shows how full MEMORY.md is.
-    if (failed !== undefined) throw failed
-    return done.filter(result => result.changed).length
-  }
-
   const roomCopy = (room: StoredRoom | RoomCopy): RoomCopy => ({ id: room.id, name: room.name, seq: typeof room.seq === 'number' ? room.seq : 0, log: [...roomLines(room)] })
   // The log as of `now`, with the lines of an earlier copy that have left it since.
   const joinLogs = (kept: RoomCopy | undefined, now: StoredRoom | RoomCopy): RoomCopy => {
@@ -179,8 +130,13 @@ export function createNews({ rt, root, reviewOn, delay, botShot, getStorage }: N
     if (bot === undefined) return
     const since = cursorsNow()[seen.key]
     await reviewBatch({
-      key: seen.key, since, batch: await chatBatch(sessionId, bot, since),
-      keeper: bot, name: bot.name, home: getStorage().ownScope(bot.id), teamWrites: () => getStorage().writesTeam(bot.id),
+      key: seen.key,
+      since,
+      batch: await chatBatch(sessionId, bot, since),
+      keeper: bot,
+      name: bot.name,
+      home: getStorage().ownScope(bot.id),
+      teamWrites: () => getStorage().writesTeam(bot.id),
       who: `The Bot: ${bot.name}${bot.role ? `, ${bot.role}` : ''}.`,
       tag: { sessionId: rt.chatOf(bot.id), kind: 'memory' },
       alive: () => rt.botOf(bot.id) !== undefined,
@@ -201,10 +157,19 @@ export function createNews({ rt, root, reviewOn, delay, botShot, getStorage }: N
     if (keeper === undefined || live === undefined) return
     const room = joinLogs(seen.room, live)
     const since = cursorsNow()[seen.key]
-    const members = (live.members ?? []).map(id => rt.botOf(id)).filter((bot): bot is StoredBot => bot !== undefined).map(bot => `${bot.name}${live.admin === bot.id ? ' (admin)' : ''}`)
+    const members = (live.members ?? [])
+      .map(id => rt.botOf(id))
+      .filter((bot): bot is StoredBot => bot !== undefined)
+      .map(bot => `${bot.name}${live.admin === bot.id ? ' (admin)' : ''}`)
     await reviewBatch({
-      key: seen.key, since, batch: groupBatch(room, since),
-      keeper, name: `group "${live.name}"`, home: store.groupScope(live.id), teamWrites: () => false, group: true,
+      key: seen.key,
+      since,
+      batch: groupBatch(room, since),
+      keeper,
+      name: `group "${live.name}"`,
+      home: store.groupScope(live.id),
+      teamWrites: () => false,
+      group: true,
       who: `The group chat: "${live.name}", with the user and ${members.join(', ')}.`,
       tag: { sessionId: live.id, kind: 'memory' },
       alive: () => rt.botOf(keeper.id) !== undefined && (rt.roomOf(live.id)?.members ?? []).includes(keeper.id),
@@ -224,7 +189,7 @@ export function createNews({ rt, root, reviewOn, delay, botShot, getStorage }: N
     const fresh = fitted(batch.fresh, keeper)
     const read = batch.fresh.slice(0, fresh.count)
     const more = fresh.count < batch.fresh.length
-    let through: number | undefined = more ? read.at(-1)?.seq ?? batch.through : batch.through
+    let through: number | undefined = more ? (read.at(-1)?.seq ?? batch.through) : batch.through
     let again = more
     // A first review fixes where it starts before the model call, so a failure
     // leaves a cursor that the next review goes on from.
@@ -237,12 +202,18 @@ export function createNews({ rt, root, reviewOn, delay, botShot, getStorage }: N
     if (read.some(line => line.who === 'user')) {
       const homeFiles = store.loadScope(home)
       const teamFiles = store.loadScope(store.TEAM)
-      const said = read.filter(line => line.who === 'user').map(line => line.text).join('\n')
+      const said = read
+        .filter(line => line.who === 'user')
+        .map(line => line.text)
+        .join('\n')
       const tagged = group ? 'group' : 'own'
       const { numbered, left } = reviewEntries(homeFiles, teamFiles, REVIEW_MEMORY_MAX, said, tagged)
       const sizes = { home: homeFiles[0]?.content.length ?? 0, team: teamFiles[0]?.content.length ?? 0 }
       const earlier = batch.earlier.map(line => reviewLine(line.who, line.text, keeper))
-      const language = writtenIn(read.filter(line => line.who === 'user').map(line => line.text.replace(/^User: /, '')), languageNow())
+      const language = writtenIn(
+        read.filter(line => line.who === 'user').map(line => line.text.replace(/^User: /, '')),
+        languageNow(),
+      )
       const reply = await botShot(keeper, reviewSystem({ teamWrites: teamWrites(), group }), reviewRequest({ who, tag: tagged, numbered, left, sizes, where: batch.where, earlier, fresh: fresh.texts, more, language }), tag)
       const changes = parseReview(reply)
       if (changes === undefined) throw new Error(`the model's answer is not a list of changes: ${clip(reply.replace(/\s+/g, ' '), 120)}`)
@@ -251,12 +222,15 @@ export function createNews({ rt, root, reviewOn, delay, botShot, getStorage }: N
       // A secret is left out for good; any other entry memory cannot keep (one too
       // long, say) fails the answer, so the next review reads the lines again.
       const applied = changes.slice(0, REVIEW_CHANGES_MAX)
-      const unfit = applied.filter(change => change.op !== 'remove').map(change => cleanEntry(change.text)).find(text => !store.secretEntry(text) && store.entryProblem(text) !== undefined)
+      const unfit = applied
+        .filter(change => change.op !== 'remove')
+        .map(change => cleanEntry(change.text))
+        .find(text => !store.secretEntry(text) && store.entryProblem(text) !== undefined)
       if (unfit !== undefined) throw new Error(`the model's answer holds an entry memory cannot keep: ${String(store.entryProblem(unfit))}`)
       const badTopic = applied.find(change => change.op === 'add' && typeof change.topic === 'string' && change.topic.trim() !== '' && cleanTopic(change.topic) === undefined)
       if (badTopic !== undefined) throw new Error(`the model's answer names the topic "${clip(String(badTopic.topic), 60)}", which cannot be a topic name`)
       if (!alive()) return
-      const changed = await applyReview({ keeper, name, home, numbered, changes: applied, source: batch.source(read), teamWrites })
+      const changed = await apply({ keeper, name, home, numbered, changes: applied, source: batch.source(read), teamWrites })
       if (!alive()) return
       // An answer at the limit may have left some out, so the same lines are read
       // again, a few times at most, while each pass still changes something.
@@ -333,18 +307,22 @@ export function createNews({ rt, root, reviewOn, delay, botShot, getStorage }: N
       timer.unref?.()
       reviewTimers.set(id, timer)
     })
-    ctx.effect(() => () => {
-      for (const timer of reviewTimers.values()) clearTimeout(timer)
-      reviewTimers.clear()
-      turnOwners.clear()
-    }, 'moon-bot: memory review')
+    ctx.effect(
+      () => () => {
+        for (const timer of reviewTimers.values()) clearTimeout(timer)
+        reviewTimers.clear()
+        turnOwners.clear()
+      },
+      'moon-bot: memory review',
+    )
   }
 
   return {
     noteNews,
-    delete: (id) => { news.delete(id) },
+    delete: id => {
+      news.delete(id)
+    },
     memoryNews,
     memoryReviews,
   }
 }
-

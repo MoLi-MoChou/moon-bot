@@ -93,9 +93,15 @@ Types + `lineWidth` 320:
 
 - host: `chat-index.ts` → `chat-index-types`; `memory/storage.ts` → `storage-types`
 
-### Follow-up (still ignored until split)
+### Cleared in batch 10 (stacked on batch 9)
 
-Remaining `packages/**/src` ignores (~13): denser modules — `widget-cell`, `usage-charts`, `sidebar-rows`, `model-menu`, `read-page`, `tasks-page`, `browser-pane-chrome`, host `parts`/`news`, `client-boot`/`index`/`bot-browsers`, `service/engine`, etc. Split by responsibility, remove each ignore, keep ≤350 after format.
+Types / helpers / responsibility splits (+ `lineWidth` 320 where needed); all remaining `packages/**/src` dense ignores removed:
+
+- client: `model-menu.tsx` → `model-menu-types` (w320); `tasks-page.tsx` → `tasks-types`, `tasks-helpers` (w320); `usage-charts.tsx` → `usage-charts-core`, `usage-charts-span`; `browser-pane-chrome.tsx` → `browser-pane-chrome-kit` (w320); `sidebar-rows.tsx` → `sidebar-rows-helpers`, `sidebar-rows-bot`, `sidebar-rows-agent`; `read-page.ts` → `read-page-types`, `read-page-walk` (w320); `widget-cell.tsx` → `widget-cell-types`, `widget-cell-nodes` (w320); `bot-browsers.ts` → `bot-browsers-create` (w320); `client-boot.ts` (w320, comments trimmed); `index.ts` → `index-styles` (w320)
+- host: `memory/news.ts` → `news-helpers`, `news-apply` (w320); `parts.ts` → `parts-helpers` (w320)
+- service: `engine.ts` → `engine-helpers` (w320)
+
+`packages/**/src` biome dense ignores are now **zero**.
 
 ## Scripts
 

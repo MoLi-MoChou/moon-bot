@@ -20,7 +20,7 @@
   "src/client/secrets-page.tsx": 1,
   "src/client/settings.tsx": 8,
   "src/client/sidebar-account.tsx": 1,
-  "src/client/sidebar-rows.tsx": 1,
+  "src/client/sidebar-rows-agent.tsx": 1,
   "src/client/user-message.tsx": 1,
   "src/client/work-process.tsx": 1
 }

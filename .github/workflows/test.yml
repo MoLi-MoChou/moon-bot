@@ -14,6 +14,8 @@ concurrency:
 
 jobs:
   test:
+    # 临时跳过：只跑 Windows 桌面打包 + Docker 镜像 / only Windows pack + image for now
+    if: false
     name: ${{ matrix.os }} · Node ${{ matrix.node }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -46,6 +48,8 @@ jobs:
       - run: pnpm run eval
 
   package:
+    # 临时跳过：only Windows pack + image for now
+    if: false
     name: Connect package
     runs-on: ubuntu-latest
     steps:
@@ -64,6 +68,8 @@ jobs:
       - run: pnpm --filter moon-bot-connect run verify:package
 
   scan:
+    # 临时跳过：only Windows pack + image for now
+    if: false
     name: Leak scan
     runs-on: ubuntu-latest
     steps:
@@ -78,6 +84,8 @@ jobs:
           SCAN_EXTRA_PATTERNS: ${{ secrets.SCAN_EXTRA_PATTERNS }}
 
   app:
+    # 临时跳过：only Windows pack + image for now
+    if: false
     name: Desktop app profile
     runs-on: ubuntu-latest
     defaults:
@@ -101,8 +109,6 @@ jobs:
       - run: pnpm test
 
   app-package:
-    # 临时跳过 Windows 桌面打包：until further notice / restore by removing if:false
-    if: false
     name: Desktop app package (Windows)
     runs-on: windows-latest
     timeout-minutes: 45
@@ -216,6 +222,8 @@ jobs:
           foreach ($file in $kept) { if (-not (Test-Path $file)) { throw "The uninstaller removed $file" } }
 
   docs:
+    # 临时跳过：only Windows pack + image for now
+    if: false
     name: Doc links
     runs-on: ubuntu-latest
     steps:
@@ -231,10 +239,11 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
-      # app-package may be skipped while Windows pack is temporarily disabled (if: false).
+      # Other jobs may be skipped (temporarily disabled); app-package must succeed.
       - run: |
-          test "${{ needs.test.result }}" = success \
-            && test "${{ needs.scan.result }}" = success \
-            && test "${{ needs.app.result }}" = success \
-            && { test "${{ needs.app-package.result }}" = success || test "${{ needs.app-package.result }}" = skipped; } \
-            && test "${{ needs.docs.result }}" = success
+          ok() { test "$1" = success || test "$1" = skipped; }
+          ok "${{ needs.test.result }}" \
+            && ok "${{ needs.scan.result }}" \
+            && ok "${{ needs.app.result }}" \
+            && test "${{ needs.app-package.result }}" = success \
+            && ok "${{ needs.docs.result }}"

@@ -23,9 +23,25 @@ Client modules split and formatted (ignores removed):
 - `about.tsx` → `about-updates`, `about-css`
 - `engine-menu.tsx` → `engine-menu-choice`, `engine-menu-css`
 
+### Cleared in batch 2 (stacked on batch 1)
+
+Client modules split and formatted (ignores removed):
+
+- `bot-settings.tsx` → `bot-settings-avatar`, `bot-settings-engine`, `bot-settings-css`
+- `schedules.tsx` → `schedules-types`, `schedules-timing`, `schedules-form`, `schedules-row`, `schedules-css`
+- `details-drawer.tsx` → `details-drawer-browser`, `details-drawer-overview`
+- `group-settings.tsx` → `group-settings-types`, `group-settings-forms`, `group-settings-new`, `group-settings-css`
+- `providers-page.tsx` → `providers-types`, `providers-row`, `providers-add`, `providers-css`
+- `secret-card.tsx` → `secret-card-types`, `secret-card-input`, `secret-card-form`, `secret-card-dock`
+- `cells-tool.tsx` → `cells-tool-types`, `cells-tool-phrases`, `cells-tool-group`, `cells-tool-call`
+- `cells-rows.tsx` → `cells-rows-memory`
+- `cells-chat.tsx` → `cells-chat-types`, `cells-chat-events`
+- `cells-turns.tsx` → `cells-turns-types`, `cells-turns-cells`, `cells-turns-tree`
+- `cells-bubbles.tsx` → `cells-bubbles-types`, `cells-bubbles-ui`, `cells-bubbles-group`
+
 ### Follow-up (still ignored until split)
 
-Remaining `packages/**/src` paths listed as `!…` in `biome.json` (host memory/parts/groups, cells-*, bot-settings, schedules, details-drawer, usage-*, etc.). Split by responsibility the same way, remove each ignore, run `pnpm run format` on the new files, keep ≤350.
+Remaining `packages/**/src` paths listed as `!…` in `biome.json` (host memory/parts/groups/roster, usage-*, browser-pane*, tasks-page, memory-panel, widget-cell, connector-market, sidebar-rows, themes/text/characters, client-boot/actions, index, service/engine/llm, store/proactive, web-search, acp/runtime, etc.). Split by responsibility the same way, remove each ignore, run `pnpm run format` on the new files, keep ≤350.
 
 ## Scripts
 

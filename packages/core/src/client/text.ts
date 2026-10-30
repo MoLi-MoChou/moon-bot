@@ -2,7 +2,7 @@
 // Text helpers
 import { hostText, t } from './i18n.ts'
 export { clockLabel, dayLabel, elapsedLabel, messageClock, relativeShort } from './text-time.ts'
-import { mentionSpans } from '../shared/mentions.ts'
+import { mentionSpans } from 'moon-bot-contracts'
 
 export const MENTION_ORIGIN = 'https://bots.local/'
 

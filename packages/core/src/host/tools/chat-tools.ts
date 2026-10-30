@@ -5,9 +5,9 @@ import { z } from 'zod'
 import type { ToolContext } from '../../engine/registry.ts'
 import type { HostRuntime, StoredBot } from '../runtime.ts'
 import { absoluteLinks } from '../links.ts'
-import { mentionSpans } from '../../shared/mentions.ts'
-import { checkShownView } from '../../shared/views.ts'
-import { resolveViewBlueprint } from '../../shared/openui.ts'
+import { mentionSpans } from 'moon-bot-contracts'
+import { checkShownView } from 'moon-bot-contracts'
+import { resolveViewBlueprint } from 'moon-bot-contracts'
 import {
   BLOCKING_QUESTION_TOOL, GROUP_REF, MODE_PARAM, WORK_DIR_PARAM,
   errorMessage, isRecord, type ToolShared,

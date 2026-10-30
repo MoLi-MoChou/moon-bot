@@ -17,7 +17,7 @@ test('the TypeScript toolchain is installed and wired into the gates', async () 
   assert.ok(packageJson.devDependencies.typescript)
   assert.ok(packageJson.devDependencies['@types/node'])
   assert.ok(packageJson.devDependencies['@types/react'])
-  // Zod is the shared contract's only runtime dependency, so it ships with the plugin.
+  // Zod is the contracts package's runtime dependency; core also depends on it for store/host schemas.
   assert.ok(packageJson.dependencies.zod)
 })
 
@@ -53,22 +53,22 @@ test('the client build accepts a TSX/TS entry and still writes the same client.j
 })
 
 test('the shared contract layer exists and names the endpoints both ends share', async () => {
-  const rpc = read('src/shared/rpc.ts')
+  const rpc = read('../contracts/src/rpc.ts')
   for (const endpoint of ['state: {', 'chat: {', 'send: {', "'workspace-download': {"]) assert.ok(rpc.includes(endpoint), endpoint)
   // The envelope's error code is a closed union, not a free string.
   assert.match(rpc, /export type RpcErrorCode =/)
   for (const code of ["'bot/refused'", "'bot/stale'", "'bot/read-only'", "'bot/internal'", "'NETWORK'"]) assert.ok(rpc.includes(code), code)
   assert.match(rpc, /HTTP_\$\{number\}/)
-  const schema = read('src/shared/schema.ts')
+  const schema = read('../contracts/src/schema.ts')
   for (const name of ['BotSchema', 'RoomSchema', 'ExchangeTurnSchema', 'MemoryEntrySchema', 'ScheduleTaskSchema', 'BotSkillSchema', 'BotWorkspaceSchema']) {
     assert.match(schema, new RegExp(`export const ${name}`))
   }
-  const views = read('src/shared/views.ts')
+  const views = read('../contracts/src/views.ts')
   assert.match(views, /export interface DiffView/)
   assert.match(views, /export interface DiagramView/)
   // The Phase 3 cards are declared, not accepted yet: the runtime validator still knows
   // only the eight components the UI can draw. Assert the behaviour, not the source text.
-  const { validateView } = await import('../src/shared/views/validate.ts')
+  const { validateView } = await import('moon-bot-contracts')
   for (const type of ['diff', 'diagram']) {
     const checked = validateView({ type, patch: '', source: '' })
     assert.match(checked.ok === false ? checked.error : '', new RegExp(`unknown component "${type}"`))
@@ -84,7 +84,7 @@ test('the host types name the HostContext without importing an outside install',
 })
 
 test('the mentions contract is its own runtime, so the two cannot drift apart', () => {
-  const typed = read('src/shared/mentions.ts')
+  const typed = read('../contracts/src/mentions.ts')
   assert.match(typed, /export function mentionSpans/)
   assert.match(typed, /export function nameProblem/)
   // The typed module is the implementation now: no JS shim or separate runtime remains.

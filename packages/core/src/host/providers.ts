@@ -2,7 +2,7 @@ import type {
   ConfigurableProvider, CredentialsService, SettingsSection, SettingsService,
 } from './host-types.js'
 import type { HostRuntime } from './runtime.js'
-import { resolveModelSpec } from '../shared/model-catalog.ts'
+import { resolveModelSpec } from 'moon-bot-contracts'
 
 type ProviderBody = Readonly<Record<string, unknown>>
 type Profile = Readonly<Record<string, unknown>>

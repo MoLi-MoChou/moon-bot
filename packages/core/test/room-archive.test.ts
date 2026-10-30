@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { createRosterRooms } from '../src/host/roster-rooms.ts'
-import { RoomSchema } from '../src/shared/schema.ts'
+import { RoomSchema } from 'moon-bot-contracts'
 
 test('a room saved before archivedAt exists is not archived', () => {
   const room = RoomSchema.parse({

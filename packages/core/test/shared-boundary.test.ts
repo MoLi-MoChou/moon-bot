@@ -3,12 +3,12 @@ import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
-// Contracts (`src/shared`) stay a pure public face: named barrel, no star re-exports,
-// and no React / Fastify / SQLite / Electron / layer imports. Deep paths remain valid;
-// new code should prefer the barrel when a single import is enough.
+// Contracts (`packages/contracts`) stay a pure public face: named barrel, no star re-exports,
+// and no React / Fastify / SQLite / Electron / layer imports. Prefer the barrel
+// (`moon-bot-contracts`) for consumers.
 
 const CORE = fileURLToPath(new URL('..', import.meta.url))
-const SHARED = join(CORE, 'src', 'shared')
+const SHARED = join(CORE, '..', 'contracts', 'src')
 const BARREL = join(SHARED, 'index.ts')
 
 const FORBIDDEN = /\bfrom\s+['"](?:react|react-dom|fastify|@fastify\/|better-sqlite3|sqlite3|electron)(?:\/[^'"]*)?['"]/
@@ -44,8 +44,8 @@ test('shared sources never import React, Fastify, SQLite, Electron, or other lay
 })
 
 test('shared barrel loads and exposes a few known contracts', async () => {
-  // Node type-stripping loads .ts; the barrel uses .ts extension in relative imports.
-  const mod = await import('../src/shared/index.ts')
+  // Runtime loads the built package (dist/); sources stay .ts for typecheck.
+  const mod = await import('moon-bot-contracts')
   assert.equal(typeof mod.LEAN, 'object')
   assert.equal(typeof mod.resolveModelSpec, 'function')
   assert.equal(typeof mod.validateView, 'function')

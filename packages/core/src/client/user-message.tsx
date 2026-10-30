@@ -8,13 +8,13 @@ const ui = {
   FileTypeIcon: null,
   JsonBlock: null,
 } as const
-import { mentionSpans } from '../shared/mentions.ts';
+import { mentionSpans } from 'moon-bot-contracts';
 import { BotMark } from './mark.tsx';
 import { CheckIcon, CopyIcon } from './icons.tsx';
 import { dateLocale, t } from './i18n.ts';
 import { clockLabel, messageClock } from './text.ts';
 import { useFold } from './fold.tsx';
-import type { MentionTarget } from '../shared/mentions.ts';
+import type { MentionTarget } from 'moon-bot-contracts';
 // One block of a message: text, an attachment, or something the host draws itself.
 export interface ContentBlock {
     type?: string;

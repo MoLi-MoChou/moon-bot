@@ -3,7 +3,7 @@
 // pill. A mirror layer under a transparent textarea does the painting, so the caret,
 // the selection and the IME keep working on the real textarea.
 import { Fragment, createElement as h, useEffect, useLayoutEffect, useRef, type CSSProperties, type ReactElement, type RefObject } from 'react'
-import { mentionSpans } from '../shared/mentions.ts'
+import { mentionSpans } from 'moon-bot-contracts'
 
 /** A Bot the composer may mention: its name and the CSS ink its chip wears. */
 export interface ChipBot {

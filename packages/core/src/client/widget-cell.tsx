@@ -7,7 +7,7 @@ import { keyLetter, useOptionKeys } from './questions.tsx';
 import { useDockHold } from './card-hold.ts';
 import type { DockHoldActions } from './card-hold.ts';
 import { heldCardKey } from './sources.ts';
-import { checkShownView, normalizeView } from '../shared/views.ts';
+import { checkShownView, normalizeView } from 'moon-bot-contracts';
 interface WidgetOption {
     label: string;
     description?: string | undefined;

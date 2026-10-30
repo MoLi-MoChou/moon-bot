@@ -5,7 +5,7 @@
 import type { AttachmentRef } from '../host-types.js'
 import type { FailureText, GroupRoom, GroupSlot, RoomLine, RoomReference } from './types.ts'
 import { escapeRegExp } from '../text.ts'
-import { mentionSpans, speakerOf } from '../../shared/mentions.ts'
+import { mentionSpans, speakerOf } from 'moon-bot-contracts'
 import { failureLine as failureLineImpl, failureSay as failureSayImpl } from '../turns/failure.ts'
 
 export const ROOM_REPLY = 'Reply with your message for the group, no name prefix: in a discussion, one or two short messages. When you are asked to do something, do it now with your tools. The group does not wait for you and sees what you write while you work: say what you will do, write again only when something matters, and end with the result, never a promise to do it later. Reply [PASS] to stay silent when you have nothing new to add or the message is for someone else.'

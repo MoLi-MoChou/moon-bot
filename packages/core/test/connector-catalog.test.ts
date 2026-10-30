@@ -4,7 +4,7 @@
 // would save a capability that cannot start.
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { CONNECTOR_CATALOG, capabilityOf, secretRefsOf } from '../src/shared/connector-catalog.ts'
+import { CONNECTOR_CATALOG, capabilityOf, secretRefsOf } from 'moon-bot-contracts'
 
 const SECRET_REF = /\$(?:MOON_BOT|DSH)_SECRET_([A-Z][A-Z0-9_]*)/g
 

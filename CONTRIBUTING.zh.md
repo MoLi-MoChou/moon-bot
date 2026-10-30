@@ -93,7 +93,7 @@ cd moon-bot
 corepack enable
 corepack prepare pnpm@10.18.3 --activate
 
-# 根一次装齐 apps/* + packages/*；postinstall 构建 core 产物。
+# 根一次装齐 apps/* + packages/*；postinstall 先构建 contracts，再构建 core 产物。
 pnpm install
 ```
 
@@ -107,6 +107,7 @@ pnpm install
 | `packages/core/src/engine/` | `AgentRuntime` 接缝：内置引擎（pi kernel）、ACP 适配器、工具注册表、策略引擎、MCP 连接器 |
 | `packages/core/src/store/`、`packages/core/src/service/` | SQLite 存储，以及带调度器的 Fastify 服务与装配 |
 | `packages/core/src/client/` | 浏览器端：侧栏、聊天、面板与对话框、主题、角色、Bot 浏览器面板 |
+| `packages/contracts`（`moon-bot-contracts`） | 共用契约（rpc、schema、views、catalog）；从具名 barrel 导入 |
 | `packages/core/client.js` | 由 `scripts/build-client.ts` 在安装与构建时生成。从不提交，`.gitignore` 里有它 |
 | `packages/core/src/web-search/` | `auto` 网页搜索提供方。不依赖 Bot 团队代码 |
 | `packages/core/test/` | 单元测试和测试数据 |

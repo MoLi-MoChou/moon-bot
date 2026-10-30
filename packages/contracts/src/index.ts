@@ -1,7 +1,7 @@
-// Public contracts surface for host, client, service, and (later) packages/contracts.
+// Public contracts surface (`moon-bot-contracts`) for host, client, service, and apps.
 // Named re-exports only — no `export *` (keeps the tree-shakeable face and makes cycles obvious).
-// Consumers may import from this barrel or a deep path; prefer the barrel for new code.
-// This layer stays pure: zod + shared files only — never React, Fastify, SQLite, Electron,
+// Consumers import this barrel (prefer it over any deep path).
+// This package stays pure: zod + its own files only — never React, Fastify, SQLite, Electron,
 // or client/host/engine/store/service (see check-gates + shared-boundary.test.ts).
 
 export {

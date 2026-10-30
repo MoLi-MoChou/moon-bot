@@ -1,0 +1,41 @@
+{
+  "name": "moon-bot-contracts",
+  "version": "0.4.8",
+  "description": "Moon Bot shared contracts: rpc, schema, views, catalogs (pure; no React/Fastify/SQLite/Electron).",
+  "license": "Apache-2.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "main": "./dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "esbuild": "0.28.2",
+    "typescript": "^5.9.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MoLi-MoChou/moon-bot.git",
+    "directory": "packages/contracts"
+  },
+  "homepage": "https://github.com/MoLi-MoChou/moon-bot/tree/main/packages/contracts"
+}

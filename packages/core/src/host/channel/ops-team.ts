@@ -3,7 +3,7 @@
 import { COLORS, EXTRA_COLORS } from '../constants.ts'
 import { resetBot as reset, resetFrom } from '../bot-reset.ts'
 import type { AttachmentRef } from '../host-types.ts'
-import type { RpcEndpoint } from '../../shared/rpc.ts'
+import type { RpcEndpoint } from 'moon-bot-contracts'
 import type {
   BotRow,
   ChannelBody,

@@ -7,7 +7,7 @@ import { useEscape } from './overlay-hooks.ts';
 import { createPayload, freshBotName, startModel } from './bot-draft.ts';
 import { ModelMenu } from './model-menu.tsx';
 import { hostText, t } from './i18n.ts';
-import { nameProblem } from '../shared/mentions.ts';
+import { nameProblem } from 'moon-bot-contracts';
 import type { DraftRoster } from './bot-draft.ts';
 // The roster fields the form reads; the rest of a roster passes through untouched.
 export type CreateRoster = DraftRoster;

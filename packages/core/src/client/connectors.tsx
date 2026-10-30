@@ -6,7 +6,7 @@ import { t } from './i18n.ts';
 import { ConnectorCatalog, type MarketActions } from './connector-market.tsx';
 import { CustomConnectorForm, CustomConnectorList, type CustomConnectorActions } from './connector-custom.tsx';
 import { blankCustomConnector, draftFromConnector, type CustomConnectorDraft } from './connector-custom.ts';
-import { CONNECTOR_CATALOG } from '../shared/connector-catalog.ts';
+import { CONNECTOR_CATALOG } from 'moon-bot-contracts';
 import type { Capability, CapabilityBot, CapabilityStatus } from './capability-types.ts';
 const TOKEN_URL = 'https://github.com/settings/personal-access-tokens/new';
 // One connector as Settings shows it: what the host reports about its link.

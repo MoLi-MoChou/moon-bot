@@ -24,6 +24,7 @@ import { ServiceContext } from './context.ts'
 import { historyPageOf } from './history-page.ts'
 import type { HostRuntime } from '../host/runtime.js'
 import { installProactive } from './proactive-wiring.ts'
+import { reminderText } from './reminder-text.ts'
 import { preAuthGate } from './proactive-gate.ts'
 import { FileAttachments } from './attachments.ts'
 
@@ -321,8 +322,7 @@ export function wireService(options: WireOptions): WiredService {
   const scheduler = new TaskScheduler(store, (sessionId, task) => {
     const agent = agentOf(sessionId) as { followup?(message: unknown): void } | undefined
     agent?.followup?.({
-      content: [{ type: 'text', text: task.prompt === '' ? task.title : `[${task.title}]
-${task.prompt}` }],
+      content: [{ type: 'text', text: reminderText(task) }],
       source: { kind: 'schedule' },
     })
   })

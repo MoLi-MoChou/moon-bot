@@ -186,12 +186,15 @@ export function UserMessageCell({ node, sessionId, useRoster, actions, renderMes
     const references = openFile && openSkill ? { openFile, openSkill } : undefined;
     const steering = node.kind === 'steering';
     const time = typeof data.time === 'number' && Number.isFinite(data.time) ? data.time : undefined;
-    const groupTime = roster.roomsById?.[sessionId] && time !== undefined ? messageClock(time) : undefined;
+    // Every message carries its clock, not only a group chat's. The separator between turns
+    // only appears after a long pause, so without this a reply that arrives two minutes
+    // after the question — a reminder firing, say — shows no time at all.
+    const sentAt = time !== undefined ? messageClock(time) : undefined;
     const { shown, folded, control } = useFold(text, { markdown: false });
     const mentionBots = mentionableBots(roster, sessionId);
     const room = roster.roomsById[sessionId];
     const body = h(UserText, { text: shown, bots: mentionBots, everyoneBots: room ? mentionBots : [], referenceLabels, skillNames: data.skillNames ?? [], references, actions });
-    return <div className='bt-umsg' data-steering={steering || undefined}><div className='bt-ustack'>{attachments.length > 0 ? <Attachments attachments={attachments} renderMessageImages={renderMessageImages} /> : null}{text !== '' || rest.length > 0 ? <div className='bt-ubody' title={clock(data.time)} data-folded={folded || undefined}>{control ? <div className='bt-fold-body'>{body}</div> : body}{control}{rest.map((block, index) => (ui.JsonBlock ? h(ui.JsonBlock, { key: index, label: t('Content'), payload: block }) : null))}</div> : null}{referenceLabels.length > 0 ? <div className='bt-urefs'>{t('Referenced {labels}', { labels: referenceLabels.join(t(', ')) })}</div> : null}{groupTime && time !== undefined ? <div className='bt-utime' title={clockLabel(time)}>{groupTime}</div> : null}</div>{text === '' ? null : <div className='bt-utools'><CopyButton text={text} /></div>}</div>;
+    return <div className='bt-umsg' data-steering={steering || undefined}><div className='bt-ustack'>{attachments.length > 0 ? <Attachments attachments={attachments} renderMessageImages={renderMessageImages} /> : null}{text !== '' || rest.length > 0 ? <div className='bt-ubody' title={clock(data.time)} data-folded={folded || undefined}>{control ? <div className='bt-fold-body'>{body}</div> : body}{control}{rest.map((block, index) => (ui.JsonBlock ? h(ui.JsonBlock, { key: index, label: t('Content'), payload: block }) : null))}</div> : null}{referenceLabels.length > 0 ? <div className='bt-urefs'>{t('Referenced {labels}', { labels: referenceLabels.join(t(', ')) })}</div> : null}{sentAt !== undefined && time !== undefined ? <div className='bt-utime' title={clockLabel(time)}>{sentAt}</div> : null}</div>{text === '' ? null : <div className='bt-utools'><CopyButton text={text} /></div>}</div>;
 }
 export const USER_MESSAGE_CSS = `
 .bt-umsg{display:flex;flex-direction:row-reverse;align-items:center;justify-content:flex-start;gap:4px}

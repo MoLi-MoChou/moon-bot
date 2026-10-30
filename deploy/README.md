@@ -2,7 +2,7 @@
 
 Local, from `apps/desktop/`:
 
-    npm ci && MOON_BOT_PASSWORD=choose-one npm run web      # http://127.0.0.1:8290
+    pnpm install && MOON_BOT_PASSWORD=choose-one pnpm --filter moon-bot run web   # http://127.0.0.1:8290
 
 Docker, from the repository root (a one-off build, for trying it out):
 

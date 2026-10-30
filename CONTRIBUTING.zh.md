@@ -83,43 +83,34 @@
 
 - Node.js `22.19` 或更高（或 `24` 及以上）。
 - Git。
-- 仅测试台需要：pnpm `11`，以及插件测试所用 DSH 版本的 DeepSeek Harness 源码。
+- 通过 Corepack 启用的 pnpm，版本对齐根目录 `packageManager`（当前 `pnpm@10.18.3`；`engines.pnpm` 为 `>=10.18.3`）。不要用 npm 或 yarn 装本仓依赖。
 
 ```sh
 git clone https://github.com/MoLi-MoChou/moon-bot.git moon-bot
-cd ds-bot-repo/ds-bot
+cd moon-bot
 
-# 插件自己的构建工具（只有 esbuild）。
+# 启用 Corepack，再激活 package.json 钉住的 pnpm 版本。
+corepack enable
+corepack prepare pnpm@10.18.3 --activate
+
+# 根一次装齐 apps/* + packages/*；postinstall 构建 core 产物。
 pnpm install
-
-# 单元测试和 lint 要加载的 DSH 包，从 npm 装进 dev/harness/。
-npm run harness
 ```
 
-测试台需要把 DeepSeek Harness 源码放在插件目录旁边（这个目录被 Git 忽略）：
-
-```sh
-cd ..
-git clone https://github.com/deepseek-ai/deepseek-harness.git
-git -C deepseek-harness checkout dsh-v0.2.1-rc.2
-(cd deepseek-harness && pnpm install)
-```
-
-如果 DeepSeek Harness 源码放在别处，把 `DSH_HARNESS` 设为它的路径。`DSH_HARNESS` 也会代替 `dev/harness/`，供单元测试和 lint 使用。
-
-`@deepseek-ai/*` 包是 peer 依赖：真实安装时由 DSH 的 profile 提供。`ds-bot/.npmrc` 阻止 npm 把它们装进插件目录。
+没有额外 host 要装：测试、bench、应用和 Docker 都跑本仓运行时（Node 22.18+）。唯一锁文件是 `pnpm-lock.yaml`（不要提交 `package-lock.json` / `npm-shrinkwrap.json` / `yarn.lock`）。
 
 ## 目录结构
 
 | 路径 | 内容 |
 |---|---|
-| `packages/core/index.js`、`packages/core/src/host/` | 服务端：Bot 名册与存储、工具、回合与投递、群聊、对话分段与搜索索引、图片、Bot 浏览器桥接、`api/bot` 通道 |
+| `packages/core/src/index.ts`、`packages/core/src/host/` | 服务端：Bot 名册与存储、工具、回合与投递、群聊、对话分段与搜索索引、记忆、定时、图片、Bot 浏览器桥接、`api/bot` 通道（`packages/core/index.js` 是生成的再导出） |
+| `packages/core/src/engine/` | `AgentRuntime` 接缝：内置引擎（pi kernel）、ACP 适配器、工具注册表、策略引擎、MCP 连接器 |
+| `packages/core/src/store/`、`packages/core/src/service/` | SQLite 存储，以及带调度器的 Fastify 服务与装配 |
 | `packages/core/src/client/` | 浏览器端：侧栏、聊天、面板与对话框、主题、角色、Bot 浏览器面板 |
 | `packages/core/client.js` | 由 `scripts/build-client.ts` 在安装与构建时生成。从不提交，`.gitignore` 里有它 |
-| `core/web-search.js` | `auto` 网页搜索提供方。不依赖 Bot 团队代码 |
-| `core/cordis.patch.yml` | 插件带的 profile patch |
+| `packages/core/src/web-search/` | `auto` 网页搜索提供方。不依赖 Bot 团队代码 |
 | `packages/core/test/` | 单元测试和测试数据 |
-| `packages/core/dev/` | 单元测试用的 DSH 包（`harness/`）、模拟模型、测试台、冒烟测试、角色生成器、Linux 上的 Desktop 脚本，以及两个用真实模型的工具：上下文管家评测和日志转发 |
+| `packages/core/dev/` | 模拟模型、测试台、冒烟测试、角色生成器，以及两个用真实模型的工具：上下文管家评测和日志转发 |
 
 ## 测试改动
 

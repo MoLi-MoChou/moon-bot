@@ -82,18 +82,23 @@ You need:
 
 - Node.js `22.19` or later (or `24` and later).
 - Git.
-- Nothing else: the tests, the bench and the app run on Node 22.18+ and pnpm (see root `packageManager`).
+- pnpm via Corepack, matching root `packageManager` (currently `pnpm@10.18.3`; `engines.pnpm` is `>=10.18.3`). Do not use npm or yarn for this repo.
 
 ```sh
 git clone https://github.com/MoLi-MoChou/moon-bot.git moon-bot
 cd moon-bot
 
-# The build tool and the types; nothing else is needed to build or test.
-pnpm install                           # one root install for the three workspaces
+# Enable Corepack, then activate the pnpm version pinned in package.json.
+corepack enable
+corepack prepare pnpm@10.18.3 --activate
+
+# One root install for apps/* + packages/*; postinstall builds core artifacts.
+pnpm install
 ```
 
 There is no host to install: the tests, the bench, the app and Docker all run on
-the runtime in this repository (Node 22.18+).
+the runtime in this repository (Node 22.18+). The only lockfile is `pnpm-lock.yaml`
+(never commit `package-lock.json`, `npm-shrinkwrap.json`, or `yarn.lock`).
 
 ## Layout
 

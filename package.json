@@ -4,7 +4,8 @@
   "private": true,
   "description": "Moon Bot: pnpm workspace with apps/* (desktop, connect) and packages/* (core).",
   "engines": {
-    "node": ">=22.18"
+    "node": ">=22.18",
+    "pnpm": ">=10.18.3"
   },
   "scripts": {
     "build": "pnpm -r --if-present run build",

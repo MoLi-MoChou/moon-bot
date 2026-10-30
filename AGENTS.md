@@ -32,7 +32,9 @@ Moon Bot 是一支长期存在的 Bot 小队，跑在自己的运行时上，不
 
 布局是 `apps/*`（`desktop`、`connect`）与 `packages/*`（`core`）。三个 workspace 共用根 `pnpm-lock.yaml`（**不要**再提交 `package-lock.json`）：在根装一次（`pnpm install` / CI 用 `pnpm install --frozen-lockfile`），然后按包运行脚本（在包目录里，或用 `--filter`，例如 `pnpm --filter moon-bot-core test`）。Node 22.18+ 直接跑 `.ts` 源码（原生类型剥离）；生成物（`packages/core/client.js`、`packages/core/dist/`）由安装时的 postinstall 和 `pnpm run build` 构建，不提交。根 `package.json` 的 `pnpm.onlyBuiltDependencies` 列出允许跑安装脚本的包（SQLite 预编译、esbuild 等）。
 
-**两个「pnpm」不要混：** 仓库包管理器是根 `packageManager` 字段里的 pnpm（当前 `pnpm@10.18.3`）。`app` 依赖里的 `pnpm@11.7.0` 是**打进桌面端、给插件装依赖的 CLI 二进制**，不是本仓的包管理器；改仓库脚本/CI 时不要去动它的版本语义，web 镜像构建仍会删掉 `app/node_modules/pnpm`。
+**两个「pnpm」不要混：** 仓库包管理器是根 `packageManager` 字段里的 pnpm（当前 `pnpm@10.18.3`，`engines.pnpm` 与之对齐）。`apps/desktop` 依赖里的 `pnpm@11.7.0` 是**打进桌面端、给插件装依赖的 CLI 二进制**，不是本仓的包管理器；改仓库脚本/CI 时不要去动它的版本语义，web 镜像构建仍会删掉 `apps/desktop/node_modules/pnpm`。
+
+**启用仓库 pnpm（新 clone）：** Node 自带 Corepack。在仓库根执行 `corepack enable`，再 `corepack prepare pnpm@10.18.3 --activate`（版本必须与根 `packageManager` 一致）；之后用 `pnpm install`。不要用 npm/yarn 装依赖，也不要提交 `package-lock.json` / `yarn.lock`。CI 与 Dockerfile 同样钉在这个版本（workflow 从 `packageManager` 读；镜像里 `corepack prepare` 写死同一号）。
 
 ```sh
 pnpm install                           # 安装三个 workspace，然后构建 client.js 和 dist/

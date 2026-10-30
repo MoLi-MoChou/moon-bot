@@ -1,7 +1,7 @@
 # Moon Bot desktop app
 
 The Electron app for Windows, Linux and macOS. It runs Moon Bot's own runtime — the host
-services, the SQLite store and the built-in engine from [`packages/core/`](../core) — in a child process
+services, the SQLite store and the built-in engine from [`packages/core/`](../../packages/core) — in a child process
 on a loopback port, and loads that address in its window. There is no DeepSeek Harness install
 or profile under it, and a new start begins with an empty team: the app does not read or copy a
 DeepSeek Harness install. The design is in
@@ -18,7 +18,7 @@ pnpm start                                # starts the app
 
 When GitHub downloads are slow, set `ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/` before the Electron download. Unset `ELECTRON_RUN_AS_NODE` before `pnpm start` if your terminal has it (terminals inside some Electron-based editors do): with it, Electron runs as plain Node and the app does not start.
 
-pnpm links `moon-bot-core` from `../core` via `workspace:*`, so the app runs the runtime of this checkout. After changing `packages/core/` (including its built `dist/`) or merging a branch that changes it, rebuild with `pnpm run build` from the repo root; `pnpm install` is only needed when manifests or the lockfile change.
+pnpm links `moon-bot-core` from `../../packages/core` via `workspace:*`, so the app runs the runtime of this checkout. After changing `packages/core/` (including its built `dist/`) or merging a branch that changes it, rebuild with `pnpm run build` from the repo root; `pnpm install` is only needed when manifests or the lockfile change.
 
 | Variable | What it sets | Default |
 |---|---|---|

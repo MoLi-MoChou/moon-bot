@@ -7,6 +7,7 @@ FROM node:22-bookworm-slim AS ui
 
 # The window's UI: the same React surface the desktop app loads, built by vite.
 WORKDIR /opt/moon-bot
+# pnpm version must match root package.json packageManager.
 RUN corepack enable && corepack prepare pnpm@10.18.3 --activate
 # One root pnpm lockfile for the workspace: manifests first so the install layer
 # caches while the sources change.
@@ -33,6 +34,7 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt/moon-bot
+# pnpm version must match root package.json packageManager.
 RUN corepack enable && corepack prepare pnpm@10.18.3 --activate
 # The manifests again, so the runtime install layer caches on its own. The root
 # postinstall script rides along: the install runs it to build core's artifacts.

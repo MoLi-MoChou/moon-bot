@@ -4,13 +4,7 @@ import { dirname, join } from 'node:path'
 import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
 import { Arch } from 'electron-builder'
-import {
-  archProblem,
-  beforePack,
-  afterPack,
-  materializeCoreLink,
-  restoreCoreLink,
-} from '../scripts/before-pack.mjs'
+import { archProblem, beforePack, afterPack, materializeCoreLink, restoreCoreLink } from '../scripts/before-pack.mjs'
 
 const app = join(dirname(fileURLToPath(import.meta.url)), '..')
 const coreLink = join(app, 'node_modules', 'moon-bot-core')

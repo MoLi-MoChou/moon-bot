@@ -36,16 +36,16 @@ const bundleOf = async entry => {
 }
 
 // The groups the plugin installs, as tags and as the sheets each group is made of.
+// Most sheets moved out of index.ts into index-styles.ts; the return button still
+// installs from index.ts, so both files are the plugin's list.
 const pluginGroups = () => {
-  const source = readFileSync(join(CORE, 'src/client/index.ts'), 'utf8')
-  const shell = source.slice(source.indexOf('const installShell'), source.indexOf('const installConversation'))
-  const conversation = source.slice(source.indexOf('const installConversation'))
+  const source = ['src/client/index-styles.ts', 'src/client/index.ts']
+    .map(file => readFileSync(join(CORE, file), 'utf8'))
+    .join('\n')
   const tags = [...source.matchAll(/installCompiledStyles\((?:[A-Z_]+ \+ )*[A-Z_]+, '([a-z-]+)'\)/g)].map(
     match => match[1],
   )
   const parts = new Set([...source.matchAll(/([A-Z][A-Z0-9_]*_CSS)/g)].map(match => match[1]))
-  void shell
-  void conversation
   return { tags: new Set(tags), parts }
 }
 

@@ -26,10 +26,14 @@ COPY apps/desktop/ui/ apps/desktop/ui/
 COPY packages/core/src/ packages/core/src/
 COPY packages/contracts/src/ packages/contracts/src/
 COPY packages/ui/src/ packages/ui/src/
+# moon-bot-ui's package exports point at dist/; root postinstall skips here (no
+# packages/core/scripts), so build the kit before vite.
+COPY packages/ui/scripts/ packages/ui/scripts/
 # pnpm install cannot focus one workspace without the lock graph, so the whole tree
 # installs; the electron binary is never fetched here, and the node_modules leave
 # with the stage.
 RUN ELECTRON_SKIP_BINARY_DOWNLOAD=1 pnpm install --frozen-lockfile \
+ && node packages/ui/scripts/build.mjs \
  && cd apps/desktop && pnpm exec vite build && rm -rf node_modules ../../node_modules ../connect/node_modules ../../packages/core/node_modules
 
 FROM node:22-bookworm-slim

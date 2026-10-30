@@ -25,15 +25,19 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.18.3
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+          cache: pnpm
       - name: Install
-        run: ELECTRON_SKIP_BINARY_DOWNLOAD=1 npm ci --no-audit --no-fund
+        run: ELECTRON_SKIP_BINARY_DOWNLOAD=1 pnpm install --frozen-lockfile
       - name: Install the browser
         run: npx playwright install --with-deps chromium
       - name: Build the artifacts
-        run: npm run build
+        run: pnpm run build
       - name: Start the mock bench
         run: |
           MOON_BOT_PASSWORD=bench core/dev/bench.sh e2e 3100 8790 reset

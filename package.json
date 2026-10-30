@@ -2,32 +2,31 @@
   "name": "moon-bot-repo",
   "version": "0.0.0",
   "private": true,
-  "description": "Moon Bot: the core package and the desktop/web app, as npm workspaces.",
-  "workspaces": [
-    "core",
-    "app",
-    "connect"
-  ],
+  "description": "Moon Bot: the core package and the desktop/web app, as a pnpm workspace.",
   "engines": {
     "node": ">=22.18"
   },
   "scripts": {
-    "build": "npm run build --workspaces --if-present",
-    "eval": "npm run eval -w moon-bot-core",
-    "lint": "npm run lint -w moon-bot-core",
-    "test": "npm run test --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present",
+    "build": "pnpm -r --if-present run build",
+    "eval": "pnpm --filter moon-bot-core run eval",
+    "lint": "pnpm --filter moon-bot-core run lint",
+    "test": "pnpm -r --if-present run test",
+    "typecheck": "pnpm -r --if-present run typecheck",
     "postinstall": "node scripts/postinstall.mjs"
-  },
-  "allowScripts": {
-    "better-sqlite3": true,
-    "esbuild": true,
-    "protobufjs": true,
-    "electron-winstaller": true,
-    "@google/genai": true
   },
   "devDependencies": {
     "playwright": "^1.64.1",
     "playwright-core": "^1.64.1"
+  },
+  "packageManager": "pnpm@10.18.3",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "better-sqlite3",
+      "esbuild",
+      "protobufjs",
+      "electron-winstaller",
+      "@google/genai",
+      "electron"
+    ]
   }
 }

@@ -7,19 +7,22 @@ FROM node:22-bookworm-slim AS ui
 
 # The window's UI: the same React surface the desktop app loads, built by vite.
 WORKDIR /opt/moon-bot
-# One root lockfile for both workspaces: the manifests come first, so the install layer
+RUN corepack enable && corepack prepare pnpm@10.18.3 --activate
+# One root pnpm lockfile for the workspace: manifests first so the install layer
 # caches while the sources change.
-COPY package.json package-lock.json ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY scripts/ scripts/
 COPY core/package.json core/tsconfig.json core/
 COPY app/package.json app/vite.config.js app/
+COPY connect/package.json connect/
 COPY app/ui/ app/ui/
 # The window compiles the Bot views from core's TypeScript sources.
 COPY core/src/ core/src/
-# npm ci cannot focus one workspace, so the whole tree installs; the electron binary is
-# never fetched here, and the node_modules leave with the stage.
-RUN ELECTRON_SKIP_BINARY_DOWNLOAD=1 npm ci --no-audit --no-fund \
- && cd app && npx vite build && rm -rf node_modules ../node_modules core/node_modules
+# pnpm install cannot focus one workspace without the lock graph, so the whole tree
+# installs; the electron binary is never fetched here, and the node_modules leave
+# with the stage.
+RUN ELECTRON_SKIP_BINARY_DOWNLOAD=1 pnpm install --frozen-lockfile \
+ && cd app && pnpm exec vite build && rm -rf node_modules ../node_modules core/node_modules
 
 FROM node:22-bookworm-slim
 
@@ -30,23 +33,25 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt/moon-bot
+RUN corepack enable && corepack prepare pnpm@10.18.3 --activate
 # The manifests again, so the runtime install layer caches on its own. The root
 # postinstall script rides along: the install runs it to build core's artifacts.
-COPY package.json package-lock.json ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY scripts/ scripts/
 COPY core/package.json core/tsconfig.json core/
 COPY app/package.json app/
+COPY connect/package.json connect/
 # Host/service ship as TypeScript sources; Node will not strip types under node_modules.
 # The build needs the dev dependencies (esbuild, typescript), so the tree installs once
 # whole; a second, production-only install replaces it, and the desktop-only packages
 # (pnpm, the updater) leave with it: the web service runs core alone.
 COPY core/ core/
-RUN ELECTRON_SKIP_BINARY_DOWNLOAD=1 npm ci --no-audit --no-fund \
+RUN ELECTRON_SKIP_BINARY_DOWNLOAD=1 pnpm install --frozen-lockfile \
  && node core/scripts/build-host.mjs \
- && rm -rf node_modules core/node_modules app/node_modules \
- && ELECTRON_SKIP_BINARY_DOWNLOAD=1 npm ci --omit=dev --no-audit --no-fund \
+ && rm -rf node_modules core/node_modules app/node_modules connect/node_modules \
+ && ELECTRON_SKIP_BINARY_DOWNLOAD=1 pnpm install --frozen-lockfile --prod \
  && rm -rf app/node_modules/pnpm app/node_modules/electron-updater \
- && npm cache clean --force
+ && pnpm store prune || true
 COPY --from=ui /opt/moon-bot/app/ui/dist/ app/ui/dist/
 COPY NOTICE LICENSE ./
 

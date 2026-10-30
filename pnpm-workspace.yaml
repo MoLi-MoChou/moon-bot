@@ -1,0 +1,6 @@
+# Transition layout: keep core/app/connect folder names (W0–W1).
+# Physical apps/* + packages/* moves are W3+.
+packages:
+  - 'core'
+  - 'app'
+  - 'connect'

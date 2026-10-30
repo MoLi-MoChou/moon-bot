@@ -38,3 +38,6 @@ node_modules/
 
 # The published connect CLI is bundled by `npm run build` (connect/scripts/build.mjs).
 /connect/dist/
+
+# npm lock (repo uses pnpm-lock.yaml only after W1)
+package-lock.json

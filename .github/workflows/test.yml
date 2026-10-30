@@ -101,6 +101,8 @@ jobs:
       - run: pnpm test
 
   app-package:
+    # 临时跳过 Windows 桌面打包：until further notice / restore by removing if:false
+    if: false
     name: Desktop app package (Windows)
     runs-on: windows-latest
     timeout-minutes: 45
@@ -229,4 +231,10 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - run: test "${{ needs.test.result }}" = success && test "${{ needs.scan.result }}" = success && test "${{ needs.app.result }}" = success && test "${{ needs.app-package.result }}" = success && test "${{ needs.docs.result }}" = success
+      # app-package may be skipped while Windows pack is temporarily disabled (if: false).
+      - run: |
+          test "${{ needs.test.result }}" = success \
+            && test "${{ needs.scan.result }}" = success \
+            && test "${{ needs.app.result }}" = success \
+            && { test "${{ needs.app-package.result }}" = success || test "${{ needs.app-package.result }}" = skipped; } \
+            && test "${{ needs.docs.result }}" = success

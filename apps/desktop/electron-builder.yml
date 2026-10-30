@@ -30,6 +30,8 @@ asarUnpack:
 npmRebuild: false
 # So the binaries come from npm as it installed them; a build for another architecture stops.
 beforePack: ./scripts/before-pack.mjs
+# Restore the moon-bot-core workspace link after packing so a second pack (CI update feed) still resolves core deps.
+afterPack: ./scripts/before-pack.mjs
 win:
   target:
     - target: nsis

@@ -48,9 +48,17 @@ Files that stay ≤350 after Biome format with a per-file `lineWidth` override (
 - host: `browser.ts`, `capabilities.ts`, `channel/ops-team.ts`, `diagnostics.ts`, `groups/rounds.ts`, `memory/prompt.ts`, `providers.ts`, `roster-rooms.ts`, `secrets/install.ts`, `store.ts`, `tools/chat-tools.ts`, `tools/shared.ts`, `turns/route.ts`
 - service: `llm.ts`
 
+### Cleared in batch 4 (stacked on batch 3)
+
+Types / responsibility splits (ignores removed):
+
+- client: `text.ts` → `text-types`, `text-mentions` (reexports `text-time`)
+- host: `turns/delivery.ts` → `delivery-types`; `tasks-panel.ts` → `tasks-panel-types`
+- engine: `acp/runtime.ts` → `runtime-types`
+
 ### Follow-up (still ignored until split)
 
-Remaining `packages/**/src` ignores (~38): denser modules that still exceed 350 even at wide lineWidth — `memory-panel`, `widget-cell`, `usage-charts`, `sidebar-rows`, `cells` leftovers none, host `memory`/`parts`/`groups`/`roster`, `client-boot`/`index`, `engine`, `validate`, etc. Split by responsibility, remove each ignore, keep ≤350 after format.
+Remaining `packages/**/src` ignores (~34): denser modules — `memory-panel`, `widget-cell`, `usage-charts`, `sidebar-rows`, host `memory`/`parts`/`groups`/`roster`, `client-boot`/`index`, `service/engine`, `validate`, etc. Split by responsibility, remove each ignore, keep ≤350 after format.
 
 ## Scripts
 

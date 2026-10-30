@@ -7,102 +7,37 @@
 import type { TaskHold } from 'moon-bot-contracts'
 import { SOURCE_KIND } from './constants.ts'
 import { roundLine } from './proactive/rounds.ts'
-import type { HostRuntime } from './runtime.js'
+import type {
+  PanelRuntime,
+  PanelLive,
+  QueueMessage,
+  PanelAgent,
+  TaskRunningView,
+  TaskDoneView,
+  TaskWaitingView,
+  TasksView,
+} from './tasks-panel-types.ts'
+export type {
+  PanelRuntime,
+  PanelLive,
+  QueueMessage,
+  PanelAgent,
+  TaskRunningView,
+  TaskDoneView,
+  TaskWaitingView,
+  TasksView,
+} from './tasks-panel-types.ts'
 
 /** What this module reads off the runtime: the turn and handoff views install theirs at
  *  startup, so they are named here rather than in the shared contract. */
-interface PanelRuntime extends HostRuntime {
-  closeWork?(id: string | undefined, name: string, text: string): string | undefined
-  workView?(): Readonly<Record<string, { readonly since?: number; readonly tool?: string; readonly target?: string; readonly said?: string; readonly switching?: boolean; readonly roomId?: string }>>
-  workOf?(info: unknown): string | undefined
-  workAsker?(workId: string): { readonly senderSessionId?: string } | undefined
-  waitingView?(): Readonly<Record<string, { readonly bots: readonly string[]; readonly rooms: readonly string[]; readonly for: readonly string[] }>>
-  approvalsView?(): readonly { readonly botId: string; readonly sessionId: string; readonly tool?: string; readonly at: number }[]
-  parkedTurns?(): readonly { readonly sessionId: string; readonly botId: string; readonly roomId?: string }[]
-}
 
 /** A live Session as the stop reads it: its running turn, or the send it has not started
  *  yet (`sentAt`, which the host's shared LiveEntry does not name). */
-interface PanelLive {
-  readonly turn?: unknown
-  readonly sentAt?: number
-}
 
 /** The slice of an Agent this module reads: the queue behind its running turn, and the
  *  cancel both the panel and a Main Bot's stop_bot go through. The built-in engine's
  *  agent counts its own waiting followups; an agent from a host host keeps them in its
  *  durable inbox instead, so both shapes are read. */
-interface QueueMessage {
-  readonly id?: string
-  readonly content?: unknown
-  readonly source?: {
-    readonly kind?: string
-    readonly role?: string
-    readonly audience?: string
-    readonly exchangeId?: string
-    readonly senderSessionId?: string
-    readonly senderRoomId?: string
-  }
-}
-
-interface PanelAgent {
-  pendingTurns?(): number
-  readonly inbox?: {
-    readonly nextTurn: readonly unknown[]
-    remove?(id: string): boolean
-  } | undefined
-  /** A runner's explicit state; only `running` is enough to report engine-busy. */
-  readonly status?: 'running' | 'idle' | string
-  cancel?(cause: { readonly kind: string }): void
-}
-
-export interface TaskRunningView {
-  readonly sessionId: string
-  readonly botId: string
-  readonly botName: string
-  readonly since: number
-  readonly roomId?: string
-  readonly roomName?: string
-  readonly tool?: string
-  readonly target?: string
-  readonly said?: string
-  readonly switching?: boolean
-  readonly fromName?: string
-  /** Messages waiting behind the running turn (the engine's queue); absent when none. */
-  readonly queued?: number
-  /** The same messages, in queue order. Absent when the host cannot name them. */
-  readonly queue?: readonly { readonly id: string; readonly preview: string }[]
-  /** A reason is included only when the host has a matching live fact. */
-  readonly hold?: TaskHold
-}
-
-export interface TaskDoneView {
-  readonly sessionId: string
-  readonly botId: string
-  readonly botName: string
-  readonly startedAt: number
-  readonly endedAt: number
-  readonly reason: string
-  readonly roomId?: string
-  readonly roomName?: string
-  readonly fromName?: string
-}
-
-export interface TaskWaitingView {
-  readonly botId: string
-  readonly botName: string
-  readonly for: readonly string[]
-  /** Set for a turn parked by a restart, so Continue knows which session. */
-  readonly sessionId?: string
-  /** A reason is included only when the host has a matching live fact. */
-  readonly hold?: TaskHold
-}
-
-export interface TasksView {
-  readonly running: readonly TaskRunningView[]
-  readonly completed: readonly TaskDoneView[]
-  readonly waiting: readonly TaskWaitingView[]
-}
 
 /** How many finished turns the panel remembers; the store keeps the conversations. */
 const DONE_KEPT = 40
@@ -111,8 +46,8 @@ export function install(rt: PanelRuntime): void {
   const done: TaskDoneView[] = []
   const started = new Map<string, number>()
 
-  const nameOf = (botId: string | undefined): string => botId === undefined ? '' : rt.botOf(botId)?.name ?? botId
-  const roomOf = (roomId: string | undefined): { readonly id: string, readonly name: string } | undefined => {
+  const nameOf = (botId: string | undefined): string => (botId === undefined ? '' : (rt.botOf(botId)?.name ?? botId))
+  const roomOf = (roomId: string | undefined): { readonly id: string; readonly name: string } | undefined => {
     if (roomId === undefined) return undefined
     const room = rt.roomOf(roomId)
     return room === undefined ? undefined : { id: room.id, name: room.name }
@@ -147,7 +82,11 @@ export function install(rt: PanelRuntime): void {
   // read it (duplicate requests, shutdown cancel, group relay) see the queued input.
   // The count still prefers `pendingTurns()` when an agent publishes one.
   const agentOf = async (sessionId: string): Promise<PanelAgent | undefined> => {
-    try { return await rt.resolveAgent(sessionId) as PanelAgent | undefined } catch { return undefined }
+    try {
+      return (await rt.resolveAgent(sessionId)) as PanelAgent | undefined
+    } catch {
+      return undefined
+    }
   }
 
   const queueOf = (agent: PanelAgent | undefined): number => {
@@ -162,7 +101,9 @@ export function install(rt: PanelRuntime): void {
       const sessionId = sessionOf(botId, entry.roomId)
       const fromName = askerOf(sessionId)
       const row: TaskRunningView = {
-        sessionId, botId, botName: nameOf(botId),
+        sessionId,
+        botId,
+        botName: nameOf(botId),
         since: entry.since ?? started.get(sessionId) ?? Date.now(),
         ...(room === undefined ? {} : { roomId: room.id, roomName: room.name }),
         ...(entry.tool === undefined ? {} : { tool: entry.tool }),
@@ -175,42 +116,70 @@ export function install(rt: PanelRuntime): void {
     })
     const approvalSessions = new Set((rt.approvalsView?.() ?? []).map(entry => entry.sessionId))
     const waitingFacts = rt.waitingView?.() ?? {}
-    const running = await Promise.all(rows.map(async row => {
-      const live = rt.live.get(row.sessionId)
-      const agent = await agentOf(row.sessionId)
-      const queued = live?.turn === undefined ? 0 : queueOf(agent)
-      const queue = live?.turn === undefined ? [] : queueItems(agent)
-      const hold: TaskHold | undefined = approvalSessions.has(row.sessionId) ? 'approval'
-        : queued > 0 ? 'queued'
-          : agent?.status === 'running' && live?.turn === undefined ? 'engine-busy'
-            : undefined
-      return hold === undefined
-        ? queued > 0 ? { ...row, queued, ...(queue.length > 0 ? { queue } : {}) } : row
-        : { ...row, ...(queued > 0 ? { queued } : {}), ...(queue.length > 0 ? { queue } : {}), hold }
-    }))
+    const running = await Promise.all(
+      rows.map(async row => {
+        const live = rt.live.get(row.sessionId)
+        const agent = await agentOf(row.sessionId)
+        const queued = live?.turn === undefined ? 0 : queueOf(agent)
+        const queue = live?.turn === undefined ? [] : queueItems(agent)
+        const hold: TaskHold | undefined = approvalSessions.has(row.sessionId)
+          ? 'approval'
+          : queued > 0
+            ? 'queued'
+            : agent?.status === 'running' && live?.turn === undefined
+              ? 'engine-busy'
+              : undefined
+        return hold === undefined
+          ? queued > 0
+            ? { ...row, queued, ...(queue.length > 0 ? { queue } : {}) }
+            : row
+          : { ...row, ...(queued > 0 ? { queued } : {}), ...(queue.length > 0 ? { queue } : {}), hold }
+      }),
+    )
     running.sort((a, b) => b.since - a.since)
     const waiting: TaskWaitingView[] = [
-      ...Object.entries(waitingFacts).map(([botId, entry]): TaskWaitingView => ({
-        botId, botName: nameOf(botId), for: [...entry.bots, ...entry.rooms, ...entry.for].slice(0, 6), hold: 'handoff',
-      })),
+      ...Object.entries(waitingFacts).map(
+        ([botId, entry]): TaskWaitingView => ({
+          botId,
+          botName: nameOf(botId),
+          for: [...entry.bots, ...entry.rooms, ...entry.for].slice(0, 6),
+          hold: 'handoff',
+        }),
+      ),
       ...(rt.parkedTurns?.() ?? []).flatMap((note): readonly TaskWaitingView[] => {
         if (note.botId === '') return []
         const room = roomOf(note.roomId)
-        return [{ botId: note.botId, botName: nameOf(note.botId), sessionId: note.sessionId, for: room === undefined ? [] : [room.name], hold: 'interrupted' }]
+        return [
+          {
+            botId: note.botId,
+            botName: nameOf(note.botId),
+            sessionId: note.sessionId,
+            for: room === undefined ? [] : [room.name],
+            hold: 'interrupted',
+          },
+        ]
       }),
     ]
     // Proactive runs that never became a turn still happened; the panel says so in one line
     // each, without counting as unread (plan §6, the quiet round).
-    const rounds = (rt.proactiveRounds?.() ?? []).map((round): TaskDoneView => ({
-      sessionId: sessionOf(round.botId, undefined), botId: round.botId, botName: round.botName,
-      startedAt: round.at, endedAt: round.at,
-      reason: roundLine(round.outcome),
-    }))
+    const rounds = (rt.proactiveRounds?.() ?? []).map(
+      (round): TaskDoneView => ({
+        sessionId: sessionOf(round.botId, undefined),
+        botId: round.botId,
+        botName: round.botName,
+        startedAt: round.at,
+        endedAt: round.at,
+        reason: roundLine(round.outcome),
+      }),
+    )
     return { running, completed: [...done, ...rounds], waiting }
   }
 
   /** Fed by the emitter: a turn's clock, and its row once it ends. */
-  const noteTurn = (sessionId: string, event: { readonly type?: string, readonly turn?: unknown, readonly reason?: unknown }): void => {
+  const noteTurn = (
+    sessionId: string,
+    event: { readonly type?: string; readonly turn?: unknown; readonly reason?: unknown },
+  ): void => {
     if (event.type === 'turn/start') {
       if (!started.has(sessionId)) started.set(sessionId, Date.now())
       return
@@ -224,7 +193,12 @@ export function install(rt: PanelRuntime): void {
     const reason = typeof event.reason === 'string' ? event.reason : kindOf(event.reason)
     const fromName = askerOf(sessionId)
     done.unshift({
-      sessionId, botId, botName: nameOf(botId), startedAt: began, endedAt: Date.now(), reason,
+      sessionId,
+      botId,
+      botName: nameOf(botId),
+      startedAt: began,
+      endedAt: Date.now(),
+      reason,
       ...(room === undefined ? {} : { roomId: room.id, roomName: room.name }),
       ...(fromName === undefined || fromName === '' ? {} : { fromName }),
     })
@@ -241,7 +215,7 @@ export function install(rt: PanelRuntime): void {
     if (entry?.turn === undefined && entry?.sentAt === undefined) return false
     let agent: PanelAgent | undefined
     try {
-      agent = await rt.resolveAgent(sessionId) as PanelAgent | undefined
+      agent = (await rt.resolveAgent(sessionId)) as PanelAgent | undefined
     } catch {
       return false
     }
@@ -276,15 +250,17 @@ export function install(rt: PanelRuntime): void {
     const exchangeId = source?.exchangeId
     const work = exchangeId === undefined || exchangeId === '' ? undefined : rt.closeWork?.(exchangeId, who, text)
     const back = source?.senderRoomId === undefined ? undefined : rt.roomOf(source.senderRoomId)?.sessions?.[sender]
-    void rt.deliver({
-      ...(rt.selfOf(sessionId) !== undefined ? { fromId: rt.selfOf(sessionId) } : {}),
-      toId: sender,
-      ...(typeof back === 'string' ? { sessionId: back } : {}),
-      text,
-      role: 'reply',
-      ...(exchangeId !== undefined && exchangeId !== '' ? { replyTo: exchangeId } : {}),
-      ...(work !== undefined && work !== '' ? { work } : {}),
-    }).catch(error => rt.warn('moon-bot: withdrawn queue item not delivered: %s', error))
+    void rt
+      .deliver({
+        ...(rt.selfOf(sessionId) !== undefined ? { fromId: rt.selfOf(sessionId) } : {}),
+        toId: sender,
+        ...(typeof back === 'string' ? { sessionId: back } : {}),
+        text,
+        role: 'reply',
+        ...(exchangeId !== undefined && exchangeId !== '' ? { replyTo: exchangeId } : {}),
+        ...(work !== undefined && work !== '' ? { work } : {}),
+      })
+      .catch(error => rt.warn('moon-bot: withdrawn queue item not delivered: %s', error))
   }
 
   Object.assign(rt, { tasksView, noteTurn, stopTask, removeQueued })
@@ -293,7 +269,7 @@ export function install(rt: PanelRuntime): void {
 const PREVIEW_MAX = 120
 
 const messageOf = (value: unknown): QueueMessage | undefined =>
-  value !== null && typeof value === 'object' ? value as QueueMessage : undefined
+  value !== null && typeof value === 'object' ? (value as QueueMessage) : undefined
 
 const previewOf = (message: QueueMessage): string => {
   const content = Array.isArray(message.content) ? message.content : []

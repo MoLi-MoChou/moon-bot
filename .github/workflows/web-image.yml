@@ -4,6 +4,8 @@ name: Web image
 #   - the browser check runs first; the image is only published when it is green
 #   - main → :main and :latest, a short sha is always pushed, a v* tag → that version
 #   - the server side is deploy/update.sh and deploy/rollback.sh
+# Dedup: publish only on push to main / v* (and workflow_dispatch) — never on
+# pull_request, so it does not double-run with Test's Windows pack on the PR.
 on:
   push:
     branches: [main]

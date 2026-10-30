@@ -8,53 +8,16 @@ import { RESUME_DELAY_MS } from './resume.ts'
 import { textOf } from './text.ts'
 import { FOLDER_RETRY_MS, createPartMove } from './parts-switch-move.ts'
 import type { Disposer } from './host-types.js'
-import type {
-  Lines, PartMove, PartMoveOptions, PartMoveRuntime, SwitchAgent, SwitchEvent, SwitchJob, SwitchLiveEntry,
-  SwitchMessage, SwitchOwner, SwitchSession, SwitchState, SwitchTables,
-} from './parts-switch-move.ts'
-import type { TurnInfo } from './runtime.js'
+import type { Lines, PartMove, SwitchAgent, SwitchEvent, SwitchJob, SwitchMessage, SwitchTables } from './parts-switch-move.ts'
+
+import type { WorkingDirectoryService, PreStepPayload, RequestErrorPayload, AssembleContext, Next, StartSwitchOptions, PartSwitchOptions, PartSwitch } from './parts-switch-types.ts'
+export type { PartSwitchRuntime, StartSwitchOptions, PartSwitchOptions, PartSwitch } from './parts-switch-types.ts'
 
 const OVERFLOW = 'CONTEXT_WINDOW_EXCEEDED'
 // A failed connection says nothing about the conversation, so it never moves a part on.
 const STUCK_CODES = ['INVALID_REQUEST', 'IMAGE_OFFLOAD_REQUIRED']
 const SWITCH_ATTEMPTS = 5
 const PAUSE_NOTE = 'Moon Bot paused your turn for a context check. Go on with it now from where you stopped.'
-
-/** The runtime surface the switch lifecycle calls. */
-export interface PartSwitchRuntime extends PartMoveRuntime {
-  readonly pastOwners: Map<string, SwitchOwner>; liveOf(sessionId: string): SwitchLiveEntry
-  renewMemory(sessionId: string): void; keepTeamFolder(): Promise<string | undefined>
-}
-
-interface WorkingDirectoryService { get(session: SwitchSession): string | undefined; set(agent: SwitchAgent, target: string, signal?: AbortSignal): Promise<void> }
-
-interface PreStepPayload { readonly agent: SwitchAgent; readonly step: number; readonly messages: readonly SwitchMessage[]; readonly signal?: AbortSignal | undefined }
-
-interface RequestErrorPayload { readonly agent: SwitchAgent; readonly failure?: { readonly code?: string | undefined } | undefined; readonly signal?: AbortSignal | undefined }
-
-interface AssembleContext { readonly agent?: SwitchAgent | undefined; readonly signal?: AbortSignal | undefined }
-
-type Next = () => unknown
-
-export interface StartSwitchOptions {
-  readonly resume?: boolean; readonly carry?: readonly SwitchMessage[]; readonly info?: TurnInfo | undefined
-  readonly joined?: readonly unknown[] | undefined; readonly overflow?: boolean; readonly failed?: string | undefined
-  readonly bare?: boolean; readonly folder?: boolean; readonly hard?: boolean
-}
-
-export interface PartSwitchOptions extends Omit<PartMoveOptions, 'rt' | 'tables'> {
-  readonly rt: PartSwitchRuntime; readonly state: SwitchState
-  readOnly(): boolean
-  condense(agent: SwitchAgent, lines: Lines, options: { readonly inTurn: boolean; readonly signal?: AbortSignal | undefined }): Promise<boolean | undefined>
-  decide(agent: SwitchAgent, options: { readonly midTurn: boolean }): Promise<'compact' | 'switch'>
-  adoptCompaction(agent: SwitchAgent): void
-}
-
-export interface PartSwitch {
-  heldBack(): Promise<void>; followFolder(botId: string): Promise<void>; switchJobs(): Iterable<SwitchJob>
-  switching(sessionId: string): boolean
-  setPartBase(sessionId: string, tokens: number | undefined): void
-}
 
 export function createPartSwitch(options: PartSwitchOptions): PartSwitch {
   const { ctx, rt, state, placeOf, tokensOf, contextLines, condense, decide, adoptCompaction, readOnly, recentTokens, noteTimeoutMs, noteCooldownMs } = options
@@ -88,7 +51,11 @@ export function createPartSwitch(options: PartSwitchOptions): PartSwitch {
   // would fail the same way, so an unloaded failure is noted once at info instead.
   const fiberUid = (): unknown => (ctx.fiber as { readonly uid?: unknown } | undefined)?.uid
   const unloaded = (error: unknown): boolean => fiberUid() === null || /in inactive context/.test(String((error as { readonly message?: unknown } | undefined)?.message ?? error))
-  const noteInfo = (template: string, ...args: readonly unknown[]): void => { try { ctx.logger.info(template, ...args) } catch {} }
+  const noteInfo = (template: string, ...args: readonly unknown[]): void => {
+    try {
+      ctx.logger.info(template, ...args)
+    } catch {}
+  }
 
   // `hard`: past the hard line or the window, the part moves on even without a note
   // from the model. `folder`: the part moves on because its working folder changed.
@@ -125,21 +92,30 @@ export function createPartSwitch(options: PartSwitchOptions): PartSwitch {
         if (resume && !back.some(message => textOf(message.content) === PAUSE_NOTE) && !noted) {
           const carried = job.joined?.length ? { joined: job.joined } : {}
           // The local the host shim types a new user message without the id the runtime gives it.
-          back.unshift(createUserMessage({
-            content: [{ type: 'text', text: PAUSE_NOTE }],
-            source: job.info ? { ...job.info, ...carried } : { kind: SOURCE_KIND, form: 'relay', role: 'resume', exchangeId: randomUUID(), senderName: 'Moon Bot', ...carried },
-          }) as unknown as SwitchMessage)
+          back.unshift(
+            createUserMessage({
+              content: [{ type: 'text', text: PAUSE_NOTE }],
+              source: job.info ? { ...job.info, ...carried } : { kind: SOURCE_KIND, form: 'relay', role: 'resume', exchangeId: randomUUID(), senderName: 'Moon Bot', ...carried },
+            }) as unknown as SwitchMessage,
+          )
         }
-        await move.forward(job, back).then(() => {
-          delete state.switching[agent.id]
-        }).catch((error) => {
-          job.kept = true
-          try { move.restore(agent, back) } catch {}
-          if (unloaded(error)) return noteInfo('moon-bot: plugin unloaded during the switch of %s; input kept in part %s', agent.id, agent.id)
-          rt.warn('moon-bot: input for %s was not handed on: %s', agent.id, error)
-          // The input is back where it was; the turn that owns it goes on at once.
-          try { move.wake(agent) } catch {}
-        })
+        await move
+          .forward(job, back)
+          .then(() => {
+            delete state.switching[agent.id]
+          })
+          .catch(error => {
+            job.kept = true
+            try {
+              move.restore(agent, back)
+            } catch {}
+            if (unloaded(error)) return noteInfo('moon-bot: plugin unloaded during the switch of %s; input kept in part %s', agent.id, agent.id)
+            rt.warn('moon-bot: input for %s was not handed on: %s', agent.id, error)
+            // The input is back where it was; the turn that owns it goes on at once.
+            try {
+              move.wake(agent)
+            } catch {}
+          })
         await rt.save()
       })
       // A state write that fails here (full disk, a file another program holds, a lost lock)
@@ -166,8 +142,7 @@ export function createPartSwitch(options: PartSwitchOptions): PartSwitch {
     }
     if (job.moved) {
       rt.renewMemory(agent.id)
-      await ctx.workspaceRegistry.archiveSession(agent.id)
-        .catch(error => rt.warn('moon-bot: earlier part %s not archived: %s', agent.id, error))
+      await ctx.workspaceRegistry.archiveSession(agent.id).catch(error => rt.warn('moon-bot: earlier part %s not archived: %s', agent.id, error))
     }
   }
 
@@ -189,33 +164,37 @@ export function createPartSwitch(options: PartSwitchOptions): PartSwitch {
   // Runs first: an earlier part hands its input on, a part past the hard line makes
   // room before the step (condensed in place, or it stops and goes on in a fresh
   // part), and the backend's own pre-step listener sees the wrapper.
-  ctx.on<PreStepPayload, Next>('agent/pre-step', async (payload, next) => {
-    await rt.load()
-    const { agent } = payload
-    const past = rt.pastOwners.get(agent.id)
-    if (past !== undefined && !rt.isBotSession(agent.id)) {
-      await move.forward(past, payload.messages).catch(error => rt.warn('moon-bot: input for %s was not handed on: %s', agent.id, error))
-      return { kind: 'reject' }
-    }
-    if (!rt.isBotSession(agent.id)) return next()
-    adoptCompaction(agent)
-    const job = switches.get(agent.id)
-    if (job !== undefined) {
-      job.carry.push(...payload.messages)
-      return { kind: 'reject' }
-    }
-    const fresh = freshParts.get(agent.id)
-    if (fresh !== undefined) {
-      freshParts.delete(agent.id)
-      partBase.set(agent.id, (tokensOf(agent.session) ?? 0) + fresh)
-    }
-    if (!readOnly() && await move.folderMove(agent, { midTurn: payload.step > 1 }) !== undefined) return switchBeforeStep(agent, payload, { folder: true })
-    const lines = await contextLines(agent.session).catch(() => undefined)
-    const tokens = tokensOf(agent.session)
-    if (lines === undefined || tokens === undefined || tokens < lines.hard || !grown(agent.id, tokens, lines) || readOnly()) return next()
-    if (await decide(agent, { midTurn: payload.step > 1 }) === 'compact' && await condense(agent, lines, { inTurn: true, signal: payload.signal })) return next()
-    return switchBeforeStep(agent, payload, { hard: true })
-  }, { prepend: true })
+  ctx.on<PreStepPayload, Next>(
+    'agent/pre-step',
+    async (payload, next) => {
+      await rt.load()
+      const { agent } = payload
+      const past = rt.pastOwners.get(agent.id)
+      if (past !== undefined && !rt.isBotSession(agent.id)) {
+        await move.forward(past, payload.messages).catch(error => rt.warn('moon-bot: input for %s was not handed on: %s', agent.id, error))
+        return { kind: 'reject' }
+      }
+      if (!rt.isBotSession(agent.id)) return next()
+      adoptCompaction(agent)
+      const job = switches.get(agent.id)
+      if (job !== undefined) {
+        job.carry.push(...payload.messages)
+        return { kind: 'reject' }
+      }
+      const fresh = freshParts.get(agent.id)
+      if (fresh !== undefined) {
+        freshParts.delete(agent.id)
+        partBase.set(agent.id, (tokensOf(agent.session) ?? 0) + fresh)
+      }
+      if (!readOnly() && (await move.folderMove(agent, { midTurn: payload.step > 1 })) !== undefined) return switchBeforeStep(agent, payload, { folder: true })
+      const lines = await contextLines(agent.session).catch(() => undefined)
+      const tokens = tokensOf(agent.session)
+      if (lines === undefined || tokens === undefined || tokens < lines.hard || !grown(agent.id, tokens, lines) || readOnly()) return next()
+      if ((await decide(agent, { midTurn: payload.step > 1 })) === 'compact' && (await condense(agent, lines, { inTurn: true, signal: payload.signal }))) return next()
+      return switchBeforeStep(agent, payload, { hard: true })
+    },
+    { prepend: true },
+  )
 
   // the host checks a Session's folder as it puts each model request together, before
   // agent/pre-step, and fails the turn when both the folder and the one the Session was
@@ -225,24 +204,27 @@ export function createPartSwitch(options: PartSwitchOptions): PartSwitch {
   // fresh part there, as on the host.0.
   // The local the host context type names only two listener arguments; this event has three.
   const onAssemble = ctx.on as unknown as (name: string, listener: (assembly: unknown, context: AssembleContext, next: Next) => unknown, options?: { readonly prepend?: boolean }) => Disposer
-  onAssemble('system-prompt/assemble', async (_assembly, context, next) => {
-    const agent = context.agent
-    const folders = ctx.get<WorkingDirectoryService>('workingDirectory')
-    if (agent === undefined || typeof folders?.get !== 'function' || readOnly()) return next()
-    const current = folders.get(agent.session)
-    if (current === undefined || await rt.isFolder(current)) return next()
-    await rt.load()
-    const team = await rt.keepTeamFolder()
-    if (current === team || !rt.isBotSession(agent.id)) return next()
-    const place = placeOf(agent.id)
-    const wanted = rt.workDirOf(place)
-    const target = wanted !== undefined && await rt.isFolder(wanted) ? wanted : team
-    if (target !== undefined) {
-      await folders.set(agent, target, context.signal)
-        .catch(error => rt.warn('moon-bot: %s works in %s, which is gone, and could not change to %s: %s', rt.botOf(place?.botId)?.name ?? agent.id, current, target, error))
-    }
-    return next()
-  }, { prepend: true })
+  onAssemble(
+    'system-prompt/assemble',
+    async (_assembly, context, next) => {
+      const agent = context.agent
+      const folders = ctx.get<WorkingDirectoryService>('workingDirectory')
+      if (agent === undefined || typeof folders?.get !== 'function' || readOnly()) return next()
+      const current = folders.get(agent.session)
+      if (current === undefined || (await rt.isFolder(current))) return next()
+      await rt.load()
+      const team = await rt.keepTeamFolder()
+      if (current === team || !rt.isBotSession(agent.id)) return next()
+      const place = placeOf(agent.id)
+      const wanted = rt.workDirOf(place)
+      const target = wanted !== undefined && (await rt.isFolder(wanted)) ? wanted : team
+      if (target !== undefined) {
+        await folders.set(agent, target, context.signal).catch(error => rt.warn('moon-bot: %s works in %s, which is gone, and could not change to %s: %s', rt.botOf(place?.botId)?.name ?? agent.id, current, target, error))
+      }
+      return next()
+    },
+    { prepend: true },
+  )
 
   // A Bot's own chat moves to its new folder now when it is idle; a running turn
   // moves at its next step, and each group conversation at its next turn there.
@@ -251,41 +233,49 @@ export function createPartSwitch(options: PartSwitchOptions): PartSwitch {
     if (sessionId === undefined || switches.has(sessionId) || readOnly()) return
     try {
       const agent = await rt.resolveAgent(sessionId)
-      if (agent.status === 'idle' && await move.folderMove(agent) !== undefined) startSwitch(agent, { folder: true })
+      if (agent.status === 'idle' && (await move.folderMove(agent)) !== undefined) startSwitch(agent, { folder: true })
     } catch (error) {
       rt.warn('moon-bot: %s did not move to its working folder: %s', rt.botOf(botId)?.name ?? botId, error)
     }
   }
 
-  ctx.on<RequestErrorPayload, Next>('agent/request-error', async (payload, next) => {
-    const code = payload.failure?.code
-    if (code === undefined || !STUCK_CODES.includes(code)) return next()
-    const decided = await next()
-    if (decided !== undefined || payload.signal?.aborted) return decided
-    await rt.load()
-    const { agent } = payload
-    if (!rt.isBotSession(agent.id) || switches.has(agent.id) || readOnly() || rescued.get(agent.id) === 'bare') return decided
-    // A provider may turn down one request for reasons of its own; a history that
-    // breaks every request fails the next turn as well.
-    const lastCode = lastTurnEnd(agent)?.data?.reason?.error?.code
-    if (code === 'INVALID_REQUEST' && !STUCK_CODES.includes(lastCode ?? '')) return decided
-    const entry = rt.liveOf(agent.id)
-    entry.switched = true
-    // The latest messages carried into a rescued part may be what breaks the request.
-    startSwitch(agent, { resume: true, info: entry.info, joined: [...(entry.joined ?? [])], overflow: true, failed: code, bare: rescued.has(agent.id) })
-    return undefined
-  }, { prepend: true })
+  ctx.on<RequestErrorPayload, Next>(
+    'agent/request-error',
+    async (payload, next) => {
+      const code = payload.failure?.code
+      if (code === undefined || !STUCK_CODES.includes(code)) return next()
+      const decided = await next()
+      if (decided !== undefined || payload.signal?.aborted) return decided
+      await rt.load()
+      const { agent } = payload
+      if (!rt.isBotSession(agent.id) || switches.has(agent.id) || readOnly() || rescued.get(agent.id) === 'bare') return decided
+      // A provider may turn down one request for reasons of its own; a history that
+      // breaks every request fails the next turn as well.
+      const lastCode = lastTurnEnd(agent)?.data?.reason?.error?.code
+      if (code === 'INVALID_REQUEST' && !STUCK_CODES.includes(lastCode ?? '')) return decided
+      const entry = rt.liveOf(agent.id)
+      entry.switched = true
+      // The latest messages carried into a rescued part may be what breaks the request.
+      startSwitch(agent, { resume: true, info: entry.info, joined: [...(entry.joined ?? [])], overflow: true, failed: code, bare: rescued.has(agent.id) })
+      return undefined
+    },
+    { prepend: true },
+  )
 
-  ctx.on<RequestErrorPayload, Next>('agent/request-error', async (payload, next) => {
-    if (payload.failure?.code !== OVERFLOW || payload.signal?.aborted) return next()
-    await rt.load()
-    const { agent } = payload
-    if (!rt.isBotSession(agent.id) || switches.has(agent.id) || readOnly()) return next()
-    const entry = rt.liveOf(agent.id)
-    entry.switched = true
-    startSwitch(agent, { resume: true, info: entry.info, joined: [...(entry.joined ?? [])], overflow: true })
-    return undefined
-  }, { prepend: true })
+  ctx.on<RequestErrorPayload, Next>(
+    'agent/request-error',
+    async (payload, next) => {
+      if (payload.failure?.code !== OVERFLOW || payload.signal?.aborted) return next()
+      await rt.load()
+      const { agent } = payload
+      if (!rt.isBotSession(agent.id) || switches.has(agent.id) || readOnly()) return next()
+      const entry = rt.liveOf(agent.id)
+      entry.switched = true
+      startSwitch(agent, { resume: true, info: entry.info, joined: [...(entry.joined ?? [])], overflow: true })
+      return undefined
+    },
+    { prepend: true },
+  )
 
   // At the end of a turn past the check line, the steward decides once. Either way
   // the part ends up below the line, and nothing is decided again until it grows
@@ -299,7 +289,7 @@ export function createPartSwitch(options: PartSwitchOptions): PartSwitch {
     if (!hard && Date.now() < (noteFailures.get(agent.id)?.until ?? 0)) return
     checking.add(agent.id)
     try {
-      if (await decide(agent, { midTurn: false }) === 'compact') {
+      if ((await decide(agent, { midTurn: false })) === 'compact') {
         const condensed = await condense(agent, lines, { inTurn: false })
         if (condensed !== false) return
       }
@@ -344,6 +334,8 @@ export function createPartSwitch(options: PartSwitchOptions): PartSwitch {
     followFolder,
     switchJobs: () => switches.values(),
     switching: (sessionId: string): boolean => switches.has(sessionId),
-    setPartBase: (sessionId, tokens) => { partBase.set(sessionId, tokens) },
+    setPartBase: (sessionId, tokens) => {
+      partBase.set(sessionId, tokens)
+    },
   }
 }

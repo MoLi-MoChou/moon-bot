@@ -73,9 +73,16 @@ Helpers / types splits (+ `lineWidth` 320 overrides where needed):
 - store: `proactive.ts` → `proactive-rules`
 - host: `groups.ts` → `groups-types` (w320); `roster.ts` → `roster-types` (w320); `memory/recall.ts` → `recall-types` (w320); `capabilities-mount.ts` → `capabilities-mount-types` (w320)
 
+### Cleared in batch 7 (stacked on batch 6)
+
+Types + `lineWidth` 320 overrides:
+
+- client: `questions.tsx` → `questions-types`
+- host: `groups/log.ts` → `log-types`; `parts-switch-move.ts` → types; `parts-switch.ts` → types
+
 ### Follow-up (still ignored until split)
 
-Remaining `packages/**/src` ignores (~21): denser modules — `memory-panel`, `widget-cell`, `usage-charts`, `sidebar-rows`, host `memory`/`parts`/`parts-switch`, `client-boot`/`index`, `service/engine`, etc. Split by responsibility, remove each ignore, keep ≤350 after format.
+Remaining `packages/**/src` ignores (~17): denser modules — `memory-panel`, `widget-cell`, `usage-charts`, `sidebar-rows`, host `memory`/`parts`/`news`/`storage`, `client-boot`/`index`/`bot-browsers`, `service/engine`, etc. Split by responsibility, remove each ignore, keep ≤350 after format.
 
 ## Scripts
 

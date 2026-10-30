@@ -117,16 +117,16 @@ the runtime in this repository (Node 22.18+). The only lockfile is `pnpm-lock.ya
 
 ## Test a change
 
-Run these in `packages/core/`:
+From the repository root (and `packages/core/` where noted):
 
 ```sh
-pnpm run build                         # src/client → client.js
-pnpm test                              # unit tests; they also fail if client.js is stale
-node scripts/build-client.ts --check   # client.js matches src/client
-pnpm run lint                          # oxlint
+pnpm run build                         # rebuild workspace artifacts
+pnpm test                              # unit tests across workspaces that define them
+pnpm run check:static                  # all-workspace typecheck + lint
+cd packages/core && node scripts/build-client.ts --check   # client.js matches src/client
 ```
 
-CI runs the same three checks on every pull request, on Linux and Windows. It also scans the tracked files for keys, tokens, personal paths and e-mail addresses, and for material that must stay local. To run the scan yourself, from the repository root:
+CI runs `pnpm test`, `pnpm run check:static`, and `pnpm run eval` on every pull request (Linux and Windows for the matrix job). It also scans the tracked files for keys, tokens, personal paths and e-mail addresses, and for material that must stay local. To run the scan yourself, from the repository root:
 
 ```sh
 mkdir -p /tmp/ds-bot-tree && git archive HEAD | tar -x -C /tmp/ds-bot-tree && node scripts/scan.mjs /tmp/ds-bot-tree

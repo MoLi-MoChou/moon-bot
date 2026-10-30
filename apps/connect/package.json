@@ -16,12 +16,14 @@
     "build": "node scripts/build.mjs",
     "prepare": "node scripts/build.mjs",
     "prepublishOnly": "node scripts/build.mjs",
-    "verify:package": "node scripts/verify-package.mjs"
+    "verify:package": "node scripts/verify-package.mjs",
+    "lint": "node scripts/lint.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",
     "typescript": "^5.9.3",
-    "esbuild": "0.28.2"
+    "esbuild": "0.28.2",
+    "oxlint": "^1.76.0"
   },
   "files": [
     "dist",

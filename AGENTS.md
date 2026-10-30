@@ -41,13 +41,14 @@ pnpm install                           # 安装三个 workspace，然后构建 c
 pnpm run build                         # 源码改动后重建产物
 pnpm test                              # 单元测试（含一个断言 client.js 与源码一致）
 pnpm --filter moon-bot-core run test:related  # 只跑碰得到改动的测试；迭代用，完成定义仍是三件套
-pnpm run typecheck                     # tsc --noEmit，strict
-pnpm run lint                          # oxlint + 架构/行数/floating-promise 门禁
+pnpm run typecheck                     # 全 workspace tsc --noEmit（pnpm -r）
+pnpm run lint                          # 全 workspace oxlint；core 另跑架构/行数/floating-promise 门禁
+pnpm run check:static                  # typecheck + lint（根上一键；CI 的 test job 跑这个）
 pnpm run eval                          # 五项能力的评测集
 pnpm --filter moon-bot run web         # 网页版：密码页 + 服务，默认 http://127.0.0.1:8290
 ```
 
-改动完成的定义是 `pnpm test`、`pnpm run typecheck`、`pnpm run lint` 全绿；CI 在 `.github/workflows/test.yml` 上对每个 PR 跑这三件，另跑 `pnpm run eval` 和泄漏扫描。`packages/core/dev/bench.sh` 起 mock 模型 + 构建后的服务，是开发用的实例，不是用户安装后的启动方式；每个 bench 用空闲端口，用完停掉自己起的所有 bench 和进程。
+改动完成的定义是 `pnpm test` 与 `pnpm run check:static`（= 全仓 typecheck + lint）全绿；CI 在 `.github/workflows/test.yml` 上对每个 PR 从仓库根跑 `check:static`（不再只在 `packages/core` cwd），另跑 `pnpm run eval` 和泄漏扫描。`packages/core/dev/bench.sh` 起 mock 模型 + 构建后的服务，是开发用的实例，不是用户安装后的启动方式；每个 bench 用空闲端口，用完停掉自己起的所有 bench 和进程。
 
 ## 分支、PR 与 issue
 
@@ -88,7 +89,7 @@ pnpm --filter moon-bot run web         # 网页版：密码页 + 服务，默认
 
 ## 验证
 
-一条改动算完成，只有 `pnpm test`、`pnpm run typecheck`、`pnpm run lint` 三件套全绿。CI 另跑 `pnpm run eval`（五项能力，用脚本化端点，离线）和 `scripts/scan.mjs`（泄漏扫描）；本地默认不跑这两项，但泄漏扫描的规则要记在心里。
+一条改动算完成，只有 `pnpm test` 与 `pnpm run check:static`（全仓 typecheck + lint）全绿。CI 另跑 `pnpm run eval`（五项能力，用脚本化端点，离线）和 `scripts/scan.mjs`（泄漏扫描）；本地默认不跑这两项，但泄漏扫描的规则要记在心里。
 
 - **默认离线。** [`packages/core/dev/mock-llm.ts`](packages/core/dev/mock-llm.ts) 是脚本化的 mock 模型，不需要 key；测试和测试台的数据都在临时目录里，跑完删掉。
 - **界面一律在 dev 实例上验证。** 用 [`packages/core/dev/bench.sh`](packages/core/dev/bench.sh) 起 mock 模型 + 本机服务（`packages/core/dev/bench.sh <name> <web-port> <mock-port> reset|start|stop`；它不是安装包），在浏览器/窗口里真实操作；改完源码先按需构建再刷新页面。

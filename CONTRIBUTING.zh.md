@@ -65,7 +65,7 @@
 
 ### 合并冲突
 
-- **`core/client.js`**：它是生成物、从不提交，只有在两边都误提交时才会冲突。先解决 `core/src/client/`，把生成文件从合并里去掉（`git checkout --ours core/client.js` 后 `npm run build`）。
+- **`core/client.js`**：它是生成物、从不提交，只有在两边都误提交时才会冲突。先解决 `core/src/client/`，把生成文件从合并里去掉（`git checkout --ours core/client.js` 后 `pnpm run build`）。
 - **`CHANGELOG.md`**：Pull Request 不改它，所以不应该冲突。如果冲突了，两边都保留。
 
 ### 发版（维护者）
@@ -90,7 +90,7 @@ git clone https://github.com/MoLi-MoChou/moon-bot.git moon-bot
 cd ds-bot-repo/ds-bot
 
 # 插件自己的构建工具（只有 esbuild）。
-npm ci
+pnpm install
 
 # 单元测试和 lint 要加载的 DSH 包，从 npm 装进 dev/harness/。
 npm run harness
@@ -126,10 +126,10 @@ git -C deepseek-harness checkout dsh-v0.2.1-rc.2
 在 `core/` 里运行：
 
 ```sh
-npm run build                          # src/client → client.js
-npm test                               # 单元测试；client.js 过期时也会失败
+pnpm run build                         # src/client → client.js
+pnpm test                              # 单元测试；client.js 过期时也会失败
 node scripts/build-client.ts --check   # client.js 与 src/client 一致
-npm run lint                           # oxlint
+pnpm run lint                          # oxlint
 ```
 
 CI 在每个 Pull Request 上，在 Linux 和 Windows 上跑同样的三项检查。它还会扫描入库的文件，查找密钥、token、个人路径和邮箱，以及只应留在本地的材料。想自己扫描，在仓库根目录运行：
@@ -162,7 +162,7 @@ dev/bench.sh dev 3081 8771 reset    # 模拟模型 + DSH Web；数据在 ../.dsh
 ## 写改动
 
 - 一个改动只做一件事。
-- 不要手改 `client.js`，也不要提交它。改 `src/client/`，运行 `npm run build`。
+- 不要手改 `client.js`，也不要提交它。改 `src/client/`，运行 `pnpm run build`。
 - 在 `src/client/` 里，颜色用 `--bt-*` 变量，圆角只用 4、6、8、10、12、16、18、20、22、999px 和 50% 这几档，弹簧用 `motion.js` 里的。有单元测试检查这三项。测试之前就写成的地方列在 `test/style-debt.json` 里，这份清单只减不增。改掉一处后，运行 `node scripts/style-debt.mjs --write` 更新清单。
 - 跟随改动周围代码的风格。只有当代码本身看不出原因时才写注释。
 - 提交说明用英文。标题简短，用祈使句（如 "Keep group replies visible"），在正文里写原因。

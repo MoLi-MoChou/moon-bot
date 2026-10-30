@@ -56,7 +56,7 @@ the product does not publish it and the reverse.
 1. `node scripts/version.mjs connect X.Y.Z` (prints the tag it implies), commit.
 2. `git tag connect-vX.Y.Z && git push origin main connect-vX.Y.Z`.
 3. `.github/workflows/publish-connect.yml` checks the tag against
-   `connect/package.json`, runs `npm run verify:package -w moon-bot-connect` (packs the
+   `connect/package.json`, runs `pnpm --filter moon-bot-connect run verify:package` (packs the
    tarball, installs it into a throwaway prefix and runs the installed bin) and only then
    runs `npm publish --access public --provenance`.
 
@@ -65,8 +65,8 @@ read-and-write access to `moon-bot-connect`. Without it the job fails at the pub
 and nothing reaches the registry. Re-running a tag for a version that is already published
 is a green no-op — the job checks the registry first.
 
-To publish by hand instead, run `npm run verify:package -w moon-bot-connect` and then
-`npm publish -w moon-bot-connect --access public` from a machine that is logged in. A first
+To publish by hand instead, run `pnpm --filter moon-bot-connect run verify:package` and then
+`pnpm --filter moon-bot-connect publish --access public` from a machine that is logged in. A first
 publish of a new package answers `202 Accepted`: the metadata shows up first and the
 tarball can 404 for a few minutes while the registry processes it — retry `npm view` rather
 than republishing. `verify:package` runs in the `Test` workflow too, on a runner with no

@@ -1,4 +1,4 @@
-// Electron embeds a different Node ABI than the Node process used by npm ci.
+// Electron embeds a different Node ABI than the Node process used by pnpm install.
 // Rebuild the native SQLite module before electron-builder copies it into the app.
 import { spawnSync } from 'node:child_process'
 import { createRequire } from 'node:module'

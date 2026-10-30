@@ -17,7 +17,7 @@ const update = process.argv.includes('--update')
 // looks like a flake far away from the cause. Say it before the suite spends two minutes.
 const HARNESS = join(CORE, 'dev', 'harness', 'node_modules', '@deepseek-ai', 'dsh-llm')
 if (!existsSync(HARNESS)) {
-  console.error(`test-gate: harness missing (${HARNESS}) - run npm run harness in core`)
+  console.error(`test-gate: harness missing (${HARNESS}) - run the core test harness setup (see AGENTS.md)`)
   process.exit(1)
 }
 

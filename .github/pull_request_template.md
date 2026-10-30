@@ -19,9 +19,9 @@ Fixes #
 
 ## How I checked it / 怎么验证的
 
-- [ ] `npm test` (in `core/`)
+- [ ] `pnpm test` (root; covers workspaces with tests)
 - [ ] `node scripts/build-client.ts --check`
-- [ ] `npm run lint`
+- [ ] `pnpm run lint`
 - [ ] Smoke test, for changes to `index.js` or `src/host/` / 改了 `index.js` 或 `src/host/` 时跑冒烟测试
 - [ ] Screenshot attached, for interface changes / 界面改动已附截图
 

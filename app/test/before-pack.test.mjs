@@ -12,7 +12,7 @@ test('a build for the architecture of this Node goes on', async () => {
 
 test('a build for another architecture stops and says where to build it', async () => {
   assert.equal(archProblem({ target: 'x64', platform: 'darwin', host: 'arm64' }),
-    'This Node runs on arm64, so npm installed arm64 native modules, and an x64 app with them would not start. Install the dependencies and build on an Intel Mac, or under Rosetta with an x64 Node.')
+    'This Node runs on arm64, so pnpm installed arm64 native modules, and an x64 app with them would not start. Install the dependencies and build on an Intel Mac, or under Rosetta with an x64 Node.')
   assert.match(archProblem({ target: 'arm64', platform: 'darwin', host: 'x64' }), /build on a Mac with Apple silicon\.$/)
   assert.match(archProblem({ target: 'x64', platform: 'win32', host: 'arm64' }), /build with an x64 Node\.$/)
   assert.match(archProblem({ target: 'universal', platform: 'darwin', host: 'arm64' }), /Build one app per architecture\./)

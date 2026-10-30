@@ -82,7 +82,7 @@ docker compose -f deploy/docker-compose.yml up -d --build
 本机试用（Node 22）：
 
 ```sh
-cd app && npm ci && npm run web     # http://127.0.0.1:8290，只监听本机时可以不设密码
+pnpm install && pnpm --filter moon-bot run web     # http://127.0.0.1:8290，只监听本机时可以不设密码
 ```
 
 ### 环境变量
@@ -104,22 +104,22 @@ cd app && npm ci && npm run web     # http://127.0.0.1:8290，只监听本机时
 自己打包：
 
 ```sh
-cd core && npm ci && npm run build
-cd ../app && npm ci && npm run dist
+pnpm install
+pnpm run build
+pnpm --filter moon-bot run dist
 ```
 
 ## 开发
 
 ```sh
-cd core
-npm ci
-npm run build               # src/client → client.js（提交时两个都要提交）
-npm test                    # 单元测试（Node ≥ 22.18，直接用 .ts 源码）
-npm run typecheck           # 类型门禁
-npm run lint                # oxlint + 架构/行数/浮空 Promise 门禁
-npm run eval                # 五项能力评测集
-npm run web                 # 独立服务（--ui 时同源托管界面）
-cd ../app && npm test
+pnpm install                # 根一次装齐三个 workspace；postinstall 构建产物
+pnpm run build              # src/client → client.js（生成物不提交，见 AGENTS.md）
+pnpm test                   # 单元测试（Node ≥ 22.18，直接用 .ts 源码）
+pnpm run typecheck          # tsc --noEmit，全 workspace
+pnpm run lint               # oxlint + 架构/行数/浮空 Promise 门禁
+pnpm run eval               # 五项能力评测集
+pnpm --filter moon-bot run web   # 独立服务（密码页 + 同源 UI）
+pnpm --filter moon-bot test
 ```
 
 ## 许可和致谢

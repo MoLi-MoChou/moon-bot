@@ -1,6 +1,6 @@
 // Moon Bot web mode: the same service and UI, served to a normal browser without Electron.
 //
-//   MOON_BOT_PASSWORD=… node src/web.ts     (npm run web)
+//   MOON_BOT_PASSWORD=… node src/web.ts     (pnpm run web)
 //
 // The service listens on a loopback port and serves the window's UI and the Bot channel from
 // one origin. This process listens on MOON_BOT_WEB_HOST:MOON_BOT_WEB_PORT (default

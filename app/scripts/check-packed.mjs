@@ -2,7 +2,7 @@
 // send a message, wait for the reply, then close the window the way a user does and wait until
 // the app has exited. Fails on a page error or a non-zero exit.
 // Usage: node scripts/check-packed.mjs [app executable] [screenshot.png]
-// The executable defaults to the one that `npm run pack` or `npm run dist` writes into dist-pack/.
+// The executable defaults to the one that `pnpm run pack` or `pnpm run dist` writes into dist-pack/.
 import { spawn, spawnSync } from 'node:child_process'
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -23,7 +23,7 @@ function packedExecutable() {
 }
 
 if (!existsSync(executable)) {
-  console.error(`check-packed: no app at ${executable}. Run npm run pack first.`)
+  console.error(`check-packed: no app at ${executable}. Run pnpm run pack first.`)
   process.exit(2)
 }
 

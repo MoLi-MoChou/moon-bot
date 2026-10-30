@@ -87,11 +87,11 @@ CI 只跑单元测试和 Linux 上的浏览器端到端。窗口外框、输入�
 
 ## 8. Desktop 和 Web 同时开
 
-`npm run web -w moon-bot` 起的服务和窗口里的服务读写同一个数据目录，两者的写者锁只让一个动手。
+`pnpm --filter moon-bot run web` 起的服务和窗口里的服务读写同一个数据目录，两者的写者锁只让一个动手。
 
 | # | 步骤 | 期望 | 结果 |
 |---|---|---|---|
-| 8.1 | Desktop 开着；另开终端运行 `MOON_BOT_PASSWORD=<密码> npm run web -w moon-bot` | Web 打开密码页，输入密码后进团队 | |
+| 8.1 | Desktop 开着；另开终端运行 `MOON_BOT_PASSWORD=<密码> pnpm --filter moon-bot run web` | Web 打开密码页，输入密码后进团队 | |
 | 8.2 | 在 Web 里看团队 | 同一个团队；Bot 列表上方有只读说明 | |
 | 8.3 | 在 Web 里改一个 Bot 的名字 | 被拒绝，提示在另一个实例里打开 | |
 | 8.4 | 在 Desktop 里改名 | Web 几秒内跟着变 | |

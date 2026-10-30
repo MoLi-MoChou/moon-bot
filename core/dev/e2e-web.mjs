@@ -48,7 +48,7 @@ try {
   try {
     playwright = require('playwright-core')
   } catch {
-    console.error('e2e-web: playwright is not installed (npm ci at the repo root installs it)')
+    console.error('e2e-web: playwright is not installed (pnpm install at the repo root installs it)')
     process.exit(2)
   }
 }

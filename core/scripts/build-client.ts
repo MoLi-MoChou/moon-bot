@@ -49,7 +49,7 @@ export async function bundleClient() {
   })
   if (result.warnings.length > 0) throw new Error(`esbuild warnings:\n${result.warnings.map(warning => warning.text).join('\n')}`)
   return [
-    '// Generated from src/client by `npm run build` (scripts/build-client.ts). Do not edit by hand.',
+    '// Generated from src/client by `pnpm run build` (scripts/build-client.ts). Do not edit by hand.',
     'window.__ModuleLoader__.load({',
     '  id: \'moon-bot-core\',',
     '  factory: (require) => {',
@@ -70,7 +70,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     let current = null
     try { current = readFileSync(OUTPUT, 'utf8') } catch { /* missing counts as stale */ }
     if (current !== next) {
-      console.error('client.js is stale: run `npm run build` in core and commit the result')
+      console.error('client.js is stale: run `pnpm run build` in core (generated client.js is not committed)')
       process.exit(1)
     }
   } else {

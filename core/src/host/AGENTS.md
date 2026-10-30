@@ -39,5 +39,5 @@ host 是产品的服务端：Bot 名单、回合、群聊、记忆、定时、�
 ## 门禁
 
 - `check-gates.mjs`：host 不得 import client；单文件 ≤ 350 行；测试不得 import `.tsx`；promise 不得悬空。
-- `npm run typecheck` 覆盖本目录；host 测试用 [`../../test/fake-ctx.ts`](../../test/fake-ctx.ts) 的假上下文，不要为了一个测试起真服务。
+- `pnpm run typecheck` 覆盖本目录；host 测试用 [`../../test/fake-ctx.ts`](../../test/fake-ctx.ts) 的假上下文，不要为了一个测试起真服务。
 - 改持久化或迁移的 PR 必须在同一 PR 里更新相应测试；测试红灯不许靠删断言过去。

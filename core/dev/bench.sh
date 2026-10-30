@@ -1,7 +1,7 @@
 #!/bin/sh
 # Mock test bench: the scripted mock model (dev/mock-llm.ts) plus Moon Bot's own service on
 # a loopback port, with its data in <checkout>/.moon-bot-test-<name>. Editing src/client
-# needs `npm run build` and a page reload; host code needs a restart.
+# needs `pnpm run build` and a page reload; host code needs a restart.
 #
 #   dev/bench.sh <name> <web-port> <mock-port> [start|stop|reset|status]
 #

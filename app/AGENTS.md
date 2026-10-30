@@ -23,11 +23,11 @@ Electron 应用：主进程、窗口、服务子进程、首次启动、搬移�
 - [`vite.config.js`](vite.config.js) 的 `ownPrimitives` 插件把 `core/src/client/primitives.tsx` 换成本地 [`ui/src/primitives.tsx`](ui/src/primitives.tsx)（窗口不加载宿主原语）。共享组件不得 import 只存在于某个宿主的模块。
 - 样式表清单在 [`ui/src/sheets.ts`](ui/src/sheets.ts)，必须覆盖 [`../core/src/client/index.ts`](../core/src/client/index.ts) 安装的每个组；[`test/ui-sheets.test.mjs`](test/ui-sheets.test.mjs) 会对比两边，漏一组会红。
 - 共用 `--bt-*` token 与 `motion.tsx` 的预设；共享组件不得依赖桌面专有能力（窗口控制、自动更新、搬移数据、内置浏览器）——这些经注入面传入，缺省时降级（网页端和手机端就走缺省那条路）。
-- 网页版和窗口共用同一个 `app/ui` 构建；[`src/web.ts`](src/web.ts)（`npm run web -w moon-bot`）只是不经过 Electron 的启动入口：起同一个 `startService` 并加密码页。网页版有的能力限制，桌面组件也要能接受。
+- 网页版和窗口共用同一个 `app/ui` 构建；[`src/web.ts`](src/web.ts)（`pnpm --filter moon-bot run web`）只是不经过 Electron 的启动入口：起同一个 `startService` 并加密码页。网页版有的能力限制，桌面组件也要能接受。
 
 ## 打包与自动更新
 
-- `npm run build` = vite 构建 `ui/` + esbuild 构建主进程 `dist-main/main.cjs`；`npm run pack`/`dist` 用 electron-builder（[`electron-builder.yml`](electron-builder.yml)）。Windows 出 NSIS 安装包 + portable，Linux 出 AppImage，macOS 出 zip（两个架构）。
+- `pnpm run build`（或根上 `pnpm --filter moon-bot run build`）= vite 构建 `ui/` + esbuild 构建主进程 `dist-main/main.cjs`；`pnpm run pack`/`dist` 用 electron-builder（[`electron-builder.yml`](electron-builder.yml)）。Windows 出 NSIS 安装包 + portable，Linux 出 AppImage，macOS 出 zip（两个架构）。
 - 只在目标平台/架构上打包：`better-sqlite3` 用 `node_modules` 里装好的原生模块，不交叉编译；[`scripts/before-pack.mjs`](scripts/before-pack.mjs) 会拦架构不符的构建。
 - 自动更新走 electron-updater：Windows/Linux 读 Release 的 `latest.yml`，后台下载、校验 sha512、提示重启后安装；macOS 只查 GitHub Release 并打开下载页，不自动装。更新检查在 Host 之前启动，Host 起不来也能更新。
 - 版本号必须等于 `core/package.json`（[`test/package.test.mjs`](test/package.test.mjs)）；发布 tag 是 `vX.Y.Z`，`app-update.yml`/`latest.yml` 的发布源不要手改。生成物（`ui/dist/`、`dist-main/`、`dist-pack/`）不进 git，不手改。
@@ -35,7 +35,7 @@ Electron 应用：主进程、窗口、服务子进程、首次启动、搬移�
 
 ## 验证
 
-- `npm test`（`test/*.test.mjs`）和 `npm run typecheck`（主进程 + ui 两个 tsconfig）必须绿；打包后检查用 `npm run check-packed`，更新检查用 [`scripts/check-update.mjs`](scripts/check-update.mjs)。
-- 界面改动用 dev 实例：`npm start`（一次性数据文件夹 + `../core/dev/mock-llm.ts`）或 bench，在窗口里真实点；不要拿安装包当界面验证。截图辅助用 [`scripts/shot.mjs`](scripts/shot.mjs)。
+- `pnpm test`（`test/*.test.mjs`）和 `pnpm run typecheck`（主进程 + ui 两个 tsconfig）必须绿；打包后检查用 `pnpm run check-packed`，更新检查用 [`scripts/check-update.mjs`](scripts/check-update.mjs)。
+- 界面改动用 dev 实例：`pnpm start`（一次性数据文件夹 + `../core/dev/mock-llm.ts`）或 bench，在窗口里真实点；不要拿安装包当界面验证。截图辅助用 [`scripts/shot.mjs`](scripts/shot.mjs)。
 - `test/` 覆盖数据搬移（一次性文件夹）、更新器、窗口外框参数、lockfile 依赖与版本一致性；改这些行为时在同一 PR 里补测试。
 - 动了 IPC、窗口安全选项、数据搬移或更新路径，要在同一 PR 里补测试；这些是边界，不靠肉眼。

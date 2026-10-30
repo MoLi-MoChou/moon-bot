@@ -16,7 +16,7 @@
 //     directly.
 //  4. Test files may not import `.tsx`: Node's type stripping does not handle JSX, so such a
 //     test dies at load time with a confusing extension error. Failing in lint says what to
-//     do instead, before `npm test` crashes.
+//     do instead, before `pnpm test` crashes.
 //  5. `host-types.js` is a type-only contract: a value import of it would load a file that
 //     does not exist, so every reference must be `import type`.
 //  6. A declaration file carries no runtime: no top-level value export in a `.d.ts`.

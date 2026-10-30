@@ -1,6 +1,9 @@
 {
   "colors": {
-    "about.tsx": {
+    "../ui/src/settings-chrome.tsx": {
+      "#fff": 1
+    },
+    "about-css.ts": {
       "#e3a008": 2
     },
     "bot-browsers-guest.ts": {
@@ -46,13 +49,13 @@
       "#ff3e51": 1,
       "#fff": 1
     },
-    "feedback.tsx": {
+    "feedback-css.ts": {
       "#141414": 1,
       "#e02135": 3,
       "#e3a008": 1,
       "#fff": 2
     },
-    "mark.tsx": {
+    "mark-bot.tsx": {
       "#fff": 1
     },
     "member-status.tsx": {
@@ -67,7 +70,7 @@
       "#f59e0b": 1,
       "rgba(20,20,20,.08)": 1
     },
-    "settings.tsx": {
+    "settings-general.tsx": {
       "#4d6bfe": 1
     },
     "sidebar-css.ts": {
@@ -78,9 +81,6 @@
     },
     "usage-page-css.ts": {
       "#fff": 2
-    },
-    "../ui/src/settings-chrome.tsx": {
-      "#fff": 1
     }
   },
   "radii": {

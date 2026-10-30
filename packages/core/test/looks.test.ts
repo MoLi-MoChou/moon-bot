@@ -60,7 +60,11 @@ test('Bot settings is the only settings entry; nothing is called Team settings',
   )
   assert.match(
     text('details-drawer.tsx'),
-    /aria-label=\{bot \? t\('Edit Bot'\) : t\('Group settings'\)\} title=\{bot \? t\('Edit Bot'\) : t\('Group settings'\)\}/,
+    /aria-label=\{bot \? t\('Edit Bot'\) : t\('Group settings'\)\}/,
+  )
+  assert.match(
+    text('details-drawer.tsx'),
+    /title=\{bot \? t\('Edit Bot'\) : t\('Group settings'\)\}/,
   )
   // A group chat's entries open its own settings the same way.
   assert.match(

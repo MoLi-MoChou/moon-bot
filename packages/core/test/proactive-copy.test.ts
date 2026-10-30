@@ -49,7 +49,8 @@ test('a proactive row is marked before its text, so the mark is read first', asy
   // sides share: the field the host sets and the field the row reads.
   const { readFileSync } = await import('node:fs')
   const chat = readFileSync(new URL('../src/client/cells-chat.tsx', import.meta.url), 'utf8')
-  assert.match(chat, /proactive\?: boolean/, 'the row type carries the mark')
+  const types = readFileSync(new URL('../src/client/cells-chat-types.ts', import.meta.url), 'utf8')
+  assert.match(types, /proactive\?: boolean/, 'the row type carries the mark')
   assert.match(chat, /row\.proactive === true \? <span className='bt-upmark'/, 'the mark is rendered')
   assert.match(chat, /data-proactive=/, 'the row can be styled apart without relying on the text')
   const pager = readFileSync(new URL('../src/host/parts-pager.ts', import.meta.url), 'utf8')

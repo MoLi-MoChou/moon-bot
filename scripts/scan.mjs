@@ -117,17 +117,17 @@ for (const file of files) {
 
 // Package checks: the license and the fields that npm and DSH read.
 if (!files.includes('LICENSE')) add(MUST, 'license', 'LICENSE', 0, 'no LICENSE at the root')
-if (!files.includes('core/package.json')) add(MUST, 'plugin-folder', '.', 0, 'no core/package.json')
+if (!files.includes('packages/core/package.json')) add(MUST, 'plugin-folder', '.', 0, 'no packages/core/package.json')
 else {
-  const pkg = JSON.parse(readFileSync(join(root, 'core/package.json'), 'utf8'))
-  if (pkg.name !== 'moon-bot-core') add(MUST, 'package', 'core/package.json', 0, `name is "${pkg.name}", expected "moon-bot-core"`)
-  if (!files.includes('core/LICENSE')) add(MUST, 'package', 'core/LICENSE', 0, 'the package has no LICENSE file')
-  if (!(pkg.files ?? []).includes('LICENSE')) add(MUST, 'package', 'core/package.json', 0, '"files" does not list LICENSE')
+  const pkg = JSON.parse(readFileSync(join(root, 'packages/core/package.json'), 'utf8'))
+  if (pkg.name !== 'moon-bot-core') add(MUST, 'package', 'packages/core/package.json', 0, `name is "${pkg.name}", expected "moon-bot-core"`)
+  if (!files.includes('packages/core/LICENSE')) add(MUST, 'package', 'packages/core/LICENSE', 0, 'the package has no LICENSE file')
+  if (!(pkg.files ?? []).includes('LICENSE')) add(MUST, 'package', 'packages/core/package.json', 0, '"files" does not list LICENSE')
   for (const field of ['repository', 'homepage', 'bugs']) {
-    if (!pkg[field]) add(MUST, 'package', 'core/package.json', 0, `no "${field}" field`)
+    if (!pkg[field]) add(MUST, 'package', 'packages/core/package.json', 0, `no "${field}" field`)
   }
   for (const [name, range] of Object.entries(pkg.peerDependencies ?? {})) {
-    if (range !== '*') add(KEEP, 'package', 'core/package.json', 0, `peer ${name} is "${range}", not "*"`)
+    if (range !== '*') add(KEEP, 'package', 'packages/core/package.json', 0, `peer ${name} is "${range}", not "*"`)
   }
 }
 for (const name of ['README.md', 'CONTRIBUTING.md', 'CHANGELOG.md', 'AGENTS.md', '.gitignore']) {

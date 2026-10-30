@@ -2,7 +2,7 @@
   "name": "moon-bot-repo",
   "version": "0.0.0",
   "private": true,
-  "description": "Moon Bot: the core package and the desktop/web app, as a pnpm workspace.",
+  "description": "Moon Bot: pnpm workspace with apps/* (desktop, connect) and packages/* (core).",
   "engines": {
     "node": ">=22.18"
   },

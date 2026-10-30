@@ -1,10 +1,10 @@
 **/node_modules
 .git
-app/dist-pack
-app/dist-next
-app/build
+apps/desktop/dist-pack
+apps/desktop/dist-next
+apps/desktop/build
 deepseek-harness
-core/dev
-core/test
+packages/core/dev
+packages/core/test
 **/.dsh-*
 **/*.tgz

@@ -65,7 +65,7 @@ Keep one pull request to one issue. Split a large change into several pull reque
 
 ### Merge conflicts
 
-- **`core/client.js`**: it is generated and never committed, so it conflicts only if both sides committed it by mistake. Resolve `core/src/client/` and drop the generated file from the merge (`git checkout --ours core/client.js` then `pnpm run build`).
+- **`packages/core/client.js`**: it is generated and never committed, so it conflicts only if both sides committed it by mistake. Resolve `packages/core/src/client/` and drop the generated file from the merge (`git checkout --ours packages/core/client.js` then `pnpm run build`).
 - **`CHANGELOG.md`**: pull requests do not change it, so it should not conflict. If it does, keep both sides.
 
 ### Releases (maintainer)
@@ -99,18 +99,18 @@ the runtime in this repository (Node 22.18+).
 
 | Path | What it is |
 |---|---|
-| `core/src/index.ts`, `core/src/host/` | The host services: Bot roster and store, tools, turns and delivery, group chats, conversation parts and the search index, memory, schedules, images, the browser bridge, the `api/bot` channel (`core/index.js` is the generated re-export) |
-| `core/src/engine/` | The `AgentRuntime` seam: the built-in engine (pi kernel), the ACP adapter, the tool registry, the policy engine, the MCP connector |
-| `core/src/store/`, `core/src/service/` | The SQLite store, and the Fastify service with its scheduler and wiring |
-| `core/src/client/` | The browser side: sidebar, chat, panels and dialogs, themes, characters, the Bot browser panel |
-| `core/client.js` | Generated from `src/client/` by `scripts/build-client.ts` at install and build time. Never committed: `.gitignore` carries it |
-| `core/src/web-search/` | The `auto` web-search provider. It does not depend on the Bot team code |
-| `core/test/` | Unit tests and fixtures |
-| `core/dev/` | The mock model, the bench, the smoke test, the character generator, and two tools for real models: the steward evaluation and a logging pass-through |
+| `packages/core/src/index.ts`, `packages/core/src/host/` | The host services: Bot roster and store, tools, turns and delivery, group chats, conversation parts and the search index, memory, schedules, images, the browser bridge, the `api/bot` channel (`packages/core/index.js` is the generated re-export) |
+| `packages/core/src/engine/` | The `AgentRuntime` seam: the built-in engine (pi kernel), the ACP adapter, the tool registry, the policy engine, the MCP connector |
+| `packages/core/src/store/`, `packages/core/src/service/` | The SQLite store, and the Fastify service with its scheduler and wiring |
+| `packages/core/src/client/` | The browser side: sidebar, chat, panels and dialogs, themes, characters, the Bot browser panel |
+| `packages/core/client.js` | Generated from `src/client/` by `scripts/build-client.ts` at install and build time. Never committed: `.gitignore` carries it |
+| `packages/core/src/web-search/` | The `auto` web-search provider. It does not depend on the Bot team code |
+| `packages/core/test/` | Unit tests and fixtures |
+| `packages/core/dev/` | The mock model, the bench, the smoke test, the character generator, and two tools for real models: the steward evaluation and a logging pass-through |
 
 ## Test a change
 
-Run these in `core/`:
+Run these in `packages/core/`:
 
 ```sh
 pnpm run build                         # src/client → client.js

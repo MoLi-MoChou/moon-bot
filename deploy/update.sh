@@ -97,7 +97,7 @@ schema_version() {
     printf '0\n'
     return 0
   fi
-  version=$(docker run --rm --user 1000:1000 -e NODE_PATH=/opt/moon-bot/core/node_modules -v "$DATA_DIR:/data:ro" --entrypoint node "$image" \
+  version=$(docker run --rm --user 1000:1000 -e NODE_PATH=/opt/moon-bot/packages/core/node_modules -v "$DATA_DIR:/data:ro" --entrypoint node "$image" \
     --input-type=commonjs -e 'const Database=require("better-sqlite3");const db=new Database("/data/store.sqlite3",{readonly:true});process.stdout.write(String(db.pragma("user_version",{simple:true})));db.close()' \
     2>/dev/null) || return 1
   case "$version" in

@@ -12,7 +12,7 @@ Moon Bot is a persistent team of Bots on its own runtime, open source under the 
 
 | Form | What it is |
 |---|---|
-| The web build | The service (`core/src/service`) serves the interface and the `api/bot` channel on one origin behind a password. Docker runs it as one container |
+| The web build | The service (`packages/core/src/service`) serves the interface and the `api/bot` channel on one origin behind a password. Docker runs it as one container |
 | The desktop app | Opens straight into Moon Bot. Its window loads the same service, which it starts itself; data lives in its own folder and updates replace the app in place |
 
 Both forms are the same product: the same host services, the same engine, the same UI. The runtime is Moon Bot's own — a Fastify service, the `AgentRuntime` seam with a built-in engine (pi kernel) and an ACP adapter, SQLite for sessions, tasks and the memory index, a policy engine for autonomy, and a scheduler that survives restarts. Nothing is installed underneath it.

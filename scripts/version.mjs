@@ -1,10 +1,10 @@
 // The manifests a release tag must agree with (docs/RELEASING.md).
 //   node scripts/version.mjs                 print the app/core versions and their tag
-//   node scripts/version.mjs 0.2.1           write that version to app and core
+//   node scripts/version.mjs 0.2.1           write that version to desktop and core
 //   node scripts/version.mjs connect 0.1.1   write the connect CLI's own version
 //
-// The desktop tag is vX.Y.Z and must match app/package.json; the CLI tag is
-// connect-vX.Y.Z and must match connect/package.json. They move independently.
+// The desktop tag is vX.Y.Z and must match apps/desktop/package.json; the CLI tag is
+// connect-vX.Y.Z and must match apps/connect/package.json. They move independently.
 import { readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -22,7 +22,7 @@ const VERSION = /^\d+\.\d+\.\d+$/
 const args = process.argv.slice(2)
 
 if (args[0] === 'connect') {
-  const path = manifestOf('connect/package.json')
+  const path = manifestOf('apps/connect/package.json')
   const wanted = args[1]
   if (wanted === undefined) {
     console.log(`connect ${read(path).version}`)
@@ -34,17 +34,17 @@ if (args[0] === 'connect') {
     process.exit(2)
   }
   write(path, wanted)
-  console.log(`connect/package.json is ${wanted}; next: git commit, then`)
+  console.log(`apps/connect/package.json is ${wanted}; next: git commit, then`)
   console.log(`  git tag connect-v${wanted} && git push origin main connect-v${wanted}`)
   process.exit(0)
 }
 
-const manifests = ['app/package.json', 'core/package.json'].map(path => manifestOf(path))
+const manifests = ['apps/desktop/package.json', 'packages/core/package.json'].map(path => manifestOf(path))
 const versions = manifests.map(path => read(path).version)
 const wanted = args[0]
 
 if (wanted === undefined) {
-  console.log(`app ${versions[0]}, core ${versions[1]}`)
+  console.log(`desktop ${versions[0]}, core ${versions[1]}`)
   if (versions[0] !== versions[1]) {
     console.error('the versions disagree; make them one before tagging')
     process.exit(1)

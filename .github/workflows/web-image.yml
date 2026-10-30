@@ -20,6 +20,8 @@ concurrency:
 
 jobs:
   e2e:
+    # 临时跳过：只跑 Docker 镜像推送 / only image publish for now (Windows pack is in test.yml)
+    if: false
     name: Browser end-to-end (mock model)
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -70,10 +72,10 @@ jobs:
         run: MOON_BOT_PASSWORD=bench packages/core/dev/bench.sh e2e 3100 8790 stop || true
 
   image:
-    # 临时跳过镜像构建/推送：until further notice / restore by removing if:false
-    if: false
-    name: Publish the image
+    # e2e temporarily skipped: still publish image (needs e2e when e2e is re-enabled)
     needs: e2e
+    if: always() && (needs.e2e.result == 'success' || needs.e2e.result == 'skipped')
+    name: Publish the image
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:

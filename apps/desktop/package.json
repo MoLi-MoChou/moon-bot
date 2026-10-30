@@ -24,6 +24,7 @@
   "dependencies": {
     "electron-updater": "6.8.10",
     "moon-bot-core": "workspace:*",
+    "moon-bot-ui": "workspace:*",
     "pnpm": "11.7.0"
   },
   "devDependencies": {

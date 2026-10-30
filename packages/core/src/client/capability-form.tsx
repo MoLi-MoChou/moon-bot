@@ -4,7 +4,7 @@ import { createElement as h, useState } from 'react';
 import { t } from './i18n.ts';
 import { draftErrors, payloadOf, transportOf, type CapabilityDraft, type DraftErrors } from './capability-draft.ts';
 import type { Capability, CapabilityActions } from './capability-types.ts';
-import { Field, Select } from './kit/index.ts';
+import { Field, Select } from 'moon-bot-ui';
 
 export function CapabilityForm({ draft, setDraft, items, actions, onClose }: {
     draft: CapabilityDraft;

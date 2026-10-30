@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { currentPart } from './text.ts';
 import { PlusIcon, SearchIcon, SidebarIcon, PlugIcon, CloudDownloadIcon, MoonBotMark, TasksIcon } from './icons.tsx';
 import { PeopleIcon } from './icons.tsx';
-import { EmptyState } from './kit/index.ts';
+import { EmptyState } from 'moon-bot-ui';
 import { hostText, t } from './i18n.ts';
 import type { ReactNode } from 'react';
 import type { TSidebarActions, TSidebarEntry, TSidebarHook, TSidebarProps, TSidebarUpdate, } from './sidebar-types.js';

@@ -30,7 +30,7 @@ Moon Bot 是一支长期存在的 Bot 小队，跑在自己的运行时上，不
 
 ## 命令
 
-布局是 `apps/*`（`desktop`、`connect`）与 `packages/*`（`core`、`contracts`）。workspace 共用根 `pnpm-lock.yaml`（**不要**再提交 `package-lock.json`）：在根装一次（`pnpm install` / CI 用 `pnpm install --frozen-lockfile`），然后按包运行脚本（在包目录里，或用 `--filter`，例如 `pnpm --filter moon-bot-core test`）。Node 22.18+ 直接跑 `.ts` 源码（原生类型剥离）；生成物（`packages/contracts/dist/`、`packages/core/client.js`、`packages/core/dist/`）由安装时的 postinstall 和 `pnpm run build` 构建，不提交。根 `package.json` 的 `pnpm.onlyBuiltDependencies` 列出允许跑安装脚本的包（SQLite 预编译、esbuild 等）。
+布局是 `apps/*`（`desktop`、`connect`）与 `packages/*`（`core`、`contracts`、`ui`）。workspace 共用根 `pnpm-lock.yaml`（**不要**再提交 `package-lock.json`）：在根装一次（`pnpm install` / CI 用 `pnpm install --frozen-lockfile`），然后按包运行脚本（在包目录里，或用 `--filter`，例如 `pnpm --filter moon-bot-core test`）。Node 22.18+ 直接跑 `.ts` 源码（原生类型剥离）；生成物（`packages/contracts/dist/`、`packages/ui/dist/`、`packages/core/client.js`、`packages/core/dist/`）由安装时的 postinstall 和 `pnpm run build` 构建，不提交。根 `package.json` 的 `pnpm.onlyBuiltDependencies` 列出允许跑安装脚本的包（SQLite 预编译、esbuild 等）。
 
 **两个「pnpm」不要混：** 仓库包管理器是根 `packageManager` 字段里的 pnpm（当前 `pnpm@10.18.3`，`engines.pnpm` 与之对齐）。`apps/desktop` 依赖里的 `pnpm@11.7.0` 是**打进桌面端、给插件装依赖的 CLI 二进制**，不是本仓的包管理器；改仓库脚本/CI 时不要去动它的版本语义，web 镜像构建仍会删掉 `apps/desktop/node_modules/pnpm`。
 
@@ -70,6 +70,7 @@ pnpm --filter moon-bot run web         # 网页版：密码页 + 服务，默认
 - `packages/core/src/service/`：Fastify 服务、host context、凭证与设置、服务商目录、调度器、附件、审批桥、记忆同步、引擎装配（[分区文档](packages/core/src/service/AGENTS.md)）。
 - `packages/core/src/client/`：浏览器侧界面——侧栏、聊天、面板、主题、形象、Bot 浏览器面板（[分区文档](packages/core/src/client/AGENTS.md)）。
 - `packages/contracts`（包名 `moon-bot-contracts`）：两端共用的契约（schema、rpc、views、OpenUI 转换、mentions、lean、model/connector catalog）。公开面是包 barrel（**具名** re-export，禁止 `export *`）：`import { … } from 'moon-bot-contracts'`。只依赖 `zod` 与自身文件，不得引入 React / Fastify / SQLite / Electron，也不得 import client/host/engine/store/service（`check-gates` + `shared-boundary` 测试）。
+- `packages/ui`（包名 `moon-bot-ui`）：公用 React kit（`EmptyState`、`Field`/`Select`、`Row`/`Card`/`Switch`/`SwitchRow`/`InlineText` 与 `*_CSS`）。公开面是具名 barrel：`import { … } from 'moon-bot-ui'`。可依赖 React（peer）；不得 import host/engine/store/service/client 或 Fastify/SQLite/Electron（`check-gates` + `kit-boundary`）。样式用宿主已装的 `--bt-*`；kit 内弹簧 timing 用本地 `spring.ts`（不拖入整个 `client/motion`）。
 - `packages/core/test/`：单元测试（`.test.ts`）和 fixtures；`packages/core/test/eval/` 是五项能力评测集。`packages/core/dev/`：mock 模型、测试台、冒烟检查、脚本。
 - `apps/desktop/`：桌面应用（主进程与窗口、服务子进程、首次启动、搬移数据、安装包与更新）；`apps/desktop/ui/` 是窗口自己的界面，从 `packages/core/src/client/` 取 Bot 视图（[分区文档](apps/desktop/AGENTS.md)）。
 - `apps/connect/`：`moon-bot-connect` CLI，把 ACP agent 经 WebSocket 中转接入。

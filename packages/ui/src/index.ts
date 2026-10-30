@@ -1,5 +1,5 @@
-// Client UI kit: pure React primitives (no host/store/service/engine, no api/actions).
-// Named exports only — no `export *`.
+// moon-bot-ui: pure React kit primitives (no host/store/service/engine, no api/actions).
+// Named exports only — no `export *`. Design tokens stay CSS `--bt-*`; spring helpers for kit CSS live in ./spring.ts.
 
 export { EmptyState, EMPTY_STATE_CSS } from './empty-state.tsx';
 export type { EmptyStateAction, EmptyStateProps } from './empty-state.tsx';

@@ -1,4 +1,4 @@
-// Finds the colors, corner radii and springs in src/client that skip the shared ones.
+// Finds the colors, corner radii and springs in src/client (and packages/ui kit) that skip the shared ones.
 // test/style-debt.json lists the ones written before the check; the test fails when a
 // file gets one more, and when one is gone but still listed.
 //
@@ -6,7 +6,7 @@
 //   node scripts/style-debt.mjs --write   lowers test/style-debt.json to what is left
 //
 // --write only lowers counts. A new entry is added by hand, so it shows in review.
-import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { lowered } from './ratchet.mjs'
@@ -15,6 +15,7 @@ export { lowered }
 
 const PLUGIN = resolve(import.meta.dirname, '..')
 const CLIENT = join(PLUGIN, 'src', 'client')
+const UI = join(PLUGIN, '..', 'ui', 'src')
 export const DEBT = join(PLUGIN, 'test', 'style-debt.json')
 
 // The theme colors, the Bot colors and the generated characters.
@@ -109,7 +110,7 @@ export const checks = {
   radii: (file, text) => [...text.matchAll(RADIUS)]
     .flatMap(match => steps(match[1] ?? match[2] ?? match[3]))
     .filter(step => !RADII.includes(step) && !step.startsWith('var(')),
-  springs: (file, text) => (file === 'motion.tsx' ? [] : [...text.matchAll(SPRING)].map(({ 0: call }) => squeeze(call))),
+  springs: (file, text) => (file === 'motion.tsx' || file === 'spring.ts' ? [] : [...text.matchAll(SPRING)].map(({ 0: call }) => squeeze(call))),
 }
 
 // Comments are not styles. A trailing comment follows a space, which a URL's `://` lacks.
@@ -117,17 +118,24 @@ const code = text => text.split(/\r?\n/)
   .map(line => (/^\s*(\/\/|\/\*|\*\/|\*\s|\*$)/.test(line) ? '' : line.replace(/\s\/\/\s.*$/, '')))
   .join('\n')
 
-export function findStyles(dir = CLIENT) {
-  const found = Object.fromEntries(Object.keys(checks).map(kind => [kind, {}]))
+function scanStyles(dir, prefix, found) {
   for (const file of readdirSync(dir, { recursive: true }).filter(name => /\.(?:js|ts|tsx)$/.test(name) && !name.replaceAll('\\', '/').startsWith('vendor/')).map(name => name.replaceAll('\\', '/'))) {
+    const key = prefix ? `${prefix}${file}` : file
     const text = code(readFileSync(join(dir, file), 'utf8'))
     for (const [kind, check] of Object.entries(checks)) {
       for (const value of check(file, text)) {
-        const counts = (found[kind][file] ??= {})
+        const counts = (found[kind][key] ??= {})
         counts[value] = (counts[value] ?? 0) + 1
       }
     }
   }
+}
+
+export function findStyles(dir = CLIENT) {
+  const found = Object.fromEntries(Object.keys(checks).map(kind => [kind, {}]))
+  scanStyles(dir, '', found)
+  // Kit CSS lives in packages/ui; keep its debt under a path relative to client/.
+  if (dir === CLIENT && existsSync(UI)) scanStyles(UI, '../ui/src/', found)
   return found
 }
 

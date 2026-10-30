@@ -35,6 +35,9 @@ importers:
       moon-bot-core:
         specifier: workspace:*
         version: link:../../packages/core
+      moon-bot-ui:
+        specifier: workspace:*
+        version: link:../../packages/ui
       pnpm:
         specifier: 11.7.0
         version: 11.7.0
@@ -140,6 +143,9 @@ importers:
       moon-bot-contracts:
         specifier: workspace:*
         version: link:../contracts
+      moon-bot-ui:
+        specifier: workspace:*
+        version: link:../ui
       zod:
         specifier: ^3.25.76
         version: 3.25.76
@@ -172,6 +178,24 @@ importers:
       '@oxlint/binding-win32-x64-msvc':
         specifier: 1.76.0
         version: 1.76.0
+
+  packages/ui:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.20.5
+        version: 22.20.5
+      '@types/react':
+        specifier: ^19.3.0
+        version: 19.3.0
+      esbuild:
+        specifier: 0.28.2
+        version: 0.28.2
+      react:
+        specifier: 19.3.0
+        version: 19.3.0
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
 
 packages:
 

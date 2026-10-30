@@ -1,6 +1,6 @@
 import { Fragment, createElement as h, useEffect, useRef, useState } from 'react';
 import type { TaskHold } from 'moon-bot-contracts';
-import { EmptyState } from './kit/index.ts';
+import { EmptyState } from 'moon-bot-ui';
 import { t } from './i18n.ts';
 import { TasksIcon } from './icons.tsx';
 import { SPRING_SHAPE } from './motion.tsx';

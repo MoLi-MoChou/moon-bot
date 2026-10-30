@@ -17,8 +17,8 @@
 
 ## Kit（公用原语）
 
-- 可复用、无宿主副作用的 UI 原语放 [`kit/`](kit/)：`EmptyState`、`Field`/`Select`、`Row`/`Card`/`Switch`/`SwitchRow`/`InlineText`。从 [`kit/index.ts`](kit/index.ts) **具名**导入；禁止 `export *`。
-- kit **不得** import `host`/`engine`/`store`/`service`，也不得碰 `api.ts`、`sources`、actions；只依赖 React、同层的 `motion`/token 类工具。Feature 页编排状态与副作用，再把细回调传给 kit。
+- 可复用、无宿主副作用的 UI 原语在 **`moon-bot-ui`**（`packages/ui`）：`EmptyState`、`Field`/`Select`、`Row`/`Card`/`Switch`/`SwitchRow`/`InlineText`。从包 barrel **具名**导入：`import { EmptyState, Field } from 'moon-bot-ui'`；禁止 `export *`。
+- kit **不得** import `host`/`engine`/`store`/`service`/`client`，也不得碰 `api.ts`、`sources`、actions；只依赖 React 与包内 spring 辅助。Feature 页编排状态与副作用，再把细回调传给 kit。
 - 第二个消费方且无副作用时再升 kit；usage 图表的 `Row` 等单域语义不同的组件留在 feature。不要在 `apps/desktop/ui` 再实现一套 Field/Row/Card/EmptyState。
 
 ## JSX 与组件

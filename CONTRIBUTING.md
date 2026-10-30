@@ -92,7 +92,7 @@ cd moon-bot
 corepack enable
 corepack prepare pnpm@10.18.3 --activate
 
-# One root install for apps/* + packages/*; postinstall builds contracts then core artifacts.
+# One root install for apps/* + packages/*; postinstall builds contracts/ui then core artifacts.
 pnpm install
 ```
 
@@ -109,6 +109,7 @@ the runtime in this repository (Node 22.18+). The only lockfile is `pnpm-lock.ya
 | `packages/core/src/store/`, `packages/core/src/service/` | The SQLite store, and the Fastify service with its scheduler and wiring |
 | `packages/core/src/client/` | The browser side: sidebar, chat, panels and dialogs, themes, characters, the Bot browser panel |
 | `packages/contracts` (`moon-bot-contracts`) | Shared contracts (rpc, schema, views, catalogs); import the named barrel |
+| `packages/ui` (`moon-bot-ui`) | Shared React UI kit; import the named barrel |
 | `packages/core/client.js` | Generated from `src/client/` by `scripts/build-client.ts` at install and build time. Never committed: `.gitignore` carries it |
 | `packages/core/src/web-search/` | The `auto` web-search provider. It does not depend on the Bot team code |
 | `packages/core/test/` | Unit tests and fixtures |

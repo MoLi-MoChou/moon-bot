@@ -79,7 +79,7 @@
     "usage-page-css.ts": {
       "#fff": 2
     },
-    "kit/settings-chrome.tsx": {
+    "../ui/src/settings-chrome.tsx": {
       "#fff": 1
     }
   },

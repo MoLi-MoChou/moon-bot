@@ -5,7 +5,7 @@
 import { Fragment, createElement as h, useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useEscape, useMenuKeys } from './overlay-hooks.ts';
-import { EmptyState } from './kit/index.ts';
+import { EmptyState } from 'moon-bot-ui';
 import { ArrowUpIcon, CheckIcon, ChevronLeftIcon, ChevronRightIcon, CloseIcon, DotsIcon, MemoryIcon, TrashIcon } from './icons.tsx';
 import { dateLocale, hostText, t } from './i18n.ts';
 import { summaryBlocks } from './text.ts';

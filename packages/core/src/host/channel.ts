@@ -2,8 +2,8 @@
 //
 // The handlers live in `channel/` by area; this file keeps the public surface, the
 // shared read-only and error handling, and the Fetch route. Endpoint names come from
-// `src/shared/rpc.ts`, so a typo in the handler map fails to compile.
-import type { ChatPage, RpcEndpoint, WorkBot } from '../shared/rpc.ts'
+// `moon-bot-contracts`, so a typo in the handler map fails to compile.
+import type { ChatPage, RpcEndpoint, WorkBot } from 'moon-bot-contracts'
 import type { AttachmentRef } from './host-types.ts'
 import type { ExchangeEntry, HostRuntime, ModelReasoning, StoredAgent, StoredBot, StoredRoom } from './runtime.js'
 import { ROUTE } from './constants.ts'

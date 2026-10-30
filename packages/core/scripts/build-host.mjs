@@ -1,9 +1,9 @@
-// Emits production JavaScript for the host (and shared modules it imports) so the
-// plugin can load under node_modules. Node 22 will not strip types for paths under
+// Emits production JavaScript for the host (and engine/store/service) so the
+// plugin can load under node_modules. Contracts live in `moon-bot-contracts` (external). Node 22 will not strip types for paths under
 // node_modules (ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING); Docker and `file:`
 // installs therefore need plain .js.
 //
-//   node scripts/build-host.mjs           writes dist/host and dist/shared
+//   node scripts/build-host.mjs           writes dist/host (and engine/store/service)
 //   node scripts/build-host.mjs --check   exits 1 when dist is missing or stale
 //
 // Sources stay TypeScript (tsc --noEmit, allowImportingTsExtensions). index.js
@@ -17,7 +17,7 @@ import { build } from 'esbuild'
 
 const PLUGIN = dirname(dirname(fileURLToPath(import.meta.url)))
 const OUT = join(PLUGIN, 'dist')
-const LAYERS = ['host', 'shared', 'engine', 'store', 'service', 'web-search']
+const LAYERS = ['host', 'engine', 'store', 'service', 'web-search']
 // Source files at src/ root: emitted to dist/ root, with a generated re-export shim at
 // the package root so `main`/`exports` keep naming plain .js files.
 const ROOT_ENTRIES = ['index.ts', 'web-search.ts']

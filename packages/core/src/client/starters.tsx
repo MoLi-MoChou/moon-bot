@@ -2,7 +2,7 @@
 // (show_view: table, checklist, options) are one tap away. They go once the chat
 // has a conversation going, or once the user taps one.
 import { createElement as h, useState } from 'react'
-import type { Bot } from '../shared/schema.ts'
+import type { Bot } from 'moon-bot-contracts'
 import { t } from './i18n.ts'
 
 const STARTERS = [

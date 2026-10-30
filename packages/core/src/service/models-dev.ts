@@ -2,7 +2,7 @@
 // Falls back gracefully to built-in presets if unreachable, with local cache persistence.
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { registerDynamicModelSpec, type ModelCapability } from '../shared/model-catalog.ts'
+import { registerDynamicModelSpec, type ModelCapability } from 'moon-bot-contracts'
 
 const MODELS_DEV_URL = 'https://models.dev/models.json'
 const SYNC_TIMEOUT_MS = 3500

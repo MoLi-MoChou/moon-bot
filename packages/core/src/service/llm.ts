@@ -4,7 +4,7 @@
 // providers module writes) and credentials, over a small directory of well-known
 // endpoints. Model discovery asks the endpoint itself, OpenAI- or Anthropic-shaped.
 import type { ConfigurableProvider } from '../host/host-types.js'
-import { resolveModelSpec } from '../shared/model-catalog.ts'
+import { resolveModelSpec } from 'moon-bot-contracts'
 import type { FileCredentials } from './credentials.ts'
 import type { FileSettings } from './settings.ts'
 

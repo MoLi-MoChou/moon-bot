@@ -4,7 +4,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { StoredBot, StoredRoom } from '../runtime.ts'
-import { speakerOf } from '../../shared/mentions.ts'
+import { speakerOf } from 'moon-bot-contracts'
 import type {
   ApplyInput, Batch, BatchInput, ChangeResult, MemoryLine, MemoryNewsItem, MemoryNewsService, NewsDeps,
   NoteNews, ReviewStatus, RoomCopy, RoomLine, Seen,

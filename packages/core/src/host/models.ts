@@ -1,7 +1,7 @@
 import { clearTimeout, setTimeout } from 'node:timers'
 import type { AgentDefaultModelService, ModelSelection } from './host-types.js'
 import type { HostRuntime, ModelEntry, ModelReasoning, StoredBot } from './runtime.js'
-import { resolveModelSpec } from '../shared/model-catalog.ts'
+import { resolveModelSpec } from 'moon-bot-contracts'
 
 interface Selection {
   readonly provider: string

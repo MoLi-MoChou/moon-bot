@@ -4,7 +4,7 @@
 // handoffs module keeps, so a dispatched job shows who sent it; recently finished rows
 // are a small ring this module fills from turn/end, since the host keeps no history of
 // finished turns. Stopping goes through the same cancel a Main Bot's stop_bot uses.
-import type { TaskHold } from '../shared/rpc.ts'
+import type { TaskHold } from 'moon-bot-contracts'
 import { SOURCE_KIND } from './constants.ts'
 import { roundLine } from './proactive/rounds.ts'
 import type { HostRuntime } from './runtime.js'

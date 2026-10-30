@@ -14,11 +14,13 @@ RUN corepack enable && corepack prepare pnpm@10.18.3 --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY scripts/ scripts/
 COPY packages/core/package.json packages/core/tsconfig.json packages/core/
+COPY packages/contracts/package.json packages/contracts/tsconfig.json packages/contracts/
 COPY apps/desktop/package.json apps/desktop/vite.config.js apps/desktop/
 COPY apps/connect/package.json apps/connect/
 COPY apps/desktop/ui/ apps/desktop/ui/
-# The window compiles the Bot views from core's TypeScript sources.
+# The window compiles the Bot views from core's TypeScript sources (+ contracts).
 COPY packages/core/src/ packages/core/src/
+COPY packages/contracts/src/ packages/contracts/src/
 # pnpm install cannot focus one workspace without the lock graph, so the whole tree
 # installs; the electron binary is never fetched here, and the node_modules leave
 # with the stage.
@@ -41,16 +43,19 @@ RUN corepack enable && corepack prepare pnpm@10.18.3 --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY scripts/ scripts/
 COPY packages/core/package.json packages/core/tsconfig.json packages/core/
+COPY packages/contracts/package.json packages/contracts/tsconfig.json packages/contracts/
 COPY apps/desktop/package.json apps/desktop/
 COPY apps/connect/package.json apps/connect/
 # Host/service ship as TypeScript sources; Node will not strip types under node_modules.
 # The build needs the dev dependencies (esbuild, typescript), so the tree installs once
 # whole; a second, production-only install replaces it, and the desktop-only packages
-# (pnpm, the updater) leave with it: the web service runs core alone.
+# (pnpm, the updater) leave with it: the web service runs core + contracts.
 COPY packages/core/ packages/core/
+COPY packages/contracts/ packages/contracts/
 RUN ELECTRON_SKIP_BINARY_DOWNLOAD=1 pnpm install --frozen-lockfile \
+ && node packages/contracts/scripts/build.mjs \
  && node packages/core/scripts/build-host.mjs \
- && rm -rf node_modules packages/core/node_modules apps/desktop/node_modules apps/connect/node_modules \
+ && rm -rf node_modules packages/core/node_modules packages/contracts/node_modules apps/desktop/node_modules apps/connect/node_modules \
  && ELECTRON_SKIP_BINARY_DOWNLOAD=1 pnpm install --frozen-lockfile --prod \
  && rm -rf apps/desktop/node_modules/pnpm apps/desktop/node_modules/electron-updater \
  && pnpm store prune || true

@@ -1,4 +1,4 @@
-// Builds core's generated artifacts (packages/core/client.js and packages/core/dist/)
+// Builds contracts dist/ then core's generated artifacts (packages/core/client.js and packages/core/dist/)
 // right after install, so a fresh clone can run the tests and the app without a manual
 // step. Skipped when the build cannot run: a production-only install has no esbuild, and
 // an image stage that copies only the manifests (before its own explicit build) has no
@@ -10,15 +10,24 @@ import { fileURLToPath } from 'node:url'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const core = join(root, 'packages', 'core')
-const esbuild = [join(root, 'node_modules', 'esbuild'), join(core, 'node_modules', 'esbuild')]
+const contracts = join(root, 'packages', 'contracts')
+const esbuild = [join(root, 'node_modules', 'esbuild'), join(core, 'node_modules', 'esbuild'), join(contracts, 'node_modules', 'esbuild')]
   .find(path => existsSync(join(path, 'bin', 'esbuild')))
 if (esbuild === undefined) process.exit(0)
 if (!existsSync(join(core, 'scripts', 'build-host.mjs'))) process.exit(0)
 
-for (const [script, args] of [['scripts/build-host.mjs', []], ['scripts/build-client.ts', []]]) {
-  const result = spawnSync(process.execPath, [join(core, script), ...args], {
+const jobs = []
+if (existsSync(join(contracts, 'scripts', 'build.mjs'))) {
+  jobs.push({ cwd: contracts, script: 'scripts/build.mjs', args: [] })
+}
+jobs.push(
+  { cwd: core, script: 'scripts/build-host.mjs', args: [] },
+  { cwd: core, script: 'scripts/build-client.ts', args: [] },
+)
+for (const job of jobs) {
+  const result = spawnSync(process.execPath, [join(job.cwd, job.script), ...job.args], {
     stdio: 'inherit',
-    cwd: core,
+    cwd: job.cwd,
   })
   if (result.error !== undefined) {
     console.error(`postinstall: ${result.error.message}`)

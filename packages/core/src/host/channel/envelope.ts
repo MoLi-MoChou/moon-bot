@@ -1,11 +1,11 @@
 // The shapes and helpers every `api/bot` handler shares: the request/response envelope,
 // the runtime methods this module calls, and what the team view returns.
 //
-// Endpoint names and error codes come from `src/shared/rpc.ts`; this file adds no
+// Endpoint names and error codes come from `moon-bot-contracts`; this file adds no
 // second list of endpoints. The runtime surface lives here rather than in `runtime.ts`
 // because it is only this module's slice of the plugin, and the file gate keeps the
 // shared interface from growing without bound.
-import type { RpcEndpoint, RpcErrorCode, RpcResultBody, WorkBot } from '../../shared/rpc.ts'
+import type { RpcEndpoint, RpcErrorCode, RpcResultBody, WorkBot } from 'moon-bot-contracts'
 import type { SecretView } from '../secrets/store.ts'
 import type { ModelEntry, StoredAgent } from '../runtime.js'
 

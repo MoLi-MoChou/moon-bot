@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { LEAN_HIDDEN_TOOLS } from '../src/shared/lean.ts'
+import { LEAN_HIDDEN_TOOLS } from 'moon-bot-contracts'
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'

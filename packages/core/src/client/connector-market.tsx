@@ -10,7 +10,7 @@ import {
   capabilityOf,
   type ConnectorCatalogEntry,
   type ConnectorCategory,
-} from '../shared/connector-catalog.ts';
+} from 'moon-bot-contracts';
 
 export interface MarketActions {
   secretSet: (payload: { name: string; value: string; purpose: string }) => Promise<unknown>;

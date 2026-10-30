@@ -4,8 +4,8 @@
 // edits the team.
 import { randomUUID } from 'node:crypto'
 import { createUserMessage } from '../llm-bits.ts'
-import { validateViewAnswer } from '../../shared/views.ts'
-import type { RpcEndpoint } from '../../shared/rpc.ts'
+import { validateViewAnswer } from 'moon-bot-contracts'
+import type { RpcEndpoint } from 'moon-bot-contracts'
 import { questionReply as questionReplyJs, viewReply as viewReplyJs } from '../parts.ts'
 import type {
   ChannelBody,

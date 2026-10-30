@@ -29,7 +29,7 @@ Fastify 服务、host 装配、凭证与设置、调度、审批桥、远程中�
 
 ## 只做壳，不做业务
 
-- 新增端点：先在 [`../shared/rpc.ts`](../shared/rpc.ts) 加 case 与类型，再在 host 的 [`channel/`](../host/channel/) 加 handler；service 只做协议转换、静态资源和鉴权，不承载业务规则。
+- 新增端点：先在 `moon-bot-contracts`（RPC 面）加 case 与类型，再在 host 的 [`channel/`](../host/channel/) 加 handler；service 只做协议转换、静态资源和鉴权，不承载业务规则。
 - 审批：引擎的 gate 把待答请求交给 `approval/request`，由 [`approval.ts`](approval.ts) 的桥接到卡片；群聊的审批由 [`../host/approvals.ts`](../host/approvals.ts) 从群里答。不要在 service 里绕开 bridge 直接放行。
 - 调度器（[`scheduler.ts`](scheduler.ts)）只做「到点把任务投递到会话」，业务状态在 tasks 表；它重启后从 `next_run_at` 恢复，不要改成纯内存定时器。
 

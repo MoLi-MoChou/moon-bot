@@ -4,8 +4,8 @@
 
 ## 边界
 
-- 只 `import` [`../shared/`](../shared/) 的契约和本目录的文件。契约公开面是 [`../shared/index.ts`](../shared/index.ts)（具名 barrel）；新代码优先从 barrel 取类型与纯函数，深路径（如 `../shared/rpc.ts`）仍允许。不得 import `host/`、`engine/`、`store/`、`service/`——[`check-gates.mjs`](../../scripts/check-gates.mjs) 的 boundary 检查会拒绝。
-- 与 host 的交互只有两条路：`api.ts` 的 `call('endpoint', payload)`（POST `api/bot`，endpoint 名字与类型在 [`../shared/rpc.ts`](../shared/rpc.ts)），和 `/api/bot/feed` 的 SSE。组件里不直接 `fetch`、不读写文件、不读环境变量。
+- 只 `import` `moon-bot-contracts`（具名 barrel）和本目录的文件。不得 import `host/`、`engine/`、`store/`、`service/`——[`check-gates.mjs`](../../scripts/check-gates.mjs) 的 boundary 检查会拒绝。
+- 与 host 的交互只有两条路：`api.ts` 的 `call('endpoint', payload)`（POST `api/bot`，endpoint 名字与类型在 `moon-bot-contracts` 的 RPC 面），和 `/api/bot/feed` 的 SSE。组件里不直接 `fetch`、不读写文件、不读环境变量。
 - 界面代码有两个消费路径：`apps/desktop/ui`（网页和桌面窗口）直接 import 视图模块，用 `apps/desktop/ui/src/team.ts` 建状态和动作；`apply(ctx)` 是历史插件入口（`client.js` 导出 `apply`/`inject`），保留但不再被这两个宿主调用。两边都要成立：网页/窗口没有 Node 能力；桌面壳的额外能力（窗口控制、自动更新、搬移数据、内置浏览器）只能经 `client-ctx.d.ts` 声明的注入面出现，缺省时降级。
 
 ## 状态与渲染

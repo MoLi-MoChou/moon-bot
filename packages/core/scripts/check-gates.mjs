@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Migration gates that oxlint cannot express.
 //
-//  1. Layer boundaries: shared (contracts) may import only `zod` and its own files — never
+//  1. Layer boundaries: shared/contracts (`packages/contracts` or fixture `src/shared`) may import only `zod` and its own files — never
 //     React/Fastify/SQLite/Electron or client/host/engine/store/service; client may not
 //     import host; host may not import client.
 //  2. Size: every logical .js/.ts/.tsx file under src is at most 350 lines. Data and
@@ -105,12 +105,39 @@ function walk(dir) {
 }
 
 function sourceFiles() {
-  return walk(sourceRoot).filter(file => SOURCE_EXTENSIONS.has(file.slice(file.lastIndexOf('.'))))
+  const files = walk(sourceRoot).filter(file => SOURCE_EXTENSIONS.has(file.slice(file.lastIndexOf('.'))))
+  const contracts = contractsSrc()
+  if (contracts !== undefined) {
+    files.push(...walk(contracts).filter(file => SOURCE_EXTENSIONS.has(file.slice(file.lastIndexOf('.')))))
+  }
+  return files
 }
 
-const relPath = file => relative(root, file).split(sep).join('/')
+function relPath(file) {
+  const contracts = contractsSrc()
+  if (contracts !== undefined) {
+    const relC = relative(contracts, file)
+    if (relC !== '' && !relC.startsWith('..') && !isAbsolute(relC)) {
+      return `../contracts/src/${relC.split(sep).join('/')}`
+    }
+  }
+  return relative(root, file).split(sep).join('/')
+}
+
+function contractsSrc() {
+  // Real checkout: contracts live in packages/contracts beside packages/core.
+  // Fixtures (--root) keep a fake src/shared tree and do not look sideways.
+  if (customRoot) return undefined
+  const candidate = join(dirname(root), 'contracts', 'src')
+  return existsSync(candidate) ? candidate : undefined
+}
 
 function layerOfPath(file) {
+  const contracts = contractsSrc()
+  if (contracts !== undefined) {
+    const relC = relative(contracts, file)
+    if (relC !== '' && !relC.startsWith('..') && !isAbsolute(relC)) return 'shared'
+  }
   const rel = relative(sourceRoot, file)
   if (rel === '' || rel.startsWith('..') || isAbsolute(rel)) return undefined
   const layer = rel.split(sep)[0]

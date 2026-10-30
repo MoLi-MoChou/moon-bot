@@ -26,12 +26,13 @@ node_modules/
 /.env
 /docker-compose.override.yml
 
-# core's generated artifacts (built by the root postinstall and `pnpm run build`; never
+# core/contracts generated artifacts (built by the root postinstall and `pnpm run build`; never
 # committed — see scripts/postinstall.mjs).
 /packages/core/client.js
 /packages/core/index.js
 /packages/core/web-search.js
 /packages/core/dist/
+/packages/contracts/dist/
 
 # The mock bench (dev/bench.sh) keeps its team beside the checkout.
 /.moon-bot-test-*/

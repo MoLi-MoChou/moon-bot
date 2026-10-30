@@ -1,5 +1,5 @@
 // Plain helpers for the Create Bot form, kept free of React so tests can load them.
-import type { Bot } from '../shared/schema.ts'
+import type { Bot } from 'moon-bot-contracts'
 
 export interface DraftRoster {
   bots: Pick<Bot, 'name'>[]

@@ -1,6 +1,6 @@
 // Reading the capability library without a browser: what a row says about its keys, its
 // tools and its live connection, and how the page groups and searches the list.
-import { CONNECTOR_CATALOG } from '../shared/connector-catalog.ts';
+import { CONNECTOR_CATALOG } from 'moon-bot-contracts';
 import type { Capability, CapabilityBot, CapabilityHealth, CapabilityHealthState, CapabilityStatus, KeyReadiness } from './capability-types.ts';
 
 const SECRET_REFERENCE = /\$(?:MOON_BOT|DSH)_SECRET_([A-Z][A-Z0-9_]*)/g;

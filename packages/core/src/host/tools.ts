@@ -5,7 +5,7 @@ import type { Agent, Disposer, ToolExecution } from './host-types.js'
 import type { HostRuntime } from './runtime.ts'
 import { ToolRegistry, type ToolEntry } from '../engine/registry.ts'
 import { registerCollectedTool } from './tools/collector.ts'
-import { LEAN_HIDDEN_TOOLS } from '../shared/lean.ts'
+import { LEAN_HIDDEN_TOOLS } from 'moon-bot-contracts'
 import {
   BLOCKING_QUESTION_TOOL, GOAL_REFUSAL, HIDDEN_TOOLS, createShared,
   type ToolShared,

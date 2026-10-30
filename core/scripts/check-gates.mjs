@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Migration gates that oxlint cannot express.
 //
-//  1. Layer boundaries: shared may import only `zod` (and files in shared); client may not
+//  1. Layer boundaries: shared (contracts) may import only `zod` and its own files — never
+//     React/Fastify/SQLite/Electron or client/host/engine/store/service; client may not
 //     import host; host may not import client.
 //  2. Size: every logical .js/.ts/.tsx file under src is at most 350 lines. Data and
 //     third-party files are exempt; the list of legacy files is explicit below.
@@ -213,6 +214,10 @@ function targetLayer(file, specifier) {
   return /(?:^|\/)(?:src|core)(?:\/|$)/.test(prefix) ? parts[index] : undefined
 }
 
+// Packages that must never appear in the contracts (shared) layer, even as a bare
+// package name. Layer targets (client/host/…) are still caught via targetLayer.
+const SHARED_FORBIDDEN_PACKAGE = /^(?:react|react-dom|fastify|@fastify\/|better-sqlite3|sqlite3|electron)(?:\/|$)/
+
 function boundaryViolation(layer, file, specifier) {
   const target = targetLayer(file, specifier)
   if (layer === 'client' && (target === 'host' || target === 'engine' || target === 'store')) return `client may not import ${target}`
@@ -225,8 +230,13 @@ function boundaryViolation(layer, file, specifier) {
   if (layer === 'service' && target === 'client') return 'service may not import client'
   if (layer !== 'shared') return undefined
   if (specifier === 'zod' || specifier.startsWith('zod/')) return undefined
+  if (SHARED_FORBIDDEN_PACKAGE.test(specifier)) {
+    return `shared may not import ${specifier.split('/')[0]} (contracts stay free of React/Fastify/SQLite/Electron)`
+  }
   if (target === 'shared') return undefined
-  if (target === 'host' || target === 'client') return `shared may not import ${target}`
+  if (target === 'host' || target === 'client' || target === 'engine' || target === 'store' || target === 'service') {
+    return `shared may not import ${target}`
+  }
   return 'shared may import only zod and its own files'
 }
 

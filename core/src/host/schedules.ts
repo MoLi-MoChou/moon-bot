@@ -180,9 +180,10 @@ export function install(rt: HostRuntime): void {
   const known = (owner: ScheduleOwner | undefined): boolean => owner !== undefined && (owner.botId === undefined ? rt.roomOf(owner.roomId) !== undefined : rt.botOf(owner.botId) !== undefined)
 
   async function schedulesView(): Promise<{ readonly available: boolean; readonly tasks: readonly Record<string, unknown>[] }> {
-    if (service === null) return { available: false, tasks: [] }
+    const current = live()
+    if (current === null) return { available: false, tasks: [] }
     const tasks: Record<string, unknown>[] = []
-    for (const entry of await service.catalog()) {
+    for (const entry of await current.catalog()) {
       const owner = ownerOf(entry.sessionId)
       if (!known(owner)) continue
       tasks.push({ ...entry, ...owner })
@@ -222,10 +223,11 @@ export function install(rt: HostRuntime): void {
   // A fresh part takes over the earlier part's active tasks: each is created again on
   // the fresh Session before the old one goes, so a failure leaves it where it was.
   async function moveSchedules(fromId: string, toId: string): Promise<void> {
-    if (service === null) return
+    const current = live()
+    if (current === null) return
     let records: readonly ScheduleRecord[]
     try {
-      records = await service.list({ sessionId: fromId })
+      records = await current.list({ sessionId: fromId })
     } catch (error) {
       rt.warn('moon-bot: tasks of %s not moved: %s', fromId, error instanceof Error ? error.message : error)
       return
@@ -234,8 +236,8 @@ export function install(rt: HostRuntime): void {
       const request = requestOf(record)
       if (request === null || (request.at !== undefined && Date.parse(request.at) <= Date.now())) continue
       try {
-        await service.create(toId, request)
-        await service.delete({ sessionId: fromId, id: record.id })
+        await current.create(toId, request)
+        await current.delete({ sessionId: fromId, id: record.id })
       } catch (error) {
         rt.warn('moon-bot: task %s stayed with the earlier part: %s', record.title, error instanceof Error ? error.message : error)
       }

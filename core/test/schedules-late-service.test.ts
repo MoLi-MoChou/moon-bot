@@ -16,6 +16,7 @@ function fakeScheduler() {
     created,
     async create(sessionId, input) { created.push({ sessionId, ...input }) },
     async list() { return [] },
+    async catalog() { return [] },
     async delete() { return true },
   }
 }
@@ -88,4 +89,15 @@ test('the listener that clears the service does not clear a late one', async () 
   const { rt, scheduler, services } = start()
   services.schedule = scheduler
   assert.notEqual(rt.scheduleFor(), null)
+})
+
+test('the schedules view reports available once the late service arrives', async () => {
+  // `available: false` is what the Settings page and the Bot tools both key off, so the
+  // view has to resolve the service the same lazy way the tools do — this is the check
+  // that failed against a real container after the first fix.
+  const { rt, scheduler, services } = start()
+  assert.deepEqual(await rt.scheduleEndpoint('schedules', {}), { available: false, tasks: [] })
+  services.schedule = scheduler
+  const after = await rt.scheduleEndpoint('schedules', {}) as { readonly available: boolean }
+  assert.equal(after.available, true, 'a scheduler provided after install must be seen')
 })

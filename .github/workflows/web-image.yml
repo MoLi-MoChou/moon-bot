@@ -70,6 +70,8 @@ jobs:
         run: MOON_BOT_PASSWORD=bench packages/core/dev/bench.sh e2e 3100 8790 stop || true
 
   image:
+    # 临时跳过镜像构建/推送：until further notice / restore by removing if:false
+    if: false
     name: Publish the image
     needs: e2e
     runs-on: ubuntu-latest

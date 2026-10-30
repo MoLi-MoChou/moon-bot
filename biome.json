@@ -32,7 +32,6 @@
       "!packages/core/src/client/browser-pane-chrome.tsx",
       "!packages/core/src/client/client-boot.ts",
       "!packages/core/src/client/index.ts",
-      "!packages/core/src/client/memory-panel.tsx",
       "!packages/core/src/client/model-menu.tsx",
       "!packages/core/src/client/read-page.ts",
       "!packages/core/src/client/sidebar-rows.tsx",
@@ -40,7 +39,6 @@
       "!packages/core/src/client/usage-charts.tsx",
       "!packages/core/src/client/widget-cell.tsx",
       "!packages/core/src/host/chat-index.ts",
-      "!packages/core/src/host/memory.ts",
       "!packages/core/src/host/memory/news.ts",
       "!packages/core/src/host/memory/storage.ts",
       "!packages/core/src/host/parts.ts",
@@ -268,6 +266,12 @@
     },
     {
       "includes": ["packages/core/src/host/parts-switch.ts"],
+      "formatter": {
+        "lineWidth": 320
+      }
+    },
+    {
+      "includes": ["packages/core/src/host/memory.ts"],
       "formatter": {
         "lineWidth": 320
       }

@@ -80,9 +80,16 @@ Types + `lineWidth` 320 overrides:
 - client: `questions.tsx` → `questions-types`
 - host: `groups/log.ts` → `log-types`; `parts-switch-move.ts` → types; `parts-switch.ts` → types
 
+### Cleared in batch 8 (stacked on batch 7)
+
+Helpers (+ `lineWidth` 320 for `memory.ts`):
+
+- client: `memory-panel.tsx` → `memory-panel-helpers`
+- host: `memory.ts` → `memory-helpers` (w320)
+
 ### Follow-up (still ignored until split)
 
-Remaining `packages/**/src` ignores (~17): denser modules — `memory-panel`, `widget-cell`, `usage-charts`, `sidebar-rows`, host `memory`/`parts`/`news`/`storage`, `client-boot`/`index`/`bot-browsers`, `service/engine`, etc. Split by responsibility, remove each ignore, keep ≤350 after format.
+Remaining `packages/**/src` ignores (~15): denser modules — `widget-cell`, `usage-charts`, `sidebar-rows`, `model-menu`, `read-page`, `tasks-page`, host `parts`/`news`/`storage`/`chat-index`, `client-boot`/`index`/`bot-browsers`, `service/engine`, etc. Split by responsibility, remove each ignore, keep ≤350 after format.
 
 ## Scripts
 

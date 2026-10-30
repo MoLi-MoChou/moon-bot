@@ -65,6 +65,8 @@ test('each layer boundary fails with a specific message', () => {
   assert.match(text, /host may not import client/)
   assert.match(text, /shared may not import host/)
   assert.match(text, /shared may import only zod and its own files/)
+  assert.match(text, /shared may not import react/)
+  assert.match(text, /shared may not import fastify/)
   assert.match(text, /client may not import engine/)
   assert.match(text, /engine may not import host/)
   assert.match(text, /store may import only shared and its own files/)

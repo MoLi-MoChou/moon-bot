@@ -65,7 +65,7 @@ npm run web -w moon-bot                # 网页版：密码页 + 服务，默认
 - `core/src/store/`：SQLite 存储——迁移、会话与消息、任务、记忆索引、策略计数、远程邀请（[迁移不变量](core/src/host/AGENTS.md)）。
 - `core/src/service/`：Fastify 服务、host context、凭证与设置、服务商目录、调度器、附件、审批桥、记忆同步、引擎装配（[分区文档](core/src/service/AGENTS.md)）。
 - `core/src/client/`：浏览器侧界面——侧栏、聊天、面板、主题、形象、Bot 浏览器面板（[分区文档](core/src/client/AGENTS.md)）。
-- `core/src/shared/`：两端共用的契约（schema、rpc、views、OpenUI 转换、mentions、lean）。
+- `core/src/shared/`：两端共用的契约（schema、rpc、views、OpenUI 转换、mentions、lean、model/connector catalog）。公开面是 [`core/src/shared/index.ts`](core/src/shared/index.ts)（**具名** re-export，禁止 `export *`）。新代码优先从 barrel 导入；深路径仍可用。这一层只依赖 `zod` 与自身文件，不得引入 React / Fastify / SQLite / Electron，也不得 import client/host/engine/store/service（`check-gates` + `shared-boundary` 测试）。
 - `core/test/`：单元测试（`.test.ts`）和 fixtures；`core/test/eval/` 是五项能力评测集。`core/dev/`：mock 模型、测试台、冒烟检查、脚本。
 - `app/`：桌面应用（主进程与窗口、服务子进程、首次启动、搬移数据、安装包与更新）；`app/ui/` 是窗口自己的界面，从 `core/src/client/` 取 Bot 视图（[分区文档](app/AGENTS.md)）。
 - `connect/`：`moon-bot-connect` CLI，把 ACP agent 经 WebSocket 中转接入。

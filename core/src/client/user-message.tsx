@@ -197,8 +197,12 @@ export function UserMessageCell({ node, sessionId, useRoster, actions, renderMes
     return <div className='bt-umsg' data-steering={steering || undefined}><div className='bt-ustack'>{attachments.length > 0 ? <Attachments attachments={attachments} renderMessageImages={renderMessageImages} /> : null}{text !== '' || rest.length > 0 ? <div className='bt-ubody' title={clock(data.time)} data-folded={folded || undefined}>{control ? <div className='bt-fold-body'>{body}</div> : body}{control}{rest.map((block, index) => (ui.JsonBlock ? h(ui.JsonBlock, { key: index, label: t('Content'), payload: block }) : null))}</div> : null}{referenceLabels.length > 0 ? <div className='bt-urefs'>{t('Referenced {labels}', { labels: referenceLabels.join(t(', ')) })}</div> : null}{sentAt !== undefined && time !== undefined ? <div className='bt-utime' title={clockLabel(time)}>{sentAt}</div> : null}</div>{text === '' ? null : <div className='bt-utools'><CopyButton text={text} /></div>}</div>;
 }
 export const USER_MESSAGE_CSS = `
-.bt-umsg{display:flex;flex-direction:row-reverse;align-items:center;justify-content:flex-start;gap:4px}
-.bt-ustack{min-width:0;max-width:min(calc(var(--bt-chat-content-width,748px) * .702),82%);display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+/* Full width with a definite basis, so the stack's percentage has something to resolve
+   against instead of collapsing to the text's own width. */
+.bt-umsg{display:flex;flex-direction:row-reverse;align-items:center;justify-content:flex-start;gap:4px;width:100%;min-width:0}
+/* The reader's own bubble: one ceiling, the same 560px as the Bot's so the two columns
+   read as one conversation, and 100% keeps it inside a narrow window. */
+.bt-ustack{min-width:0;max-width:min(560px,100%);display:flex;flex-direction:column;align-items:flex-end;gap:8px}
 .bt-ubody{max-width:100%;box-sizing:border-box;background:var(--bt-user);color:var(--bt-user-ink);border-radius:18px;padding:7px 12px;font-size:var(--bt-content-font-size,14px);line-height:calc(var(--bt-content-font-size,14px) + 8px);white-space:pre-wrap;word-break:break-word}
 .bt-ubody a{color:inherit}
 .bt-umention{display:inline-flex;align-items:center;gap:3px;vertical-align:-3px;max-width:100%;padding:0 1px;border:0;background:none;color:inherit;font:inherit;font-weight:600;line-height:inherit;cursor:pointer;border-radius:6px;white-space:nowrap}

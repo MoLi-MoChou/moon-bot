@@ -49,4 +49,8 @@ Remaining `packages/**/src` paths listed as `!…` in `biome.json` (host memory/
 - `pnpm run format:check` — CI / `check:static`
 - `pnpm run check:static` — typecheck + lint + format:check
 
-Tool choice: **Biome** (openbot-aligned formatter tooling). oxlint/`check-gates` stay the architecture lint.
+Tool choice: **Biome** (openbot-aligned formatter tooling). Prettier was tried; it expands dense JSX the same way, so it does not avoid the ignores. oxlint/`check-gates` stay the architecture lint.
+
+## Windows / line endings
+
+Biome uses `lineEnding: lf`. The repo `.gitattributes` sets `* text=auto eol=lf` so Windows checkouts (including `windows-latest` CI) keep LF and `pnpm run format:check` matches Linux.

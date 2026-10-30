@@ -1,296 +1,289 @@
-import { createElement as h, useLayoutEffect, useRef, useState } from 'react';
-import { BotMark, toolState } from './mark.tsx';
-import { Elapsed, Shimmer, workPhrase } from './cells.ts';
-import { SPRING_SHAPE, SPRING_TAP, spring, useLinger } from './motion.tsx';
-import { t } from './i18n.ts';
-import type { ReactNode } from 'react';
-import type { MarkBot } from './mark.tsx';
-/** What a Bot is doing, as the shell's work table keeps it. */
-interface WorkDoing {
-    readonly botId?: string | undefined;
-    readonly roomId?: string | undefined;
-    readonly since?: number | undefined;
-    readonly speaking?: boolean | undefined;
-    readonly switching?: boolean | undefined;
-    readonly tool?: string | undefined;
-}
-/** A tool call a group turn waits on before it goes on. */
-interface Approval {
-    readonly id: string;
-    readonly botId: string;
-    readonly at?: number | undefined;
-    readonly tool?: string | undefined;
-    readonly reason?: string | undefined;
-    readonly answerable?: boolean | undefined;
-    readonly detail?: {
-        readonly text?: string | undefined;
-        readonly code?: string | undefined;
-    } | undefined;
-}
-/** The shell's work table: what each Bot and each group is busy with right now. */
-interface WorkTable {
-    readonly bots?: Record<string, WorkDoing | undefined> | undefined;
-    readonly rooms?: Record<string, readonly WorkDoing[] | undefined> | undefined;
-    readonly approvals?: readonly Approval[] | undefined;
-}
-interface Room {
-    readonly id: string;
-    readonly name: string;
-    readonly members: readonly string[];
-}
-interface MemberBot extends MarkBot {
-    readonly id: string;
-    name: string;
-    role?: string | null | undefined;
-}
-interface Roster {
-    readonly byId: Record<string, MemberBot | undefined>;
-    readonly roomsById?: Record<string, Room | undefined> | undefined;
-}
-type StoreHook<T> = <R>(select: (state: T) => R) => R;
-/** One member of a group, with what it is doing and what it waits on. */
-export interface MemberEntry {
-    readonly id: string;
-    readonly approvals: Approval[];
-    readonly doing: WorkDoing | undefined;
-    readonly here: boolean;
-    readonly state: 'ask' | 'work' | 'idle';
-}
-interface BusyEntry extends MemberEntry {
-    readonly bot: MemberBot;
-}
-/** What the capsule outlives the work with, as plain data. */
-interface DockModel {
-    readonly open: {
-        readonly details?: string | undefined;
-        readonly session?: string | undefined;
-    };
-    readonly faces: readonly {
-        readonly id: string;
-        readonly ask: boolean;
-        readonly state: string;
-    }[];
-    readonly waiting: string;
-    readonly doing: string;
-}
-interface ApprovalActions {
-    answerApproval: (id: string, choice: string) => Promise<unknown>;
-    openSession: (id: string) => void;
-    reportError: (error: unknown, where?: string) => void;
-}
-interface MemberActions {
-    showDetails: (id: string) => void;
-    openSession: (id: string) => void;
-    answerApproval: (id: string, choice: string) => Promise<unknown>;
-    stopMemberWork: (roomId: string, botId: string) => Promise<unknown>;
-    reportError: (error: unknown, where?: string) => void;
-}
-// -------------------------------------------------------------------------
-// What a group's members are doing: above the group's composer, one capsule for the
-// members at work or waiting for an approval; above a Bot's own composer, one for the
-// groups it is at work in; and per member in the details panel, where the approvals
-// their group turns wait on are answered.
-const NO_WORK: WorkTable = { bots: {}, rooms: {}, approvals: [] };
-const FACES_MAX = 3;
-const DOCK_EXIT_MS = 160;
+import { createElement as h, useRef, useState } from 'react'
+import { toolState } from './mark.tsx'
+import { Shimmer, workPhrase } from './cells.ts'
+import { SPRING_SHAPE, SPRING_TAP, spring, useLinger } from './motion.tsx'
+import { t } from './i18n.ts'
+import type {
+  WorkDoing,
+  WorkTable,
+  Room,
+  MemberBot,
+  Roster,
+  StoreHook,
+  MemberEntry,
+  BusyEntry,
+  DockModel,
+  ApprovalActions,
+  MemberActions,
+} from './member-status-helpers.tsx'
+import {
+  NO_WORK,
+  FACES_MAX,
+  DOCK_EXIT_MS,
+  dockMembers,
+  Face,
+  useFitWidth,
+  stateLine,
+  ApprovalCard,
+} from './member-status-helpers.tsx'
+export type { MemberEntry } from './member-status-helpers.tsx'
+
 // Work in this group wins over the Bot's own chat or another group.
 export function memberWork(room: Room, work: WorkTable = NO_WORK): MemberEntry[] {
-    const here = work.rooms?.[room.id] ?? [];
-    return room.members.map((id): MemberEntry => {
-        const approvals = (work.approvals ?? []).filter(entry => entry.botId === id);
-        const local = here.find(entry => entry.botId === id);
-        const doing = local ? { ...local, roomId: room.id } : work.bots?.[id];
-        return { id, approvals, doing, here: local !== undefined, state: approvals.length > 0 ? 'ask' : doing ? 'work' : 'idle' };
-    });
+  const here = work.rooms?.[room.id] ?? []
+  return room.members.map((id): MemberEntry => {
+    const approvals = (work.approvals ?? []).filter(entry => entry.botId === id)
+    const local = here.find(entry => entry.botId === id)
+    const doing = local ? { ...local, roomId: room.id } : work.bots?.[id]
+    return {
+      id,
+      approvals,
+      doing,
+      here: local !== undefined,
+      state: approvals.length > 0 ? 'ask' : doing ? 'work' : 'idle',
+    }
+  })
 }
 // The busy members, those waiting for an approval first.
 export function busyMembers(room: Room, work: WorkTable | undefined, roster: Roster): BusyEntry[] {
-    const busy = memberWork(room, work).filter(entry => entry.state !== 'idle' && roster.byId[entry.id] !== undefined);
-    return [...busy.filter(entry => entry.state === 'ask'), ...busy.filter(entry => entry.state === 'work')]
-        .map(entry => ({ ...entry, bot: roster.byId[entry.id] as MemberBot }));
+  const busy = memberWork(room, work).filter(entry => entry.state !== 'idle' && roster.byId[entry.id] !== undefined)
+  return [...busy.filter(entry => entry.state === 'ask'), ...busy.filter(entry => entry.state === 'work')].map(
+    entry => ({ ...entry, bot: roster.byId[entry.id] as MemberBot }),
+  )
 }
-// The capsule leaves out the round's current speaker, which its round shows.
-const dockMembers = (busy: readonly BusyEntry[]): BusyEntry[] => busy.filter(entry => !(entry.state === 'work' && entry.here && entry.doing?.speaking === true));
-export const workState = (doing: WorkDoing | undefined): string => (doing?.switching ? 'thinking' : toolState(doing?.tool ?? ''));
+export const workState = (doing: WorkDoing | undefined): string =>
+  doing?.switching ? 'thinking' : toolState(doing?.tool ?? '')
 // The groups a Bot is at work in.
-export function botGroupWork(botId: string, work: WorkTable, roster: Roster): {
-    room: Room;
-    doing: WorkDoing;
-    since: number | undefined;
+export function botGroupWork(
+  botId: string,
+  work: WorkTable,
+  roster: Roster,
+): {
+  room: Room
+  doing: WorkDoing
+  since: number | undefined
 }[] {
-    return Object.entries(work.rooms ?? {}).flatMap(([roomId, entries]) => {
-        const entry = entries?.find(item => item.botId === botId);
-        const room = roster.roomsById?.[roomId];
-        return entry && room ? [{ room, doing: entry, since: entry.since }] : [];
-    });
+  return Object.entries(work.rooms ?? {}).flatMap(([roomId, entries]) => {
+    const entry = entries?.find(item => item.botId === botId)
+    const room = roster.roomsById?.[roomId]
+    return entry && room ? [{ room, doing: entry, since: entry.since }] : []
+  })
 }
 export function summaryText(busy: readonly BusyEntry[]): {
-    waiting: string;
-    doing: string;
+  waiting: string
+  doing: string
 } {
-    const asks = busy.filter(entry => entry.state === 'ask');
-    const workers = busy.filter(entry => entry.state === 'work');
-    const names = asks.slice(0, 2).map(entry => entry.bot.name);
-    const waiting = asks.length === 0 ? ''
-        : asks.length === 1 ? t('{name} is waiting for your approval', { name: names[0] })
-            : asks.length === 2 ? t('{first} and {second} are waiting for your approval', { first: names[0], second: names[1] })
-                : t('{first}, {second} and {count} more are waiting for your approval', { first: names[0], second: names[1], count: asks.length - 2, total: asks.length });
-    const first = workers[0];
-    const doing = first ? `${first.bot.name} · ${workPhrase(first.doing)}…${workers.length > 1 ? ` +${workers.length - 1}` : ''}` : '';
-    return { waiting, doing };
+  const asks = busy.filter(entry => entry.state === 'ask')
+  const workers = busy.filter(entry => entry.state === 'work')
+  const names = asks.slice(0, 2).map(entry => entry.bot.name)
+  const waiting =
+    asks.length === 0
+      ? ''
+      : asks.length === 1
+        ? t('{name} is waiting for your approval', { name: names[0] })
+        : asks.length === 2
+          ? t('{first} and {second} are waiting for your approval', { first: names[0], second: names[1] })
+          : t('{first}, {second} and {count} more are waiting for your approval', {
+              first: names[0],
+              second: names[1],
+              count: asks.length - 2,
+              total: asks.length,
+            })
+  const first = workers[0]
+  const doing = first
+    ? `${first.bot.name} · ${workPhrase(first.doing)}…${workers.length > 1 ? ` +${workers.length - 1}` : ''}`
+    : ''
+  return { waiting, doing }
 }
 // What the capsule shows, as plain data: it outlives the work for its exit.
 function dockModel(sessionId: string, roster: Roster, work: WorkTable): DockModel | null {
-    const room = roster.roomsById?.[sessionId];
-    if (room) {
-        const busy = dockMembers(busyMembers(room, work, roster));
-        if (busy.length === 0)
-            return null;
-        const { waiting, doing } = summaryText(busy);
-        return {
-            open: { details: room.id },
-            faces: busy.slice(0, FACES_MAX).map(entry => ({ id: entry.id, ask: entry.state === 'ask', state: workState(entry.doing) })),
-            waiting, doing,
-        };
-    }
-    const bot = roster.byId[sessionId];
-    // A running own chat has its activity row.
-    const own = bot === undefined ? undefined : work.bots?.[bot.id];
-    if (!bot || (own !== undefined && own.roomId === undefined))
-        return null;
-    const groups = botGroupWork(bot.id, work, roster);
-    if (groups.length === 0)
-        return null;
-    const first = groups[0] as {
-        room: Room;
-        doing: WorkDoing;
-        since: number | undefined;
-    };
+  const room = roster.roomsById?.[sessionId]
+  if (room) {
+    const busy = dockMembers(busyMembers(room, work, roster))
+    if (busy.length === 0) return null
+    const { waiting, doing } = summaryText(busy)
     return {
-        open: { session: first.room.id },
-        faces: [{ id: bot.id, ask: false, state: workState(first.doing) }],
-        waiting: '',
-        doing: `${t('in {name}', { name: first.room.name })} · ${workPhrase(first.doing)}…${groups.length > 1 ? ` +${groups.length - 1}` : ''}`,
-    };
-}
-function Face({ bot, ask, state }: {
-    bot: MemberBot;
-    ask: boolean;
-    state: string;
-}) {
-    return <span className='bt-mw-face' data-ask={ask || undefined}><BotMark bot={bot} size={20} state={ask ? 'alert' : state} /></span>;
-}
-// The capsule springs to the width of what it says; it is measured, so the spring runs
-// between two real widths. A capsule that comes back starts from its own width.
-function useFitWidth(inner: React.RefObject<HTMLSpanElement | null>, key: string | null): number | null {
-    const [width, setWidth] = useState<number | null>(null);
-    useLayoutEffect(() => { setWidth(key && inner.current ? inner.current.offsetWidth : null); }, [key]);
-    return width;
+      open: { details: room.id },
+      faces: busy
+        .slice(0, FACES_MAX)
+        .map(entry => ({ id: entry.id, ask: entry.state === 'ask', state: workState(entry.doing) })),
+      waiting,
+      doing,
+    }
+  }
+  const bot = roster.byId[sessionId]
+  // A running own chat has its activity row.
+  const own = bot === undefined ? undefined : work.bots?.[bot.id]
+  if (!bot || (own !== undefined && own.roomId === undefined)) return null
+  const groups = botGroupWork(bot.id, work, roster)
+  if (groups.length === 0) return null
+  const first = groups[0] as {
+    room: Room
+    doing: WorkDoing
+    since: number | undefined
+  }
+  return {
+    open: { session: first.room.id },
+    faces: [{ id: bot.id, ask: false, state: workState(first.doing) }],
+    waiting: '',
+    doing: `${t('in {name}', { name: first.room.name })} · ${workPhrase(first.doing)}…${groups.length > 1 ? ` +${groups.length - 1}` : ''}`,
+  }
 }
 // Above the composer, one capsule for everything at work: it opens the group's details,
 // or from a Bot's own chat the group it is at work in.
-export function MemberDock({ sessionId, useRoster, useWork, actions }: {
-    sessionId: string;
-    useRoster: StoreHook<Roster>;
-    useWork: StoreHook<WorkTable>;
-    actions: Pick<MemberActions, 'showDetails' | 'openSession'>;
+export function MemberDock({
+  sessionId,
+  useRoster,
+  useWork,
+  actions,
+}: {
+  sessionId: string
+  useRoster: StoreHook<Roster>
+  useWork: StoreHook<WorkTable>
+  actions: Pick<MemberActions, 'showDetails' | 'openSession'>
 }) {
-    const roster = useRoster(value => value);
-    const work = useWork(value => value);
-    const live = dockModel(sessionId, roster, work);
-    const [kept, leaving] = useLinger(live ? JSON.stringify(live) : null, DOCK_EXIT_MS);
-    const model = kept === null ? null : (JSON.parse(kept) as DockModel);
-    const inner = useRef<HTMLSpanElement | null>(null);
-    const width = useFitWidth(inner, kept);
-    if (!model)
-        return null;
-    const faces = model.faces.map(face => ({ ...face, bot: roster.byId[face.id] })).filter((face): face is {
-        id: string;
-        ask: boolean;
-        state: string;
-        bot: MemberBot;
-    } => face.bot !== undefined);
-    const label = [model.waiting, model.doing].filter(Boolean).join(' · ');
-    const open = (): void => { if (model.open.details !== undefined)
-        actions.showDetails(model.open.details);
-    else if (model.open.session !== undefined)
-        actions.openSession(model.open.session); };
-    return <div className='bt-mw-dock' data-leaving={leaving || undefined}><button type='button' className='bt-mw-pill' aria-label={label} onClick={open} disabled={leaving} style={width ? { width } : undefined}><span ref={inner} className='bt-mw-pill-in'><span className='bt-mw-faces' aria-hidden>{faces.map(face => <Face key={face.id} {...face} />)}</span><span key={label} className='bt-mw-label' aria-hidden>{model.waiting ? <span className='bt-mw-ask'>{model.waiting}</span> : null}{model.waiting && model.doing ? <span className='bt-mw-dot'>·</span> : null}{model.doing ? <span className='bt-mw-doing'><Shimmer>{model.doing}</Shimmer></span> : null}</span></span></button></div>;
-}
-// The clock stays whole at the end; only what comes before it is cut.
-const stateLine = (className: string, at: number | undefined, ...what: readonly ReactNode[]): ReactNode => <span className={className}><span className='bt-member-what'>{...what}</span>{typeof at === 'number' ? <Elapsed at={at} className='bt-member-time' /> : null}</span>;
-function ApprovalCard({ approval, bot, actions }: {
-    approval: Approval;
-    bot: MemberBot;
-    actions: ApprovalActions;
-}) {
-    const [busy, setBusy] = useState(false);
-    const answer = (choice: string): void => {
-        setBusy(true);
-        void Promise.resolve(actions.answerApproval(approval.id, choice))
-            .catch(error => actions.reportError(error, 'approval'))
-            .finally(() => setBusy(false));
-    };
-    return <div className='bt-mw-card' role='group' aria-label={t('{name} is waiting for your approval', { name: bot.name })} onKeyDown={(event) => {
-        if (event.key === 'Escape' && approval.answerable && !busy) {
-            event.preventDefault();
-            event.stopPropagation();
-            answer('reject');
-        }
-    }}><div className='bt-mw-tool'>{approval.tool}</div>{approval.detail?.text ? <div className='bt-mw-text'>{approval.detail.text}</div> : null}{approval.reason ? <div className='bt-mw-reason'>{approval.reason}</div> : null}{approval.detail?.code ? <code className='bt-mw-code' title={approval.detail.code}>{approval.detail.code}</code> : null}{approval.answerable
-        ? <div className='bt-mw-actions'><button type='button' className='bt-q-btn' disabled={busy} onClick={() => answer('reject')}>{t('Reject')}</button><button type='button' className='bt-q-submit' disabled={busy} onClick={() => answer('allow')}>{t('Allow once')}</button></div> : <div className='bt-mw-actions'><button type='button' className='bt-q-btn' onClick={() => actions.openSession(bot.id)}>{t("Open {name}'s chat", { name: bot.name })}</button></div>}</div>;
+  const roster = useRoster(value => value)
+  const work = useWork(value => value)
+  const live = dockModel(sessionId, roster, work)
+  const [kept, leaving] = useLinger(live ? JSON.stringify(live) : null, DOCK_EXIT_MS)
+  const model = kept === null ? null : (JSON.parse(kept) as DockModel)
+  const inner = useRef<HTMLSpanElement | null>(null)
+  const width = useFitWidth(inner, kept)
+  if (!model) return null
+  const faces = model.faces
+    .map(face => ({ ...face, bot: roster.byId[face.id] }))
+    .filter(
+      (
+        face,
+      ): face is {
+        id: string
+        ask: boolean
+        state: string
+        bot: MemberBot
+      } => face.bot !== undefined,
+    )
+  const label = [model.waiting, model.doing].filter(Boolean).join(' · ')
+  const open = (): void => {
+    if (model.open.details !== undefined) actions.showDetails(model.open.details)
+    else if (model.open.session !== undefined) actions.openSession(model.open.session)
+  }
+  return (
+    <div className='bt-mw-dock' data-leaving={leaving || undefined}>
+      <button
+        type='button'
+        className='bt-mw-pill'
+        aria-label={label}
+        onClick={open}
+        disabled={leaving}
+        style={width ? { width } : undefined}>
+        <span ref={inner} className='bt-mw-pill-in'>
+          <span className='bt-mw-faces' aria-hidden>
+            {faces.map(face => (
+              <Face key={face.id} {...face} />
+            ))}
+          </span>
+          <span key={label} className='bt-mw-label' aria-hidden>
+            {model.waiting ? <span className='bt-mw-ask'>{model.waiting}</span> : null}
+            {model.waiting && model.doing ? <span className='bt-mw-dot'>·</span> : null}
+            {model.doing ? (
+              <span className='bt-mw-doing'>
+                <Shimmer>{model.doing}</Shimmer>
+              </span>
+            ) : null}
+          </span>
+        </span>
+      </button>
+    </div>
+  )
 }
 // A member's second line in the group's details: what it is doing and where, or its role.
-export function MemberState({ entry, bot, room, roster }: {
-    entry: MemberEntry | undefined;
-    bot: MemberBot;
-    room: Room;
-    roster: Roster;
+export function MemberState({
+  entry,
+  bot,
+  room,
+  roster,
+}: {
+  entry: MemberEntry | undefined
+  bot: MemberBot
+  room: Room
+  roster: Roster
 }) {
-    if (entry?.state === 'ask')
-        return stateLine('bt-member-state bt-mw-ask', entry.approvals[0]?.at, t('Waiting for your approval'));
-    if (entry?.state !== 'work')
-        return bot.role ? stateLine('bt-member-state', undefined, bot.role) : null;
-    // A member that is at work always has the entry it works on; it is what set the state.
-    const doing = entry.doing as WorkDoing;
-    const where = doing.roomId === room.id ? ''
-        : doing.roomId ? t('in {name}', { name: roster.roomsById?.[doing.roomId]?.name ?? t('a group chat') })
-            : t('in its own chat');
-    return stateLine('bt-member-state', doing.since, <Shimmer>{`${workPhrase(doing)}…`}</Shimmer>, where ? ` ${where}` : '');
+  if (entry?.state === 'ask')
+    return stateLine('bt-member-state bt-mw-ask', entry.approvals[0]?.at, t('Waiting for your approval'))
+  if (entry?.state !== 'work') return bot.role ? stateLine('bt-member-state', undefined, bot.role) : null
+  // A member that is at work always has the entry it works on; it is what set the state.
+  const doing = entry.doing as WorkDoing
+  const where =
+    doing.roomId === room.id
+      ? ''
+      : doing.roomId
+        ? t('in {name}', { name: roster.roomsById?.[doing.roomId]?.name ?? t('a group chat') })
+        : t('in its own chat')
+  return stateLine(
+    'bt-member-state',
+    doing.since,
+    <Shimmer>{`${workPhrase(doing)}…`}</Shimmer>,
+    where ? ` ${where}` : '',
+  )
 }
 // Work in this group can be stopped from its details, since the user cannot reach the
 // member's group Session otherwise; a turn waiting for an approval still holds its work.
-export function StopMemberWork({ entry, bot, room, actions }: {
-    entry: MemberEntry | undefined;
-    bot: MemberBot;
-    room: Room;
-    actions: Pick<MemberActions, 'stopMemberWork' | 'reportError'>;
+export function StopMemberWork({
+  entry,
+  bot,
+  room,
+  actions,
+}: {
+  entry: MemberEntry | undefined
+  bot: MemberBot
+  room: Room
+  actions: Pick<MemberActions, 'stopMemberWork' | 'reportError'>
 }) {
-    const [stopping, setStopping] = useState(false);
-    if (!entry?.here || (entry.state !== 'work' && entry.state !== 'ask'))
-        return null;
-    const stop = () => {
-        setStopping(true);
-        void Promise.resolve(actions.stopMemberWork(room.id, bot.id))
-            .catch(error => actions.reportError(error, 'stop'))
-            .finally(() => setStopping(false));
-    };
-    return <button type='button' className='bt-member-stop' disabled={stopping} aria-label={`${t('Stop')} · ${bot.name}`} onClick={stop}>{t('Stop')}</button>;
+  const [stopping, setStopping] = useState(false)
+  if (!entry?.here || (entry.state !== 'work' && entry.state !== 'ask')) return null
+  const stop = () => {
+    setStopping(true)
+    void Promise.resolve(actions.stopMemberWork(room.id, bot.id))
+      .catch(error => actions.reportError(error, 'stop'))
+      .finally(() => setStopping(false))
+  }
+  return (
+    <button
+      type='button'
+      className='bt-member-stop'
+      disabled={stopping}
+      aria-label={`${t('Stop')} · ${bot.name}`}
+      onClick={stop}>
+      {t('Stop')}
+    </button>
+  )
 }
-export function MemberApprovals({ entry, bot, actions }: {
-    entry: MemberEntry | undefined;
-    bot: MemberBot;
-    actions: ApprovalActions;
+export function MemberApprovals({
+  entry,
+  bot,
+  actions,
+}: {
+  entry: MemberEntry | undefined
+  bot: MemberBot
+  actions: ApprovalActions
 }) {
-    if (entry?.state !== 'ask')
-        return null;
-    return <div className='bt-member-cards'>{entry.approvals.map(approval => <ApprovalCard key={approval.id} approval={approval} bot={bot} actions={actions} />)}</div>;
+  if (entry?.state !== 'ask') return null
+  return (
+    <div className='bt-member-cards'>
+      {entry.approvals.map(approval => (
+        <ApprovalCard key={approval.id} approval={approval} bot={bot} actions={actions} />
+      ))}
+    </div>
+  )
 }
-export function useMemberWork(room: Room | undefined, useWork?: StoreHook<WorkTable> | undefined): {
-    entries: MemberEntry[];
+export function useMemberWork(
+  room: Room | undefined,
+  useWork?: StoreHook<WorkTable> | undefined,
+): {
+  entries: MemberEntry[]
 } {
-    const work = useWork?.(value => value) ?? NO_WORK;
-    return { entries: room ? memberWork(room, work) : [] };
+  const work = useWork?.(value => value) ?? NO_WORK
+  return { entries: room ? memberWork(room, work) : [] }
 }
 export const MEMBER_CSS = `
 .bt-mw-dock{display:flex;justify-content:center;margin:0 auto 8px;pointer-events:none}
@@ -343,4 +336,4 @@ body[data-bt-dark] .bt-member-state.bt-mw-ask{color:#f0b84a}
 .bt-mw-actions>button:disabled{opacity:.5;cursor:default}
 :is(.bt-mw-pill,.bt-member-open,.bt-member-stop):focus-visible{outline:2px solid var(--bt-accent);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){.bt-mw-pill,.bt-mw-face,.bt-mw-label,.bt-member,.bt-mw-card{animation:none}.bt-mw-pill{transition:background-color .12s ease}}
-`;
+`

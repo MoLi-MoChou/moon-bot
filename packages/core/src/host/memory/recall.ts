@@ -7,65 +7,12 @@ import { join } from 'node:path'
 import { z } from 'zod'
 import type { ToolRunContext } from '../host-types.js'
 import type { ToolContext } from '../../engine/registry.ts'
-import type { StoredBot } from '../runtime.ts'
 import type { MemoryActor, MemoryFile, MemoryScope, ScopedEntry } from './records.ts'
 import type { MemoryBody, Panel, RecallDeps, RecallService, Scopes, ScopeList } from '../memory-types.ts'
 import { MEMORY_LIMITS, cleanEntry, cleanTopic, errorMessage, formatEntry, squash } from './records.ts'
 import { SUMMARY_SYSTEM, askRequest, askSystem, groupSummaryRequest, parseAsk, summaryRequest } from './prompt.ts'
-
-export interface Caller {
-  readonly bot: StoredBot
-  readonly sessionId: string
-  readonly roomId: string | undefined
-}
-
-export interface PanelEntry {
-  readonly scope: string
-  readonly topic: string | null
-  readonly text: string
-  readonly added: string | null
-  readonly by: string | null
-  readonly source: string | null
-}
-
-export interface MemoryView {
-  readonly roomId?: string | undefined
-  readonly botId?: string | undefined
-  readonly entries: readonly PanelEntry[]
-  readonly sizes: Readonly<Record<string, number>>
-  readonly limits: { readonly entry: number; readonly main: number; readonly topic: number; readonly topics: number }
-  readonly summary: { readonly text: string; readonly at?: number | undefined } | null
-  readonly fresh: boolean
-  readonly summarizing: boolean
-  readonly error: string | null
-}
-
-export interface AskAnswer {
-  readonly op: string
-  readonly scope: string
-  readonly text: string
-  readonly before?: string | undefined
-  readonly ok: boolean
-  readonly error?: string | undefined
-}
-
-export interface AskResult {
-  readonly reply: string
-  readonly changes: readonly AskAnswer[]
-  readonly view: MemoryView
-}
-
-export interface Summary {
-  readonly hash: string
-  readonly text: string
-  readonly at?: number | undefined
-}
-
-export interface SummaryFailure {
-  readonly hash: string
-  readonly model: string | undefined
-  readonly message: string
-}
+import type { Caller, PanelEntry, MemoryView, AskAnswer, AskResult, Summary, SummaryFailure } from './recall-types.ts'
+export type { Caller, PanelEntry, MemoryView, AskAnswer, AskResult, Summary, SummaryFailure } from './recall-types.ts'
 
 const RECALL_MAX = 30
 const QUERY_TERMS_MAX = 6
@@ -83,7 +30,7 @@ export function createRecall({ rt, storage, botShot }: RecallDeps): RecallServic
   const callerOf = (exec: ToolContext | ToolRunContext): Caller | undefined => {
     const agentView = (exec as { readonly agent?: { readonly id?: unknown } | undefined }).agent
     const fromContext = 'sessionId' in exec ? exec.sessionId : undefined
-    const sessionId: string | undefined = typeof fromContext === 'string' ? fromContext : (agentView !== null && agentView !== undefined && typeof agentView.id === 'string' ? agentView.id : undefined)
+    const sessionId: string | undefined = typeof fromContext === 'string' ? fromContext : agentView !== null && agentView !== undefined && typeof agentView.id === 'string' ? agentView.id : undefined
     if (sessionId === undefined) return undefined
     const bot = rt.botOf(rt.selfOf(sessionId))
     return bot === undefined ? undefined : { bot, sessionId, roomId: storage.roomIdOf(sessionId) }
@@ -106,7 +53,9 @@ export function createRecall({ rt, storage, botShot }: RecallDeps): RecallServic
           break
         }
       }
-    } catch { /* no history to point at: the time stands in */ }
+    } catch {
+      /* no history to point at: the time stands in */
+    }
     return seq === undefined ? `part ${number} ${rt.clock(Date.now())}` : `part ${number} #${seq}`
   }
   const metaFor = async (caller: Caller, scope: MemoryScope): Promise<Record<string, string>> => ({
@@ -124,10 +73,10 @@ export function createRecall({ rt, storage, botShot }: RecallDeps): RecallServic
     const { scope, error } = storage.namedScope(raw, botId, roomId)
     if (error !== undefined) return { error }
     if (scope === undefined) return { scopes: roomId === undefined ? [storage.ownScope(botId), storage.TEAM] : [storage.ownScope(botId), storage.groupScope(roomId), storage.TEAM] }
-    if (scope.kind === 'bot' && scope.botId !== botId && !rt.isMain(botId)) return { error: 'Only a Main Bot can read another Bot\'s memory. Ask that Bot with message_bot instead.' }
+    if (scope.kind === 'bot' && scope.botId !== botId && !rt.isMain(botId)) return { error: "Only a Main Bot can read another Bot's memory. Ask that Bot with message_bot instead." }
     return { scopes: [scope] }
   }
-  const tagOf = (scope: MemoryScope, botId: string): string => (scope.kind === 'team' ? 'team' : scope.kind === 'group' ? 'group' : scope.botId === botId ? 'yours' : rt.botOf(scope.botId)?.name ?? '?')
+  const tagOf = (scope: MemoryScope, botId: string): string => (scope.kind === 'team' ? 'team' : scope.kind === 'group' ? 'group' : scope.botId === botId ? 'yours' : (rt.botOf(scope.botId)?.name ?? '?'))
 
   function installTools(): void {
     rt.registerTool({
@@ -157,32 +106,37 @@ export function createRecall({ rt, storage, botShot }: RecallDeps): RecallServic
           return `No topic [[${String(args.topic).slice(0, 60)}]] there. Topics: ${known.join(', ') || 'none yet'}.`
         }
         const where = (tag: string, file: MemoryFile): string => `${tag} · ${file.topic === undefined ? 'MEMORY.md' : `[[${file.topic}]]`}`
-        const query = String(args.query ?? '').trim().slice(0, 120)
+        const query = String(args.query ?? '')
+          .trim()
+          .slice(0, 120)
         if (query === '') {
-          return loaded.map(({ tag, label, files }) => {
-            const main = files[0]
-            if (main === undefined) return ''
-            const topics = files.slice(1)
-            return [
-              `${capital(label)}: MEMORY.md has ${main.entries.length} entries (${storage.sizeNote(main, main.content.length)})${topics.length > 0 ? `; topics ${topics.map(file => `[[${file.topic ?? ''}]] (${file.entries.length})`).join(', ')}` : '; no topics'}.`,
-              ...main.entries.map(entry => `[${where(tag, main)}] ${formatEntry(entry.text, entry.meta).slice(2)}`),
-            ].join('\n')
-          }).join('\n\n')
+          return loaded
+            .map(({ tag, label, files }) => {
+              const main = files[0]
+              if (main === undefined) return ''
+              const topics = files.slice(1)
+              return [
+                `${capital(label)}: MEMORY.md has ${main.entries.length} entries (${storage.sizeNote(main, main.content.length)})${topics.length > 0 ? `; topics ${topics.map(file => `[[${file.topic ?? ''}]] (${file.entries.length})`).join(', ')}` : '; no topics'}.`,
+                ...main.entries.map(entry => `[${where(tag, main)}] ${formatEntry(entry.text, entry.meta).slice(2)}`),
+              ].join('\n')
+            })
+            .join('\n\n')
         }
         const terms = [...new Set(squash(query).split(' ').filter(Boolean))].slice(0, QUERY_TERMS_MAX)
-        const scored = loaded.flatMap(({ tag, files }) => storage.allEntries(files).map((entry) => {
-          const hay = squash(`${entry.text} ${entry.file.topic ?? ''}`)
-          return { entry, tag, count: terms.filter(term => hay.includes(term)).length }
-        })).filter(hit => hit.count > 0)
+        const scored = loaded
+          .flatMap(({ tag, files }) =>
+            storage.allEntries(files).map(entry => {
+              const hay = squash(`${entry.text} ${entry.file.topic ?? ''}`)
+              return { entry, tag, count: terms.filter(term => hay.includes(term)).length }
+            }),
+          )
+          .filter(hit => hit.count > 0)
         const every = scored.filter(hit => hit.count === terms.length)
         const hits = (every.length > 0 ? every : scored.sort((a, b) => b.count - a.count)).slice(0, RECALL_MAX)
         const names = loaded.map(item => item.label)
         const labels = names.length > 2 ? `${names.slice(0, -1).join(', ')}, and ${names.at(-1) ?? ''}` : names.join(' and ')
         if (hits.length === 0) return `Nothing in ${labels} mentions "${query}". read_own_chat searches what was said.`
-        return [
-          every.length > 0 ? `Entries with "${query}" in ${labels}:` : `No entry has all of "${query}"; entries with the most of these words:`,
-          ...hits.map(({ entry, tag }) => `[${where(tag, entry.file)}] ${formatEntry(entry.text, entry.meta).slice(2)}`),
-        ].join('\n')
+        return [every.length > 0 ? `Entries with "${query}" in ${labels}:` : `No entry has all of "${query}"; entries with the most of these words:`, ...hits.map(({ entry, tag }) => `[${where(tag, entry.file)}] ${formatEntry(entry.text, entry.meta).slice(2)}`)].join('\n')
       },
     })
   }
@@ -191,10 +145,15 @@ export function createRecall({ rt, storage, botShot }: RecallDeps): RecallServic
   // The memory panel: a summary the keeper's model writes, every entry, and "ask or
   // update", one model call whose changes go through the same path as the tools.
 
-  const panelEntries = (files: readonly MemoryFile[], scope: string): PanelEntry[] => storage.allEntries(files).map(entry => ({
-    scope, topic: entry.file.topic ?? null, text: entry.text,
-    added: entry.meta.added ?? null, by: entry.meta.by ?? null, source: entry.meta.source ?? null,
-  }))
+  const panelEntries = (files: readonly MemoryFile[], scope: string): PanelEntry[] =>
+    storage.allEntries(files).map(entry => ({
+      scope,
+      topic: entry.file.topic ?? null,
+      text: entry.text,
+      added: entry.meta.added ?? null,
+      by: entry.meta.by ?? null,
+      source: entry.meta.source ?? null,
+    }))
 
   const summaries = new Map<string, Summary>()
   const summarizing = new Map<string, Promise<unknown>>()
@@ -212,7 +171,9 @@ export function createRecall({ rt, storage, botShot }: RecallDeps): RecallServic
           return summary
         }
       }
-    } catch { /* none yet */ }
+    } catch {
+      /* none yet */
+    }
     return undefined
   }
   const linesFor = (files: readonly MemoryFile[]): string[] => storage.allEntries(files).map(entry => `- ${entry.file.topic ? `[[${entry.file.topic}]] ` : ''}${entry.text}`)
@@ -237,19 +198,19 @@ export function createRecall({ rt, storage, botShot }: RecallDeps): RecallServic
     const keeper = panel.keeper
     if (keeper === undefined) return
     const model = keeper.model
-    const request = panel.group
-      ? groupSummaryRequest({ name: panel.name, lines: linesFor(loaded.group ?? []), language })
-      : summaryRequest({ name: panel.name, own: linesFor(loaded.own ?? []), team: linesFor(loaded.team ?? []), language })
+    const request = panel.group ? groupSummaryRequest({ name: panel.name, lines: linesFor(loaded.group ?? []), language }) : summaryRequest({ name: panel.name, own: linesFor(loaded.own ?? []), team: linesFor(loaded.team ?? []), language })
     const job = (async () => {
       const text = await botShot(keeper, SUMMARY_SYSTEM, request, panel.tag)
       const value: Summary = { hash, text: text.slice(0, SUMMARY_TEXT_MAX), at: Date.now() }
       summaries.set(panel.id, value)
       summaryFailures.delete(panel.id)
       if (rt.readOnly() === undefined) await storage.writeText(summaryPath(panel.id), JSON.stringify(value, null, 2))
-    })().catch((error: unknown) => {
-      summaryFailures.set(panel.id, { hash, model, message: errorMessage(error) })
-      rt.warn('moon-bot: memory summary for %s failed: %s', panel.name, error)
-    }).finally(() => summarizing.delete(panel.id))
+    })()
+      .catch((error: unknown) => {
+        summaryFailures.set(panel.id, { hash, model, message: errorMessage(error) })
+        rt.warn('moon-bot: memory summary for %s failed: %s', panel.name, error)
+      })
+      .finally(() => summarizing.delete(panel.id))
     summarizing.set(panel.id, job)
   }
 
@@ -262,7 +223,9 @@ export function createRecall({ rt, storage, botShot }: RecallDeps): RecallServic
     for (const [tag, scope] of Object.entries(panel.scopes)) loaded[tag] = storage.loadScope(scope)
     const entries = Object.entries(loaded).flatMap(([tag, files]) => panelEntries(files, tag))
     const language = languageNow()
-    const hash = createHash('sha256').update(JSON.stringify([language, ...Object.values(loaded).map(linesFor)])).digest('hex')
+    const hash = createHash('sha256')
+      .update(JSON.stringify([language, ...Object.values(loaded).map(linesFor)]))
+      .digest('hex')
     const saved = savedSummary(panel.id)
     const prior = summaryFailures.get(panel.id)
     const failed = prior !== undefined && prior.hash === hash && prior.model === panel.keeper?.model ? prior : undefined
@@ -285,7 +248,9 @@ export function createRecall({ rt, storage, botShot }: RecallDeps): RecallServic
   async function memoryAsk(body: MemoryBody): Promise<AskResult> {
     const panel = panelOf(body)
     if (panel.keeper === undefined) throw new Error('No Bot is left in this group chat')
-    const text = String(body.text ?? '').trim().slice(0, ASK_TEXT_MAX)
+    const text = String(body.text ?? '')
+      .trim()
+      .slice(0, ASK_TEXT_MAX)
     if (text === '') throw new Error('Type a question or a change first')
     const numbered: ScopedEntry[] = Object.entries(panel.scopes).flatMap(([tag, scope]) => storage.allEntries(storage.loadScope(scope)).map(entry => ({ ...entry, scope: tag })))
     const answer = parseAsk(await botShot(panel.keeper, askSystem(panel.group), askRequest({ name: panel.name, group: panel.group, numbered, language: languageNow(), text }), panel.tag))
@@ -295,7 +260,7 @@ export function createRecall({ rt, storage, botShot }: RecallDeps): RecallServic
     for (const change of answer.changes.slice(0, ASK_CHANGES_MAX)) {
       const op = String(change.op ?? '')
       const target = numbered[Number(change.entry) - 1]
-      const tag = op === 'add' ? (change.team === true && panel.scopes.team !== undefined ? 'team' : home) : target?.scope ?? home
+      const tag = op === 'add' ? (change.team === true && panel.scopes.team !== undefined ? 'team' : home) : (target?.scope ?? home)
       const scope = panel.scopes[tag]
       const next = cleanEntry(change.text)
       try {
@@ -310,7 +275,7 @@ export function createRecall({ rt, storage, botShot }: RecallDeps): RecallServic
         else if (op === 'edit' && target !== undefined) await storage.replaceEntry({ scope, topic: target.file.topic, match: target.text, text: next, meta, actor: USER, label })
         else if (op === 'remove' && target !== undefined) await storage.removeEntry({ scope, topic: target.file.topic, match: target.text, actor: USER, label })
         else continue
-        changes.push({ op, scope: tag, text: op === 'remove' ? target?.text ?? '' : next, ...(op === 'edit' && target !== undefined ? { before: target.text } : {}), ok: true })
+        changes.push({ op, scope: tag, text: op === 'remove' ? (target?.text ?? '') : next, ...(op === 'edit' && target !== undefined ? { before: target.text } : {}), ok: true })
       } catch (failure) {
         changes.push({ op, scope: tag, text: next || target?.text || '', ok: false, error: errorMessage(failure) })
       }
@@ -329,7 +294,13 @@ export function createRecall({ rt, storage, botShot }: RecallDeps): RecallServic
   }
 
   return {
-    callerOf, sourceOf, metaFor, installTools, memoryView, memoryAsk, memoryForget,
+    callerOf,
+    sourceOf,
+    metaFor,
+    installTools,
+    memoryView,
+    memoryAsk,
+    memoryForget,
     forgetSummary: (id, clearFailure = false) => {
       summaries.delete(id)
       if (clearFailure) summaryFailures.delete(id)

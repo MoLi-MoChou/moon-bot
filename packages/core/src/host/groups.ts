@@ -10,38 +10,31 @@ import { z } from 'zod'
 import { createUserMessage } from './llm-bits.ts'
 import { SOURCE_KIND, TEXT_KEPT } from './constants.ts'
 import { headOf } from './text.ts'
-import type { Agent } from './host-types.js'
 import type { ToolContext } from '../engine/registry.ts'
 import type { StoredBot, TurnInfo } from './runtime.ts'
 import { failureLine, failureSay, fileLine, lineText, mentionsIn, transcript } from './groups/notice.ts'
-import type {
-  FailureDetail, GroupRoom, GroupRound, GroupRuntime, RoomLine, RoomPost,
-} from './groups/types.ts'
+import type { FailureDetail, GroupRoom, GroupRound, GroupRuntime, RoomLine, RoomPost } from './groups/types.ts'
 import { ROOM_LOG_MAX, ensureRoomLog, installRoomLog } from './groups/log.ts'
 import { installRounds } from './groups/rounds.ts'
+import type { RelayContext, ReadOwnChatArgs, ReadGroupChatArgs } from './groups-types.ts'
 
 export { isPass, mentionsIn, referenceNote, stripOwnName } from './groups/notice.ts'
 export type {
-  FailureDetail, GroupReply, GroupRoom, GroupRound, GroupSlot, MemberSession, ReadyRoom,
-  RoomLine, RoomPost, RoomReference, RoomTurnResult, RoomWaiter, SlotStatus, StartedTurn,
+  FailureDetail,
+  GroupReply,
+  GroupRoom,
+  GroupRound,
+  GroupSlot,
+  MemberSession,
+  ReadyRoom,
+  RoomLine,
+  RoomPost,
+  RoomReference,
+  RoomTurnResult,
+  RoomWaiter,
+  SlotStatus,
+  StartedTurn,
 } from './groups/types.ts'
-
-/** The relay's context: the live agent of the group Session, whose inbox the round
- *  drains, rides a ToolContext where the host provides one (tools/the host.ts). */
-interface RelayContext extends ToolContext {
-  readonly agent?: Agent
-}
-
-interface ReadOwnChatArgs {
-  readonly query?: unknown
-  readonly around?: unknown
-  readonly part?: unknown
-}
-
-interface ReadGroupChatArgs {
-  readonly group?: unknown
-  readonly seq?: unknown
-}
 
 const GROUP_REF = { type: 'string', required: true, description: 'Exact group chat name from list_bots' }
 const ROOM_READ_MAX = 30
@@ -59,12 +52,18 @@ export function install(rt: GroupRuntime): void {
       working.length > 0 ? `Still working on it: ${working.join(', ')}. Each posts its result in the group when done, not to you; read_group_chat shows it.` : '',
       waiting.length > 0 ? `Waiting for the user's approval: ${waiting.join(', ')}. What they say afterwards is posted in the group, not sent to you; read_group_chat shows it.` : '',
       round.passed.length > 0 ? `Stayed silent: ${round.passed.join(', ')}.` : '',
-      round.failed.length > 0 ? `Could not answer because their model call failed: ${round.replies.filter(reply => reply.kind === 'failed').map(reply => `${reply.name} (${failureLine({ code: reply.code, status: reply.status, message: reply.text })})`).join(', ')}.` : '',
-    ].filter(Boolean).join('\n\n')
+      round.failed.length > 0
+        ? `Could not answer because their model call failed: ${round.replies
+            .filter(reply => reply.kind === 'failed')
+            .map(reply => `${reply.name} (${failureLine({ code: reply.code, status: reply.status, message: reply.text })})`)
+            .join(', ')}.`
+        : '',
+    ]
+      .filter(Boolean)
+      .join('\n\n')
     // Replies the poster waited for go on with the work it posted for.
     const work = post.sub === undefined ? undefined : rt.closeWork?.(post.sub, `Group "${room.name}"`, text)
-    await rt.deliver({ toId: post.botId, role: 'report', roomId: room.id, text, ...(work ? { work, replyTo: post.sub } : {}) })
-      .catch(error => rt.warn('moon-bot: group report to %s failed: %s', post.name, error))
+    await rt.deliver({ toId: post.botId, role: 'report', roomId: room.id, text, ...(work ? { work, replyTo: post.sub } : {}) }).catch(error => rt.warn('moon-bot: group report to %s failed: %s', post.name, error))
   }
 
   // The user stops a member's work in this group from the group's details. Messages
@@ -91,11 +90,13 @@ export function install(rt: GroupRuntime): void {
     if (room === undefined || member === undefined || !room.members.includes(member.id)) return
     const { code, status, message } = failure
     const zh = String(rt.uiLanguage?.() ?? '').startsWith('Chinese')
-    await log.postToRoom(room, member, zh
-      ? `没能做完：${failureSay(failure, true)}。`
-      : `Could not finish: ${failureSay(failure)}.`, {
-      late: true, quiet: true, failed: { code, ...(status ? { status } : {}), message },
-    }).catch(error => rt.warn('moon-bot: late group failure from %s failed: %s', member.name, error))
+    await log
+      .postToRoom(room, member, zh ? `没能做完：${failureSay(failure, true)}。` : `Could not finish: ${failureSay(failure)}.`, {
+        late: true,
+        quiet: true,
+        failed: { code, ...(status ? { status } : {}), message },
+      })
+      .catch(error => rt.warn('moon-bot: late group failure from %s failed: %s', member.name, error))
   }
   rt.lateRoomFailure = lateRoomFailure
 
@@ -104,10 +105,12 @@ export function install(rt: GroupRuntime): void {
     const room = rt.roomOf(roomId)
     if (!room?.admin) return
     const agent = await rt.resolveAgent(room.id)
-    agent.followup(createUserMessage({
-      content: [{ type: 'text', text: '[Group chat created]' }],
-      source: { kind: SOURCE_KIND, form: 'relay', role: 'kickoff', exchangeId: randomUUID(), senderName: 'You', roomId: room.id },
-    }))
+    agent.followup(
+      createUserMessage({
+        content: [{ type: 'text', text: '[Group chat created]' }],
+        source: { kind: SOURCE_KIND, form: 'relay', role: 'kickoff', exchangeId: randomUUID(), senderName: 'You', roomId: room.id },
+      }),
+    )
     await ctx.sessions.flush(agent.session)
   }
   rt.greetRoom = greetRoom
@@ -163,7 +166,9 @@ export function install(rt: GroupRuntime): void {
         ...(opener.kickoff ? { kickoff: true } : {}),
         ...(references.length > 0 ? { references, shown: [] } : {}),
         slots: rounds.openingSpeakers(room, opener).map(member => ({
-          id: member.id, name: member.name, status: 'waiting',
+          id: member.id,
+          name: member.name,
+          status: 'waiting',
           ...(opener.kickoff ? { note: 'the group was just created' } : {}),
           ...(named.includes(member) ? { by: opener.botId } : {}),
           ...(opener.done ? { note: `${opener.name ?? 'a member'} finished the work you asked for` } : {}),
@@ -216,15 +221,20 @@ export function install(rt: GroupRuntime): void {
   // Private context enters a group only through this tool, and the group sees each use.
   rt.registerTool({
     name: 'read_own_chat',
-    description: 'Read or search your own chat with the user, across all its parts, including earlier parts that left your working context. Each line starts with its anchor, such as [part 2 #1234 · 10-08 14:22]; long messages are cut. Pass the anchor as around to read that message in full, with what was said just before and after it. In a group chat the group sees that you looked, so share only what the group needs.',
+    description:
+      'Read or search your own chat with the user, across all its parts, including earlier parts that left your working context. Each line starts with its anchor, such as [part 2 #1234 · 10-08 14:22]; long messages are cut. Pass the anchor as around to read that message in full, with what was said just before and after it. In a group chat the group sees that you looked, so share only what the group needs.',
     parameters: {
       query: { type: 'string', description: 'Words to look for in every part, separated by spaces. A message must have all of them; when none has, those with the most are shown. Omit for the latest messages' },
       around: { type: 'string', description: 'An anchor from an earlier result, such as "part 2 #1234": shows that message in full and the messages just before and after it' },
       part: { type: 'integer', description: 'Number of an earlier part: shows the handoff note you wrote when it ended' },
     },
-    schema: z.object({
-      query: z.string().optional(), around: z.string().optional(), part: z.number().int().optional(),
-    }).passthrough(),
+    schema: z
+      .object({
+        query: z.string().optional(),
+        around: z.string().optional(),
+        part: z.number().int().optional(),
+      })
+      .passthrough(),
     async execute(args: ReadOwnChatArgs, context: ToolContext): Promise<string> {
       await rt.load()
       const id = context.sessionId
@@ -233,8 +243,12 @@ export function install(rt: GroupRuntime): void {
       if (botId === undefined) return 'Only Bots on the team can use read_own_chat.'
       const member = rt.botOf(botId)
       const room = rt.roomOf(owner?.roomId)
-      const query = String(args.query ?? '').trim().slice(0, 80)
-      const around = String(args.around ?? '').trim().slice(0, 40)
+      const query = String(args.query ?? '')
+        .trim()
+        .slice(0, 80)
+      const around = String(args.around ?? '')
+        .trim()
+        .slice(0, 40)
       const parts = rt.partsOf(botId)
       const number = typeof args.part === 'number' && Number.isInteger(args.part) ? args.part : undefined
       if (room !== undefined && member !== undefined) {

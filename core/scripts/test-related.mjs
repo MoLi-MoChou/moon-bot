@@ -1,7 +1,7 @@
 // Which tests to run while you iterate: the ones that reach a file you changed.
 //
-// This is a shortcut, not a gate. A change is done when `npm test`, `npm run typecheck`
-// and `npm run lint` pass; a green run here says nothing about the rest of the suite.
+// This is a shortcut, not a gate. A change is done when `pnpm test`, `pnpm run typecheck`
+// and `pnpm run lint` pass; a green run here says nothing about the rest of the suite.
 //
 // Usage:
 //   node scripts/test-related.mjs               # changed files from git, then run
@@ -126,7 +126,7 @@ if (picked.length === 0) {
 }
 console.log(`test:related: ${changed.length} changed file(s) -> ${picked.length} test file(s):`)
 for (const file of picked) console.log(`  ${shown(file)}`)
-console.log('test:related: a shortcut only. A change is done when npm test, npm run typecheck and npm run lint pass.')
+console.log('test:related: a shortcut only. A change is done when pnpm test, pnpm run typecheck and pnpm run lint pass.')
 if (list) process.exit(0)
 
 const run = spawnSync(process.execPath, ['--import', './test/harness-resolve.mjs', '--test', ...picked.map(shown)], { cwd: CORE, stdio: 'inherit' })

@@ -10,15 +10,15 @@ DeepSeek Harness install. The design is in
 ## Run
 
 ```sh
-npm ci
-cd ../core && npm run build && cd ../app   # dist/service, which the app's Host runs
-node node_modules/electron/install.js     # when npm did not download Electron (no node_modules/electron/dist)
-npm start                                 # starts the app
+pnpm install                              # from repo root (or here after a root install)
+pnpm --filter moon-bot-core run build     # dist/service, which the app's Host runs
+node node_modules/electron/install.js     # when pnpm did not download Electron (no node_modules/electron/dist)
+pnpm start                                # starts the app
 ```
 
-When GitHub downloads are slow, set `ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/` before the Electron download. Unset `ELECTRON_RUN_AS_NODE` before `npm start` if your terminal has it (terminals inside some Electron-based editors do): with it, Electron runs as plain Node and the app does not start.
+When GitHub downloads are slow, set `ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/` before the Electron download. Unset `ELECTRON_RUN_AS_NODE` before `pnpm start` if your terminal has it (terminals inside some Electron-based editors do): with it, Electron runs as plain Node and the app does not start.
 
-npm installs `moon-bot-core` from `../core` as a copy of its package files (`install-links` in `.npmrc`), so the app runs the runtime of this checkout. Run `npm ci` again after you change `core/` — including its built `dist/` — or merge a branch that changes it: while the version stays the same, `npm install` keeps the old copy.
+pnpm links `moon-bot-core` from `../core` via `workspace:*`, so the app runs the runtime of this checkout. After changing `core/` (including its built `dist/`) or merging a branch that changes it, rebuild with `pnpm run build` from the repo root; `pnpm install` is only needed when manifests or the lockfile change.
 
 | Variable | What it sets | Default |
 |---|---|---|
@@ -37,11 +37,11 @@ The runtime keeps its settings in `settings.json` and its API keys in `credentia
 
 ## Web mode
 
-`npm run web` serves the same service and the built window (`ui/dist`) to a normal browser. It reads `MOON_BOT_DATA`, `MOON_BOT_PASSWORD`, `MOON_BOT_WEB_HOST`, `MOON_BOT_WEB_PORT` and `MOON_BOT_UI` (the `MOCHOU_*` and `DSH_BOT_*` names still work). It listens on `127.0.0.1:8290` by default. A password is required on any address but loopback; with one, the page asks for it, exchanges it for the service's signed session cookie, and serves the UI and the Bot channel behind it.
+`pnpm run web` (or `pnpm --filter moon-bot run web` from the root) serves the same service and the built window (`ui/dist`) to a normal browser. It reads `MOON_BOT_DATA`, `MOON_BOT_PASSWORD`, `MOON_BOT_WEB_HOST`, `MOON_BOT_WEB_PORT` and `MOON_BOT_UI` (the `MOCHOU_*` and `DSH_BOT_*` names still work). It listens on `127.0.0.1:8290` by default. A password is required on any address but loopback; with one, the page asks for it, exchanges it for the service's signed session cookie, and serves the UI and the Bot channel behind it.
 
 ## Check a change
 
-`npm test` checks the data move on throwaway folders, the updater, the window frame, and that the lockfile and package versions agree. `npm run typecheck` and `npm run build` (the window through Vite, the main process through esbuild) must pass too, as the `core/` gates must.
+`pnpm test` checks the data move on throwaway folders, the updater, the window frame, and that the lockfile and package versions agree. `pnpm run typecheck` and `pnpm run build` (the window through Vite, the main process through esbuild) must pass too, as the `core/` gates must.
 
 `scripts/shot.mjs` starts the app on throwaway folders, saves a screenshot of its window, prints the page text, closes the window the way a user does and waits until the app exits. It needs a model; point it at `core/dev/mock-llm.ts` and set the provider in the app's Settings, or configure a real provider first.
 
@@ -53,15 +53,15 @@ Never point `DS_BOT_HOME` at your own data, or at `~/.dsh`.
 
 ## Package
 
-[electron-builder](https://www.electron.build/) packages the app with the settings in `electron-builder.yml`. Build on the platform and architecture that you package for: native modules (`better-sqlite3`) are taken from `node_modules` as npm installed them, not rebuilt.
+[electron-builder](https://www.electron.build/) packages the app with the settings in `electron-builder.yml`. Build on the platform and architecture that you package for: native modules (`better-sqlite3`) are taken from `node_modules` as the install left them, not rebuilt.
 
 ```sh
-npm run pack           # the app without an installer: dist-pack/win-unpacked/ (Windows), dist-pack/mac*/ (macOS), dist-pack/linux-unpacked/ (Linux)
-npm run dist           # the installer: dist-pack/Moon-Bot-<version>-win-x64.exe (Windows), a .zip (macOS), an AppImage (Linux)
-npm run check-packed   # starts the packaged app on throwaway folders, chats once, closes it
+pnpm run pack           # the app without an installer: dist-pack/win-unpacked/ (Windows), dist-pack/mac*/ (macOS), dist-pack/linux-unpacked/ (Linux)
+pnpm run dist           # the installer: dist-pack/Moon-Bot-<version>-win-x64.exe (Windows), a .zip (macOS), an AppImage (Linux)
+pnpm run check-packed   # starts the packaged app on throwaway folders, chats once, closes it
 ```
 
-macOS produces one zip per architecture. Build arm64 on an Apple chip Mac and x64 on an Intel Mac, or under Rosetta with an x64 Node that also ran `npm ci`. Do not cross-build: it packages native modules from `node_modules`. `scripts/before-pack.mjs` stops a build whose architecture is not the one of the Node that runs it. The app is ad-hoc signed so downloaded copies are sealed. It ships as a zip, not a dmg: macOS 26 calls a downloaded unsigned dmg damaged and does not open it, and an ad-hoc signature on the dmg does not help (#351). Safari unzips the download; move Moon Bot to Applications. On first open, use System Settings → Privacy & Security → Open Anyway. Do not disable Gatekeeper.
+macOS produces one zip per architecture. Build arm64 on an Apple chip Mac and x64 on an Intel Mac, or under Rosetta with an x64 Node that also ran `pnpm install`. Do not cross-build: it packages native modules from `node_modules`. `scripts/before-pack.mjs` stops a build whose architecture is not the one of the Node that runs it. The app is ad-hoc signed so downloaded copies are sealed. It ships as a zip, not a dmg: macOS 26 calls a downloaded unsigned dmg damaged and does not open it, and an ad-hoc signature on the dmg does not help (#351). Safari unzips the download; move Moon Bot to Applications. On first open, use System Settings → Privacy & Security → Open Anyway. Do not disable Gatekeeper.
 
 `check-packed` takes another executable as its first argument, and a file for a screenshot of the window as its second. It runs an app that lies inside this checkout from a copy in its throwaway folder: from inside the checkout, Node would find a module that the package left out in the checkout's own `node_modules`.
 
@@ -75,7 +75,7 @@ The checks start before the Host, so that a version whose Host does not start ca
 
 On macOS, the app checks GitHub's releases at start and every 4 hours. It asks once per version, after that release's zip for this Mac is attached. Stable installs ignore prereleases; prerelease installs can see them. Download opens the release page; Later closes the dialog. The app does not install the update itself. `DS_BOT_UPDATE_URL` on macOS points to a JSON list like the `releases` API response. A release needs `tag_name`, an HTTPS `html_url`, and the matching architecture's zip in `assets`.
 
-On Windows, `app-update.yml` tells the app where its releases are; `npm run dist` writes it from `publish` in `electron-builder.yml`, together with `latest.yml` beside the installer (`npm run pack` writes neither). Neither command publishes. The release workflow (`.github/workflows/release.yml`) builds the installer when a release is published and attaches the installer, its `.blockmap` and `latest.yml` to the release. The release tag is the version of `core/`, and `npm test` checks that the app has the same version. The macOS release job builds each zip on a matching-architecture runner and attaches only the zip.
+On Windows, `app-update.yml` tells the app where its releases are; `pnpm run dist` writes it from `publish` in `electron-builder.yml`, together with `latest.yml` beside the installer (`pnpm run pack` writes neither). Neither command publishes. The release workflow (`.github/workflows/release.yml`) builds the installer when a release is published and attaches the installer, its `.blockmap` and `latest.yml` to the release. The release tag is the version of `core/`, and `pnpm test` checks that the app has the same version. The macOS release job builds each zip on a matching-architecture runner and attaches only the zip.
 
 On throwaway folders (`DS_BOT_HOME`) the app checks for updates only from `DS_BOT_UPDATE_URL`, and it never asks: the update waits until the app quits. `scripts/check-update.mjs` checks the update of a packaged app with such a feed:
 
@@ -110,11 +110,11 @@ The script serves a releases list with one release of that version that has this
 | `src/updates.ts` | The Windows and Linux installer updates and macOS release-page checks |
 | `src/web.ts`, `src/web-login.ts` | Web mode: the password page and the proxy to the service |
 | `src/sandbox.ts` | When Chromium's sandbox cannot start on this Linux host |
-| `test/` | `npm test` |
+| `test/` | `pnpm test` |
 | `ui/` | The app's own window. React, built with Vite (`vite.config.js`) into `ui/dist`. It draws the Bot views from `../core/src/client/` and uses the service's `api/bot` channel and its live `api/bot/feed` |
 | `assets/` | The icon and its variants, written by `scripts/icon.py` |
 | `electron-builder.yml`, `build/` | The package and the installer: app identity, files, icons, the Windows installer and the Linux and macOS targets |
-| `scripts/check-packed.mjs` | `npm run check-packed`: the check of a packaged app |
+| `scripts/check-packed.mjs` | `pnpm run check-packed`: the check of a packaged app |
 | `scripts/check-update.mjs` | The check of a packaged app's update from a Windows feed folder or a macOS release |
 
 Some files adapt code from DSH Desktop (MIT); see [NOTICE](../NOTICE).

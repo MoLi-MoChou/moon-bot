@@ -1,9 +1,9 @@
 #!/bin/sh
 # One-command check of this checkout, with the mock model only:
-#   unit     npm test
+#   unit     pnpm test
 #   build    client.js and dist/ match their sources
-#   lint     npm run lint (typecheck included in the repo gate)
-#   types    npm run typecheck
+#   lint     pnpm run lint (typecheck included in the repo gate)
+#   types    pnpm run typecheck
 #   eval     the five-capability evaluation set
 #   smoke    a fresh bench and dev/smoke.mjs
 #   web      a fresh bench and dev/ui-shots.mjs (sidebar, private chat, group, settings)
@@ -62,11 +62,11 @@ need_ports() {
   done
 }
 
-step_unit() { cd "$PLUGIN" && npm test; }
-step_types() { cd "$PLUGIN" && npm run typecheck; }
+step_unit() { cd "$PLUGIN" && pnpm test; }
+step_types() { cd "$PLUGIN" && pnpm run typecheck; }
 step_build() { cd "$PLUGIN" && node scripts/build-client.ts --check && node scripts/build-host.mjs --check; }
-step_lint() { cd "$PLUGIN" && npm run lint; }
-step_eval() { cd "$PLUGIN" && npm run eval; }
+step_lint() { cd "$PLUGIN" && pnpm run lint; }
+step_eval() { cd "$PLUGIN" && pnpm run eval; }
 step_smoke() {
   cd "$PLUGIN" || return 1
   dev/bench.sh check-smoke "$SMOKE_PORT" "$SMOKE_MOCK" stop >/dev/null

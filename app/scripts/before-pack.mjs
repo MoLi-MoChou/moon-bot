@@ -14,10 +14,10 @@ export function archProblem({ target, platform, host = process.arch, targets = [
   if (target === 'universal' || targets.includes('universal')) return 'A universal app would need the native modules of both architectures. Build one app per architecture.'
   if (target === host) return undefined
   const where = WHERE[platform]?.[target] ?? `with an ${target} Node`
-  return `This Node runs on ${host}, so npm installed ${host} native modules, and an ${target} app with them would not start. Install the dependencies and build ${where}.`
+  return `This Node runs on ${host}, so pnpm installed ${host} native modules, and an ${target} app with them would not start. Install the dependencies and build ${where}.`
 }
 
-// npm workspaces link moon-bot-core to ../../core, outside the app folder this hook packs
+// pnpm workspaces link moon-bot-core to ../../core, outside the app folder this hook packs
 // from. The packaged app needs the package's own files, so the link becomes the copy the
 // package would install (its "files" list) before electron-builder collects node_modules.
 async function materializeCoreLink() {
@@ -31,7 +31,7 @@ async function materializeCoreLink() {
   const core = resolve(app, '..', 'core')
   const { access } = await import('node:fs/promises')
   await access(join(core, 'dist', 'service', 'server.js')).catch(() => {
-    throw new Error('core/dist is missing: run npm run build (or npm ci) before packing the app')
+    throw new Error('core/dist is missing: run pnpm run build (or pnpm install) before packing the app')
   })
   await rm(link, { recursive: true, force: true })
   await mkdir(dirname(link), { recursive: true })

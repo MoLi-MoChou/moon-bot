@@ -65,7 +65,7 @@ Keep one pull request to one issue. Split a large change into several pull reque
 
 ### Merge conflicts
 
-- **`core/client.js`**: it is generated and never committed, so it conflicts only if both sides committed it by mistake. Resolve `core/src/client/` and drop the generated file from the merge (`git checkout --ours core/client.js` then `npm run build`).
+- **`core/client.js`**: it is generated and never committed, so it conflicts only if both sides committed it by mistake. Resolve `core/src/client/` and drop the generated file from the merge (`git checkout --ours core/client.js` then `pnpm run build`).
 - **`CHANGELOG.md`**: pull requests do not change it, so it should not conflict. If it does, keep both sides.
 
 ### Releases (maintainer)
@@ -82,14 +82,14 @@ You need:
 
 - Node.js `22.19` or later (or `24` and later).
 - Git.
-- Nothing else: the tests, the bench and the app run on Node 22.18+ and npm.
+- Nothing else: the tests, the bench and the app run on Node 22.18+ and pnpm (see root `packageManager`).
 
 ```sh
 git clone https://github.com/MoLi-MoChou/moon-bot.git moon-bot
 cd moon-bot
 
 # The build tool and the types; nothing else is needed to build or test.
-npm ci                                 # one root install for the three workspaces
+pnpm install                           # one root install for the three workspaces
 ```
 
 There is no host to install: the tests, the bench, the app and Docker all run on
@@ -113,10 +113,10 @@ the runtime in this repository (Node 22.18+).
 Run these in `core/`:
 
 ```sh
-npm run build                          # src/client → client.js
-npm test                               # unit tests; they also fail if client.js is stale
+pnpm run build                         # src/client → client.js
+pnpm test                              # unit tests; they also fail if client.js is stale
 node scripts/build-client.ts --check   # client.js matches src/client
-npm run lint                           # oxlint
+pnpm run lint                          # oxlint
 ```
 
 CI runs the same three checks on every pull request, on Linux and Windows. It also scans the tracked files for keys, tokens, personal paths and e-mail addresses, and for material that must stay local. To run the scan yourself, from the repository root:
@@ -144,12 +144,12 @@ The mock model answers a fixed set of commands, so a bench costs no tokens. The 
 
 For a change to the context steward or its prompts (`src/host/steward.js`), also check it on a real model. `dev/steward-eval.mjs` runs its decisions on fixed conversation endings, and `dev/llm-tap.mjs` logs every call a real bench makes. Both cost tokens and explain their use at the top.
 
-For a change to the Bot browser, check it in the app (`cd app && npm start`), with the mock model answering if you want no tokens spent.
+For a change to the Bot browser, check it in the app (`pnpm --filter moon-bot start`), with the mock model answering if you want no tokens spent.
 
 ## Write a change
 
 - Keep a change to one subject.
-- Do not edit `client.js` by hand and never commit it. Change `src/client/` and run `npm run build`.
+- Do not edit `client.js` by hand and never commit it. Change `src/client/` and run `pnpm run build`.
 - In `src/client/`, take colors from the `--bt-*` variables, corner radii from the steps 4, 6, 8, 10, 12, 16, 18, 20, 22, 999px and 50%, and springs from `motion.js`. A unit test checks this. The places written before the test are listed in `test/style-debt.json`; that list only gets shorter. When you remove one, run `node scripts/style-debt.mjs --write` to update it.
 - Follow the style of the code around your change. Write a comment only when the reason for the code is not clear from the code itself.
 - Write commit messages in English. Use a short subject in the imperative mood ("Keep group replies visible") and explain the reason in the body.

@@ -149,6 +149,15 @@ export function install(rt: HostRuntime): void {
   const { ctx } = rt
   let service: ScheduleService | null = null
 
+  /**
+   * The scheduler, asked for at call time.
+   *
+   * `ctx.inject` hands a named service over only if it is already there, and the wiring
+   * provides `schedule` after this module installs — so a value captured at install time is
+   * null forever. Every caller goes through this instead.
+   */
+  const live = (): ScheduleService | null => service ?? (typeof ctx.get === 'function' ? (ctx.get<ScheduleService>('schedule') ?? null) : null)
+
   const attach = (sub: ScheduleHost): void => {
     const own = sub.schedule
     service = own ?? null
@@ -184,7 +193,8 @@ export function install(rt: HostRuntime): void {
   const endpoints: Record<string, (body: ScheduleBody) => Promise<unknown>> = {
     schedules: () => schedulesView(),
     async 'schedule-create'(body) {
-      if (service === null) throw invalid('Scheduled tasks are turned off')
+      const current = live()
+      if (current === null) throw invalid('Scheduled tasks are turned off')
       const target = bodyText(body, 'target')
       const bot = rt.botOf(target)
       const room = rt.roomOf(target)
@@ -196,14 +206,15 @@ export function install(rt: HostRuntime): void {
       if (prompt === '') throw invalid('Say what the Bot should do')
       const targetId = bot !== undefined ? rt.chatOf(bot.id) : room?.id
       if (targetId === undefined) throw invalid('No such Bot or group chat')
-      await service.create(targetId, { title, prompt, ...selectorOf(body.when as SelectorInput | undefined) })
+      await current.create(targetId, { title, prompt, ...selectorOf(body.when as SelectorInput | undefined) })
       return schedulesView()
     },
     async 'schedule-delete'(body) {
-      if (service === null) throw invalid('Scheduled tasks are turned off')
+      const current = live()
+      if (current === null) throw invalid('Scheduled tasks are turned off')
       const sessionId = bodyText(body, 'sessionId') ?? ''
       if (ownerOf(sessionId) === undefined) throw invalid('No such task')
-      await service.delete({ sessionId, id: String(body.id ?? '') })
+      await current.delete({ sessionId, id: String(body.id ?? '') })
       return schedulesView()
     },
   }
@@ -236,21 +247,28 @@ export function install(rt: HostRuntime): void {
   Object.assign(rt, {
     // The Bot tools read the same service the settings endpoints do, so a task made in
     // chat and one made in Settings are the same task, fired the same way.
-    scheduleFor: (): ScheduleService | null => service,
+    //
+    // Read at call time, not at install time: the service is provided by the wiring after
+    // this module installs, and `ctx.inject` never delivers a name that arrives later. With
+    // the captured variable the tools saw null for the life of the process and refused every
+    // reminder as "turned off in this build".
+    scheduleFor: (): ScheduleService | null => live(),
     scheduleOwnerOf: ownerOf,
     // `when` is the settings form's shape, so a tool and the form accept the same timings.
     createScheduleFrom: async (sessionId: string, title: string, prompt: string, when: SelectorInput | undefined): Promise<void> => {
-      if (service === null) throw invalid('Scheduled tasks are turned off')
-      await service.create(sessionId, { title, prompt, ...selectorOf(when) })
+      const current = live()
+      if (current === null) throw invalid('Scheduled tasks are turned off')
+      await current.create(sessionId, { title, prompt, ...selectorOf(when) })
     },
-    listSchedulesOf: async (sessionId: string): Promise<readonly ScheduleRecord[]> => (service === null ? [] : service.list({ sessionId })),
+    listSchedulesOf: async (sessionId: string): Promise<readonly ScheduleRecord[]> => (live()?.list({ sessionId }) ?? []),
     // Only a task of this Session may go: another conversation's id is refused rather
     // than deleted, so a Bot cannot cancel someone else's reminder by guessing an id.
     deleteScheduleOf: async (sessionId: string, id: string): Promise<void> => {
-      if (service === null) throw invalid('Scheduled tasks are turned off')
-      const own = await service.list({ sessionId })
+      const current = live()
+      if (current === null) throw invalid('Scheduled tasks are turned off')
+      const own = await current.list({ sessionId })
       if (!own.some(record => record.id === id)) throw invalid(`No reminder ${id} comes back to this conversation`)
-      await service.delete({ sessionId, id })
+      await current.delete({ sessionId, id })
     },
     scheduleEndpoint: (endpoint: string, body: ScheduleBody | undefined): Promise<unknown> => {
       const handler = endpoints[endpoint]

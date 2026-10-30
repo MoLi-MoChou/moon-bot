@@ -9,43 +9,12 @@ import { createRosterRoles } from './roster-roles.ts'
 import { createRosterRooms } from './roster-rooms.ts'
 import type { RosterRooms } from './roster-rooms.ts'
 import type { HostRuntime, StoredBot, StoredBotEngine, StoredRoom } from './runtime.js'
-
-interface CreateBotOptions {
-  readonly name?: unknown
-  readonly role?: unknown
-  readonly instructions?: unknown
-  readonly color?: string | null
-  readonly brief?: string
-  readonly createdBy?: string
-  readonly main?: boolean
-  readonly avatar?: unknown
-  readonly model?: string
-  readonly effort?: string
-  readonly workDir?: string | null
-  readonly copyOf?: string
-  readonly pickModel?: boolean
-  readonly engine?: unknown
-  readonly runtimeId?: unknown
-}
-
-interface UpdateBotPatch {
-  readonly name?: unknown
-  readonly role?: unknown
-  readonly instructions?: unknown
-  readonly color?: string | null
-  readonly avatar?: unknown
-  readonly model?: string | null
-  readonly effort?: string | null
-  readonly permission?: string | null
-  readonly workDir?: string | null
-  readonly engine?: unknown
-  readonly runtimeId?: unknown
-}
+import type { CreateBotOptions, UpdateBotPatch } from './roster-types.ts'
 
 const cleanEngine = (value: unknown): StoredBotEngine | undefined => {
   if (value === null || value === undefined) return undefined
   if (typeof value !== 'object' || Array.isArray(value)) throw new Error('Invalid Bot engine')
-  const input = value as { kind?: unknown, command?: unknown, args?: unknown, key?: unknown, agentId?: unknown }
+  const input = value as { kind?: unknown; command?: unknown; args?: unknown; key?: unknown; agentId?: unknown }
   if (input.kind === 'builtin') return { kind: 'builtin' }
   if (input.kind === 'acp-remote') {
     // The agentId names a relay invite; the runner resolves it to a live connection.
@@ -114,16 +83,16 @@ export function install(rt: HostRuntime): void {
   // `pickModel` leaves the model to the user: the chat opens on a model card, and the
   // greeting waits until a model is chosen. So does a Bot made when no model is served.
   async function createBot(options: CreateBotOptions): Promise<StoredBot> {
-    const cleanName = String(options.name ?? '').trim().slice(0, 40)
+    const cleanName = String(options.name ?? '')
+      .trim()
+      .slice(0, 40)
     const problem = nameProblem(cleanName)
     if (problem !== undefined) throw new Error(problem)
     if (botNameTaken(cleanName)) throw new Error(`A Bot named ${cleanName} already exists`)
     return holdName('bot', cleanName, () => buildBot(cleanName, options))
   }
 
-  async function buildBot(cleanName: string, {
-    role = '', instructions = '', color, brief = '', createdBy, main = false, avatar, model, effort, workDir, copyOf, pickModel = false, engine, runtimeId,
-  }: CreateBotOptions): Promise<StoredBot> {
+  async function buildBot(cleanName: string, { role = '', instructions = '', color, brief = '', createdBy, main = false, avatar, model, effort, workDir, copyOf, pickModel = false, engine, runtimeId }: CreateBotOptions): Promise<StoredBot> {
     const cleanAvatarValue = cleanAvatar(avatar)
     const engineSpec = cleanEngine(engine)
     const cleanRuntimeId = typeof runtimeId === 'string' && runtimeId.trim() !== '' ? runtimeId.trim().slice(0, 120) : undefined
@@ -166,7 +135,8 @@ export function install(rt: HostRuntime): void {
       }
       await rt.save()
       // The greeting runs on the Bot's own model, once its provider is registered.
-      void rt.waitForModel(bot)
+      void rt
+        .waitForModel(bot)
         .then(() => rt.applyModel(bot).catch(error => rt.warn('moon-bot: model for %s not applied: %s', cleanName, error)))
         .then(() => sendKickoff(rt, bot, { text, ...(createdBy === undefined ? {} : { from: createdBy }) }))
       return bot
@@ -178,8 +148,7 @@ export function install(rt: HostRuntime): void {
       // A save that another change queued meanwhile still carries this Bot; a later
       // one writes the team without it.
       void rt.save().catch(() => {})
-      await ctx.workspaceRegistry.archiveSession(id)
-        .catch(archiveError => rt.warn('moon-bot: archiving the Session for %s failed: %s', cleanName, archiveError))
+      await ctx.workspaceRegistry.archiveSession(id).catch(archiveError => rt.warn('moon-bot: archiving the Session for %s failed: %s', cleanName, archiveError))
       throw error
     }
   }
@@ -189,7 +158,7 @@ export function install(rt: HostRuntime): void {
     if (bot === undefined) throw new Error('Unknown Bot')
     const served = (await rt.catalog()).some(entry => entry.ref === bot.model)
     // A folder that went away since leaves the copy in the team workspace.
-    const workDir = bot.workDir !== undefined && await rt.isFolder(bot.workDir) ? bot.workDir : undefined
+    const workDir = bot.workDir !== undefined && (await rt.isFolder(bot.workDir)) ? bot.workDir : undefined
     // No await from here to createBot's check, so two copies at once get different names.
     return createBot({
       name: freshName(`${bot.name} copy`),
@@ -213,12 +182,10 @@ export function install(rt: HostRuntime): void {
     // unchanged too.
     const moving = patch.workDir !== undefined
     const workDir = moving ? await rt.cleanWorkDir(patch.workDir ?? '') : undefined
-    const modelRef: string | null | undefined = patch.model === undefined ? undefined
-      : patch.model === null || patch.model === '' ? null
-      : await rt.resolveModel(patch.model)
+    const modelRef: string | null | undefined = patch.model === undefined ? undefined : patch.model === null || patch.model === '' ? null : await rt.resolveModel(patch.model)
     // A new level resolves against the model the Bot will run on: the new one, the
     // model it keeps, or — the model cleared — the one it last ran on.
-    const effortRef = modelRef === undefined ? bot.model ?? bot.appliedModel : modelRef ?? bot.appliedModel
+    const effortRef = modelRef === undefined ? (bot.model ?? bot.appliedModel) : (modelRef ?? bot.appliedModel)
     let effortId: string | null | undefined
     const engineSpec = patch.engine === undefined ? undefined : cleanEngine(patch.engine)
     const runtimeId = patch.runtimeId === undefined ? undefined : typeof patch.runtimeId === 'string' && patch.runtimeId.trim() !== '' ? patch.runtimeId.trim().slice(0, 120) : undefined
@@ -325,8 +292,7 @@ export function install(rt: HostRuntime): void {
     // Past parts are archived too: a part move can leave tasks on the old Session,
     // which otherwise stays armed and invisible. Already-archived ids are a no-op.
     for (const part of parts) {
-      await ctx.workspaceRegistry.archiveSession(part, { stopActivity: true })
-        .catch(error => rt.warn('moon-bot: Bot %s not archived: %s', bot.name, error))
+      await ctx.workspaceRegistry.archiveSession(part, { stopActivity: true }).catch(error => rt.warn('moon-bot: Bot %s not archived: %s', bot.name, error))
     }
     if (failed !== undefined) throw failed
   }
@@ -337,14 +303,30 @@ export function install(rt: HostRuntime): void {
     if (state.mainBotIds.some(id => rt.botOf(id))) return
     // Only the team's first Main Bot is stored as Moon Bot's lilac moon sprite; other Bots get a
     // look from their id, and a Bot made Main Bot later keeps its own.
-    bootstrapping ??= createBot({ name: defaults.mainName, role: defaults.mainRole, main: true, color: 'lilac', avatar: { shape: 'moonbot' }, pickModel: true })
-      .finally(() => { bootstrapping = null })
+    bootstrapping ??= createBot({ name: defaults.mainName, role: defaults.mainRole, main: true, color: 'lilac', avatar: { shape: 'moonbot' }, pickModel: true }).finally(() => {
+      bootstrapping = null
+    })
     await bootstrapping
   }
 
   Object.assign(rt, {
-    ensureWorkspace, keepTeamFolder, createSession, createBot, duplicateBot, updateBot, setFlags,
-    roomBusy, autoRoomName, retitleRoom, createRoom, updateRoom, deleteRoom, archiveRoom,
-    setMain, deleteBot, bootstrap, dropKickoff: (botId: string) => dropHeldKickoff(rt, botId),
+    ensureWorkspace,
+    keepTeamFolder,
+    createSession,
+    createBot,
+    duplicateBot,
+    updateBot,
+    setFlags,
+    roomBusy,
+    autoRoomName,
+    retitleRoom,
+    createRoom,
+    updateRoom,
+    deleteRoom,
+    archiveRoom,
+    setMain,
+    deleteBot,
+    bootstrap,
+    dropKickoff: (botId: string) => dropHeldKickoff(rt, botId),
   })
 }

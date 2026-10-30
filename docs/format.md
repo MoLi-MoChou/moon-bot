@@ -65,9 +65,17 @@ Responsibility / helpers splits (ignores removed):
 - host: `usage/view.ts` → `view-helpers`
 - web-search: `provider.ts` → `provider-helpers`
 
+### Cleared in batch 6 (stacked on batch 5)
+
+Helpers / types splits (+ `lineWidth` 320 overrides where needed):
+
+- client: `member-status.tsx` → `member-status-helpers`; `characters.ts` → `characters-types` (w320); `new-chat.tsx` → `new-chat-types` (w320)
+- store: `proactive.ts` → `proactive-rules`
+- host: `groups.ts` → `groups-types` (w320); `roster.ts` → `roster-types` (w320); `memory/recall.ts` → `recall-types` (w320); `capabilities-mount.ts` → `capabilities-mount-types` (w320)
+
 ### Follow-up (still ignored until split)
 
-Remaining `packages/**/src` ignores (~29): denser modules — `memory-panel`, `widget-cell`, `usage-charts`, `sidebar-rows`, host `memory`/`parts`/`groups`/`roster`, `client-boot`/`index`, `service/engine`, etc. Split by responsibility, remove each ignore, keep ≤350 after format.
+Remaining `packages/**/src` ignores (~21): denser modules — `memory-panel`, `widget-cell`, `usage-charts`, `sidebar-rows`, host `memory`/`parts`/`parts-switch`, `client-boot`/`index`, `service/engine`, etc. Split by responsibility, remove each ignore, keep ≤350 after format.
 
 ## Scripts
 

@@ -2,47 +2,14 @@
 // Agent's own context, so it lives as long as that Session does and goes away with it.
 // One reconcile chain per Agent: a slow MCP server holds up only its own Agent.
 import { createHash } from 'node:crypto'
-import type { Agent, HostContext, PluginFiber } from './host-types.js'
+import type { Agent } from './host-types.js'
 import { configFor } from './capabilities-config.ts'
 import { createStandaloneMounts } from './capabilities-standalone.ts'
-import type { CapabilityItem, HostRuntime, StoredBot, StoredState } from './runtime.js'
+import type { StoredBot } from './runtime.js'
+import type { CapabilityStatus, MountRecord, MountOptions, CapabilityMounts, StatusMap } from './capabilities-mount-types.ts'
+export type { CapabilityState, CapabilityStatus, CapabilityMounts } from './capabilities-mount-types.ts'
+
 const ENSURE_TIMEOUT_MS = 15_000
-
-export type CapabilityState = 'error' | 'needs-approval' | 'connecting' | 'ready'
-
-export interface CapabilityStatus {
-  readonly state: CapabilityState
-  readonly error?: string
-}
-interface MountRecord {
-  readonly key: string
-  readonly fiber: PluginFiber | undefined
-  /** The standalone mount's own teardown (no the host fiber involved). */
-  readonly drop?: (() => void) | undefined
-}
-interface MountOptions {
-  readonly ctx: HostContext
-  readonly rt: HostRuntime
-  readonly state: StoredState
-  library(): Record<string, CapabilityItem>
-  expand(names: readonly string[] | undefined): Set<string>
-}
-export interface CapabilityMounts {
-  reconcile(): Promise<void>
-  scheduleReconcile(): Promise<unknown>
-  ensureCapabilities(sessionId: string): Promise<void>
-  prepare(agent: Agent, sessionId: string): Promise<void>
-  trackAgent(agent: Agent | undefined): void
-  trackBotAgents(bot: StoredBot): Promise<void>
-  statusFor(botId: string, name: string): CapabilityStatus | undefined
-  statusesView(): Record<string, Record<string, CapabilityStatus>>
-  /** The tools a capability currently serves, by its own name; packs merge their children. */
-  toolsView(): Record<string, readonly string[]>
-  /** The `rt.secretsChanged` hook: a secret changed, so re-out everything. */
-  wrapSecretsChanged(previous: (() => void) | undefined): () => void
-  dispose(): Promise<void>
-}
-type StatusMap = Map<string, Map<string, Map<string, CapabilityStatus>>>
 
 export function createCapabilityMounts({ rt, state, library, expand }: MountOptions): CapabilityMounts {
   const agents = new Map<string, WeakRef<Agent>>()
@@ -56,9 +23,9 @@ export function createCapabilityMounts({ rt, state, library, expand }: MountOpti
   let stopped = false
   const statusSet = (botId: string, itemName: string, sessionId: string, status: CapabilityStatus): void => {
     let byItem = sessionStatuses.get(botId)
-    if (!byItem) sessionStatuses.set(botId, byItem = new Map())
+    if (!byItem) sessionStatuses.set(botId, (byItem = new Map()))
     let bySession = byItem.get(itemName)
-    if (!bySession) byItem.set(itemName, bySession = new Map())
+    if (!bySession) byItem.set(itemName, (bySession = new Map()))
     const previous = bySession.get(sessionId)
     if (previous?.state === status.state && previous?.error === status.error) return
     bySession.set(sessionId, status)
@@ -108,10 +75,7 @@ export function createCapabilityMounts({ rt, state, library, expand }: MountOpti
           .filter(child => library()[child]?.kind === 'mcp')
           .map(child => statusFor(bot.id, child))
           .filter((status): status is CapabilityStatus => status !== undefined)
-        const status = children.find(item => item.state === 'error')
-          ?? children.find(item => item.state === 'needs-approval')
-          ?? children.find(item => item.state === 'connecting')
-          ?? children[0]
+        const status = children.find(item => item.state === 'error') ?? children.find(item => item.state === 'needs-approval') ?? children.find(item => item.state === 'connecting') ?? children[0]
         if (status) statuses[name] = status
       }
       result[bot.id] = statuses
@@ -138,8 +102,12 @@ export function createCapabilityMounts({ rt, state, library, expand }: MountOpti
   }
 
   const disposeMount = async (mount: MountRecord | undefined): Promise<void> => {
-    mount?.drop?.(); const fiber = mount?.fiber
-    if (fiber !== undefined) await Promise.resolve().then(() => fiber.dispose()).catch(() => {})
+    mount?.drop?.()
+    const fiber = mount?.fiber
+    if (fiber !== undefined)
+      await Promise.resolve()
+        .then(() => fiber.dispose())
+        .catch(() => {})
   }
   const mountOne = async (agent: Agent, bot: StoredBot | undefined, agentMounts: Map<string, MountRecord>, name: string): Promise<void> => {
     const botId = bot?.id ?? ''
@@ -214,12 +182,14 @@ export function createCapabilityMounts({ rt, state, library, expand }: MountOpti
     const running = chains.get(agent)
     if (queued.has(agent)) return running ?? Promise.resolve()
     queued.add(agent)
-    const run: Promise<void> = (running ?? Promise.resolve()).then(async () => {
-      queued.delete(agent)
-      const sessionId = agent.session.id
-      if (stopped || agents.get(sessionId)?.deref() !== agent) return
-      await reconcileAgent(agent, botOfSession(sessionId))
-    }).catch((error: unknown) => rt.warn('moon-bot: capability reconcile for %s failed: %s', agent.session?.id, error))
+    const run: Promise<void> = (running ?? Promise.resolve())
+      .then(async () => {
+        queued.delete(agent)
+        const sessionId = agent.session.id
+        if (stopped || agents.get(sessionId)?.deref() !== agent) return
+        await reconcileAgent(agent, botOfSession(sessionId))
+      })
+      .catch((error: unknown) => rt.warn('moon-bot: capability reconcile for %s failed: %s', agent.session?.id, error))
     chains.set(agent, run)
     return run
   }
@@ -249,10 +219,12 @@ export function createCapabilityMounts({ rt, state, library, expand }: MountOpti
   }
   const scheduleReconcile = (): Promise<unknown> => {
     if (!scheduled) {
-      scheduled = new Promise<void>(resolve => queueMicrotask(() => {
-        scheduled = null
-        resolve(reconcile().catch(error => rt.warn('moon-bot: capability reconcile failed: %s', error)))
-      }))
+      scheduled = new Promise<void>(resolve =>
+        queueMicrotask(() => {
+          scheduled = null
+          resolve(reconcile().catch(error => rt.warn('moon-bot: capability reconcile failed: %s', error)))
+        }),
+      )
     }
     return scheduled
   }
@@ -260,14 +232,24 @@ export function createCapabilityMounts({ rt, state, library, expand }: MountOpti
   // same Agent do not wait for it again.
   const stalled = new WeakSet<Agent>()
   const prepare = async (agent: Agent, sessionId: string): Promise<void> => {
-    const run = loadInputs().then(() => reconcileOne(agent)).then(() => true, (error: unknown) => {
-      rt.warn('moon-bot: capability mount for %s failed: %s', sessionId, error)
-      return true
-    })
+    const run = loadInputs()
+      .then(() => reconcileOne(agent))
+      .then(
+        () => true,
+        (error: unknown) => {
+          rt.warn('moon-bot: capability mount for %s failed: %s', sessionId, error)
+          return true
+        },
+      )
     if (stalled.has(agent)) return
     const timeoutMs = rt.capabilityEnsureTimeoutMs ?? ENSURE_TIMEOUT_MS
     let timer: ReturnType<typeof setTimeout> | undefined
-    const completed = await Promise.race([run, new Promise<boolean>(resolve => { timer = setTimeout(resolve, timeoutMs, false) })])
+    const completed = await Promise.race([
+      run,
+      new Promise<boolean>(resolve => {
+        timer = setTimeout(resolve, timeoutMs, false)
+      }),
+    ])
     if (timer !== undefined) clearTimeout(timer)
     if (completed) return
     stalled.add(agent)
@@ -279,7 +261,7 @@ export function createCapabilityMounts({ rt, state, library, expand }: MountOpti
     const bot = botOfSession(sessionId)
     if (!bot) return
     const reference = agents.get(sessionId)
-    if ((bot.capabilities ?? []).length === 0 && !(mounts.get(reference?.deref() as Agent)?.size)) return
+    if ((bot.capabilities ?? []).length === 0 && !mounts.get(reference?.deref() as Agent)?.size) return
     let agent: Agent
     try {
       agent = await rt.resolveAgent(sessionId)
@@ -298,12 +280,15 @@ export function createCapabilityMounts({ rt, state, library, expand }: MountOpti
 
     if (agents.get(sessionId)?.deref() === agent) return
     agents.set(sessionId, new WeakRef(agent))
-    agent.ctx?.effect?.(() => () => {
-      if (agents.get(sessionId)?.deref() === agent) agents.delete(sessionId)
-      clearSession(sessionId)
-      for (const mount of mounts.get(agent)?.values() ?? []) void disposeMount(mount)
-      mounts.delete(agent)
-    }, `moon-bot: capabilities ${sessionId}`)
+    agent.ctx?.effect?.(
+      () => () => {
+        if (agents.get(sessionId)?.deref() === agent) agents.delete(sessionId)
+        clearSession(sessionId)
+        for (const mount of mounts.get(agent)?.values() ?? []) void disposeMount(mount)
+        mounts.delete(agent)
+      },
+      `moon-bot: capabilities ${sessionId}`,
+    )
   }
   const trackBotAgents = async (bot: StoredBot): Promise<void> => {
     const sessionIds = new Set<string>()
@@ -328,10 +313,12 @@ export function createCapabilityMounts({ rt, state, library, expand }: MountOpti
       }
     }
   }
-  const wrapSecretsChanged = (previous: (() => void) | undefined): (() => void) => () => {
-    previous?.()
-    if (loadingSecrets === 0) void scheduleReconcile()
-  }
+  const wrapSecretsChanged =
+    (previous: (() => void) | undefined): (() => void) =>
+    () => {
+      previous?.()
+      if (loadingSecrets === 0) void scheduleReconcile()
+    }
   const dispose = async (): Promise<void> => {
     stopped = true
     standalone.dispose()
@@ -343,7 +330,16 @@ export function createCapabilityMounts({ rt, state, library, expand }: MountOpti
   }
 
   return {
-    reconcile, scheduleReconcile, ensureCapabilities, prepare, trackAgent, trackBotAgents,
-    statusFor, statusesView, toolsView, wrapSecretsChanged, dispose,
+    reconcile,
+    scheduleReconcile,
+    ensureCapabilities,
+    prepare,
+    trackAgent,
+    trackBotAgents,
+    statusFor,
+    statusesView,
+    toolsView,
+    wrapSecretsChanged,
+    dispose,
   }
 }

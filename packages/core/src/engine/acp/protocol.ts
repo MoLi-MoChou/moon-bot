@@ -19,7 +19,7 @@ export interface JsonRpcResponse {
   readonly jsonrpc: '2.0'
   readonly id: number | string
   readonly result?: unknown
-  readonly error?: { readonly code?: number | undefined, readonly message?: string | undefined } | undefined
+  readonly error?: { readonly code?: number | undefined; readonly message?: string | undefined } | undefined
 }
 
 export type Inbound = JsonRpcResponse | JsonRpcNotification | JsonRpcRequest
@@ -34,7 +34,7 @@ export const UPDATE_OF = (notification: JsonRpcNotification): SessionUpdate | un
   if (notification.method !== 'session/update') return undefined
   const params = notification.params
   if (params === null || typeof params !== 'object') return undefined
-  const view = params as { sessionId?: unknown, update?: unknown }
+  const view = params as { sessionId?: unknown; update?: unknown }
   if (typeof view.sessionId !== 'string' || view.update === null || typeof view.update !== 'object') return undefined
   return { sessionId: view.sessionId, update: view.update as Readonly<Record<string, unknown>> }
 }
@@ -62,7 +62,11 @@ export class LineProtocol {
       const line = this.buffer.slice(0, end).trim()
       this.buffer = this.buffer.slice(end + 1)
       if (line === '') continue
-      try { this.receive(JSON.parse(line) as Inbound) } catch { /* a torn line is skipped, not fatal */ }
+      try {
+        this.receive(JSON.parse(line) as Inbound)
+      } catch {
+        /* a torn line is skipped, not fatal */
+      }
     }
   }
 }

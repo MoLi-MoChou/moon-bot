@@ -16,7 +16,11 @@ const { outputFiles } = await build({
     ].join('\n'),
     resolveDir: fileURLToPath(new URL('..', import.meta.url)),
   },
-  bundle: true, format: 'cjs', platform: 'browser', write: false, logLevel: 'silent',
+  bundle: true,
+  format: 'cjs',
+  platform: 'browser',
+  write: false,
+  logLevel: 'silent',
   external: ['react', 'react-dom'],
 })
 let effects = []
@@ -24,52 +28,74 @@ const sets = []
 const Fragment = Symbol('Fragment')
 const h = (type, props, ...children) => ({ type, props: { ...props, children } })
 const react = {
-  createElement: h, Fragment,
-  useEffect: (effect) => { effects.push(effect) },
-  useLayoutEffect: (effect) => { effects.push(effect) },
+  createElement: h,
+  Fragment,
+  useEffect: effect => {
+    effects.push(effect)
+  },
+  useLayoutEffect: effect => {
+    effects.push(effect)
+  },
   useState: initial => [typeof initial === 'function' ? initial() : initial, value => sets.push(value)],
-  useMemo: make => make(), useRef: current => ({ current }), useId: () => 'card-id',
+  useMemo: make => make(),
+  useRef: current => ({ current }),
+  useId: () => 'card-id',
 }
 const timers = new Set()
 // The bundled module's exports, as this test drives them.
-interface CellNode { type: unknown, props: Record<string, unknown> & { children?: unknown, className?: string, title?: string }, [key: string]: unknown }
-const module = { exports: {} as {
-  ToolCell: (props: Record<string, unknown>) => CellNode | null
-  TriggerCell: (props: Record<string, unknown>) => CellNode | null
-  callTree: (root: unknown) => { callId: string }[]
-  stackReplies: (replies: unknown[]) => { index?: number, texts?: string[], time?: number, duration?: number }[]
-  forgetMemoryLines: () => void
-  QuestionDock: (props: Record<string, unknown>) => unknown
-  SecretDock: (props: Record<string, unknown>) => unknown
-  countCards: (state: unknown, sessionId: string, ids: unknown, delta: number) => unknown
-} }
+interface CellNode {
+  type: unknown
+  props: Record<string, unknown> & { children?: unknown; className?: string; title?: string }
+  [key: string]: unknown
+}
+const module = {
+  exports: {} as {
+    ToolCell: (props: Record<string, unknown>) => CellNode | null
+    TriggerCell: (props: Record<string, unknown>) => CellNode | null
+    callTree: (root: unknown) => { callId: string }[]
+    stackReplies: (replies: unknown[]) => { index?: number; texts?: string[]; time?: number; duration?: number }[]
+    forgetMemoryLines: () => void
+    QuestionDock: (props: Record<string, unknown>) => unknown
+    SecretDock: (props: Record<string, unknown>) => unknown
+    countCards: (state: unknown, sessionId: string, ids: unknown, delta: number) => unknown
+  },
+}
 runInNewContext(outputFiles[0].text, {
-  module, exports: module.exports,
-  document: { hidden: false }, TextEncoder,
-  setTimeout: (fn) => { const timer = { fn }; timers.add(timer); return timer },
+  module,
+  exports: module.exports,
+  document: { hidden: false },
+  TextEncoder,
+  setTimeout: fn => {
+    const timer = { fn }
+    timers.add(timer)
+    return timer
+  },
   clearTimeout: timer => timers.delete(timer),
-  require: (name) => {
+  require: name => {
     if (name === 'react') return react
     if (name === 'react-dom') return { createPortal: node => node }
     throw new Error(`Unexpected platform module ${name}`)
   },
 })
-const { ToolCell, TriggerCell, callTree, stackReplies, forgetMemoryLines, QuestionDock, SecretDock, countCards } = module.exports
+const { ToolCell, TriggerCell, callTree, stackReplies, forgetMemoryLines, QuestionDock, SecretDock, countCards } =
+  module.exports
 
 // Runs the effects collected since the last render; returns the cleanups.
 const mount = () => {
   const cleanups = effects.map(effect => effect()).filter(cleanup => typeof cleanup === 'function')
   effects = []
-  return () => { for (const cleanup of cleanups) cleanup() }
+  return () => {
+    for (const cleanup of cleanups) cleanup()
+  }
 }
-const expand = (node) => {
+const expand = node => {
   if (node === null || node === undefined || typeof node === 'boolean') return null
   if (Array.isArray(node)) return node.map(expand)
   if (typeof node !== 'object') return node
   if (typeof node.type === 'function') return expand(node.type(node.props))
   return { ...node, props: { ...node.props, children: expand(node.props.children) } }
 }
-const text = (node) => {
+const text = node => {
   if (node === null || node === undefined) return ''
   if (Array.isArray(node)) return node.map(text).join('')
   return typeof node === 'object' ? text(node.props.children) : String(node)
@@ -85,26 +111,83 @@ const writer = { id: 'writer', name: 'Writer', color: 'blue' }
 const chief = { id: 'chief', name: 'Chief', color: 'green' }
 const room = { id: 'room', name: 'Ops', members: ['writer', 'chief'], admin: 'chief' }
 const team = (over = {}) => ({
-  bots: [writer, chief], byId: { writer, chief }, rooms: [room], roomsById: { room }, exchangeTurns: {},
-  questions: {}, secretRequests: {}, secrets: [], ...over,
+  bots: [writer, chief],
+  byId: { writer, chief },
+  rooms: [room],
+  roomsById: { room },
+  exchangeTurns: {},
+  questions: {},
+  secretRequests: {},
+  secrets: [],
+  ...over,
 })
-const question = (callId, over = {}) => ({ id: 'question', callId, question: 'Which draft?', options: [{ label: 'Short' }], allowCustom: true, ...over })
-const request = (callId, over = {}) => ({ id: 'request', callId, sessionId: chief.id, name: 'DEMO_TOKEN', purpose: 'Test card', status: 'pending', kind: 'fill', ...over })
+const question = (callId, over = {}) => ({
+  id: 'question',
+  callId,
+  question: 'Which draft?',
+  options: [{ label: 'Short' }],
+  allowCustom: true,
+  ...over,
+})
+const request = (callId, over = {}) => ({
+  id: 'request',
+  callId,
+  sessionId: chief.id,
+  name: 'DEMO_TOKEN',
+  purpose: 'Test card',
+  status: 'pending',
+  kind: 'fill',
+  ...over,
+})
 
 const text$ = value => [{ type: 'text', text: typeof value === 'string' ? value : JSON.stringify(value) }]
-const call = (name, callId, { args = {}, content = '', subCalls = [], running = false, isError = false }: { args?: Record<string, unknown>, content?: unknown, subCalls?: unknown[], running?: boolean, isError?: boolean } = {}) => (running
-  ? { phase: 'start', name, callId, argsRaw: JSON.stringify(args), subCalls, turn: 0 }
-  : { kind: 'tool-result', name, callId, call: { name, argsRaw: JSON.stringify(args) }, content: text$(content), isError, subCalls })
-const program = (subCalls, { running = false, isError = false }: { running?: boolean, isError?: boolean } = {}) => call('run_code', 'program', { subCalls, running, isError })
+const call = (
+  name,
+  callId,
+  {
+    args = {},
+    content = '',
+    subCalls = [],
+    running = false,
+    isError = false,
+  }: {
+    args?: Record<string, unknown>
+    content?: unknown
+    subCalls?: unknown[]
+    running?: boolean
+    isError?: boolean
+  } = {},
+) =>
+  running
+    ? { phase: 'start', name, callId, argsRaw: JSON.stringify(args), subCalls, turn: 0 }
+    : {
+        kind: 'tool-result',
+        name,
+        callId,
+        call: { name, argsRaw: JSON.stringify(args) },
+        content: text$(content),
+        isError,
+        subCalls,
+      }
+const program = (subCalls, { running = false, isError = false }: { running?: boolean; isError?: boolean } = {}) =>
+  call('run_code', 'program', { subCalls, running, isError })
 
-test('a member\'s messages in a row stack under its name, and an event line starts a new block', () => {
+test("a member's messages in a row stack under its name, and an event line starts a new block", () => {
   const replies = [
-    { botId: 'writer', text: 'a', time: 10, duration: 1000 }, { botId: 'writer', text: 'b', time: 20, duration: 2000 },
+    { botId: 'writer', text: 'a', time: 10, duration: 1000 },
+    { botId: 'writer', text: 'b', time: 20, duration: 2000 },
     { kind: 'working', botId: 'writer', time: 30 },
-    { botId: 'writer', text: 'c', time: 40, duration: 4000 }, { botId: 'chief', text: 'd', time: 50, duration: 5000 },
+    { botId: 'writer', text: 'c', time: 40, duration: 4000 },
+    { botId: 'chief', text: 'd', time: 50, duration: 5000 },
     { botId: 'writer', text: 'e', time: 60, duration: 6000 },
   ]
-  assert.deepEqual(JSON.parse(JSON.stringify(stackReplies(replies).map(item => [item.index, item.texts]))), [[0, ['a', 'b']], [2, []], [3, ['c']], [4, ['d']], [5, ['e']]])
+  assert.deepEqual(JSON.parse(JSON.stringify(stackReplies(replies).map(item => [item.index, item.texts]))), [
+    [0, ['a', 'b']],
+    [2, []],
+    [3, ['c']],
+    [4, ['d']],
+    [5, ['e']],
+  ])
   // A stacked block carries its last message's time and how long that turn ran.
   const [stacked, event, single] = stackReplies(replies)
   assert.deepEqual([stacked.time, stacked.duration], [20, 2000])
@@ -120,8 +203,11 @@ const at = (daysAgo, hour, minute) => {
 const clockOf = ms => new Date(ms).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 const findAll = (node, match) => {
   const found = []
-  const visit = (entry) => {
-    if (Array.isArray(entry)) { entry.forEach(visit); return }
+  const visit = entry => {
+    if (Array.isArray(entry)) {
+      entry.forEach(visit)
+      return
+    }
     if (!entry || typeof entry !== 'object') return
     if (match(entry)) found.push(entry)
     visit(entry.props?.children)
@@ -141,9 +227,15 @@ test('a group reply shows its time, and how long its turn ran', () => {
   const times = findAll(out, node => node.props?.className === 'bt-group-time')
   const tooks = findAll(out, node => node.props?.className === 'bt-group-took')
   assert.deepEqual(times.map(text), [clockOf(today), `Yesterday ${clockOf(yesterday)}`])
-  assert.deepEqual(times.map(node => node.props.title), [`Today ${clockOf(today)}`, `Yesterday ${clockOf(yesterday)}`])
+  assert.deepEqual(
+    times.map(node => node.props.title),
+    [`Today ${clockOf(today)}`, `Yesterday ${clockOf(yesterday)}`],
+  )
   assert.deepEqual(tooks.map(text), ['1m 8s', '2s'])
-  assert.deepEqual(tooks.map(node => node.props.title), ['Ran for 1m 8s', 'Ran for 2s'])
+  assert.deepEqual(
+    tooks.map(node => node.props.title),
+    ['Ran for 1m 8s', 'Ran for 2s'],
+  )
 })
 
 // A user text sent while a relay runs joins the round's replies with its time.
@@ -156,21 +248,37 @@ test('a user message inside a group relay shows its time', () => {
   const out = show(call('group_relay', 'direct', { content: { replies } }), { sessionId: 'room' })
   const times = findAll(out, node => node.props?.className === 'bt-utime')
   assert.deepEqual(times.map(text), [clockOf(today)])
-  assert.deepEqual(times.map(node => node.props.title), [`Today ${clockOf(today)}`])
+  assert.deepEqual(
+    times.map(node => node.props.title),
+    [`Today ${clockOf(today)}`],
+  )
 })
 
 // The trigger of a post in a group chat carries the event's time, not the post's.
 test('a group post drawn from its trigger shows the time it came in', () => {
   const time = at(0, 16, 42)
   const node = {
-    key: 'trigger', kind: 'turn-trigger', location: { turn: { turn: 1 } },
-    data: { seq: 7, time, content: text$('Draft is up.'), source: { kind: 'bot', role: 'post', senderSessionId: 'writer', senderName: 'Writer' } },
+    key: 'trigger',
+    kind: 'turn-trigger',
+    location: { turn: { turn: 1 } },
+    data: {
+      seq: 7,
+      time,
+      content: text$('Draft is up.'),
+      source: { kind: 'bot', role: 'post', senderSessionId: 'writer', senderName: 'Writer' },
+    },
   }
-  const out = expand(TriggerCell({
-    node, sessionId: 'room', actions: {},
-    useRoster: select => select(team()), useSessions: select => select({ byId: {} }),
-    useTurnClock: select => select({}), useUi: select => select({ visits: {}, reactions: {} }),
-  }))
+  const out = expand(
+    TriggerCell({
+      node,
+      sessionId: 'room',
+      actions: {},
+      useRoster: select => select(team()),
+      useSessions: select => select({ byId: {} }),
+      useTurnClock: select => select({}),
+      useUi: select => select({ visits: {}, reactions: {} }),
+    }),
+  )
   const stamps = findAll(out, entry => entry.props?.className === 'bt-group-time')
   assert.equal(stamps.length, 1)
   assert.equal(text(stamps[0]), clockOf(time))
@@ -178,8 +286,11 @@ test('a group post drawn from its trigger shows the time it came in', () => {
 })
 
 const props = (root, { sessionId = chief.id, roster = team(), actions = {}, turn = 1, held = {} } = {}) => ({
-  node: { key: 'node', data: { root }, location: { turn: { turn } } }, sessionId,
-  useRoster: select => select(roster), useUi: select => select({ reactions: {}, visits: {} }), actions,
+  node: { key: 'node', data: { root }, location: { turn: { turn } } },
+  sessionId,
+  useRoster: select => select(roster),
+  useUi: select => select({ reactions: {}, visits: {} }),
+  actions,
   useHeldCards: select => select(held),
 })
 const show = (root, options) => {
@@ -202,12 +313,20 @@ const BRANCHES: [string, Parameters<typeof call>[2], RegExp][] = [
   ['post_to_group', { content: 'Posted in "Ops".' }, /Posted in.*Ops/],
   ['ask_user', {}, /Which draft\?.*Short/],
   ['request_secret', { args: { name: 'DEMO_TOKEN' } }, /Chief needs a key.*DEMO_TOKEN/],
-  ['ask_user_question', { args: { questions: [{ question: 'Ship it?', options: [{ label: 'Yes' }] }] }, content: { answers: [{ selected: ['Yes'] }] } }, /Ship it\?.*Yes/],
+  [
+    'ask_user_question',
+    {
+      args: { questions: [{ question: 'Ship it?', options: [{ label: 'Yes' }] }] },
+      content: { answers: [{ selected: ['Yes'] }] },
+    },
+    /Ship it\?.*Yes/,
+  ],
   ['read_group_chat', { args: { group: 'Ops' } }, /Read.*Ops/],
   ['remember', { args: { scope: 'Chief' }, content: 'Saved to Chief memory.' }, /Memory updated/],
   ['forget', { args: { scope: 'Chief' }, content: 'Removed from Chief memory.' }, /Memory updated/],
 ]
-const rosterFor = callId => team({ questions: { chief: question(callId) }, secretRequests: { chief: [request(callId)] } })
+const rosterFor = callId =>
+  team({ questions: { chief: question(callId) }, secretRequests: { chief: [request(callId)] } })
 
 test('every call ToolCell draws shows the same nested in a PTC program as on its own', () => {
   assert.equal(BRANCHES.length, 15)
@@ -219,17 +338,34 @@ test('every call ToolCell draws shows the same nested in a PTC program as on its
     const nested = shown(program([call(name, 'program:ptc:1', options)]), { roster: rosterFor('program:ptc:1') })
     assert.equal(nested, native, `${name} under run_code`)
     forgetMemoryLines()
-    const deep = shown(program([call('run_code', 'program:ptc:1', { subCalls: [call(name, 'program:ptc:1:ptc:1', options)] })]), { roster: rosterFor('program:ptc:1:ptc:1') })
+    const deep = shown(
+      program([call('run_code', 'program:ptc:1', { subCalls: [call(name, 'program:ptc:1:ptc:1', options)] })]),
+      { roster: rosterFor('program:ptc:1:ptc:1') },
+    )
     assert.equal(deep, native, `${name} two programs deep`)
   }
 })
 
 test('a program draws every known sub-call in dispatch order and each call once', () => {
-  const relay = call('group_relay', 'program:ptc:2', { content: { replies: [{ botId: 'writer', text: 'Group reply.' }] } })
+  const relay = call('group_relay', 'program:ptc:2', {
+    content: { replies: [{ botId: 'writer', text: 'Group reply.' }] },
+  })
   const message = call('message_bot', 'program:ptc:1', { args: { to: 'Writer' } })
   const secret = call('request_secret', 'program:ptc:3', { args: { name: 'DEMO_TOKEN' } })
-  const root = program([message, call('run_code', 'program:ptc:4', { subCalls: [relay, secret, message] }), relay, call('bash', 'program:ptc:5')])
-  assert.deepEqual(JSON.parse(JSON.stringify(callTree(root).map(entry => entry.callId))), ['program', 'program:ptc:1', 'program:ptc:4', 'program:ptc:2', 'program:ptc:3', 'program:ptc:5'])
+  const root = program([
+    message,
+    call('run_code', 'program:ptc:4', { subCalls: [relay, secret, message] }),
+    relay,
+    call('bash', 'program:ptc:5'),
+  ])
+  assert.deepEqual(JSON.parse(JSON.stringify(callTree(root).map(entry => entry.callId))), [
+    'program',
+    'program:ptc:1',
+    'program:ptc:4',
+    'program:ptc:2',
+    'program:ptc:3',
+    'program:ptc:5',
+  ])
   const out = shown(root, { roster: team({ secretRequests: { chief: [request('program:ptc:3')] } }) })
   assert.match(out, /Messaged.*Writer.*Group reply\..*Chief needs a key/)
   assert.equal(count(out, 'Messaged'), 1)
@@ -238,27 +374,52 @@ test('a program draws every known sub-call in dispatch order and each call once'
 })
 
 test('nested group relays keep their own replies in order, each once', () => {
-  const first = call('group_relay', 'program:ptc:1:ptc:1', { content: { replies: [{ botId: 'writer', text: 'First reply.' }] } })
-  const second = call('group_relay', 'program:ptc:1:ptc:2', { content: { replies: [{ botId: 'writer', text: 'Second reply.' }] } })
-  const out = shown(program([call('run_code', 'program:ptc:1', { subCalls: [first, second] }), first]), { sessionId: 'room' })
+  const first = call('group_relay', 'program:ptc:1:ptc:1', {
+    content: { replies: [{ botId: 'writer', text: 'First reply.' }] },
+  })
+  const second = call('group_relay', 'program:ptc:1:ptc:2', {
+    content: { replies: [{ botId: 'writer', text: 'Second reply.' }] },
+  })
+  const out = shown(program([call('run_code', 'program:ptc:1', { subCalls: [first, second] }), first]), {
+    sessionId: 'room',
+  })
   assert.match(out, /First reply\..*Second reply\./)
   assert.equal(count(out, 'First reply.'), 1)
 })
 
-test('cards and replies still show when the program\'s own call head left the loaded history', () => {
-  const roster = team({ questions: { chief: question('program:ptc:3') }, secretRequests: { chief: [request('program:ptc:1')] } })
-  const relay = call('group_relay', 'program:ptc:2', { content: { replies: [{ botId: 'writer', text: 'Group reply.' }] } })
-  const root = { ...program([call('request_secret', 'program:ptc:1', { args: { name: 'DEMO_TOKEN' } }), relay, call('ask_user', 'program:ptc:3')]), name: '', call: null }
+test("cards and replies still show when the program's own call head left the loaded history", () => {
+  const roster = team({
+    questions: { chief: question('program:ptc:3') },
+    secretRequests: { chief: [request('program:ptc:1')] },
+  })
+  const relay = call('group_relay', 'program:ptc:2', {
+    content: { replies: [{ botId: 'writer', text: 'Group reply.' }] },
+  })
+  const root = {
+    ...program([
+      call('request_secret', 'program:ptc:1', { args: { name: 'DEMO_TOKEN' } }),
+      relay,
+      call('ask_user', 'program:ptc:3'),
+    ]),
+    name: '',
+    call: null,
+  }
   assert.match(shown(root, { roster }), /Chief needs a key.*Group reply\..*Which draft\?/)
 })
 
-test('each sub-call shows its own state, not its program\'s', () => {
+test("each sub-call shows its own state, not its program's", () => {
   const created = call('create_bot', 'program:ptc:1', { args: { name: 'Writer' } })
   assert.match(shown(program([created], { running: true })), /Created.*Writer/)
-  assert.equal(shown(program([{ ...call('create_bot', 'program:ptc:1', { args: { name: 'Writer' }, running: true }) }])), '')
+  assert.equal(
+    shown(program([{ ...call('create_bot', 'program:ptc:1', { args: { name: 'Writer' }, running: true }) }])),
+    '',
+  )
   const failed = call('message_bot', 'program:ptc:1', { args: { to: 'Writer' }, isError: true })
   assert.match(shown(program([failed])), /Couldn't message Writer/)
-  assert.match(shown(program([call('message_bot', 'program:ptc:1', { args: { to: 'Writer' } })], { isError: true })), /^Messaged/)
+  assert.match(
+    shown(program([call('message_bot', 'program:ptc:1', { args: { to: 'Writer' } })], { isError: true })),
+    /^Messaged/,
+  )
   const refused = call('post_to_group', 'program:ptc:1', { content: 'No group is called "Nope".', isError: true })
   const posted = call('post_to_group', 'program:ptc:2', { content: 'Posted in "Ops".' })
   assert.match(shown(program([refused, posted])), /Couldn't post in the group.*Posted in.*Ops/)
@@ -273,54 +434,95 @@ test('a program with no known sub-call draws nothing, as before', () => {
 
 test('a hidden Bot-to-Bot turn draws none of its sub-calls', () => {
   const roster = team({ exchangeTurns: { chief: [1] }, secretRequests: { chief: [request('program:ptc:1')] } })
-  const root = program([call('request_secret', 'program:ptc:1', { args: { name: 'DEMO_TOKEN' } }), call('message_bot', 'program:ptc:2', { args: { to: 'Writer' } })])
+  const root = program([
+    call('request_secret', 'program:ptc:1', { args: { name: 'DEMO_TOKEN' } }),
+    call('message_bot', 'program:ptc:2', { args: { to: 'Writer' } }),
+  ])
   assert.equal(shown(root, { roster }), '')
   assert.match(shown(root, { roster, turn: 2 }), /Chief needs a key.*Messaged/)
 })
 
-test('a message line opens the exchange of the chat\'s Bot, from any part', () => {
+test("a message line opens the exchange of the chat's Bot, from any part", () => {
   const opened = []
-  const out = show(program([call('message_bot', 'program:ptc:1', { args: { to: 'Writer' } })]), { actions: { openExchange: (...ids) => opened.push(ids) } })
+  const out = show(program([call('message_bot', 'program:ptc:1', { args: { to: 'Writer' } })]), {
+    actions: { openExchange: (...ids) => opened.push(ids) },
+  })
   find(out, node => node.type === 'button').props.onClick()
   const current = { ...chief, sessionId: 'chief-2', parts: ['chief', 'chief-2'] }
   const roster = team({ bots: [writer, current], byId: { writer, chief: current, 'chief-2': current } })
-  const later = show(call('message_bot', 'direct', { args: { to: 'Writer' } }), { sessionId: 'chief-2', roster, actions: { openExchange: (...ids) => opened.push(ids) } })
+  const later = show(call('message_bot', 'direct', { args: { to: 'Writer' } }), {
+    sessionId: 'chief-2',
+    roster,
+    actions: { openExchange: (...ids) => opened.push(ids) },
+  })
   find(later, node => node.type === 'button').props.onClick()
-  assert.deepEqual(JSON.parse(JSON.stringify(opened)), [['chief', 'writer'], ['chief', 'writer']])
+  assert.deepEqual(JSON.parse(JSON.stringify(opened)), [
+    ['chief', 'writer'],
+    ['chief', 'writer'],
+  ])
 })
 
 // The activity row reads one note per chat node.
 const notes = (root, options = {}) => {
   const log = []
-  ToolCell(props(root, { ...options, actions: { noteLive: (sessionId, id, entry) => log.push({ sessionId, id, entry }) } }))
+  ToolCell(
+    props(root, { ...options, actions: { noteLive: (sessionId, id, entry) => log.push({ sessionId, id, entry }) } }),
+  )
   const unmount = mount()
   unmount()
   return JSON.parse(JSON.stringify(log))
 }
 
 test('the live note follows the running sub-call of a program', () => {
-  const asking = notes(program([call('message_bot', 'program:ptc:1', { args: { to: 'Writer' }, running: true })], { running: true }))
+  const asking = notes(
+    program([call('message_bot', 'program:ptc:1', { args: { to: 'Writer' }, running: true })], { running: true }),
+  )
   assert.deepEqual(asking, [
     { sessionId: 'chief', id: 'tool:program', entry: { label: 'Asking Writer', state: 'sending' } },
     { sessionId: 'chief', id: 'tool:program', entry: null },
   ])
-  const relaying = notes(program([call('message_bot', 'program:ptc:1', { args: { to: 'Writer' } }), call('group_relay', 'program:ptc:2', { running: true })], { running: true }))
+  const relaying = notes(
+    program(
+      [
+        call('message_bot', 'program:ptc:1', { args: { to: 'Writer' } }),
+        call('group_relay', 'program:ptc:2', { running: true }),
+      ],
+      { running: true },
+    ),
+  )
   assert.equal(relaying[0].entry.relay, true)
   const shell = notes(program([call('bash', 'program:ptc:1', { running: true })], { running: true }))
   assert.equal(shell[0].entry.label, 'Running shell commands')
   const between = notes(program([call('message_bot', 'program:ptc:1', { args: { to: 'Writer' } })], { running: true }))
   assert.equal(between[0].entry.label, null)
-  assert.deepEqual(notes(program([call('message_bot', 'program:ptc:1', { args: { to: 'Writer' }, running: true })])), [])
+  assert.deepEqual(
+    notes(program([call('message_bot', 'program:ptc:1', { args: { to: 'Writer' }, running: true })])),
+    [],
+  )
   const roster = team({ exchangeTurns: { chief: [1] } })
-  assert.deepEqual(notes(program([call('message_bot', 'program:ptc:1', { args: { to: 'Writer' }, running: true })], { running: true }), { roster }), [])
-  assert.equal(notes(call('message_bot', 'direct', { args: { to: 'Writer' }, running: true }))[0].entry.label, 'Asking Writer')
+  assert.deepEqual(
+    notes(
+      program([call('message_bot', 'program:ptc:1', { args: { to: 'Writer' }, running: true })], { running: true }),
+      { roster },
+    ),
+    [],
+  )
+  assert.equal(
+    notes(call('message_bot', 'direct', { args: { to: 'Writer' }, running: true }))[0].entry.label,
+    'Asking Writer',
+  )
 })
 
 // A minimal cards store, as index.ts keeps one.
 const cardStore = () => {
-  const store: { state: Record<string, unknown> & Record<string, Record<string, number>>, noteCards: (sessionId: string, ids: readonly string[], delta: number) => void } = {
+  const store: {
+    state: Record<string, unknown> & Record<string, Record<string, number>>
+    noteCards: (sessionId: string, ids: readonly string[], delta: number) => void
+  } = {
     state: {},
-    noteCards: (sessionId, ids, delta) => { store.state = countCards(store.state, sessionId, ids, delta) as typeof store.state },
+    noteCards: (sessionId, ids, delta) => {
+      store.state = countCards(store.state, sessionId, ids, delta) as typeof store.state
+    },
   }
   return store
 }
@@ -333,7 +535,11 @@ const draw = (root, store, options = {}) => {
 
 test('a cell tells the docks which card calls it draws, until it unmounts', () => {
   const store = cardStore()
-  const root = program([call('ask_user', 'program:ptc:1'), call('request_secret', 'program:ptc:2'), call('message_bot', 'program:ptc:3')])
+  const root = program([
+    call('ask_user', 'program:ptc:1'),
+    call('request_secret', 'program:ptc:2'),
+    call('message_bot', 'program:ptc:3'),
+  ])
   ToolCell(props(root, { actions: { noteCards: store.noteCards } }))
   const unmount = mount()
   assert.deepEqual(JSON.parse(JSON.stringify(store.state)), { chief: { 'program:ptc:1': 1, 'program:ptc:2': 1 } })
@@ -349,22 +555,31 @@ test('a cell tells the docks which card calls it draws, until it unmounts', () =
 })
 
 const dockProps = (store, roster, { sessionId = chief.id, openState = 'open', actions = {}, held = {} } = {}) => ({
-  sessionId, actions,
+  sessionId,
+  actions,
   useRoster: select => select(roster),
   useCards: select => select(store.state),
   useHeldCards: select => select(held),
   useSession: select => select({ openState }),
 })
 const docks = (store, roster, options?) => {
-  const out = text(expand([QuestionDock(dockProps(store, roster, options)), SecretDock(dockProps(store, roster, options))]))
+  const out = text(
+    expand([QuestionDock(dockProps(store, roster, options)), SecretDock(dockProps(store, roster, options))]),
+  )
   effects = []
   return out
 }
 
 test('a card whose call is not drawn waits in the dock; a drawn one shows only at its call', () => {
   const store = cardStore()
-  const roster = team({ questions: { chief: question('program:ptc:1') }, secretRequests: { chief: [request('program:ptc:2')] } })
-  const root = program([call('ask_user', 'program:ptc:1'), call('request_secret', 'program:ptc:2', { args: { name: 'DEMO_TOKEN' } })])
+  const roster = team({
+    questions: { chief: question('program:ptc:1') },
+    secretRequests: { chief: [request('program:ptc:2')] },
+  })
+  const root = program([
+    call('ask_user', 'program:ptc:1'),
+    call('request_secret', 'program:ptc:2', { args: { name: 'DEMO_TOKEN' } }),
+  ])
   assert.match(docks(store, roster), /Which draft\?.*Chief needs a key/)
   const { out, unmount } = draw(root, store, { roster })
   const inline = text(out)
@@ -377,13 +592,19 @@ test('a card whose call is not drawn waits in the dock; a drawn one shows only a
 
 test('the docks keep pending cards through history loading until their calls actually mount', () => {
   const store = cardStore()
-  const roster = team({ questions: { chief: question('program:ptc:1') }, secretRequests: { chief: [request('program:ptc:2')] } })
+  const roster = team({
+    questions: { chief: question('program:ptc:1') },
+    secretRequests: { chief: [request('program:ptc:2')] },
+  })
   for (const openState of ['cold', 'loading', 'open', 'error']) {
     const waiting = docks(store, roster, { openState })
     assert.equal(count(waiting, 'Which draft?'), 1, openState)
     assert.equal(count(waiting, 'needs a key'), 1, openState)
   }
-  const root = program([call('ask_user', 'program:ptc:1'), call('request_secret', 'program:ptc:2', { args: { name: 'DEMO_TOKEN' } })])
+  const root = program([
+    call('ask_user', 'program:ptc:1'),
+    call('request_secret', 'program:ptc:2', { args: { name: 'DEMO_TOKEN' } }),
+  ])
   const { out, unmount } = draw(root, store, { roster })
   assert.equal(docks(store, roster, { openState: 'loading' }), '')
   assert.equal(count(text(out), 'Which draft?'), 1)
@@ -408,7 +629,10 @@ test('an edited dock card stays there when its history call mounts, with no inli
 
 test('dock ownership is isolated by session, request id and card kind, not the call id', () => {
   const store = cardStore()
-  const roster = team({ questions: { chief: question('same-call', { id: 'same-id' }) }, secretRequests: { chief: [request('same-call', { id: 'same-id' })] } })
+  const roster = team({
+    questions: { chief: question('same-call', { id: 'same-id' }) },
+    secretRequests: { chief: [request('same-call', { id: 'same-id' })] },
+  })
   const root = program([call('ask_user', 'same-call'), call('request_secret', 'secret-call')])
   // Duplicate call ids are coalesced by callTree, so check each kind separately.
   const questionCall = call('ask_user', 'same-call')
@@ -441,7 +665,10 @@ test('completed requests leave the dock and can show settled history even during
 
 test('a question can be answered and a secret request canceled before history arrives', async () => {
   const store = cardStore()
-  const roster = team({ questions: { chief: question('question-call') }, secretRequests: { chief: [request('secret-call')] } })
+  const roster = team({
+    questions: { chief: question('question-call') },
+    secretRequests: { chief: [request('secret-call')] },
+  })
   const answers = []
   const canceled = []
   const actions = { answerQuestion: async (...args) => answers.push(args), secretCancel: async id => canceled.push(id) }
@@ -459,8 +686,15 @@ test('a question can be answered and a secret request canceled before history ar
 test('a card from an earlier part waits in the dock even when a call here has the same id', () => {
   const store = cardStore()
   const current = { ...chief, sessionId: 'chief-2', parts: ['chief', 'chief-2'] }
-  const roster = team({ bots: [writer, current], byId: { writer, chief: current, 'chief-2': current }, secretRequests: { chief: [request('call-1', { sessionId: 'chief' })] } })
-  const { out, unmount } = draw(call('request_secret', 'call-1', { args: { name: 'DEMO_TOKEN' } }), store, { roster, sessionId: 'chief-2' })
+  const roster = team({
+    bots: [writer, current],
+    byId: { writer, chief: current, 'chief-2': current },
+    secretRequests: { chief: [request('call-1', { sessionId: 'chief' })] },
+  })
+  const { out, unmount } = draw(call('request_secret', 'call-1', { args: { name: 'DEMO_TOKEN' } }), store, {
+    roster,
+    sessionId: 'chief-2',
+  })
   assert.doesNotMatch(text(out), /needs a key/)
   assert.match(docks(store, roster, { sessionId: 'chief-2' }), /Chief needs a key/)
   unmount()
@@ -469,7 +703,11 @@ test('a card from an earlier part waits in the dock even when a call here has th
 test('a secret in a hidden turn shows in the dock instead of nowhere', () => {
   const store = cardStore()
   const roster = team({ exchangeTurns: { chief: [1] }, secretRequests: { chief: [request('program:ptc:1')] } })
-  const { out, unmount } = draw(program([call('request_secret', 'program:ptc:1', { args: { name: 'DEMO_TOKEN' } })]), store, { roster })
+  const { out, unmount } = draw(
+    program([call('request_secret', 'program:ptc:1', { args: { name: 'DEMO_TOKEN' } })]),
+    store,
+    { roster },
+  )
   assert.equal(text(out), '')
   assert.match(docks(store, roster), /Chief needs a key/)
   unmount()
@@ -477,18 +715,32 @@ test('a secret in a hidden turn shows in the dock instead of nowhere', () => {
 
 // #38: a PTC group round's replies vanished once the round ended.
 test('a PTC group relay shows its replies from the sub-call, live and after reload', async () => {
-  const replies = [{ botId: 'writer', text: 'Hello from Writer.' }, { botId: 'chief', text: 'Hello from Chief.' }]
+  const replies = [
+    { botId: 'writer', text: 'Hello from Writer.' },
+    { botId: 'chief', text: 'Hello from Chief.' },
+  ]
   const finished = program([call('group_relay', 'call-1-1:ptc:1', { content: { replies } })])
   const reloaded = shown(finished, { sessionId: 'room' })
   assert.match(reloaded, /Writer.*Hello from Writer\..*Chief.*Admin.*Hello from Chief\./)
   const headless = { ...finished, name: '', call: null }
   assert.equal(shown(headless, { sessionId: 'room' }), reloaded)
 
-  const progress = [{ callId: 'other', replies: [{ botId: 'chief', text: 'Not this round.' }] }, { callId: 'call-1-1:ptc:1', replies: replies.slice(0, 1), speaking: 'chief' }]
+  const progress = [
+    { callId: 'other', replies: [{ botId: 'chief', text: 'Not this round.' }] },
+    { callId: 'call-1-1:ptc:1', replies: replies.slice(0, 1), speaking: 'chief' },
+  ]
   const asked = []
-  const actions = { roomProgress: async (id) => { asked.push(id); return progress } }
+  const actions = {
+    roomProgress: async id => {
+      asked.push(id)
+      return progress
+    },
+  }
   const running = program([call('group_relay', 'call-1-1:ptc:1', { running: true })], { running: true })
-  const relay = find(ToolCell(props(running, { sessionId: 'room', actions })), node => node.type?.name === 'GroupReplies')
+  const relay = find(
+    ToolCell(props(running, { sessionId: 'room', actions })),
+    node => node.type?.name === 'GroupReplies',
+  )
   effects = []
   sets.length = 0
   relay.type(relay.props)
@@ -502,7 +754,10 @@ test('a PTC group relay shows its replies from the sub-call, live and after relo
 
 // #105: the secret and question cards of a PTC program showed nowhere.
 test('PTC secret and question cards show at their sub-calls and act on their own requests', async () => {
-  const roster = team({ questions: { chief: question('call-1-2:ptc:1') }, secretRequests: { chief: [request('call-2-1:ptc:1')] } })
+  const roster = team({
+    questions: { chief: question('call-1-2:ptc:1') },
+    secretRequests: { chief: [request('call-2-1:ptc:1')] },
+  })
   const answers = []
   const canceled = []
   const actions = { answerQuestion: async (...args) => answers.push(args), secretCancel: async id => canceled.push(id) }
@@ -512,13 +767,20 @@ test('PTC secret and question cards show at their sub-calls and act on their own
   await Promise.resolve()
   assert.deepEqual(JSON.parse(JSON.stringify(answers)), [['chief', 'question', { selected: ['Short'], custom: '' }]])
 
-  const secret = show(program([call('request_secret', 'call-2-1:ptc:1', { args: { name: 'DEMO_TOKEN' }, running: true })], { running: true }), { roster, actions })
+  const secret = show(
+    program([call('request_secret', 'call-2-1:ptc:1', { args: { name: 'DEMO_TOKEN' }, running: true })], {
+      running: true,
+    }),
+    { roster, actions },
+  )
   assert.match(text(secret), /Chief needs a key/)
   await find(secret, node => node.props['aria-label'] === 'Cancel the request').props.onClick()
   assert.deepEqual(canceled, ['request'])
 
   const settled = team({ secretRequests: { chief: [request('call-2-1:ptc:1', { status: 'canceled' })] } })
-  const after = shown(program([call('request_secret', 'call-2-1:ptc:1', { args: { name: 'DEMO_TOKEN' } })]), { roster: settled })
+  const after = shown(program([call('request_secret', 'call-2-1:ptc:1', { args: { name: 'DEMO_TOKEN' } })]), {
+    roster: settled,
+  })
   assert.match(after, /Chief asked for DEMO_TOKEN.*Canceled/)
   assert.doesNotMatch(after, /Paste or type the key/)
   assert.doesNotMatch(shown(program([call('ask_user', 'call-0-1:ptc:1')]), { roster }), /Which draft\?/)
@@ -527,15 +789,22 @@ test('PTC secret and question cards show at their sub-calls and act on their own
 
 // #133: a DSH goal round showed its raw <goal_round> prompt as an event line.
 test('a goal round draws nothing, while another unknown trigger keeps its event line', () => {
-  const trigger = source => expand(TriggerCell({
-    node: { key: 'node', data: { source, turn: 2, content: text$('<goal_round>Keep going</goal_round>') }, location: { turn: { turn: 2 } } },
-    sessionId: 'room',
-    useRoster: select => select(team()),
-    useSessions: select => select({ byId: {} }),
-    useTurnClock: select => select({}),
-    useUi: select => select({ visits: {} }),
-    actions: {},
-  }))
+  const trigger = source =>
+    expand(
+      TriggerCell({
+        node: {
+          key: 'node',
+          data: { source, turn: 2, content: text$('<goal_round>Keep going</goal_round>') },
+          location: { turn: { turn: 2 } },
+        },
+        sessionId: 'room',
+        useRoster: select => select(team()),
+        useSessions: select => select({ byId: {} }),
+        useTurnClock: select => select({}),
+        useUi: select => select({ visits: {} }),
+        actions: {},
+      }),
+    )
   assert.equal(trigger({ kind: 'goal', goalId: 'goal-1', revision: 1, round: 1 }), null)
   assert.match(text(trigger({ kind: 'webhook' })), /<goal_round>Keep going/)
 })
@@ -555,16 +824,32 @@ test('a reaction on a group post stays on that post, also after it draws again',
   }
   // The trigger node the chat builds for a user/message from a Bot.
   const post = (seq, turn, from, words) => ({
-    key: `turn-trigger:${seq}`, kind: 'turn-trigger', anchorSeq: seq, location: { turn: { turn } },
-    data: { kind: 'context', seq, time: 1, content: text$(words), source: { kind: 'bot', role: 'post', senderSessionId: from, senderName: from }, producer: {}, form: null },
+    key: `turn-trigger:${seq}`,
+    kind: 'turn-trigger',
+    anchorSeq: seq,
+    location: { turn: { turn } },
+    data: {
+      kind: 'context',
+      seq,
+      time: 1,
+      content: text$(words),
+      source: { kind: 'bot', role: 'post', senderSessionId: from, senderName: from },
+      producer: {},
+      form: null,
+    },
   })
-  const draw = node => TriggerCell({
-    node, sessionId: 'room', actions,
-    useRoster: select => select(team()), useSessions: select => select({ byId: {} }),
-    useTurnClock: select => select({}), useUi: select => select(ui),
-  })
+  const draw = node =>
+    TriggerCell({
+      node,
+      sessionId: 'room',
+      actions,
+      useRoster: select => select(team()),
+      useSessions: select => select({ byId: {} }),
+      useTurnClock: select => select({}),
+      useUi: select => select(ui),
+    })
   // The handler a bubble's reaction menu calls, read before the menu draws.
-  const reactOf = (node) => {
+  const reactOf = node => {
     if (Array.isArray(node)) return node.map(reactOf).find(Boolean)
     if (!node || typeof node !== 'object') return undefined
     if (typeof node.props?.react === 'function') return node.props.react
@@ -586,9 +871,13 @@ test('a reaction on a group post stays on that post, also after it draws again',
 })
 
 test('a show_view call the host refused draws nothing; a display-only card draws with the trimmed title', () => {
-  const cell = (title, view, extra = {}) => show(call('show_view', 'view-call', { args: { title, view, ...extra } }), { roster: team({ views: {} }) })
-  const gone = (node) => {
-    assert.ok(find(node, each => each.props?.className === 'bt-q-gone') !== undefined, 'the call leaves the hidden mark')
+  const cell = (title, view, extra = {}) =>
+    show(call('show_view', 'view-call', { args: { title, view, ...extra } }), { roster: team({ views: {} }) })
+  const gone = node => {
+    assert.ok(
+      find(node, each => each.props?.className === 'bt-q-gone') !== undefined,
+      'the call leaves the hidden mark',
+    )
     assert.equal(text(node), '')
   }
   // Refusals the host returned as text reach the cell as a done call; the shared
@@ -609,9 +898,17 @@ test('a display-only call still draws when the args come through the value acces
   // undefined for them — so the title has to go through the string accessor.
   const data = { title: 'Status', view: { type: 'metric', label: 'Done', value: '3' } }
   const callNode = {
-    kind: 'tool-result', name: 'show_view', callId: 'view-call', isError: false,
-    args: { text: key => (typeof data[key] === 'string' ? data[key] : undefined), value: key => (typeof data[key] === 'string' ? undefined : data[key]) },
-    call: { name: 'show_view', argsRaw: JSON.stringify(data) }, content: text$('The view is on screen.'), subCalls: [],
+    kind: 'tool-result',
+    name: 'show_view',
+    callId: 'view-call',
+    isError: false,
+    args: {
+      text: key => (typeof data[key] === 'string' ? data[key] : undefined),
+      value: key => (typeof data[key] === 'string' ? undefined : data[key]),
+    },
+    call: { name: 'show_view', argsRaw: JSON.stringify(data) },
+    content: text$('The view is on screen.'),
+    subCalls: [],
   }
   const node = show(callNode, { roster: team({ views: {} }) })
   const title = find(node, item => item.props?.className === 'bt-q-title')

@@ -9,17 +9,20 @@ import { apply } from '../index.js'
 import { homeLock } from '../src/host/home-lock.ts'
 import { fakeContext } from './fake-ctx.ts'
 
-const tempHome = (t) => {
+const tempHome = t => {
   const home = mkdtempSync(join(tmpdir(), 'ds-bot-lock-'))
   t.after(() => rmSync(home, { recursive: true, force: true, maxRetries: 5 }))
   return home
 }
 
-test('the first host takes the lock and a second live host only reads', (t) => {
+test('the first host takes the lock and a second live host only reads', t => {
   const path = join(tempHome(t), 'state.lock')
   const first = homeLock(path, { pid: 101, isAlive: () => true })
   const second = homeLock(path, { pid: 202, isAlive: () => true })
-  t.after(() => { first.release(); second.release() })
+  t.after(() => {
+    first.release()
+    second.release()
+  })
   assert.equal(first.claim(), undefined)
   assert.equal(first.owns(), true)
   assert.equal(second.claim().pid, 101)
@@ -30,7 +33,7 @@ test('the first host takes the lock and a second live host only reads', (t) => {
   assert.equal(second.owns(), true)
 })
 
-test('a lock whose same-host process has exited is taken over', (t) => {
+test('a lock whose same-host process has exited is taken over', t => {
   const path = join(tempHome(t), 'state.lock')
   writeFileSync(path, JSON.stringify({ pid: 101, host: hostname(), token: 'gone' }))
   const dead = homeLock(path, { pid: 202, isAlive: () => false })
@@ -40,7 +43,7 @@ test('a lock whose same-host process has exited is taken over', (t) => {
   dead.release()
 })
 
-test('an old same-host lock stays live while its process is alive', (t) => {
+test('an old same-host lock stays live while its process is alive', t => {
   const path = join(tempHome(t), 'state.lock')
   writeFileSync(path, JSON.stringify({ pid: 101, host: hostname(), token: 'old' }))
   const old = new Date(Date.now() - 120_000)
@@ -51,7 +54,7 @@ test('an old same-host lock stays live while its process is alive', (t) => {
   assert.equal(late.owns(), false)
 })
 
-test('an old lock from another host is taken over', (t) => {
+test('an old lock from another host is taken over', t => {
   const path = join(tempHome(t), 'state.lock')
   writeFileSync(path, JSON.stringify({ pid: 101, host: 'elsewhere', token: 'far' }))
   const old = new Date(Date.now() - 120_000)
@@ -62,7 +65,7 @@ test('an old lock from another host is taken over', (t) => {
   assert.equal(near.owns(), true)
 })
 
-test('a stale-lock recheck does not delete a new owner token', (t) => {
+test('a stale-lock recheck does not delete a new owner token', t => {
   const path = join(tempHome(t), 'state.lock')
   writeFileSync(path, JSON.stringify({ pid: 101, host: hostname(), token: 'stale' }))
   const old = new Date(Date.now() - 120_000)
@@ -88,7 +91,7 @@ test('a stale-lock recheck does not delete a new owner token', (t) => {
   assert.equal(JSON.parse(readFileSync(path, 'utf8')).token, 'new-owner')
 })
 
-test('a holder that finds another token in the file knows it lost the lock', (t) => {
+test('a holder that finds another token in the file knows it lost the lock', t => {
   const path = join(tempHome(t), 'state.lock')
   const lock = homeLock(path, { pid: 101 })
   t.after(() => lock.release())
@@ -103,7 +106,17 @@ const TEAM = {
   version: 1,
   mainBotIds: ['m1'],
   revision: 7,
-  bots: { m1: { id: 'm1', sessionId: 'm1', name: 'Chief', role: 'Chief of Staff', lab: 'deepseek', instructions: '', createdAt: 1 } },
+  bots: {
+    m1: {
+      id: 'm1',
+      sessionId: 'm1',
+      name: 'Chief',
+      role: 'Chief of Staff',
+      lab: 'deepseek',
+      instructions: '',
+      createdAt: 1,
+    },
+  },
   rooms: {},
   exchanges: [],
   exchangeTurns: {},
@@ -114,18 +127,23 @@ function start(t, home) {
   const ctx = fakeContext()
   let route
   const register = ctx.connection.fetch.register
-  ctx.connection.fetch.register = (options) => {
+  ctx.connection.fetch.register = options => {
     route = options
     return register(options)
   }
   apply(ctx, { home })
   t.after(() => ctx.dispose())
-  const call = async (endpoint, payload) => (await route.fetch(new Request('http://localhost/api/bot', { method: 'POST', body: JSON.stringify({ endpoint, payload }) }))).json()
+  const call = async (endpoint, payload) =>
+    (
+      await route.fetch(
+        new Request('http://localhost/api/bot', { method: 'POST', body: JSON.stringify({ endpoint, payload }) }),
+      )
+    ).json()
   call.ctx = ctx
   return call
 }
 
-test('while another instance holds the team, the channel reads it, refuses changes, then takes over', async (t) => {
+test('while another instance holds the team, the channel reads it, refuses changes, then takes over', async t => {
   const home = tempHome(t)
   writeFileSync(join(home, 'state.json'), JSON.stringify(TEAM))
   // The test runner's parent process: alive, on this host, and not this process.
@@ -133,7 +151,10 @@ test('while another instance holds the team, the channel reads it, refuses chang
   const call = start(t, home)
 
   const view = (await call('state', {})).value
-  assert.deepEqual(view.bots.map(bot => bot.name), ['Chief'])
+  assert.deepEqual(
+    view.bots.map(bot => bot.name),
+    ['Chief'],
+  )
   assert.match(view.readOnly, new RegExp(`open in another Moon Bot \\(Web or Desktop, pid ${process.ppid} on `))
   const refused = await call('set-prefs', { theme: 'dark' })
   assert.equal(refused.error.code, 'bot/read-only')
@@ -155,10 +176,18 @@ test('while another instance holds the team, the channel reads it, refuses chang
   assert.equal((await call('state', {})).value.readOnly, null)
 })
 
-test('a reading host follows the other host\'s keys, never writes them, and keeps them after taking over', async (t) => {
+test("a reading host follows the other host's keys, never writes them, and keeps them after taking over", async t => {
   const home = tempHome(t)
   const secretsPath = join(home, 'secrets.json')
-  const key = (name, value) => ({ name, value, purpose: '', scope: 'all', requestedBy: null, createdAt: 1, updatedAt: 1 })
+  const key = (name, value) => ({
+    name,
+    value,
+    purpose: '',
+    scope: 'all',
+    requestedBy: null,
+    createdAt: 1,
+    updatedAt: 1,
+  })
   const writeKeys = (keys, revision) => {
     writeFileSync(secretsPath, JSON.stringify({ version: 1, secrets: keys }))
     writeFileSync(join(home, 'state.json'), JSON.stringify({ ...TEAM, revision }))
@@ -170,7 +199,9 @@ test('a reading host follows the other host\'s keys, never writes them, and keep
 
   assert.deepEqual(await names(), ['FIRST_KEY'])
   assert.equal((await call('secret-set', { name: 'MINE', value: 'mine-value-1' })).error.code, 'bot/read-only')
-  const asked = await call.ctx.registeredTools.get('request_secret').execute({ name: 'MINE', purpose: 'x' }, { agent: { id: 'm1' } })
+  const asked = await call.ctx.registeredTools
+    .get('request_secret')
+    .execute({ name: 'MINE', purpose: 'x' }, { agent: { id: 'm1' } })
   assert.match(asked, /^No card can be shown now\. The Bot team in .* is open in another Moon Bot/)
   assert.deepEqual((await call('state', {})).value.secretRequests, {})
 
@@ -179,9 +210,14 @@ test('a reading host follows the other host\'s keys, never writes them, and keep
   assert.deepEqual(await names(), ['FIRST_KEY', 'SECOND_KEY'])
 
   // After taking over, a new key joins both instead of replacing the file with an old copy.
-  writeKeys([key('FIRST_KEY', 'first-value-1'), key('SECOND_KEY', 'second-value-2'), key('THIRD_KEY', 'third-value-3')], 9)
+  writeKeys(
+    [key('FIRST_KEY', 'first-value-1'), key('SECOND_KEY', 'second-value-2'), key('THIRD_KEY', 'third-value-3')],
+    9,
+  )
   rmSync(join(home, 'state.lock'))
   assert.equal((await call('secret-set', { name: 'MINE', value: 'mine-value-1' })).ok, true)
-  const saved = JSON.parse(readFileSync(secretsPath, 'utf8')).secrets.map(secret => secret.name).sort()
+  const saved = JSON.parse(readFileSync(secretsPath, 'utf8'))
+    .secrets.map(secret => secret.name)
+    .sort()
   assert.deepEqual(saved, ['FIRST_KEY', 'MINE', 'SECOND_KEY', 'THIRD_KEY'])
 })

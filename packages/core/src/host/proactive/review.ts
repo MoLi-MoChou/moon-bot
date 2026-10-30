@@ -29,15 +29,20 @@ export interface Review {
 
 export interface ProactiveDeps {
   /** The store's proactive tables, or undefined when there is no store. */
-  readonly store: () => {
-    readonly recentCandidates: (subscriptionId: string, since: number) => readonly {
-      readonly text: string
-      readonly fingerprint: string
-      readonly topicKeys: string
-      readonly decision: { readonly decision: string, readonly decidedAt: number } | undefined
-    }[]
-    readonly deliveredOn: (subscriptionId: string, since: number, until: number) => number
-  } | undefined
+  readonly store: () =>
+    | {
+        readonly recentCandidates: (
+          subscriptionId: string,
+          since: number,
+        ) => readonly {
+          readonly text: string
+          readonly fingerprint: string
+          readonly topicKeys: string
+          readonly decision: { readonly decision: string; readonly decidedAt: number } | undefined
+        }[]
+        readonly deliveredOn: (subscriptionId: string, since: number, until: number) => number
+      }
+    | undefined
   /** The messages of one session since a moment, oldest first. */
   readonly messagesSince: (sessionId: string, since: number) => readonly DayMessage[]
   /** What the Bot remembers, as the memory panel reads it. */
@@ -47,9 +52,13 @@ export interface ProactiveDeps {
   readonly timeZone: () => string | undefined
 }
 
-const clockOf = (at: number, timeZone: string | undefined): string => new Intl.DateTimeFormat('en-GB', {
-  ...(timeZone === undefined ? {} : { timeZone }), hour12: false, hour: '2-digit', minute: '2-digit',
-}).format(new Date(at))
+const clockOf = (at: number, timeZone: string | undefined): string =>
+  new Intl.DateTimeFormat('en-GB', {
+    ...(timeZone === undefined ? {} : { timeZone }),
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(at))
 
 /**
  * Looks back over the Bot's day and lists what it would say, without saying it.
@@ -71,51 +80,55 @@ export async function review(rt: HostRuntime, deps: ProactiveDeps, botId: string
   for (const subscription of subscriptions) {
     const earlier = store?.recentCandidates(subscription.id, now - WINDOW_MS) ?? []
     const messages = deps.messagesSince(rt.chatOf(botId), dayStart)
-    const outcome = await runOnce({
-      subscriptionId: subscription.id,
-      botId,
-      sessionId: rt.chatOf(botId),
-      triggerSource: 'manual',
-      readOnly: true,
-      candidates: {
-        topics: subscription.topics,
-        memory: deps.memoryOf(botId),
-        messages: messages.slice(-DAY_MESSAGES),
-        // The subjects it already raised, so a review does not propose them again.
-        alreadySaid: earlier.map(item => item.text),
+    const outcome = await runOnce(
+      {
+        subscriptionId: subscription.id,
+        botId,
+        sessionId: rt.chatOf(botId),
+        triggerSource: 'manual',
+        readOnly: true,
+        candidates: {
+          topics: subscription.topics,
+          memory: deps.memoryOf(botId),
+          messages: messages.slice(-DAY_MESSAGES),
+          // The subjects it already raised, so a review does not propose them again.
+          alreadySaid: earlier.map(item => item.text),
+        },
+        screen: {
+          deliveredToday: store?.deliveredOn(subscription.id, dayStart, now) ?? 0,
+          dailyCap: subscription.dailyCap,
+          earlier: earlier.map(item => ({
+            fingerprint: item.fingerprint,
+            topicKeys: JSON.parse(item.topicKeys) as readonly string[],
+            decision: item.decision?.decision as 'delivered' | 'quiet' | 'dropped' | 'delayed' | undefined,
+            decidedAt: item.decision?.decidedAt,
+          })),
+          mentionedRecently: false,
+          localTime: deps.localTimeOf(now),
+          quiet:
+            subscription.quietFrom === null || subscription.quietTo === null
+              ? null
+              : { from: subscription.quietFrom, to: subscription.quietTo },
+        },
       },
-      screen: {
-        deliveredToday: store?.deliveredOn(subscription.id, dayStart, now) ?? 0,
-        dailyCap: subscription.dailyCap,
-        earlier: earlier.map(item => ({
-          fingerprint: item.fingerprint,
-          topicKeys: JSON.parse(item.topicKeys) as readonly string[],
-          decision: item.decision?.decision as 'delivered' | 'quiet' | 'dropped' | 'delayed' | undefined,
-          decidedAt: item.decision?.decidedAt,
-        })),
-        mentionedRecently: false,
-        localTime: deps.localTimeOf(now),
-        quiet: subscription.quietFrom === null || subscription.quietTo === null
-          ? null
-          : { from: subscription.quietFrom, to: subscription.quietTo },
+      {
+        ask: async ({ system, prompt }) => {
+          const small = rt.smallShot
+          if (small === undefined) throw new Error('No model is available for a review')
+          return small(botId, system, prompt)
+        },
+        // The soft judgement runs inside a review too: the panel must show what would really
+        // happen, including a candidate the judge turns down.
+        judgeAsk: async ({ system, prompt }) => {
+          const small = rt.smallShot
+          if (small === undefined) throw new Error('No model is available for a review')
+          return small(botId, system, prompt)
+        },
+        newId: () => `c-${now.toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+        now: () => now,
+        log: (message, ...rest) => rt.warn(message, ...rest),
       },
-    }, {
-      ask: async ({ system, prompt }) => {
-        const small = rt.smallShot
-        if (small === undefined) throw new Error('No model is available for a review')
-        return small(botId, system, prompt)
-      },
-      // The soft judgement runs inside a review too: the panel must show what would really
-      // happen, including a candidate the judge turns down.
-      judgeAsk: async ({ system, prompt }) => {
-        const small = rt.smallShot
-        if (small === undefined) throw new Error('No model is available for a review')
-        return small(botId, system, prompt)
-      },
-      newId: () => `c-${now.toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
-      now: () => now,
-      log: (message, ...rest) => rt.warn(message, ...rest),
-    })
+    )
     if (outcome.kind === 'prepared') {
       considered += 1
       candidates.push(toReviewCandidate(outcome))
@@ -128,7 +141,13 @@ export async function review(rt: HostRuntime, deps: ProactiveDeps, botId: string
 
 const toReviewCandidate = (outcome: Extract<RunOutcome, { kind: 'prepared' }>): ReviewCandidate => {
   const { candidate, verdict } = outcome
-  const base = { id: candidate.id, text: candidate.text, evidence: candidate.evidence, whyCare: candidate.whyCare, ttl: candidate.ttl }
+  const base = {
+    id: candidate.id,
+    text: candidate.text,
+    evidence: candidate.evidence,
+    whyCare: candidate.whyCare,
+    ttl: candidate.ttl,
+  }
   if (verdict.kind === 'accept') return { ...base, would: 'send' }
   if (verdict.kind === 'delay') return { ...base, would: 'delay', reason: 'quiet-hours' }
   return { ...base, would: 'drop', reason: verdict.reason }

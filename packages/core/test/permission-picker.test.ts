@@ -6,7 +6,11 @@ import { build } from 'esbuild'
 
 const { outputFiles } = await build({
   entryPoints: [fileURLToPath(new URL('../src/client/permission-picker.tsx', import.meta.url))],
-  bundle: true, format: 'cjs', platform: 'browser', write: false, logLevel: 'silent',
+  bundle: true,
+  format: 'cjs',
+  platform: 'browser',
+  write: false,
+  logLevel: 'silent',
   external: ['react', 'react-dom'],
 })
 
@@ -18,17 +22,35 @@ const prevDeps = []
 let hook = 0
 let dirty = false
 let pendingEffects = []
-const changed = (deps, prev) => deps === undefined || prev === undefined || deps.length !== prev.length || deps.some((dep, i) => !Object.is(dep, prev[i]))
+const changed = (deps, prev) =>
+  deps === undefined ||
+  prev === undefined ||
+  deps.length !== prev.length ||
+  deps.some((dep, i) => !Object.is(dep, prev[i]))
 const react = {
   createElement: (type, props, ...children) => ({ type, props: { ...props, children: children.flat(Infinity) } }),
   useState(initial) {
     const i = hook++
     if (!(i in cells)) cells[i] = typeof initial === 'function' ? initial() : initial
-    return [cells[i], (next) => { cells[i] = typeof next === 'function' ? next(cells[i]) : next; dirty = true }]
+    return [
+      cells[i],
+      next => {
+        cells[i] = typeof next === 'function' ? next(cells[i]) : next
+        dirty = true
+      },
+    ]
   },
-  useRef(initial) { const i = hook++; if (!(i in cells)) cells[i] = { current: initial }; return cells[i] },
-  useEffect(fn, deps) { pendingEffects.push({ i: hook++, fn, deps }) },
-  useLayoutEffect(fn, deps) { pendingEffects.push({ i: hook++, fn, deps }) },
+  useRef(initial) {
+    const i = hook++
+    if (!(i in cells)) cells[i] = { current: initial }
+    return cells[i]
+  },
+  useEffect(fn, deps) {
+    pendingEffects.push({ i: hook++, fn, deps })
+  },
+  useLayoutEffect(fn, deps) {
+    pendingEffects.push({ i: hook++, fn, deps })
+  },
   useMemo: make => make(),
   useId: () => 'id',
   Fragment: Symbol('Fragment'),
@@ -41,14 +63,18 @@ const render = (component, props) => {
     pendingEffects = []
     tree = component(props)
     for (const { i, fn, deps } of pendingEffects) {
-      if (changed(deps, prevDeps[i])) { prevDeps[i] = deps; fn() }
+      if (changed(deps, prevDeps[i])) {
+        prevDeps[i] = deps
+        fn()
+      }
     }
   } while (dirty)
   return tree
 }
 const module = { exports: {} as { PermissionPicker: (props: Record<string, unknown>) => unknown } }
 runInNewContext(outputFiles[0].text, {
-  module, exports: module.exports,
+  module,
+  exports: module.exports,
   require: name => (name === 'react' ? react : {}),
 })
 const { PermissionPicker } = module.exports
@@ -70,20 +96,42 @@ const mountPicker = (initial, repick = false) => {
   props.onPick = value => {
     flying += 1
     seen.maxFlying = Math.max(seen.maxFlying, flying)
-    return new Promise((resolve, reject) => requests.push({
-      value,
-      resolve: (done) => { flying -= 1; resolve(done) },
-      reject: (error) => { flying -= 1; reject(error) },
-    }))
+    return new Promise((resolve, reject) =>
+      requests.push({
+        value,
+        resolve: done => {
+          flying -= 1
+          resolve(done)
+        },
+        reject: error => {
+          flying -= 1
+          reject(error)
+        },
+      }),
+    )
   }
   let tree
-  const rerender = (patch?) => { props = { ...props, ...patch }; tree = render(PermissionPicker, props); return tree }
+  const rerender = (patch?) => {
+    props = { ...props, ...patch }
+    tree = render(PermissionPicker, props)
+    return tree
+  }
   const picker = {
-    requests, seen, rerender,
-    press(value) { tree.props.children.find(button => button.props.title === value).props.onClick(); rerender() },
-    pressed() { return tree.props.children.find(button => button.props['aria-pressed'])?.props.title },
+    requests,
+    seen,
+    rerender,
+    press(value) {
+      tree.props.children.find(button => button.props.title === value).props.onClick()
+      rerender()
+    },
+    pressed() {
+      return tree.props.children.find(button => button.props['aria-pressed'])?.props.title
+    },
     // Lets settled request continuations and their state updates land.
-    async flush() { await settle(); rerender() },
+    async flush() {
+      await settle()
+      rerender()
+    },
   }
   rerender()
   return picker

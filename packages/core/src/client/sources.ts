@@ -12,7 +12,12 @@ export function createSource<T>(initial: T): Source<T> {
   const listeners = new Set<() => void>()
   return {
     getSnapshot: () => value,
-    subscribe: (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener) } },
+    subscribe: (listener: () => void) => {
+      listeners.add(listener)
+      return () => {
+        listeners.delete(listener)
+      }
+    },
     set(next: T | ((previous: T) => T)): void {
       const resolved = typeof next === 'function' ? (next as (previous: T) => T)(value) : next
       if (resolved === value) return
@@ -30,8 +35,15 @@ export interface BotLike {
   parts?: readonly string[]
   [key: string]: unknown
 }
-export interface RoomLike { id: string; [key: string]: unknown }
-export interface AgentLike { id: string; sessions?: readonly string[]; [key: string]: unknown }
+export interface RoomLike {
+  id: string
+  [key: string]: unknown
+}
+export interface AgentLike {
+  id: string
+  sessions?: readonly string[]
+  [key: string]: unknown
+}
 
 export const EMPTY_ROSTER = {
   revision: -1,
@@ -42,7 +54,7 @@ export const EMPTY_ROSTER = {
   agents: [] as AgentLike[],
   exchangeTurns: {} as Record<string, number[]>,
   // The pending question of each Session: the cells read its id and call.
-  questions: {} as Record<string, { id: string, callId?: string | undefined } | undefined>,
+  questions: {} as Record<string, { id: string; callId?: string | undefined } | undefined>,
   secrets: [] as unknown[],
   capabilities: [] as unknown[],
   capabilityStatuses: {} as Record<string, unknown>,
@@ -61,7 +73,8 @@ export const EMPTY_ROSTER = {
 export type Roster = typeof EMPTY_ROSTER
 
 // Any Main Bot holds the Main Bot powers; `mainBotId`, the first one, is the sidebar tile.
-export const isMainOf = (roster: { mainBotIds?: readonly string[] }, id: string | undefined): boolean => id !== undefined && (roster.mainBotIds ?? []).includes(id)
+export const isMainOf = (roster: { mainBotIds?: readonly string[] }, id: string | undefined): boolean =>
+  id !== undefined && (roster.mainBotIds ?? []).includes(id)
 
 // A Bot's chat is a chain of Sessions ("parts"): the Bot id is its first part's id
 // and `sessionId` its current one. Every part id finds the Bot; Session state
@@ -85,13 +98,19 @@ export function indexRoster(value: {
     agentsById[agent.id] = agent
     for (const sessionId of agent.sessions ?? []) agentOf[sessionId] = agent.id
   }
-  return { ...value, agents: value.agents ?? [], byId, roomsById, agentsById, agentOf, ready: true } as Roster & { ready: true }
+  return { ...value, agents: value.agents ?? [], byId, roomsById, agentsById, agentOf, ready: true } as Roster & {
+    ready: true
+  }
 }
 
 // Whether a main-view Session id belongs to the team's Agent: the conversation
 // group then stays withdrawn while the shell keeps the sidebar. Before the roster
 // arrives, the ids cached from the last pull answer.
-export function isAgentSession(roster: { ready?: boolean; agentOf?: Record<string, string> }, cache: { has: (id: string) => boolean }, sessionId: string | undefined | null): boolean {
+export function isAgentSession(
+  roster: { ready?: boolean; agentOf?: Record<string, string> },
+  cache: { has: (id: string) => boolean },
+  sessionId: string | undefined | null,
+): boolean {
   if (sessionId === undefined || sessionId === null || sessionId === '') return false
   if (roster.ready === true) return roster.agentOf?.[sessionId] !== undefined
   return cache.has(sessionId)
@@ -101,7 +120,12 @@ export function isAgentSession(roster: { ready?: boolean; agentOf?: Record<strin
 export const heldCardKey = (kind: string, requestId: string): string => JSON.stringify([kind, requestId])
 
 // Per Session, how many mounted cells draw or hold each card; 0 drops the entry.
-export function countCards(state: Record<string, Record<string, number>>, sessionId: string, callIds: readonly string[], delta: number): Record<string, Record<string, number>> {
+export function countCards(
+  state: Record<string, Record<string, number>>,
+  sessionId: string,
+  callIds: readonly string[],
+  delta: number,
+): Record<string, Record<string, number>> {
   const own = { ...state[sessionId] }
   for (const callId of callIds) {
     const count = (own[callId] ?? 0) + delta

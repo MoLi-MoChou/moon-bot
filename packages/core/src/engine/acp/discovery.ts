@@ -39,8 +39,20 @@ const CANDIDATES: readonly Candidate[] = [
   { id: 'codex-acp', label: 'Codex (ACP)', command: 'codex-acp', kind: 'acp' },
   { id: 'opencode', label: 'OpenCode', command: 'opencode', kind: 'acp' },
   { id: 'gemini', label: 'Gemini', command: 'gemini', kind: 'acp' },
-  { id: 'codex', label: 'Codex', command: 'codex', kind: 'unsupported', reason: 'Non-ACP CLI · 原生 CLI 暂无 ACP 适配器' },
-  { id: 'cursor-agent', label: 'Cursor', command: 'cursor-agent', kind: 'unsupported', reason: 'No Cursor adapter registered yet · 暂无 Cursor 适配器' },
+  {
+    id: 'codex',
+    label: 'Codex',
+    command: 'codex',
+    kind: 'unsupported',
+    reason: 'Non-ACP CLI · 原生 CLI 暂无 ACP 适配器',
+  },
+  {
+    id: 'cursor-agent',
+    label: 'Cursor',
+    command: 'cursor-agent',
+    kind: 'unsupported',
+    reason: 'No Cursor adapter registered yet · 暂无 Cursor 适配器',
+  },
   { id: 'grok', label: 'Grok', command: 'grok', kind: 'unsupported', reason: 'Non-ACP CLI · 原生 CLI 暂无 ACP 适配器' },
 ]
 
@@ -51,13 +63,20 @@ const ON_DEMAND_CANDIDATES: readonly OnDemandCandidate[] = [
   { id: 'ondemand:gemini', label: 'Gemini (npx)', npxPackage: 'pi-gemini-acp' },
 ]
 
-const trimOutput = (value: Buffer | string | null | undefined): string => String(value ?? '').replace(/\s+/gu, ' ').trim().slice(0, 120)
+const trimOutput = (value: Buffer | string | null | undefined): string =>
+  String(value ?? '')
+    .replace(/\s+/gu, ' ')
+    .trim()
+    .slice(0, 120)
 
 const pathOf = (command: string): string | undefined => {
   const lookup = process.platform === 'win32' ? 'where.exe' : 'which'
   const result = spawnSync(lookup, [command], { encoding: 'utf8', windowsHide: true, timeout: 2_000 })
   if (result.status !== 0) return undefined
-  const lines = String(result.stdout ?? '').split(/\r?\n/gu).map(line => line.trim()).filter(Boolean)
+  const lines = String(result.stdout ?? '')
+    .split(/\r?\n/gu)
+    .map(line => line.trim())
+    .filter(Boolean)
   if (lines.length === 0) return undefined
   if (process.platform === 'win32') {
     const win = lines.find(line => /\.(?:cmd|exe|bat)$/iu.test(line))
@@ -70,7 +89,9 @@ const pathOf = (command: string): string | undefined => {
 export function commandVersion(path: string): string | undefined {
   const isWinCmd = process.platform === 'win32' && /\.(?:cmd|bat)$/iu.test(path)
   const result = spawnSync(path, ['--version'], {
-    encoding: 'utf8', windowsHide: true, timeout: 3_000,
+    encoding: 'utf8',
+    windowsHide: true,
+    timeout: 3_000,
     ...(isWinCmd ? { shell: true } : {}),
   })
   const text = trimOutput(result.stdout) || trimOutput(result.stderr)

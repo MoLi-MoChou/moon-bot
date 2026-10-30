@@ -6,23 +6,34 @@ import { afterEach, test } from 'node:test'
 import { cleanVersion, install, newer, sourceOf } from '../src/host/update.ts'
 
 const PKG = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
-const flush = async () => { for (let index = 0; index < 8; index += 1) await Promise.resolve() }
+const flush = async () => {
+  for (let index = 0; index < 8; index += 1) await Promise.resolve()
+}
 const realFetch = globalThis.fetch
-afterEach(() => { globalThis.fetch = realFetch })
+afterEach(() => {
+  globalThis.fetch = realFetch
+})
 
 // The update module alone, on a stub plugin manager and a scripted fetch.
-function start({ source, registries, answers = {}, result = { application: 'restart-required' }, config = {}, profileDir }: {
-  source?: string,
-  registries?: { registry: string | null, fallbackRegistries: string[], resolved: string },
-  answers?: Record<string, unknown>,
-  result?: unknown,
-  config?: Record<string, unknown>,
-  profileDir?: string,
+function start({
+  source,
+  registries,
+  answers = {},
+  result = { application: 'restart-required' },
+  config = {},
+  profileDir,
+}: {
+  source?: string
+  registries?: { registry: string | null; fallbackRegistries: string[]; resolved: string }
+  answers?: Record<string, unknown>
+  result?: unknown
+  config?: Record<string, unknown>
+  profileDir?: string
 } = {}) {
   const fetched = []
   const installs = []
   const warnings = []
-  globalThis.fetch = (async (url) => {
+  globalThis.fetch = (async url => {
     fetched.push(url)
     const answer = answers[url]
     if (answer === undefined) return { ok: false, status: 404, json: async () => ({}) }
@@ -30,18 +41,37 @@ function start({ source, registries, answers = {}, result = { application: 'rest
     return { ok: true, status: 200, json: async () => answer }
   }) as unknown as typeof fetch
   const pluginManager = {
-    listBundles: async () => [{ name: 'other', source: 'other@^1.0.0' }, ...(source === undefined ? [] : [{ name: PKG.name, source }])],
-    registries: async () => registries ?? { registry: null, fallbackRegistries: ['https://registry.npmmirror.com/'], resolved: 'https://registry.npmjs.org/' },
-    installBundle: async (spec, options) => { installs.push([spec, options]); return typeof result === 'function' ? result() : result },
+    listBundles: async () => [
+      { name: 'other', source: 'other@^1.0.0' },
+      ...(source === undefined ? [] : [{ name: PKG.name, source }]),
+    ],
+    registries: async () =>
+      registries ?? {
+        registry: null,
+        fallbackRegistries: ['https://registry.npmmirror.com/'],
+        resolved: 'https://registry.npmjs.org/',
+      },
+    installBundle: async (spec, options) => {
+      installs.push([spec, options])
+      return typeof result === 'function' ? result() : result
+    },
   }
   const rt = {
-    ctx: { get: name => (name === 'pluginManager' ? pluginManager : name === 'profileContext' && profileDir ? { dir: profileDir } : undefined), effect() {} },
+    ctx: {
+      get: name =>
+        name === 'pluginManager'
+          ? pluginManager
+          : name === 'profileContext' && profileDir
+            ? { dir: profileDir }
+            : undefined,
+      effect() {},
+    },
     config,
     warn: (...args) => warnings.push(args),
   } as unknown as Parameters<typeof install>[0] & {
-    updateCheck(options?: { fresh?: boolean }): Promise<{ available: boolean, [key: string]: unknown }>
-    updateStart(options?: Record<string, unknown>): { phase: string, [key: string]: unknown }
-    updateView(): { repoUrl: string, [key: string]: unknown }
+    updateCheck(options?: { fresh?: boolean }): Promise<{ available: boolean; [key: string]: unknown }>
+    updateStart(options?: Record<string, unknown>): { phase: string; [key: string]: unknown }
+    updateView(): { repoUrl: string; [key: string]: unknown }
     repoStars(): Promise<number | null>
   }
   install(rt)
@@ -67,10 +97,19 @@ test('the install source decides where a newer version is looked for', () => {
   assert.deepEqual(sourceOf('npm:ds-bot@^0.1.0'), { kind: 'registry' })
   assert.deepEqual(sourceOf('link:E:/项目库/My Bots/ds-bot'), { kind: 'path' })
   assert.deepEqual(sourceOf('/home/user/ds-bot'), { kind: 'path' })
-  assert.deepEqual(sourceOf('github:MoLi-MoChou/moon-bot#v0.1.0&path:/core'),
-    { kind: 'git', owner: 'MoLi-MoChou', repo: 'moon-bot', ref: 'v0.1.0', rest: ['path:/core'] })
-  assert.deepEqual(sourceOf('git+https://github.com/MoLi-MoChou/moon-bot.git#main'),
-    { kind: 'git', owner: 'MoLi-MoChou', repo: 'moon-bot', rest: [] })
+  assert.deepEqual(sourceOf('github:MoLi-MoChou/moon-bot#v0.1.0&path:/core'), {
+    kind: 'git',
+    owner: 'MoLi-MoChou',
+    repo: 'moon-bot',
+    ref: 'v0.1.0',
+    rest: ['path:/core'],
+  })
+  assert.deepEqual(sourceOf('git+https://github.com/MoLi-MoChou/moon-bot.git#main'), {
+    kind: 'git',
+    owner: 'MoLi-MoChou',
+    repo: 'moon-bot',
+    rest: [],
+  })
   assert.deepEqual(sourceOf('https://example.com/ds-bot-0.1.0.tgz'), { kind: 'tarball' })
   assert.deepEqual(sourceOf(undefined), { kind: 'unknown' })
 })
@@ -85,7 +124,10 @@ test('a registry install finds the newest version on the next registry and insta
     result: { application: 'restart-required', version: '9.0.0' },
   })
   const view = await rt.updateCheck()
-  assert.deepEqual(fetched, [`https://registry.npmjs.org/${PKG.name}/latest`, `https://registry.npmmirror.com/${PKG.name}/latest`])
+  assert.deepEqual(fetched, [
+    `https://registry.npmjs.org/${PKG.name}/latest`,
+    `https://registry.npmmirror.com/${PKG.name}/latest`,
+  ])
   assert.equal(view.available, true)
   assert.equal(view.latest, '9.0.0')
   assert.equal(view.current, PKG.version)
@@ -100,10 +142,14 @@ test('a registry install finds the newest version on the next registry and insta
   assert.equal(done.available, false)
 })
 
-test('a private registry of pnpm\'s own is asked alone, and an answer stands for a while', async () => {
+test("a private registry of pnpm's own is asked alone, and an answer stands for a while", async () => {
   const { rt, fetched } = start({
     source: `${PKG.name}@^${PKG.version}`,
-    registries: { registry: null, fallbackRegistries: ['https://registry.npmmirror.com/'], resolved: 'https://npm.corp.example/' },
+    registries: {
+      registry: null,
+      fallbackRegistries: ['https://registry.npmmirror.com/'],
+      resolved: 'https://npm.corp.example/',
+    },
     answers: { [`https://npm.corp.example/${PKG.name}/latest`]: { version: PKG.version } },
   })
   const view = await rt.updateCheck()
@@ -128,7 +174,7 @@ test('a versioned GitHub install follows the latest release tag and keeps its pa
   assert.deepEqual(installs, [['github:MoLi-MoChou/moon-bot#v9.1.0&path:/core', {}]])
 })
 
-test('a versioned GitHub install follows the release to the repository\'s current address', async () => {
+test("a versioned GitHub install follows the release to the repository's current address", async () => {
   const { rt, installs } = start({
     source: 'github:old-owner/DeepSeek-Bot#v0.1.0&path:/core',
     answers: {
@@ -159,10 +205,15 @@ test('a linked checkout, an unversioned git install, or a disabled check never a
   assert.deepEqual(fetched, [])
 })
 
-test('in the desktop app, which updates as a whole, it never asks the network and offers nothing', async (t) => {
+test('in the desktop app, which updates as a whole, it never asks the network and offers nothing', async t => {
   process.env.DS_BOT_APP = '1'
-  t.after(() => { delete process.env.DS_BOT_APP })
-  const { rt, fetched } = start({ source: `${PKG.name}@^${PKG.version}`, answers: { [`https://registry.npmjs.org/${PKG.name}/latest`]: { version: '9.0.0' } } })
+  t.after(() => {
+    delete process.env.DS_BOT_APP
+  })
+  const { rt, fetched } = start({
+    source: `${PKG.name}@^${PKG.version}`,
+    answers: { [`https://registry.npmjs.org/${PKG.name}/latest`]: { version: '9.0.0' } },
+  })
   const view = await rt.updateCheck({ fresh: true })
   assert.equal(view.source, 'app')
   assert.equal(view.available, false)
@@ -183,7 +234,7 @@ test('the star count comes from the repository, is kept for an hour, and survive
   assert.deepEqual(fetched, [repo, repo])
 })
 
-test('without a source from the plugin manager, the profile\'s own dependency entry decides', async () => {
+test("without a source from the plugin manager, the profile's own dependency entry decides", async () => {
   const dir = mkdtempSync(join(tmpdir(), 'ds-bot-update-'))
   writeFileSync(join(dir, 'package.json'), JSON.stringify({ dependencies: { [PKG.name]: `^${PKG.version}` } }))
   const { rt } = start({
@@ -200,7 +251,8 @@ test('without a source from the plugin manager, the profile\'s own dependency en
 
 test('a check that finds nothing clears the version a check before it found', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'ds-bot-update-'))
-  const setSource = source => writeFileSync(join(dir, 'package.json'), JSON.stringify({ dependencies: { [PKG.name]: source } }))
+  const setSource = source =>
+    writeFileSync(join(dir, 'package.json'), JSON.stringify({ dependencies: { [PKG.name]: source } }))
   setSource(`^${PKG.version}`)
   const latest = `https://registry.npmjs.org/${PKG.name}/latest`
   const answers = { [latest]: { version: '9.0.0' } }
@@ -229,9 +281,10 @@ test('a failed install reports why and can be tried again', async () => {
     source: `${PKG.name}@^${PKG.version}`,
     config: { updateRegistry: 'https://registry.example' },
     answers: { [`https://registry.example/${PKG.name}/latest`]: { version: '9.0.0' } },
-    result: () => (++attempt === 1
-      ? { application: 'failed', error: { code: 'incompatible-version', diagnostic: 'needs a newer DSH' } }
-      : { application: 'restart-required', version: '9.0.0' }),
+    result: () =>
+      ++attempt === 1
+        ? { application: 'failed', error: { code: 'incompatible-version', diagnostic: 'needs a newer DSH' } }
+        : { application: 'restart-required', version: '9.0.0' },
   })
   await rt.updateCheck()
   rt.updateStart()

@@ -8,12 +8,15 @@ function clock(ms: number): string {
   return new Date(ms).toLocaleTimeString(dateLocale(), { hour: 'numeric', minute: '2-digit' })
 }
 const midnight = (value: Date): number => new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime()
-const daysBefore = (date: Date, now: number): number => Math.round((midnight(new Date(now)) - midnight(date)) / 86400000)
+const daysBefore = (date: Date, now: number): number =>
+  Math.round((midnight(new Date(now)) - midnight(date)) / 86400000)
 export function dayLabel(ms: number): string {
   const date = new Date(ms)
   const today = new Date()
   const sameDay = date.toDateString() === today.toDateString()
-  return sameDay ? t('Today {time}', { time: clock(ms) }) : `${date.toLocaleDateString(dateLocale(), { weekday: 'short', month: 'short', day: 'numeric' })} ${clock(ms)}`
+  return sameDay
+    ? t('Today {time}', { time: clock(ms) })
+    : `${date.toLocaleDateString(dateLocale(), { weekday: 'short', month: 'short', day: 'numeric' })} ${clock(ms)}`
 }
 
 // The time separator's stamp: "Today 1:12 AM", "Yesterday 9:03 PM", "Thu, Sep 3 4:20 PM".

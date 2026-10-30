@@ -2,27 +2,54 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { listedOpener } from '../src/client/open-listed.ts'
 
-interface ListedRow { id: string, retainedBy?: { mainView: number } }
+interface ListedRow {
+  id: string
+  retainedBy?: { mainView: number }
+}
 const store = (ids: string[] = []) => {
   const listeners = new Set<() => void>()
   const snapshot = { byId: {} as Record<string, ListedRow> }
-  const notify = () => { for (const fn of listeners) fn() }
-  const put = (id, main?) => { snapshot.byId[id] = main ? { id, retainedBy: { mainView: 1 } } : { id } }
+  const notify = () => {
+    for (const fn of listeners) fn()
+  }
+  const put = (id, main?) => {
+    snapshot.byId[id] = main ? { id, retainedBy: { mainView: 1 } } : { id }
+  }
   for (const id of ids) put(id)
   return {
     getSnapshot: () => snapshot,
-    subscribe: (fn) => { listeners.add(fn); return () => { listeners.delete(fn) } },
-    set: (id) => { put(id); notify() },
-    setMain: (id) => { for (const row of Object.values(snapshot.byId)) delete row.retainedBy; put(id, true); notify() },
+    subscribe: fn => {
+      listeners.add(fn)
+      return () => {
+        listeners.delete(fn)
+      }
+    },
+    set: id => {
+      put(id)
+      notify()
+    },
+    setMain: id => {
+      for (const row of Object.values(snapshot.byId)) delete row.retainedBy
+      put(id, true)
+      notify()
+    },
   }
 }
 
-const mainViewOf = (list: { getSnapshot(): { byId: Record<string, ListedRow> } }) => Object.values(list.getSnapshot().byId).find(row => (row?.retainedBy?.mainView ?? 0) > 0)?.id
+const mainViewOf = (list: { getSnapshot(): { byId: Record<string, ListedRow> } }) =>
+  Object.values(list.getSnapshot().byId).find(row => (row?.retainedBy?.mainView ?? 0) > 0)?.id
 
-const rig = (list) => {
+const rig = list => {
   const opened = []
   let refreshes = 0
-  const show = listedOpener({ list, open: id => opened.push(id), refresh: () => { refreshes += 1 }, current: () => mainViewOf(list) })
+  const show = listedOpener({
+    list,
+    open: id => opened.push(id),
+    refresh: () => {
+      refreshes += 1
+    },
+    current: () => mainViewOf(list),
+  })
   return { show, opened, refreshes: () => refreshes }
 }
 

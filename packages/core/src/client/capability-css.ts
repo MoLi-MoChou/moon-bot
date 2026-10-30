@@ -65,4 +65,4 @@ export const CAPABILITY_CSS = `
 .bt-cap-toolbar .bt-market-search{max-width:none}
 }
 @media (prefers-reduced-motion:reduce){.bt-chevron svg{transition:none}}
-`;
+`

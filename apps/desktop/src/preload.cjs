@@ -10,17 +10,24 @@ if (host !== undefined && location.origin === host) {
   // DS Bot's settings show and move the app's data location through this.
   contextBridge.exposeInMainWorld('dsBotApp', {
     dataLocation: () => ipcRenderer.invoke('moon-bot:data-location'),
-    moveData: (workspace) => ipcRenderer.invoke('moon-bot:move-data', typeof workspace === 'string' ? workspace : undefined),
-    teamWorkspaceChanged: (path) => { ipcRenderer.send('moon-bot:team-workspace', String(path)) },
+    moveData: workspace =>
+      ipcRenderer.invoke('moon-bot:move-data', typeof workspace === 'string' ? workspace : undefined),
+    teamWorkspaceChanged: path => {
+      ipcRenderer.send('moon-bot:team-workspace', String(path))
+    },
     // Moon Bot patch: the app's own updater, for Settings > About.
     updates: {
       state: () => ipcRenderer.invoke('moon-bot:update-state'),
       check: () => ipcRenderer.invoke('moon-bot:update-check'),
       install: () => ipcRenderer.invoke('moon-bot:update-install'),
-      onChange: (listener) => {
-        const handler = (_event, state) => { listener(state) }
+      onChange: listener => {
+        const handler = (_event, state) => {
+          listener(state)
+        }
         ipcRenderer.on('moon-bot:update-changed', handler)
-        return () => { ipcRenderer.removeListener('moon-bot:update-changed', handler) }
+        return () => {
+          ipcRenderer.removeListener('moon-bot:update-changed', handler)
+        }
       },
     },
   })
@@ -32,7 +39,9 @@ if (host !== undefined && location.origin === host) {
       if (fullscreen) root.dataset.fullscreen = 'true'
       else delete root.dataset.fullscreen
     })
-    const start = () => { frameless(caption.slice('--moon-bot-caption='.length), process.argv.includes('--moon-bot-mica')) }
+    const start = () => {
+      frameless(caption.slice('--moon-bot-caption='.length), process.argv.includes('--moon-bot-mica'))
+    }
     // A preload runs before the document root exists.
     if (document.readyState === 'loading') window.addEventListener('DOMContentLoaded', start, { once: true })
     else start()
@@ -57,7 +66,7 @@ function captionColors(_mica) {
   canvas.width = canvas.height = 1
   const context = canvas.getContext('2d', { willReadFrequently: true })
   if (context === null) return
-  const opaque = (color) => {
+  const opaque = color => {
     context.clearRect(0, 0, 1, 1)
     context.fillStyle = color
     context.fillRect(0, 0, 1, 1)
@@ -115,10 +124,18 @@ function captionColors(_mica) {
   const queue = () => {
     if (queued) return
     queued = true
-    requestAnimationFrame(() => { queued = false; send() })
+    requestAnimationFrame(() => {
+      queued = false
+      send()
+    })
   }
   const observer = new MutationObserver(queue)
-  observer.observe(document.body, { attributes: true, attributeFilter: ['data-bt-dark', 'style'], childList: true, subtree: true })
+  observer.observe(document.body, {
+    attributes: true,
+    attributeFilter: ['data-bt-dark', 'style'],
+    childList: true,
+    subtree: true,
+  })
   observer.observe(document.head, { childList: true, subtree: true, characterData: true })
   observer.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] })
   // A stylesheet link is added before it loads; its rules apply without another mutation.

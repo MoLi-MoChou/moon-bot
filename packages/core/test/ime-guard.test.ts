@@ -13,26 +13,37 @@ performance.now = () => clock
 function createRoot() {
   const listeners = new Map()
   return {
-    addEventListener (type, listener, capture) {
+    addEventListener(type, listener, capture) {
       assert.equal(capture, true, `${type} must listen in the capture phase`)
       listeners.set(type, [...(listeners.get(type) ?? []), listener])
     },
-    removeEventListener (type, listener) {
-      listeners.set(type, (listeners.get(type) ?? []).filter(item => item !== listener))
+    removeEventListener(type, listener) {
+      listeners.set(
+        type,
+        (listeners.get(type) ?? []).filter(item => item !== listener),
+      )
     },
-    fire (type, event) {
+    fire(type, event) {
       // remove() swaps in a new array, so a listener that removes itself cannot skip another.
       for (const listener of listeners.get(type) ?? []) listener(event)
     },
     count: type => (listeners.get(type) ?? []).length,
-  } as unknown as Parameters<typeof installImeGuard>[0] & { fire: (type: string, event: unknown) => void, count: (type: string) => number }
+  } as unknown as Parameters<typeof installImeGuard>[0] & {
+    fire: (type: string, event: unknown) => void
+    count: (type: string) => number
+  }
 }
 
 class Field extends Element {
   composer: boolean | undefined
-  constructor (composer) { super(); this.composer = composer }
+  constructor(composer) {
+    super()
+    this.composer = composer
+  }
   // Only the composer's descendants answer the guard's selector, as in the page.
-  override closest (selector) { return this.composer && selector.includes('data-composer-input') ? this : null }
+  override closest(selector) {
+    return this.composer && selector.includes('data-composer-input') ? this : null
+  }
 }
 
 const enter = (target, { composing = false, keyCode = 13 } = {}) => {
@@ -161,5 +172,9 @@ test('nothing is heard after the guard is removed', () => {
 })
 
 // Restore the clock for any test file that runs after this one in the same process.
-test.after?.(() => { performance.now = realNow })
-process.on('exit', () => { performance.now = realNow })
+test.after?.(() => {
+  performance.now = realNow
+})
+process.on('exit', () => {
+  performance.now = realNow
+})

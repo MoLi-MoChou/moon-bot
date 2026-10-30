@@ -40,7 +40,9 @@ const wantedTheme = option('theme')
 const passwordEnv = option('password-env')
 
 if (!url) {
-  console.error('usage: node dev/ui-smoke.mjs <url> [--out <dir>] [--wait <ms>] [--theme <id>] [--allow <regex>] [--password-env <NAME>] [--timeout <ms>]')
+  console.error(
+    'usage: node dev/ui-smoke.mjs <url> [--out <dir>] [--wait <ms>] [--theme <id>] [--allow <regex>] [--password-env <NAME>] [--timeout <ms>]',
+  )
   process.exit(2)
 }
 
@@ -58,8 +60,11 @@ if (tools === undefined) {
   console.error('no .tools folder beside the checkout; set MOON_BOT_TOOLS to the bench tools folder')
   process.exit(2)
 }
-const playwrightPath = process.env.PLAYWRIGHT_CORE ?? (tools === undefined ? '' : join(tools, 'pw', 'node_modules', 'playwright-core'))
-const chrome = process.env.CHROME_BIN ?? (tools === undefined ? '' : join(tools, 'ms-playwright', 'chromium-1148', 'chrome-linux', 'chrome'))
+const playwrightPath =
+  process.env.PLAYWRIGHT_CORE ?? (tools === undefined ? '' : join(tools, 'pw', 'node_modules', 'playwright-core'))
+const chrome =
+  process.env.CHROME_BIN ??
+  (tools === undefined ? '' : join(tools, 'ms-playwright', 'chromium-1148', 'chrome-linux', 'chrome'))
 if (!existsSync(playwrightPath)) {
   console.error(`no playwright-core at ${playwrightPath}; set PLAYWRIGHT_CORE or MOON_BOT_TOOLS`)
   process.exit(2)
@@ -93,13 +98,15 @@ let shot
 try {
   browser = await chromium.launch({ executablePath: chrome, env, args: ['--no-sandbox', '--disable-dev-shm-usage'] })
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } })
-  page.on('console', message => { if (message.type() === 'error') errors.push(message.text()) })
+  page.on('console', message => {
+    if (message.type() === 'error') errors.push(message.text())
+  })
   page.on('pageerror', error => errors.push(String(error)))
 
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: timeoutMs })
 
   // A password build asks on its own page. The value stays in the environment.
-  if (await page.locator('input[type=password]').count() > 0) {
+  if ((await page.locator('input[type=password]').count()) > 0) {
     if (passwordEnv === undefined || !process.env[passwordEnv]) {
       throw Object.assign(new Error('the login page asks for a password; pass --password-env <NAME>'), { usage: true })
     }
@@ -112,7 +119,9 @@ try {
 
   // DSH shows a first-run preview notice; clear it when it appears, before any read.
   const notice = page.getByRole('dialog').getByRole('button', { name: /Continue|继续/ })
-  try { await page.addLocatorHandler(notice, () => notice.click()) } catch {}
+  try {
+    await page.addLocatorHandler(notice, () => notice.click())
+  } catch {}
 
   // The plugin registers its client after the shell boots: wait for any bt- class rather
   // than a fixed sleep, so a white page is reported by its symptom (0 elements).
@@ -134,7 +143,8 @@ try {
 
   ok(classes >= minBt, `the plugin client is mounted (${classes} bt- elements, need ${minBt})`)
   ok(THEMES.includes(theme), `body theme is one of ${THEMES.join(', ')} (got ${JSON.stringify(theme)})`)
-  if (wantedTheme !== undefined) ok(theme === wantedTheme, `body theme is ${wantedTheme} (got ${JSON.stringify(theme)})`)
+  if (wantedTheme !== undefined)
+    ok(theme === wantedTheme, `body theme is ${wantedTheme} (got ${JSON.stringify(theme)})`)
   const unexpected = errors.filter(text => !allows.some(allow => allow.test(text)))
   ok(unexpected.length === 0, `console has no unexpected error (${unexpected.length})`)
   for (const text of unexpected.slice(0, 8)) console.log(`     · ${text.slice(0, 300)}`)
@@ -148,7 +158,10 @@ try {
   }
 } catch (error) {
   console.error(`ui-smoke: ${error.message}`)
-  if (error.usage) console.error('usage: node dev/ui-smoke.mjs <url> [--out <dir>] [--wait <ms>] [--theme <id>] [--allow <regex>] [--password-env <NAME>] [--timeout <ms>]')
+  if (error.usage)
+    console.error(
+      'usage: node dev/ui-smoke.mjs <url> [--out <dir>] [--wait <ms>] [--theme <id>] [--allow <regex>] [--password-env <NAME>] [--timeout <ms>]',
+    )
   process.exitCode = error.usage ? 2 : 1
   if (shot === undefined) console.error('no screenshot: the page did not load')
 } finally {

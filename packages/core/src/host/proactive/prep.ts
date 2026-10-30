@@ -55,7 +55,7 @@ export interface Candidate {
 /** The model call Prep needs, as a seam so the pipeline can be tested without a model. */
 export interface PrepareAsk {
   /** Returns the raw text the model answered; parsing is this module's job. */
-  (request: { readonly system: string, readonly prompt: string }): Promise<string>
+  (request: { readonly system: string; readonly prompt: string }): Promise<string>
 }
 
 export const PREP_SYSTEM = `You are the part of Moon Bot that decides whether anything from the last day is worth telling the user about, unprompted.
@@ -79,7 +79,9 @@ export function prepPrompt(input: PrepInput): string {
   lines.push('## What this Bot remembers')
   if (input.memory.length === 0) lines.push('(nothing)')
   for (const entry of input.memory.slice(0, 60)) {
-    lines.push(`- ${entry.topic === null ? '' : `[${entry.topic}] `}${entry.text}${entry.added === null ? '' : ` (saved ${entry.added})`}`)
+    lines.push(
+      `- ${entry.topic === null ? '' : `[${entry.topic}] `}${entry.text}${entry.added === null ? '' : ` (saved ${entry.added})`}`,
+    )
   }
   lines.push('')
   lines.push('## What was said in this conversation today')
@@ -110,7 +112,11 @@ interface Parsed {
 
 /** Reads the model's JSON answer, tolerating a fenced block around it. */
 export function parsePrepAnswer(raw: string): Parsed | undefined {
-  const body = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/```$/, '').trim()
+  const body = raw
+    .trim()
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/```$/, '')
+    .trim()
   if (empty(body)) return undefined
   let value: unknown
   try {

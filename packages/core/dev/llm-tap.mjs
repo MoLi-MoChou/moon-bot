@@ -29,26 +29,47 @@ if (!port || !upstream || !log) {
 }
 if (bodies) mkdirSync(bodies, { recursive: true })
 const base = upstream.replace(/\/+$/, '')
-const HOP_BY_HOP = new Set(['host', 'connection', 'content-length', 'transfer-encoding', 'keep-alive', 'accept-encoding', 'upgrade', 'te', 'trailer', 'proxy-connection'])
+const HOP_BY_HOP = new Set([
+  'host',
+  'connection',
+  'content-length',
+  'transfer-encoding',
+  'keep-alive',
+  'accept-encoding',
+  'upgrade',
+  'te',
+  'trailer',
+  'proxy-connection',
+])
 let next = 0
 
-const textOf = content => (typeof content === 'string' ? content
-  : Array.isArray(content) ? content.map(part => part?.text ?? '').join('\n') : '')
+const textOf = content =>
+  typeof content === 'string' ? content : Array.isArray(content) ? content.map(part => part?.text ?? '').join('\n') : ''
 
 function describe(body) {
   const messages = body?.messages ?? []
-  const system = body?.system !== undefined ? textOf(body.system)
-    : textOf(messages.find(message => message.role === 'system' || message.role === 'developer')?.content)
+  const system =
+    body?.system !== undefined
+      ? textOf(body.system)
+      : textOf(messages.find(message => message.role === 'system' || message.role === 'developer')?.content)
   const lastUser = textOf(messages.findLast(message => message.role === 'user')?.content)
-  const kind = /context steward/.test(system) ? 'steward'
-    : /You keep the long-term memory of one Bot/.test(system) ? 'review'
-      : /You write the memory summary/.test(system) ? 'summary'
-        : /You keep the memory of one Bot/.test(system) ? 'ask'
-          : /You are now writing a checkpoint/.test(lastUser) ? 'checkpoint'
-            : /You are now writing a handoff note/.test(lastUser) ? 'handoff' : 'main'
-  const bot = /You are ([^,\n]+), a Bot/.exec(system)?.[1]
-    ?? (kind === 'review' ? /^The Bot: ([^,\n]+?)[,.]/.exec(lastUser)?.[1] : undefined)
-    ?? (/Main Bot/.test(system) ? 'Main Bot' : undefined)
+  const kind = /context steward/.test(system)
+    ? 'steward'
+    : /You keep the long-term memory of one Bot/.test(system)
+      ? 'review'
+      : /You write the memory summary/.test(system)
+        ? 'summary'
+        : /You keep the memory of one Bot/.test(system)
+          ? 'ask'
+          : /You are now writing a checkpoint/.test(lastUser)
+            ? 'checkpoint'
+            : /You are now writing a handoff note/.test(lastUser)
+              ? 'handoff'
+              : 'main'
+  const bot =
+    /You are ([^,\n]+), a Bot/.exec(system)?.[1] ??
+    (kind === 'review' ? /^The Bot: ([^,\n]+?)[,.]/.exec(lastUser)?.[1] : undefined) ??
+    (/Main Bot/.test(system) ? 'Main Bot' : undefined)
   return {
     kind,
     bot,
@@ -67,9 +88,17 @@ function tokensOf(usage) {
   if (usage === undefined) return undefined
   if (usage.input_tokens !== undefined) {
     const cached = usage.cache_read_input_tokens ?? 0
-    return { prompt: usage.input_tokens + cached + (usage.cache_creation_input_tokens ?? 0), cached, output: usage.output_tokens }
+    return {
+      prompt: usage.input_tokens + cached + (usage.cache_creation_input_tokens ?? 0),
+      cached,
+      output: usage.output_tokens,
+    }
   }
-  return { prompt: usage.prompt_tokens, cached: usage.prompt_tokens_details?.cached_tokens ?? usage.prompt_cache_hit_tokens ?? 0, output: usage.completion_tokens }
+  return {
+    prompt: usage.prompt_tokens,
+    cached: usage.prompt_tokens_details?.cached_tokens ?? usage.prompt_cache_hit_tokens ?? 0,
+    output: usage.completion_tokens,
+  }
 }
 
 const SIZE_FIELDS = new Set(['messages', 'tools', 'max_tokens', 'max_completion_tokens'])
@@ -79,12 +108,14 @@ const previousOf = new Map()
 // then the messages in order, down to the first differing character.
 function prefixAgainst(previous, body) {
   if (previous === undefined) return undefined
-  const fields = [...new Set([...Object.keys(previous.body), ...Object.keys(body)])]
-    .filter(key => !SIZE_FIELDS.has(key) && JSON.stringify(previous.body[key]) !== JSON.stringify(body[key]))
+  const fields = [...new Set([...Object.keys(previous.body), ...Object.keys(body)])].filter(
+    key => !SIZE_FIELDS.has(key) && JSON.stringify(previous.body[key]) !== JSON.stringify(body[key]),
+  )
   const before = previous.body.messages ?? []
   const after = body.messages ?? []
   let same = 0
-  while (same < before.length && same < after.length && JSON.stringify(before[same]) === JSON.stringify(after[same])) same += 1
+  while (same < before.length && same < after.length && JSON.stringify(before[same]) === JSON.stringify(after[same]))
+    same += 1
   const result = {
     previous: previous.id,
     fields,
@@ -97,7 +128,13 @@ function prefixAgainst(previous, body) {
     const b = JSON.stringify(after[same])
     let at = 0
     while (at < a.length && a[at] === b[at]) at += 1
-    result.firstDiff = { index: same, role: after[same]?.role, at, was: a.slice(Math.max(0, at - 80), at + 160), now: b.slice(Math.max(0, at - 80), at + 160) }
+    result.firstDiff = {
+      index: same,
+      role: after[same]?.role,
+      at,
+      was: a.slice(Math.max(0, at - 80), at + 160),
+      now: b.slice(Math.max(0, at - 80), at + 160),
+    }
   }
   return result
 }
@@ -119,7 +156,9 @@ function answerOf(raw, streamed) {
   // Anthropic Messages: usage comes in message_start and grows in message_delta.
   const event = json => {
     switch (json.type) {
-      case 'message_start': out.usage = { ...json.message?.usage }; break
+      case 'message_start':
+        out.usage = { ...json.message?.usage }
+        break
       case 'content_block_start':
         if (json.content_block?.type === 'tool_use') out.tools.push(json.content_block.name)
         if (typeof json.content_block?.text === 'string') out.text += json.content_block.text
@@ -151,14 +190,22 @@ function answerOf(raw, streamed) {
     take(json?.choices?.[0], json?.usage)
   }
   if (!streamed) {
-    try { one(JSON.parse(raw)) } catch { out.text = raw.slice(0, 2000) }
+    try {
+      one(JSON.parse(raw))
+    } catch {
+      out.text = raw.slice(0, 2000)
+    }
     return out
   }
   for (const line of raw.split('\n')) {
     if (!line.startsWith('data:')) continue
     const data = line.slice(5).trim()
     if (data === '' || data === '[DONE]') continue
-    try { one(JSON.parse(data)) } catch { /* a partial line; the rest of the stream still counts */ }
+    try {
+      one(JSON.parse(data))
+    } catch {
+      /* a partial line; the rest of the stream still counts */
+    }
   }
   return out
 }
@@ -170,12 +217,20 @@ createServer(async (req, res) => {
   for await (const chunk of req) chunks.push(chunk)
   const raw = Buffer.concat(chunks)
   let body
-  try { body = raw.length > 0 ? JSON.parse(raw.toString('utf8')) : undefined } catch { body = undefined }
+  try {
+    body = raw.length > 0 ? JSON.parse(raw.toString('utf8')) : undefined
+  } catch {
+    body = undefined
+  }
   const headers = {}
   for (const [name, value] of Object.entries(req.headers)) if (!HOP_BY_HOP.has(name)) headers[name] = value
   let upstreamResponse
   try {
-    upstreamResponse = await fetch(`${base}${req.url.replace(/^\/v1/, '')}`, { method: req.method, headers, body: raw.length > 0 ? raw : undefined })
+    upstreamResponse = await fetch(`${base}${req.url.replace(/^\/v1/, '')}`, {
+      method: req.method,
+      headers,
+      body: raw.length > 0 ? raw : undefined,
+    })
   } catch (error) {
     res.writeHead(502, { 'content-type': 'application/json' })
     res.end(JSON.stringify({ error: { message: `tap: upstream unreachable: ${error.message}` } }))
@@ -194,7 +249,10 @@ createServer(async (req, res) => {
   }
   res.end()
   if (body?.messages === undefined) {
-    appendFileSync(log, JSON.stringify({ t: new Date().toISOString(), id, path: req.url, status: upstreamResponse.status }) + '\n')
+    appendFileSync(
+      log,
+      JSON.stringify({ t: new Date().toISOString(), id, path: req.url, status: upstreamResponse.status }) + '\n',
+    )
     return
   }
   const call = describe(body)
@@ -204,23 +262,26 @@ createServer(async (req, res) => {
   const prefix = prefixAgainst(previousOf.get(who), body)
   previousOf.set(who, { id, body })
   if (bodies) writeFileSync(path.join(bodies, `${id}-${call.kind}-${String(who).replace(/[^\w.-]+/g, '_')}.json`), raw)
-  appendFileSync(log, JSON.stringify({
-    t: new Date().toISOString(),
-    id,
-    ms: Date.now() - started,
-    status: upstreamResponse.status,
-    kind: call.kind,
-    bot: call.bot,
-    messages: call.messages,
-    request: call.request,
-    ...(prefix === undefined ? {} : { prefix }),
-    usage: answer.usage,
-    tokens: tokensOf(answer.usage),
-    finish: answer.finish,
-    lastUser: whole ? call.lastUser : call.lastUser.slice(0, 300),
-    text: answer.text,
-    reasoning: whole ? answer.reasoning : answer.reasoning.slice(0, 200),
-    tools: answer.tools,
-    ...(upstreamResponse.status >= 400 ? { error: text.slice(0, 1000) } : {}),
-  }) + '\n')
+  appendFileSync(
+    log,
+    JSON.stringify({
+      t: new Date().toISOString(),
+      id,
+      ms: Date.now() - started,
+      status: upstreamResponse.status,
+      kind: call.kind,
+      bot: call.bot,
+      messages: call.messages,
+      request: call.request,
+      ...(prefix === undefined ? {} : { prefix }),
+      usage: answer.usage,
+      tokens: tokensOf(answer.usage),
+      finish: answer.finish,
+      lastUser: whole ? call.lastUser : call.lastUser.slice(0, 300),
+      text: answer.text,
+      reasoning: whole ? answer.reasoning : answer.reasoning.slice(0, 200),
+      tools: answer.tools,
+      ...(upstreamResponse.status >= 400 ? { error: text.slice(0, 1000) } : {}),
+    }) + '\n',
+  )
 }).listen(Number(port), '127.0.0.1', () => console.log(`llm-tap: 127.0.0.1:${port} -> ${base}`))

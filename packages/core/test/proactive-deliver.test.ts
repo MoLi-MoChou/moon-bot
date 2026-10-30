@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { isProactiveSource, proactiveCaller } from '../src/host/proactive/deliver.ts'
 
-test('the Bot is told this came from the user\'s standing request, not from the user now', () => {
+test("the Bot is told this came from the user's standing request, not from the user now", () => {
   // If the Bot read it as a normal message it would answer as if the user had just spoken,
   // and might open with a greeting addressed to a person who is not there.
   const text = proactiveCaller('The weekly report is still empty.', ['10-29 · you said so'])

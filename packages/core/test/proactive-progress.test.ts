@@ -52,13 +52,21 @@ function deps(over = {}) {
     pipeline: { ask: async () => 'NOTHING', newId: () => 'c1', now: () => 1_000_000, log: () => undefined },
     send: { send: () => true, record: () => undefined, live: () => true },
     contextOf: async () => ({
-      topics: 'x', dailyCap: 1, sessionId: 'b1', quietFrom: null, quietTo: null,
-      memory: [{ topic: null, text: 'a', added: null }], messages: [], earlier: [], alreadySaid: [],
-      deliveredToday: 0, mentionedRecently: false,
+      topics: 'x',
+      dailyCap: 1,
+      sessionId: 'b1',
+      quietFrom: null,
+      quietTo: null,
+      memory: [{ topic: null, text: 'a', added: null }],
+      messages: [],
+      earlier: [],
+      alreadySaid: [],
+      deliveredToday: 0,
+      mentionedRecently: false,
     }),
     localTime: () => '09:00',
     localDayStart: () => 0,
-    log: (message) => logged.push(message),
+    log: message => logged.push(message),
     ...over,
   }
 }
@@ -78,7 +86,14 @@ test('a busy subscription is not touched', async () => {
 
 test('a run that throws is still marked fired, so the next tick does not repeat it', async () => {
   const d = deps({
-    pipeline: { ask: async () => { throw new Error('offline') }, newId: () => 'c1', now: () => 0, log: () => undefined },
+    pipeline: {
+      ask: async () => {
+        throw new Error('offline')
+      },
+      newId: () => 'c1',
+      now: () => 0,
+      log: () => undefined,
+    },
   })
   await pollProgress(d)
   assert.equal(d.noted.length, 1)

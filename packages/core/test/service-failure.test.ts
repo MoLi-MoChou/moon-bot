@@ -14,10 +14,18 @@ import { PI_AI_NS } from '../src/service/llm.ts'
 import { startService, type StandaloneService } from '../src/service/server.ts'
 
 type Call = (endpoint: string, payload: Record<string, unknown>) => Promise<Record<string, unknown>>
-interface FeedEvent { readonly event: string, readonly data: Record<string, unknown> }
+interface FeedEvent {
+  readonly event: string
+  readonly data: Record<string, unknown>
+}
 
 // One HTTP endpoint the model call lands on: a refusal, or an answer after `delayMs`.
-const endpoint = async (options: { readonly status?: number, readonly body?: string, readonly delayMs?: number, readonly reply?: string }) => {
+const endpoint = async (options: {
+  readonly status?: number
+  readonly body?: string
+  readonly delayMs?: number
+  readonly reply?: string
+}) => {
   const server = createServer((req, res) => {
     req.resume()
     req.on('end', () => {
@@ -28,10 +36,15 @@ const endpoint = async (options: { readonly status?: number, readonly body?: str
       }
       setTimeout(() => {
         res.writeHead(200, { 'content-type': 'text/event-stream' })
-        const send = (delta: Record<string, unknown>) => res.write(`data: ${JSON.stringify({ id: 'x', object: 'chat.completion.chunk', created: 1, model: 'mock', choices: [{ index: 0, delta, finish_reason: null }] })}\n\n`)
+        const send = (delta: Record<string, unknown>) =>
+          res.write(
+            `data: ${JSON.stringify({ id: 'x', object: 'chat.completion.chunk', created: 1, model: 'mock', choices: [{ index: 0, delta, finish_reason: null }] })}\n\n`,
+          )
         send({ role: 'assistant', content: '' })
         send({ content: options.reply ?? '好了。' })
-        res.write(`data: ${JSON.stringify({ id: 'x', object: 'chat.completion.chunk', created: 1, model: 'mock', choices: [{ index: 0, delta: {}, finish_reason: 'stop' }] })}\n\n`)
+        res.write(
+          `data: ${JSON.stringify({ id: 'x', object: 'chat.completion.chunk', created: 1, model: 'mock', choices: [{ index: 0, delta: {}, finish_reason: 'stop' }] })}\n\n`,
+        )
         res.write('data: [DONE]\n\n')
         res.end()
       }, options.delayMs ?? 0)
@@ -39,17 +52,40 @@ const endpoint = async (options: { readonly status?: number, readonly body?: str
   })
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
   const port = (server.address() as { port: number }).port
-  return { url: `http://127.0.0.1:${port}/v1`, close: () => new Promise<void>(resolve => server.close(() => resolve())) }
+  return {
+    url: `http://127.0.0.1:${port}/v1`,
+    close: () => new Promise<void>(resolve => server.close(() => resolve())),
+  }
 }
 
-const stateFile = { version: 1, mainBotIds: ['a'], bots: { a: { id: 'a', name: 'Chief', role: 'Boss', sessionId: 'a', model: 'custom/mock-1', createdAt: 1 } }, rooms: {}, agents: {}, exchanges: [], exchangeTurns: {}, questions: {}, prefs: {}, revision: 0 }
+const stateFile = {
+  version: 1,
+  mainBotIds: ['a'],
+  bots: { a: { id: 'a', name: 'Chief', role: 'Boss', sessionId: 'a', model: 'custom/mock-1', createdAt: 1 } },
+  rooms: {},
+  agents: {},
+  exchanges: [],
+  exchangeTurns: {},
+  questions: {},
+  prefs: {},
+  revision: 0,
+}
 
 // A service over a fresh home, its feed events collected from the start.
-async function start(t: { after: (fn: () => void | Promise<void>) => void }, provider: string | undefined): Promise<{ service: StandaloneService, call: Call, feed: FeedEvent[] }> {
+async function start(
+  t: { after: (fn: () => void | Promise<void>) => void },
+  provider: string | undefined,
+): Promise<{ service: StandaloneService; call: Call; feed: FeedEvent[] }> {
   const home = mkdtempSync(join(tmpdir(), 'ds-bot-visible-'))
   writeFileSync(join(home, 'state.json'), JSON.stringify(stateFile))
   if (provider !== undefined) {
-    await new FileSettings(home).mutate(PI_AI_NS, [{ op: 'set', path: ['providers', 'custom'], value: { api: 'openai-completions', baseURL: provider, models: [{ id: 'mock-1' }] } }])
+    await new FileSettings(home).mutate(PI_AI_NS, [
+      {
+        op: 'set',
+        path: ['providers', 'custom'],
+        value: { api: 'openai-completions', baseURL: provider, models: [{ id: 'mock-1' }] },
+      },
+    ])
   }
   const service = await startService({ home })
   t.after(() => service.close())
@@ -74,8 +110,17 @@ async function start(t: { after: (fn: () => void | Promise<void>) => void }, pro
         if (data !== undefined) feed.push({ event: kind, data: JSON.parse(data) as Record<string, unknown> })
       }
     }
-  })().catch(() => { /* the aborted feed closes the reader */ })
-  const call: Call = async (endpoint, payload) => (await fetch(`${service.url}/api/bot`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ endpoint, payload }) })).json() as Promise<Record<string, unknown>>
+  })().catch(() => {
+    /* the aborted feed closes the reader */
+  })
+  const call: Call = async (endpoint, payload) =>
+    (
+      await fetch(`${service.url}/api/bot`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ endpoint, payload }),
+      })
+    ).json() as Promise<Record<string, unknown>>
   return { service, call, feed }
 }
 
@@ -85,43 +130,61 @@ const settle = async (check: () => boolean, budget = 15_000): Promise<void> => {
   assert.ok(check(), 'the condition was not reached')
 }
 
-const chatItems = async (call: Call): Promise<{ kind: string, text?: string, code?: string }[]> => {
+const chatItems = async (call: Call): Promise<{ kind: string; text?: string; code?: string }[]> => {
   const chat = await call('chat', { botId: 'a' })
   assert.equal(chat.ok, true, JSON.stringify(chat))
-  return ((chat.value as { items?: { kind: string, text?: string, code?: string }[] } | undefined)?.items ?? [])
+  return (chat.value as { items?: { kind: string; text?: string; code?: string }[] } | undefined)?.items ?? []
 }
 
-test('a refused key leaves one error line in the chat, and the sent message', async (t) => {
-  const server = await endpoint({ status: 401, body: JSON.stringify({ error: { message: 'invalid api key sk-test-123456' } }) })
+test('a refused key leaves one error line in the chat, and the sent message', async t => {
+  const server = await endpoint({
+    status: 401,
+    body: JSON.stringify({ error: { message: 'invalid api key sk-test-123456' } }),
+  })
   t.after(() => void server.close())
   const { call, feed } = await start(t, server.url)
 
   const sent = await call('send', { sessionId: 'a', text: 'start the launch' })
   assert.equal(sent.ok, true, JSON.stringify(sent))
-  await settle(() => feed.some(entry => entry.event === 'message' && (entry.data.item as { kind?: string } | undefined)?.kind === 'error'))
+  await settle(() =>
+    feed.some(
+      entry => entry.event === 'message' && (entry.data.item as { kind?: string } | undefined)?.kind === 'error',
+    ),
+  )
 
   // The live feed showed the failure while it happened...
-  const live = feed.find(entry => entry.event === 'message' && (entry.data.item as { kind?: string } | undefined)?.kind === 'error')
-  const liveItem = live?.data.item as { kind?: string, code?: string, text?: string } | undefined
+  const live = feed.find(
+    entry => entry.event === 'message' && (entry.data.item as { kind?: string } | undefined)?.kind === 'error',
+  )
+  const liveItem = live?.data.item as { kind?: string; code?: string; text?: string } | undefined
   assert.deepEqual([liveItem?.kind, liveItem?.code, liveItem?.text], ['error', 'AUTH', undefined])
   // ...and the window's own history has it after a reload.
-  assert.deepEqual((await chatItems(call)).map(item => [item.kind, item.code, item.text]), [
-    ['user', undefined, 'start the launch'],
-    ['error', 'AUTH', undefined],
-  ])
+  assert.deepEqual(
+    (await chatItems(call)).map(item => [item.kind, item.code, item.text]),
+    [
+      ['user', undefined, 'start the launch'],
+      ['error', 'AUTH', undefined],
+    ],
+  )
 })
 
-test('a Bot whose route is not set up says exactly that', async (t) => {
+test('a Bot whose route is not set up says exactly that', async t => {
   const { call, feed } = await start(t, undefined)
   await call('send', { sessionId: 'a', text: 'start the launch' })
   await settle(() => feed.some(entry => (entry.data.item as { kind?: string } | undefined)?.kind === 'error'))
   const items = await chatItems(call)
-  assert.deepEqual(items.map(item => [item.kind, item.code]), [['user', undefined], ['error', 'NO-MODEL']])
+  assert.deepEqual(
+    items.map(item => [item.kind, item.code]),
+    [
+      ['user', undefined],
+      ['error', 'NO-MODEL'],
+    ],
+  )
   // The window was told the Bot stopped working, rather than left drawing it as such.
   await settle(() => feed.some(entry => entry.event === 'live'))
 })
 
-test('the sent message reads as work before the model answers', async (t) => {
+test('the sent message reads as work before the model answers', async t => {
   const server = await endpoint({ delayMs: 700, reply: 'At your service.' })
   t.after(() => void server.close())
   const { call, feed } = await start(t, server.url)
@@ -134,9 +197,14 @@ test('the sent message reads as work before the model answers', async (t) => {
   // The live frame travels over the SSE connection, so it is not in the buffer the instant
   // send answers; wait for the barrier instead of racing the socket (CI lost that race).
   await settle(() => feed.some(entry => entry.event === 'live'))
-  assert.ok(feed.some(entry => entry.event === 'live'), 'the window is told to read the live figures')
+  assert.ok(
+    feed.some(entry => entry.event === 'live'),
+    'the window is told to read the live figures',
+  )
 
-  await settle(() => feed.some(entry => entry.event === 'message' && (entry.data.item as { kind?: string } | undefined)?.kind === 'bot'))
+  await settle(() =>
+    feed.some(entry => entry.event === 'message' && (entry.data.item as { kind?: string } | undefined)?.kind === 'bot'),
+  )
   const done = await call('state', {})
   assert.deepEqual((done.value as { work?: { bots?: Record<string, unknown> } } | undefined)?.work?.bots, {})
 })

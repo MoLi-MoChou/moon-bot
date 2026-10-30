@@ -9,7 +9,7 @@ export function fakeAttachments() {
       files.set(ref.attachmentId, data)
       return ref
     },
-    async* readFileStream(ref) {
+    async *readFileStream(ref) {
       const data = files.get(ref.attachmentId)
       if (data === undefined) throw new Error('no such file')
       for (let at = 0; at < data.length; at += 1001) yield data.subarray(at, at + 1001)
@@ -33,7 +33,14 @@ export function fakeContext({ services = {} } = {}) {
     guards,
     listeners,
     sections,
-    logger: { warn(...args) { void args }, info(...args) { void args } },
+    logger: {
+      warn(...args) {
+        void args
+      },
+      info(...args) {
+        void args
+      },
+    },
     get: name => services[name],
     on(name, listener, options) {
       calls.push(`on ${name}${options?.prepend ? ' (prepend)' : ''}`)
@@ -53,7 +60,12 @@ export function fakeContext({ services = {} } = {}) {
     },
     // Settles once every cleanup has, including the writes some of them wait for.
     dispose() {
-      return Promise.allSettled(disposers.splice(0).reverse().map(dispose => dispose()))
+      return Promise.allSettled(
+        disposers
+          .splice(0)
+          .reverse()
+          .map(dispose => dispose()),
+      )
     },
     tools: {
       register(tool) {

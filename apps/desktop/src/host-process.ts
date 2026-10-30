@@ -7,13 +7,19 @@ const STDERR_TAIL_CHARS = 8 * 1024
 // The web server prints its launch URL, and the launch token in it opens the Host.
 const redact = (text: string): string => text.replace(/([?&]token=)[^&\s]+/gu, '$1<hidden>')
 
-const settlesWithin = (promise: Promise<unknown>, ms: number): Promise<boolean> => new Promise((resolve) => {
-  const timer = setTimeout(() => { resolve(false) }, ms)
-  void promise.then(() => { clearTimeout(timer); resolve(true) })
-})
+const settlesWithin = (promise: Promise<unknown>, ms: number): Promise<boolean> =>
+  new Promise(resolve => {
+    const timer = setTimeout(() => {
+      resolve(false)
+    }, ms)
+    void promise.then(() => {
+      clearTimeout(timer)
+      resolve(true)
+    })
+  })
 
 const record = (value: unknown): Record<string, unknown> | undefined =>
-  typeof value === 'object' && value !== null ? value as Record<string, unknown> : undefined
+  typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : undefined
 
 export interface HostProcessOptions {
   readonly entry: string
@@ -36,13 +42,17 @@ export class HostProcess {
   #stopping = false
   #failed = false
 
-  constructor(options: HostProcessOptions) { this.#options = options }
+  constructor(options: HostProcessOptions) {
+    this.#options = options
+  }
 
   start(): Promise<HostReady> {
     this.#ready ??= new Promise((resolve, reject) => {
       const { entry, cwd, env, pnpm } = this.#options
       const child = spawn(process.execPath, ['--expose-internals', entry, pnpm], {
-        cwd, env: { ...env, ELECTRON_RUN_AS_NODE: '1' }, stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
+        cwd,
+        env: { ...env, ELECTRON_RUN_AS_NODE: '1' },
+        stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
       })
       this.#child = child
       const { stdout, stderr } = child
@@ -50,7 +60,9 @@ export class HostProcess {
       if (stdout === null || stderr === null) throw new Error('the Host child opened without pipes')
       stdout.setEncoding('utf8')
       stderr.setEncoding('utf8')
-      stdout.on('data', (chunk: string) => { process.stdout.write(redact(chunk)) })
+      stdout.on('data', (chunk: string) => {
+        process.stdout.write(redact(chunk))
+      })
       stderr.on('data', (chunk: string) => {
         process.stderr.write(redact(chunk))
         this.#stderr = (this.#stderr + chunk).slice(-STDERR_TAIL_CHARS)
@@ -58,14 +70,20 @@ export class HostProcess {
       child.on('message', (raw: unknown) => {
         const message = record(raw)
         if (message === undefined) return
-        if (message.type === 'ready') resolve({ url: String(message.url), injections: Array.isArray(message.injections) ? message.injections : [] })
+        if (message.type === 'ready')
+          resolve({ url: String(message.url), injections: Array.isArray(message.injections) ? message.injections : [] })
         else if (message.type === 'fatal') this.#fail(new Error(String(message.message)), reject)
       })
-      child.once('error', (error: Error) => { this.#fail(error, reject) })
-      this.#exit = new Promise((done) => {
+      child.once('error', (error: Error) => {
+        this.#fail(error, reject)
+      })
+      this.#exit = new Promise(done => {
         child.once('close', (code: number | null) => {
           const tail = redact(this.#stderr.trim())
-          this.#fail(new Error(`The Moon Bot service stopped (exit ${String(code)})${tail === '' ? '' : `:\n${tail}`}`), reject)
+          this.#fail(
+            new Error(`The Moon Bot service stopped (exit ${String(code)})${tail === '' ? '' : `:\n${tail}`}`),
+            reject,
+          )
           done()
         })
       })
@@ -78,9 +96,12 @@ export class HostProcess {
     const child = this.#child
     if (child === undefined) return
     this.#stopping = true
-    if (child.connected) child.send({ type: 'shutdown' }, (error) => { if (error) console.error(error) })
-    if (!await settlesWithin(this.#exit ?? Promise.resolve(), 10_000)) child.kill()
-    if (!await settlesWithin(this.#exit ?? Promise.resolve(), 5_000)) child.kill('SIGKILL')
+    if (child.connected)
+      child.send({ type: 'shutdown' }, error => {
+        if (error) console.error(error)
+      })
+    if (!(await settlesWithin(this.#exit ?? Promise.resolve(), 10_000))) child.kill()
+    if (!(await settlesWithin(this.#exit ?? Promise.resolve(), 5_000))) child.kill('SIGKILL')
     this.#child = undefined
   }
 

@@ -7,7 +7,10 @@ import { build } from 'esbuild'
 
 const bundle = await build({
   entryPoints: [fileURLToPath(new URL('../src/client/exchange.js', import.meta.url))],
-  bundle: true, format: 'cjs', platform: 'node', write: false,
+  bundle: true,
+  format: 'cjs',
+  platform: 'node',
+  write: false,
   external: ['react', 'react-dom'],
 })
 const find = (node, match) => {
@@ -15,7 +18,8 @@ const find = (node, match) => {
   if (!node || typeof node !== 'object') return []
   return [...(match(node) ? [node] : []), ...find(node.children, match)]
 }
-const messages = count => Array.from({ length: count }, (_, i) => ({ id: String(i), from: 'a', time: i + 1, text: `Message ${i + 1}` }))
+const messages = count =>
+  Array.from({ length: count }, (_, i) => ({ id: String(i), from: 'a', time: i + 1, text: `Message ${i + 1}` }))
 
 function rig(initial) {
   const slots = []
@@ -33,9 +37,15 @@ function rig(initial) {
   // effects run after the rendered message rows have changed that range.
   const scroller = {
     clientHeight: 200,
-    get scrollHeight() { return height },
-    get scrollTop() { return top },
-    set scrollTop(value) { top = Math.max(0, Math.min(value, height - this.clientHeight)) },
+    get scrollHeight() {
+      return height
+    },
+    get scrollTop() {
+      return top
+    },
+    set scrollTop(value) {
+      top = Math.max(0, Math.min(value, height - this.clientHeight))
+    },
   }
   const effect = (queue, run, deps) => {
     const i = at++
@@ -50,22 +60,37 @@ function rig(initial) {
   const react = {
     Fragment: 'fragment',
     createElement: (type, props, ...children) => ({ type, props: props ?? {}, children: children.flat(Infinity) }),
-    useRef: (current) => { const i = at++; return slots[i] ??= { current } },
-    useState: (initialValue) => {
+    useRef: current => {
+      const i = at++
+      return (slots[i] ??= { current })
+    },
+    useState: initialValue => {
       const i = at++
       if (!(i in slots)) slots[i] = initialValue
-      return [slots[i], (value) => { if (slots[i] !== value) { slots[i] = value; dirty = true } }]
+      return [
+        slots[i],
+        value => {
+          if (slots[i] !== value) {
+            slots[i] = value
+            dirty = true
+          }
+        },
+      ]
     },
     useEffect: (run, deps) => effect(effects, run, deps),
     useLayoutEffect: (run, deps) => effect(layouts, run, deps),
   }
   const module = { exports: {} as { ExchangeDialog: (props: unknown) => unknown } }
   runInNewContext(bundle.outputFiles[0].text, {
-    module, exports: module.exports,
+    module,
+    exports: module.exports,
     require: name => (name === 'react' ? react : {}),
     document: { hidden: false, querySelector: () => null },
     window: { addEventListener() {}, removeEventListener() {} },
-    setTimeout: (run) => { timers.set(++timer, run); return timer },
+    setTimeout: run => {
+      timers.set(++timer, run)
+      return timer
+    },
     clearTimeout: id => timers.delete(id),
   })
   const props = { pair: ['a', 'b'], roster: { byId: {} }, actions: { exchange: () => next, closeOverlay() {} } }
@@ -83,28 +108,41 @@ function rig(initial) {
       effects.forEach(run => run())
     }
   }
-  const settle = async () => { await setImmediate(); render() }
+  const settle = async () => {
+    await setImmediate()
+    render()
+  }
   render()
   return {
-    scroller, settle,
-    scroll: (value) => {
+    scroller,
+    settle,
+    scroll: value => {
       scroller.scrollTop = value
       find(tree, node => node.props.role === 'log')[0].props.onScroll?.({ currentTarget: scroller })
     },
-    poll: async (value) => {
+    poll: async value => {
       next = value
       const [id, run] = timers.entries().next().value
       timers.delete(id)
       await run()
       render()
     },
-    changePair: (pair, value) => { props.pair = pair; next = value; dirty = true; render() },
+    changePair: (pair, value) => {
+      props.pair = pair
+      next = value
+      dirty = true
+      render()
+    },
   }
 }
 
 test('opening an exchange shows its latest message after the transcript loads', async () => {
   let resolve
-  const r = rig(new Promise(done => { resolve = done }))
+  const r = rig(
+    new Promise(done => {
+      resolve = done
+    }),
+  )
   assert.equal(r.scroller.scrollTop, 0)
   resolve(messages(20))
   await r.settle()

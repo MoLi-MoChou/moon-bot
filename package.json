@@ -14,9 +14,12 @@
     "test": "pnpm -r --if-present run test",
     "typecheck": "pnpm -r --if-present run typecheck",
     "postinstall": "node scripts/postinstall.mjs",
-    "check:static": "pnpm run typecheck && pnpm run lint"
+    "check:static": "pnpm run typecheck && pnpm run lint && pnpm run format:check",
+    "format": "biome format --write .",
+    "format:check": "biome format ."
   },
   "devDependencies": {
+    "@biomejs/biome": "2.6.4",
     "playwright": "^1.64.1",
     "playwright-core": "^1.64.1"
   },

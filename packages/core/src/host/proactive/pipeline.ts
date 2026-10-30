@@ -24,8 +24,8 @@ export interface RunCandidates {
   /** The subject to watch, in the user's own words. */
   readonly topics: string
   /** What the Bot remembers, already read. */
-  readonly memory: readonly { readonly topic: string | null, readonly text: string, readonly added: string | null }[]
-  readonly messages: readonly { readonly role: string, readonly text: string, readonly at: number }[]
+  readonly memory: readonly { readonly topic: string | null; readonly text: string; readonly added: string | null }[]
+  readonly messages: readonly { readonly role: string; readonly text: string; readonly at: number }[]
   readonly alreadySaid: readonly string[]
 }
 
@@ -35,7 +35,7 @@ export interface RunScreen {
   readonly earlier: readonly EarlierCandidate[]
   readonly mentionedRecently: boolean
   readonly localTime: string
-  readonly quiet: { readonly from: string, readonly to: string } | null
+  readonly quiet: { readonly from: string; readonly to: string } | null
 }
 
 export interface RunRequest {
@@ -52,7 +52,12 @@ export interface RunRequest {
 export type RunOutcome =
   | { readonly kind: 'nothing' }
   | { readonly kind: 'failed'; readonly reason: string }
-  | { readonly kind: 'prepared'; readonly candidate: Candidate; readonly verdict: ScreenVerdict; readonly why?: string | undefined }
+  | {
+      readonly kind: 'prepared'
+      readonly candidate: Candidate
+      readonly verdict: ScreenVerdict
+      readonly why?: string | undefined
+    }
 
 /**
  * Runs the pipeline once and reports what happened, without delivering anything: the caller
@@ -61,22 +66,26 @@ export type RunOutcome =
 export async function runOnce(request: RunRequest, deps: RunDeps): Promise<RunOutcome> {
   let candidate: Candidate | undefined
   try {
-    candidate = await prepare({
-      subscription: {
-        id: request.subscriptionId,
-        botId: request.botId,
-        sessionId: request.sessionId,
-        topics: request.candidates.topics,
-        // Reading paid capabilities during prep stays off unless a subscription says so;
-        // this build never enables it, and the field carries the decision forward.
-        allowPaidPrep: false,
+    candidate = await prepare(
+      {
+        subscription: {
+          id: request.subscriptionId,
+          botId: request.botId,
+          sessionId: request.sessionId,
+          topics: request.candidates.topics,
+          // Reading paid capabilities during prep stays off unless a subscription says so;
+          // this build never enables it, and the field carries the decision forward.
+          allowPaidPrep: false,
+        },
+        memory: request.candidates.memory,
+        messages: request.candidates.messages,
+        alreadySaid: request.candidates.alreadySaid,
+        now: deps.now(),
+        triggerSource: request.triggerSource,
       },
-      memory: request.candidates.memory,
-      messages: request.candidates.messages,
-      alreadySaid: request.candidates.alreadySaid,
-      now: deps.now(),
-      triggerSource: request.triggerSource,
-    }, deps.ask, deps.newId)
+      deps.ask,
+      deps.newId,
+    )
   } catch (error) {
     // A failed preparation is silence: the user is not told that a check went wrong.
     const reason = error instanceof Error ? error.message : String(error)
@@ -96,8 +105,12 @@ export async function runOnce(request: RunRequest, deps: RunDeps): Promise<RunOu
   // The soft question is only asked about a candidate the hard rules already allowed: the
   // other ones are decided, and asking would spend a request to learn nothing.
   if (verdict.kind === 'accept' && deps.judgeAsk !== undefined) {
-    const judged = await judge(candidate, deps.judgeAsk).catch(() => ({ kind: 'drop' as const, reason: 'the judge failed' }))
-    if (judged.kind === 'drop') return { kind: 'prepared', candidate, verdict: { kind: 'drop', reason: 'not-worth-it' }, why: judged.reason }
+    const judged = await judge(candidate, deps.judgeAsk).catch(() => ({
+      kind: 'drop' as const,
+      reason: 'the judge failed',
+    }))
+    if (judged.kind === 'drop')
+      return { kind: 'prepared', candidate, verdict: { kind: 'drop', reason: 'not-worth-it' }, why: judged.reason }
   }
   return { kind: 'prepared', candidate, verdict }
 }

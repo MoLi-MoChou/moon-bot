@@ -19,7 +19,9 @@ test('every package that the app runs on is a dependency, not only a peer', () =
   assert.match(lock, /^lockfileVersion:\s*'9\.0'/m)
   assert.match(lock, /^ {2}autoInstallPeers:\s*true$/m)
   // app importer lists moon-bot-core as a real dependency (workspace link).
-  const appBlock = lock.split(/\n {2}(?=\S)/).find(block => block.startsWith('apps/desktop:\n') || block.startsWith('apps/desktop:\r\n'))
+  const appBlock = lock
+    .split(/\n {2}(?=\S)/)
+    .find(block => block.startsWith('apps/desktop:\n') || block.startsWith('apps/desktop:\r\n'))
   assert.ok(appBlock, 'pnpm-lock.yaml must list the apps/desktop importer')
   assert.match(appBlock, /^ {4}dependencies:\n(?: {6}.+\n)*? {6}moon-bot-core:\n {8}specifier: workspace:\*/m)
 })
@@ -35,7 +37,10 @@ test('root packageManager and engines.pnpm agree, and Docker corepack matches', 
   const dockerfile = readFileSync(join(root, 'Dockerfile'), 'utf8')
   const prepares = [...dockerfile.matchAll(/corepack prepare pnpm@(\d+\.\d+\.\d+)/g)].map(m => m[1])
   assert.ok(prepares.length >= 1, 'Dockerfile must corepack prepare a pnpm version')
-  assert.ok(prepares.every(v => v === pinned), `Dockerfile corepack prepare must use ${pinned}, got ${prepares.join(',')}`)
+  assert.ok(
+    prepares.every(v => v === pinned),
+    `Dockerfile corepack prepare must use ${pinned}, got ${prepares.join(',')}`,
+  )
 })
 
 // A release is tagged with the version of ds-bot, and the installed apps compare their own

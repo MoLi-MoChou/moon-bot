@@ -58,7 +58,9 @@ const systemLookup: Lookup = (tool, args) => {
 const systemVersion: VersionProbe = path => {
   const isWinCmd = process.platform === 'win32' && /\.(?:cmd|bat)$/iu.test(path)
   const result = spawnSync(path, ['--version'], {
-    encoding: 'utf8', windowsHide: true, timeout: 3_000,
+    encoding: 'utf8',
+    windowsHide: true,
+    timeout: 3_000,
     ...(isWinCmd ? { shell: true } : {}),
   })
   const text = trim(String(result.stdout ?? '')) || trim(String(result.stderr ?? ''))
@@ -66,10 +68,15 @@ const systemVersion: VersionProbe = path => {
 }
 
 /** which on Unix, where.exe on Windows — the rule core's discovery uses. */
-export const lookupToolFor = (platform: NodeJS.Platform): string => platform === 'win32' ? 'where.exe' : 'which'
+export const lookupToolFor = (platform: NodeJS.Platform): string => (platform === 'win32' ? 'where.exe' : 'which')
 
 export const firstPathOf = (result: LookupResult): string | undefined =>
-  result.status === 0 ? result.stdout.split(/\r?\n/u).map(line => line.trim()).find(line => line !== '') : undefined
+  result.status === 0
+    ? result.stdout
+        .split(/\r?\n/u)
+        .map(line => line.trim())
+        .find(line => line !== '')
+    : undefined
 
 export function findAgents(
   candidates: readonly AgentCandidate[] = ACP_CANDIDATES,
@@ -81,20 +88,29 @@ export function findAgents(
     const path = firstPathOf(lookup(tool, [candidate.command]))
     if (path === undefined) return []
     const version = versionOf(path)
-    return [{ id: candidate.id, label: candidate.label, command: candidate.command, path, ...(version === undefined ? {} : { version }) }]
+    return [
+      {
+        id: candidate.id,
+        label: candidate.label,
+        command: candidate.command,
+        path,
+        ...(version === undefined ? {} : { version }),
+      },
+    ]
   })
 }
 
 export type AgentPick =
-  | { readonly ok: true, readonly agent: FoundAgent }
-  | { readonly ok: false, readonly problem: 'none' | 'multiple', readonly found: readonly FoundAgent[] }
+  | { readonly ok: true; readonly agent: FoundAgent }
+  | { readonly ok: false; readonly problem: 'none' | 'multiple'; readonly found: readonly FoundAgent[] }
 
 export function pickAgent(found: readonly FoundAgent[]): AgentPick {
   if (found.length === 1) return { ok: true, agent: found[0] as FoundAgent }
   return { ok: false, problem: found.length === 0 ? 'none' : 'multiple', found }
 }
 
-const describe = (agent: FoundAgent): string => `${agent.label} (${agent.path}${agent.version === undefined ? '' : `, ${agent.version}`})`
+const describe = (agent: FoundAgent): string =>
+  `${agent.label} (${agent.path}${agent.version === undefined ? '' : `, ${agent.version}`})`
 
 /** The error for an ambiguous or empty discovery: name what it saw, then the fix. */
 export function pickFailureMessage(found: readonly FoundAgent[]): string {

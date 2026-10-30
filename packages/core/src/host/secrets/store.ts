@@ -96,18 +96,24 @@ const reason = (error: unknown): string => {
 }
 
 const storedRecords = (parsed: unknown): SecretRecord[] => {
-  const secrets = parsed !== null && typeof parsed === 'object' && Array.isArray((parsed as { readonly secrets?: unknown }).secrets)
-    ? (parsed as { readonly secrets: unknown[] }).secrets
-    : []
+  const secrets =
+    parsed !== null && typeof parsed === 'object' && Array.isArray((parsed as { readonly secrets?: unknown }).secrets)
+      ? (parsed as { readonly secrets: unknown[] }).secrets
+      : []
   const records: SecretRecord[] = []
   for (const entry of secrets) {
-    const raw = entry !== null && typeof entry === 'object' ? entry as Record<string, unknown> : {}
+    const raw = entry !== null && typeof entry === 'object' ? (entry as Record<string, unknown>) : {}
     if (typeof raw.name !== 'string' || !SECRET_NAME.test(raw.name) || typeof raw.value !== 'string') continue
     records.push({
       name: raw.name,
       value: raw.value,
       purpose: typeof raw.purpose === 'string' ? raw.purpose : '',
-      scope: raw.scope === 'all' ? 'all' : Array.isArray(raw.scope) ? raw.scope.filter((id): id is string => typeof id === 'string') : 'all',
+      scope:
+        raw.scope === 'all'
+          ? 'all'
+          : Array.isArray(raw.scope)
+            ? raw.scope.filter((id): id is string => typeof id === 'string')
+            : 'all',
       requestedBy: typeof raw.requestedBy === 'string' ? raw.requestedBy : null,
       createdAt: Number(raw.createdAt) || Date.now(),
       updatedAt: Number(raw.updatedAt) || Date.now(),
@@ -184,7 +190,9 @@ class SecretStoreImpl implements SecretStore {
     this.usedTimer = setTimeout(() => {
       this.usedTimer = null
       if (this.loadedReadOnly || this.rt.readOnly() !== undefined) return
-      void this.persist().then(() => this.rt.save()).catch(() => {})
+      void this.persist()
+        .then(() => this.rt.save())
+        .catch(() => {})
     }, USED_SAVE_MS)
     this.usedTimer.unref?.()
   }
@@ -260,7 +268,8 @@ class SecretStoreImpl implements SecretStore {
 
   async tell(botId: string, text: string): Promise<void> {
     if (this.rt.botOf(botId) === undefined) return
-    await this.rt.deliver({ toId: botId, role: 'secret', text })
+    await this.rt
+      .deliver({ toId: botId, role: 'secret', text })
       .catch((error: unknown) => this.rt.warn('moon-bot: secret note to %s failed: %s', botId, error))
   }
 
@@ -308,7 +317,9 @@ class SecretStoreImpl implements SecretStore {
   }
 
   secretsView(): SecretView[] {
-    return [...this.secrets.values()].sort((a, b) => a.name.localeCompare(b.name)).map(secret => this.secretView(secret))
+    return [...this.secrets.values()]
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map(secret => this.secretView(secret))
   }
 
   scopeText(scope: SecretScope): string {

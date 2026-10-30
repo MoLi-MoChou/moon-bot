@@ -19,10 +19,12 @@ const KEEP = 'can stay'
 
 const SELF = 'scripts/scan.mjs'
 const PLACEHOLDER = /mock|test|fake|dummy|example|placeholder|should-not|xxx|your|<|\$\{|redact|sample/i
-const VENDORS = /\b(qwen|minimax|stepfun|kimi|moonshot|zhipu|glm|mimo|anthropic|claude|openai|gemini|mistral|xai|zai)\b/i
+const VENDORS =
+  /\b(qwen|minimax|stepfun|kimi|moonshot|zhipu|glm|mimo|anthropic|claude|openai|gemini|mistral|xai|zai)\b/i
 // Files that define the look (characters, inks, logos, themes). Vendor names there are
 // brand references; elsewhere they name model routes and can stay.
-const LOOK_FILES = /(^|\/)(src\/client\/(inks|characters|mark|themes|styles)\.js|dev\/(mascot-outlines|characters)\.mjs)$/
+const LOOK_FILES =
+  /(^|\/)(src\/client\/(inks|characters|mark|themes|styles)\.js|dev\/(mascot-outlines|characters)\.mjs)$/
 // Private checkout folders are forbidden, while the versioned docs/research tree is public.
 const NOT_PUBLIC = /(^|[\s(`'"]|\.\.\/)(spec|backup|shots|attachments|workspace)\/|\.dsh-home/
 // Migration code and its tests must name the legacy ids (old package name, old theme and
@@ -34,25 +36,54 @@ const extra = extraPatterns()
 const TEXT_RULES = [
   // Secrets.
   { id: 'secret-openai-style', level: MUST, re: /\bsk-[A-Za-z0-9_-]{20,}/g, secret: true },
-  { id: 'secret-github', level: MUST, re: /\b(gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{20,})/g, secret: true },
+  {
+    id: 'secret-github',
+    level: MUST,
+    re: /\b(gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{20,})/g,
+    secret: true,
+  },
   { id: 'secret-aws', level: MUST, re: /\bAKIA[0-9A-Z]{16}\b/g, secret: true },
   { id: 'secret-google', level: MUST, re: /\bAIza[0-9A-Za-z_-]{35}\b/g, secret: true },
   { id: 'secret-slack', level: MUST, re: /\bxox[abposr]-[A-Za-z0-9-]{10,}/g, secret: true },
   { id: 'secret-private-key', level: MUST, re: /-----BEGIN [A-Z ]*PRIVATE KEY-----/g, secret: true },
   { id: 'secret-bearer', level: MUST, re: /\bBearer\s+[A-Za-z0-9._~+/-]{24,}=*/g, secret: true },
   {
-    id: 'secret-assignment', level: MUST, secret: true,
+    id: 'secret-assignment',
+    level: MUST,
+    secret: true,
     re: /\b(api[_-]?key|secret|token|password|passwd)["']?\s*[:=]\s*["'][A-Za-z0-9_\-./+=]{16,}["']/gi,
   },
   // Personal data.
-  { id: 'personal-path', level: MUST, re: /\/home\/(?!<|user\b|runner\b|node\b)[a-z_][a-z0-9_-]*\/|\/Users\/(?!<|Shared\b)[A-Za-z][\w.-]*\/|[A-Za-z]:\\Users\\(?!<|Public\b)[^\\\s`"'<>]+/g },
-  { id: 'personal-email', level: MUST, re: /\b[\w.+-]+@(qq|163|126|gmail|outlook|hotmail|foxmail|icloud|yahoo)\.(com|cn)\b/gi },
-  { id: 'other-email', level: KEEP, re: /\b[\w.+-]+@(?!(\d|example\.|users\.noreply\.github\.com|localhost|(qq|163|126|gmail|outlook|hotmail|foxmail|icloud|yahoo)\.))[\w-]+\.[a-z]{2,}\b/gi },
+  {
+    id: 'personal-path',
+    level: MUST,
+    re: /\/home\/(?!<|user\b|runner\b|node\b)[a-z_][a-z0-9_-]*\/|\/Users\/(?!<|Shared\b)[A-Za-z][\w.-]*\/|[A-Za-z]:\\Users\\(?!<|Public\b)[^\\\s`"'<>]+/g,
+  },
+  {
+    id: 'personal-email',
+    level: MUST,
+    re: /\b[\w.+-]+@(qq|163|126|gmail|outlook|hotmail|foxmail|icloud|yahoo)\.(com|cn)\b/gi,
+  },
+  {
+    id: 'other-email',
+    level: KEEP,
+    re: /\b[\w.+-]+@(?!(\d|example\.|users\.noreply\.github\.com|localhost|(qq|163|126|gmail|outlook|hotmail|foxmail|icloud|yahoo)\.))[\w-]+\.[a-z]{2,}\b/gi,
+  },
   ...(extra ? [{ id: 'extra-pattern', level: MUST, re: extra, legacyOk: true }] : []),
   // Only original material: no vendor brands in the look, no third-party logos.
-  { id: 'vendor-look-identifier', level: MUST, re: /\b(KIMI|MINIMAX|STEPFUN|QWEN|MIMO|ZAI|ZHIPU|GLM|DEEPSEEK)_(BODY|WAVE|STAR|MARK|LOGO|INK|INKS|COLOR|COLORS)\b|\bLAB_(INKS|COLORS)\b/g, legacyOk: true },
+  {
+    id: 'vendor-look-identifier',
+    level: MUST,
+    re: /\b(KIMI|MINIMAX|STEPFUN|QWEN|MIMO|ZAI|ZHIPU|GLM|DEEPSEEK)_(BODY|WAVE|STAR|MARK|LOGO|INK|INKS|COLOR|COLORS)\b|\bLAB_(INKS|COLORS)\b/g,
+    legacyOk: true,
+  },
   { id: 'vendor-in-look-file', level: MUST, re: new RegExp(VENDORS.source, 'gi'), files: LOOK_FILES, legacyOk: true },
-  { id: 'vendor-brand', level: MUST, re: /brand[^\n]{0,40}\b(qwen|minimax|stepfun|kimi|zhipu|mimo|deepseek)\b|\b(qwen|minimax|stepfun|kimi|zhipu|mimo)\b[^\n]{0,40}brand/gi, legacyOk: true },
+  {
+    id: 'vendor-brand',
+    level: MUST,
+    re: /brand[^\n]{0,40}\b(qwen|minimax|stepfun|kimi|zhipu|mimo|deepseek)\b|\b(qwen|minimax|stepfun|kimi|zhipu|mimo)\b[^\n]{0,40}brand/gi,
+    legacyOk: true,
+  },
   // A test may name the logo to check that the look no longer uses it.
   { id: 'third-party-logo', level: MUST, re: /WhaleLogo|favicon\.svg/g, notFiles: /(^|\/)test\// },
   { id: 'vendor-name', level: KEEP, re: new RegExp(VENDORS.source, 'gi'), notFiles: LOOK_FILES, summary: true },
@@ -65,7 +96,12 @@ const TEXT_RULES = [
   { id: 'draft-marker', level: MUST, re: /TBD\(|DRAFT for/g },
   { id: 'not-public-path-in-docs', level: MUST, re: new RegExp(NOT_PUBLIC.source, 'g'), files: /\.md$/ },
   { id: 'not-public-path-in-code', level: KEEP, re: new RegExp(NOT_PUBLIC.source, 'g'), notFiles: /\.md$/ },
-  { id: 'public-ip', level: KEEP, re: /\b(?!(127|10|0)\.)(?!192\.168\.)(?!172\.(1[6-9]|2\d|3[01])\.)(?!192\.0\.2\.|198\.51\.100\.|203\.0\.113\.|169\.254\.)(\d{1,3}\.){3}\d{1,3}\b/g, unless: /version|v\d|@\d/i },
+  {
+    id: 'public-ip',
+    level: KEEP,
+    re: /\b(?!(127|10|0)\.)(?!192\.168\.)(?!172\.(1[6-9]|2\d|3[01])\.)(?!192\.0\.2\.|198\.51\.100\.|203\.0\.113\.|169\.254\.)(\d{1,3}\.){3}\d{1,3}\b/g,
+    unless: /version|v\d|@\d/i,
+  },
 ]
 
 const FORBIDDEN_FILES = [
@@ -86,7 +122,9 @@ const jsonOut = args.includes('--json') ? args[args.indexOf('--json') + 1] : nul
 const showAll = args.includes('--all')
 
 const findings = []
-const files = walk(root).map(path => relative(root, path).split('\\').join('/')).sort()
+const files = walk(root)
+  .map(path => relative(root, path).split('\\').join('/'))
+  .sort()
 
 for (const file of files) {
   for (const rule of FORBIDDEN_FILES) {
@@ -108,7 +146,9 @@ for (const file of files) {
       rule.re.lastIndex = 0
       for (const match of line.matchAll(rule.re)) {
         if (rule.secret && PLACEHOLDER.test(match[0])) continue
-        const shown = rule.secret ? `${match[0].slice(0, 6)}… (${match[0].length} chars)` : snippet(line, match.index, match[0].length)
+        const shown = rule.secret
+          ? `${match[0].slice(0, 6)}… (${match[0].length} chars)`
+          : snippet(line, match.index, match[0].length)
         add(rule.level, rule.id, file, index + 1, shown, rule.summary)
       }
     }
@@ -120,9 +160,12 @@ if (!files.includes('LICENSE')) add(MUST, 'license', 'LICENSE', 0, 'no LICENSE a
 if (!files.includes('packages/core/package.json')) add(MUST, 'plugin-folder', '.', 0, 'no packages/core/package.json')
 else {
   const pkg = JSON.parse(readFileSync(join(root, 'packages/core/package.json'), 'utf8'))
-  if (pkg.name !== 'moon-bot-core') add(MUST, 'package', 'packages/core/package.json', 0, `name is "${pkg.name}", expected "moon-bot-core"`)
-  if (!files.includes('packages/core/LICENSE')) add(MUST, 'package', 'packages/core/LICENSE', 0, 'the package has no LICENSE file')
-  if (!(pkg.files ?? []).includes('LICENSE')) add(MUST, 'package', 'packages/core/package.json', 0, '"files" does not list LICENSE')
+  if (pkg.name !== 'moon-bot-core')
+    add(MUST, 'package', 'packages/core/package.json', 0, `name is "${pkg.name}", expected "moon-bot-core"`)
+  if (!files.includes('packages/core/LICENSE'))
+    add(MUST, 'package', 'packages/core/LICENSE', 0, 'the package has no LICENSE file')
+  if (!(pkg.files ?? []).includes('LICENSE'))
+    add(MUST, 'package', 'packages/core/package.json', 0, '"files" does not list LICENSE')
   for (const field of ['repository', 'homepage', 'bugs']) {
     if (!pkg[field]) add(MUST, 'package', 'packages/core/package.json', 0, `no "${field}" field`)
   }

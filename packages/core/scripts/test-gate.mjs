@@ -22,20 +22,32 @@ if (!existsSync(HARNESS)) {
 }
 
 const run = spawnSync(process.execPath, ['--import', './test/harness-resolve.mjs', '--test', 'test/*.test.js'], {
-  cwd: CORE, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024,
+  cwd: CORE,
+  encoding: 'utf8',
+  maxBuffer: 64 * 1024 * 1024,
 })
 const output = `${run.stdout ?? ''}\n${run.stderr ?? ''}`
 
-const numberAfter = (label) => {
+const numberAfter = label => {
   const match = new RegExp(`^\u2139 ${label} (\\d+)$`, 'm').exec(output)
   return match ? Number(match[1]) : undefined
 }
-const failures = [...new Set(output.split('\n')
-  .filter(line => line.startsWith('\u2716 '))
-  .map(line => line.slice(2).replace(/ \(\d+(?:\.\d+)?ms\)$/, ''))
-  .filter(name => name !== 'failing tests:'))].sort()
+const failures = [
+  ...new Set(
+    output
+      .split('\n')
+      .filter(line => line.startsWith('\u2716 '))
+      .map(line => line.slice(2).replace(/ \(\d+(?:\.\d+)?ms\)$/, ''))
+      .filter(name => name !== 'failing tests:'),
+  ),
+].sort()
 
-const counts = { tests: numberAfter('tests'), pass: numberAfter('pass'), fail: numberAfter('fail'), cancelled: numberAfter('cancelled') }
+const counts = {
+  tests: numberAfter('tests'),
+  pass: numberAfter('pass'),
+  fail: numberAfter('fail'),
+  cancelled: numberAfter('cancelled'),
+}
 const known = JSON.parse(readFileSync(KNOWN, 'utf8'))
 
 if (update) {
@@ -45,7 +57,8 @@ if (update) {
 }
 
 const problems = []
-if (counts.tests !== known.tests) problems.push(`ran ${counts.tests ?? 0} tests, the baseline has ${known.tests} - a test file did not load`)
+if (counts.tests !== known.tests)
+  problems.push(`ran ${counts.tests ?? 0} tests, the baseline has ${known.tests} - a test file did not load`)
 if (counts.cancelled !== 0) problems.push(`cancelled ${counts.cancelled}`)
 const expected = new Set(known.names)
 const actual = new Set(failures)

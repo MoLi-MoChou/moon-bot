@@ -11,11 +11,16 @@ test('offloadTargets selects live images from prior user and tool messages', () 
     { type: 'user/message' },
   ]
   const messages = new Map([
-    [events[0], { content: [
-      { type: 'image', attachment: { attachmentId: 'a' } },
-      { type: 'image', offloaded: true, attachment: { attachmentId: 'b' } },
-      { type: 'image', attachment: { attachmentId: 'c' } },
-    ] }],
+    [
+      events[0],
+      {
+        content: [
+          { type: 'image', attachment: { attachmentId: 'a' } },
+          { type: 'image', offloaded: true, attachment: { attachmentId: 'b' } },
+          { type: 'image', attachment: { attachmentId: 'c' } },
+        ],
+      },
+    ],
     [events[1], { content: [{ type: 'image', attachment: { attachmentId: 'ignored' } }] }],
     [events[2], { content: [{ type: 'image', attachment: { attachmentId: 'd' } }] }],
     [events[3], { content: [{ type: 'text', text: 'no image' }] }],

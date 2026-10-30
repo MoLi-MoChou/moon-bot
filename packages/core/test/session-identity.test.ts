@@ -16,12 +16,47 @@ const TEAM = {
   revision: 1,
   whaleStored: true,
   bots: {
-    m1: { id: 'm1', sessionId: 'm1', name: 'Chief', role: 'Chief of Staff', model: 'deepseek/v4', instructions: '', createdAt: 1 },
-    b2: { id: 'b2', sessionId: 'b2', name: 'Writer', role: 'Writing', model: 'deepseek/v4', instructions: '', createdAt: 2 },
-    b3: { id: 'b3', sessionId: 'b3', name: 'Coder', role: 'Code', model: 'deepseek/v4', instructions: '', createdAt: 3 },
+    m1: {
+      id: 'm1',
+      sessionId: 'm1',
+      name: 'Chief',
+      role: 'Chief of Staff',
+      model: 'deepseek/v4',
+      instructions: '',
+      createdAt: 1,
+    },
+    b2: {
+      id: 'b2',
+      sessionId: 'b2',
+      name: 'Writer',
+      role: 'Writing',
+      model: 'deepseek/v4',
+      instructions: '',
+      createdAt: 2,
+    },
+    b3: {
+      id: 'b3',
+      sessionId: 'b3',
+      name: 'Coder',
+      role: 'Code',
+      model: 'deepseek/v4',
+      instructions: '',
+      createdAt: 3,
+    },
   },
   rooms: {
-    r1: { id: 'r1', name: 'Launch', named: true, members: ['b2', 'b3'], admin: 'b3', mode: 'everyone', notice: '', sessions: { b3: 'g3' }, seq: 0, log: [] },
+    r1: {
+      id: 'r1',
+      name: 'Launch',
+      named: true,
+      members: ['b2', 'b3'],
+      admin: 'b3',
+      mode: 'everyone',
+      notice: '',
+      sessions: { b3: 'g3' },
+      seq: 0,
+      log: [],
+    },
   },
   exchanges: [],
   exchangeTurns: {},
@@ -48,7 +83,12 @@ function start() {
     tokens: 0,
     compacted: 0,
     respond: () => '',
-    requests: [] as { model?: string, sessionId?: string, purpose?: string, messages?: { content: { type: string, text?: string }[] }[] }[],
+    requests: [] as {
+      model?: string
+      sessionId?: string
+      purpose?: string
+      messages?: { content: { type: string; text?: string }[] }[]
+    }[],
   }
   const compaction = {
     summarize() {},
@@ -91,8 +131,22 @@ function start() {
       selectModel: async () => {},
       page: async () => ({
         records: [
-          { event: { seq: 0, time: 1, type: 'user/message', data: { source: { kind: 'user' }, content: [{ type: 'text', text: 'Keep working on the report' }] } } },
-          { event: { seq: 1, time: 2, type: 'assistant/message', data: { message: { content: [{ type: 'text', text: 'Working on it.' }] } } } },
+          {
+            event: {
+              seq: 0,
+              time: 1,
+              type: 'user/message',
+              data: { source: { kind: 'user' }, content: [{ type: 'text', text: 'Keep working on the report' }] },
+            },
+          },
+          {
+            event: {
+              seq: 1,
+              time: 2,
+              type: 'assistant/message',
+              data: { message: { content: [{ type: 'text', text: 'Working on it.' }] } },
+            },
+          },
         ],
         hasMore: false,
       }),
@@ -106,7 +160,8 @@ function start() {
     await ctx.dispose()
     // A reading is cached on disk in the background.
     if (bench.requests.some(request => request.model === 'vision' && request.sessionId !== undefined)) {
-      for (let tries = 0; tries < 100 && !existsSync(join(home, 'ocr.json')); tries += 1) await new Promise(resolve => setTimeout(resolve, 10))
+      for (let tries = 0; tries < 100 && !existsSync(join(home, 'ocr.json')); tries += 1)
+        await new Promise(resolve => setTimeout(resolve, 10))
     }
     rmSync(home, { recursive: true, force: true, maxRetries: 5 })
   }
@@ -114,60 +169,101 @@ function start() {
 }
 
 for (const sessionId of ['b2', 'g3']) {
-  test(`the context steward names the Session it decides for (${sessionId}), and the part is condensed in place`, async (t) => {
+  test(`the context steward names the Session it decides for (${sessionId}), and the part is condensed in place`, async t => {
     const { ctx, bench, stop } = start()
     t.after(stop)
     bench.tokens = 95_000
     bench.respond = () => '{"action":"compact"}'
-    const session = { id: sessionId, seq: 2, requestHeader: () => ({ config: { provider: 'deepseek', model: 'v4' } }), deriveMessages: () => [], toolHistory: () => [] }
+    const session = {
+      id: sessionId,
+      seq: 2,
+      requestHeader: () => ({ config: { provider: 'deepseek', model: 'v4' } }),
+      deriveMessages: () => [],
+      toolHistory: () => [],
+    }
     const preStep = ctx.listeners.get('agent/pre-step').find(listener => /adoptCompaction/.test(String(listener)))
     const next = { kind: 'continue' }
-    const result = await preStep({ agent: { id: sessionId, session }, messages: [], step: 2, signal: new AbortController().signal }, () => next)
+    const result = await preStep(
+      { agent: { id: sessionId, session }, messages: [], step: 2, signal: new AbortController().signal },
+      () => next,
+    )
     assert.equal(result, next)
     assert.equal(bench.compacted, 1)
-    assert.deepEqual(bench.requests.map(request => [request.sessionId, request.purpose]), [[sessionId, 'compaction']])
+    assert.deepEqual(
+      bench.requests.map(request => [request.sessionId, request.purpose]),
+      [[sessionId, 'compaction']],
+    )
   })
 }
 
-test('an image in a Bot chat is read for that chat, and the chat gets the reading', async (t) => {
+test('an image in a Bot chat is read for that chat, and the chat gets the reading', async t => {
   const { ctx, bench, stop } = start()
   t.after(stop)
   bench.respond = options => (options.model === 'vision' ? 'A red triangle.' : 'It is a triangle.')
-  const message = { role: 'user', source: { kind: 'user' }, content: [{ type: 'image', attachment }, { type: 'text', text: 'What is this?' }] }
-  const chunks = await drain(ctx.llm.stream({ provider: 'deepseek', model: 'v4', sessionId: 'b2', messages: [message] }))
+  const message = {
+    role: 'user',
+    source: { kind: 'user' },
+    content: [
+      { type: 'image', attachment },
+      { type: 'text', text: 'What is this?' },
+    ],
+  }
+  const chunks = await drain(
+    ctx.llm.stream({ provider: 'deepseek', model: 'v4', sessionId: 'b2', messages: [message] }),
+  )
   assert.equal(chunks.at(-1).reason.kind, 'stop')
-  assert.deepEqual(bench.requests.map(request => [request.model, request.sessionId]), [['vision', 'b2'], ['v4', 'b2']])
+  assert.deepEqual(
+    bench.requests.map(request => [request.model, request.sessionId]),
+    [
+      ['vision', 'b2'],
+      ['v4', 'b2'],
+    ],
+  )
   assert.equal(bench.requests[0].messages[0].content[0].type, 'image')
   assert.match(bench.requests[1].messages[0].content[0].text, /A red triangle\./)
 })
 
-test('an image in a group is read for the group, and the group still relays its own rounds', async (t) => {
+test('an image in a group is read for the group, and the group still relays its own rounds', async t => {
   const { ctx, rt, bench, stop } = start()
   t.after(stop)
   bench.respond = () => 'A red triangle.'
   const [reading] = await rt.imagesForGroup([attachment], 'r1')
   assert.match(reading, /read by vision:\]\nA red triangle\./)
-  assert.deepEqual(bench.requests.map(request => [request.model, request.sessionId]), [['vision', 'r1']])
+  assert.deepEqual(
+    bench.requests.map(request => [request.model, request.sessionId]),
+    [['vision', 'r1']],
+  )
 
-  const chunks = await drain(ctx.llm.stream({ provider: 'deepseek', model: 'v4', sessionId: 'r1', messages: [userText('Discuss the picture')] }))
+  const chunks = await drain(
+    ctx.llm.stream({ provider: 'deepseek', model: 'v4', sessionId: 'r1', messages: [userText('Discuss the picture')] }),
+  )
   assert.ok(chunks.some(chunk => chunk.type === 'tool-call-delta' && chunk.name === 'group_relay'))
   assert.equal(bench.requests.length, 1)
 })
 
-test('the Session hooks pass DS Bot\'s own requests through, and still act on a Session\'s own rounds', async (t) => {
+test("the Session hooks pass DS Bot's own requests through, and still act on a Session's own rounds", async t => {
   const { rt, hook, stop } = start()
   t.after(stop)
   await rt.load()
-  const own = (sessionId, messages) => ({ provider: 'deepseek', model: 'v4', sessionId, messages: rt.tagUsage([...messages], { sessionId, kind: 'memory' }) })
+  const own = (sessionId, messages) => ({
+    provider: 'deepseek',
+    model: 'v4',
+    sessionId,
+    messages: rt.tagUsage([...messages], { sessionId, kind: 'memory' }),
+  })
   const round = (sessionId, messages) => ({ provider: 'deepseek', model: 'v4', sessionId, messages })
   const passed = (async function* () {})()
   const pass = () => passed
 
   const relay = hook(/relayOrPass/)
   assert.equal(relay(own('r1', [userText('Read this')]), pass), passed)
-  assert.ok((await drain(relay(round('r1', [userText('Read this')]), pass))).some(chunk => chunk.name === 'group_relay'))
+  assert.ok(
+    (await drain(relay(round('r1', [userText('Read this')]), pass))).some(chunk => chunk.name === 'group_relay'),
+  )
 
-  const handoff = [{ role: 'user', source: { kind: 'bot', handoff: true }, content: [{ type: 'text', text: 'Handoff note' }] }]
+  const handoff = [
+    { role: 'user', source: { kind: 'bot', handoff: true }, content: [{ type: 'text', text: 'Handoff note' }] },
+  ]
   const acknowledge = hook(/acknowledge/)
   assert.equal(acknowledge(own('b2', handoff), pass), passed)
   assert.ok((await drain(acknowledge(round('b2', handoff), pass))).some(chunk => chunk.type === 'text-delta'))

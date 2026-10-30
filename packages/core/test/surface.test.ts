@@ -36,12 +36,18 @@ const recordingGroups = (log, { failing = null } = {}) => {
     if (name === failing) throw new Error(`could not release ${name}`)
   }
   return surfaceGroups({
-    shell: () => { log.push('install shell'); return [entry('shell styles'), entry('shell theme')] },
-    conversation: () => { log.push('install conversation'); return [entry('conversation styles'), entry('conversation tokens'), entry('conversation cells')] },
+    shell: () => {
+      log.push('install shell')
+      return [entry('shell styles'), entry('shell theme')]
+    },
+    conversation: () => {
+      log.push('install conversation')
+      return [entry('conversation styles'), entry('conversation tokens'), entry('conversation cells')]
+    },
   })
 }
 
-test('switching to Agent mode withdraws the conversation before the shell, last entry first', (t) => {
+test('switching to Agent mode withdraws the conversation before the shell, last entry first', t => {
   t.mock.method(console, 'warn', () => {})
   const log = []
   const groups = recordingGroups(log)
@@ -49,42 +55,66 @@ test('switching to Agent mode withdraws the conversation before the shell, last 
   assert.deepEqual(log, ['install shell', 'install conversation'])
   log.length = 0
   groups.reconcile(groupsFor({ mode: 'agent' }))
-  assert.deepEqual(log, ['conversation cells', 'conversation tokens', 'conversation styles', 'shell theme', 'shell styles'])
+  assert.deepEqual(log, [
+    'conversation cells',
+    'conversation tokens',
+    'conversation styles',
+    'shell theme',
+    'shell styles',
+  ])
 })
 
-test('a throwing disposer does not stop the rest, and the group can be installed again', (t) => {
+test('a throwing disposer does not stop the rest, and the group can be installed again', t => {
   const warn = t.mock.method(console, 'warn', () => {})
   const log = []
   const groups = recordingGroups(log, { failing: 'conversation tokens' })
   groups.reconcile(groupsFor({ mode: 'bot' }))
   log.length = 0
   assert.doesNotThrow(() => groups.reconcile(groupsFor({ mode: 'agent' })))
-  assert.deepEqual(log, ['conversation cells', 'conversation tokens', 'conversation styles', 'shell theme', 'shell styles'])
+  assert.deepEqual(log, [
+    'conversation cells',
+    'conversation tokens',
+    'conversation styles',
+    'shell theme',
+    'shell styles',
+  ])
   assert.equal(warn.mock.callCount(), 1)
   log.length = 0
   groups.reconcile(groupsFor({ mode: 'bot' }))
   assert.deepEqual(log, ['install shell', 'install conversation'])
 })
 
-test('unloading the plugin disposes every group even when a disposer throws', (t) => {
+test('unloading the plugin disposes every group even when a disposer throws', t => {
   t.mock.method(console, 'warn', () => {})
   const log = []
   const groups = recordingGroups(log, { failing: 'conversation cells' })
   groups.reconcile(groupsFor({ mode: 'bot' }))
   log.length = 0
   assert.doesNotThrow(() => groups.dispose())
-  assert.deepEqual(log, ['conversation cells', 'conversation tokens', 'conversation styles', 'shell theme', 'shell styles'])
+  assert.deepEqual(log, [
+    'conversation cells',
+    'conversation tokens',
+    'conversation styles',
+    'shell theme',
+    'shell styles',
+  ])
   log.length = 0
   groups.dispose()
   assert.deepEqual(log, [])
 })
 
-test('a group whose install throws stays unmounted and is tried again', (t) => {
+test('a group whose install throws stays unmounted and is tried again', t => {
   t.mock.method(console, 'warn', () => {})
   let attempts = 0
   const groups = surfaceGroups({
     shell: () => [() => () => {}],
-    conversation: () => [() => { attempts += 1; if (attempts === 1) throw new Error('slot refused'); return () => {} }],
+    conversation: () => [
+      () => {
+        attempts += 1
+        if (attempts === 1) throw new Error('slot refused')
+        return () => {}
+      },
+    ],
   })
   assert.doesNotThrow(() => groups.reconcile(groupsFor({ mode: 'bot' })))
   groups.reconcile(groupsFor({ mode: 'bot', plain: true }))
@@ -94,29 +124,54 @@ test('a group whose install throws stays unmounted and is tried again', (t) => {
 
 // 公开#149: another plugin held a cell at the same priority, so one step of the
 // conversation group threw after the styles, the header and the chat cells were on.
-test('a group whose step throws takes back the steps before it, so Agent mode leaves nothing behind', (t) => {
+test('a group whose step throws takes back the steps before it, so Agent mode leaves nothing behind', t => {
   t.mock.method(console, 'warn', () => {})
   const live = new Set()
-  const mount = name => () => { live.add(name); return () => live.delete(name) }
-  const collide = () => { throw new Error('single slot "conversation.input.model" already has a registration at priority -10') }
+  const mount = name => () => {
+    live.add(name)
+    return () => live.delete(name)
+  }
+  const collide = () => {
+    throw new Error('single slot "conversation.input.model" already has a registration at priority -10')
+  }
   const errors = []
-  const groups = surfaceGroups({
-    shell: () => [mount('shell styles')],
-    conversation: () => [mount('conversation css'), mount('HeaderPill'), mount('chat.node cells'), collide, mount('bot-plus')],
-  }, { onError: (group, error) => errors.push([group, (error as Error).message]) })
+  const groups = surfaceGroups(
+    {
+      shell: () => [mount('shell styles')],
+      conversation: () => [
+        mount('conversation css'),
+        mount('HeaderPill'),
+        mount('chat.node cells'),
+        collide,
+        mount('bot-plus'),
+      ],
+    },
+    { onError: (group, error) => errors.push([group, (error as Error).message]) },
+  )
   groups.reconcile(groupsFor({ mode: 'bot' }))
   assert.deepEqual([...live], ['shell styles'])
-  assert.deepEqual(errors.map(([group]) => group), ['conversation'])
+  assert.deepEqual(
+    errors.map(([group]) => group),
+    ['conversation'],
+  )
   groups.reconcile(groupsFor({ mode: 'agent' }))
   assert.deepEqual([...live], [])
 })
 
-test('a shell that cannot go on keeps the conversation group off too', (t) => {
+test('a shell that cannot go on keeps the conversation group off too', t => {
   t.mock.method(console, 'warn', () => {})
   const live = new Set()
-  const mount = name => () => { live.add(name); return () => live.delete(name) }
+  const mount = name => () => {
+    live.add(name)
+    return () => live.delete(name)
+  }
   const groups = surfaceGroups({
-    shell: () => [mount('shell styles'), () => { throw new Error('slot refused') }],
+    shell: () => [
+      mount('shell styles'),
+      () => {
+        throw new Error('slot refused')
+      },
+    ],
     conversation: () => [mount('conversation css')],
   })
   groups.reconcile(groupsFor({ mode: 'bot' }))
@@ -130,11 +185,24 @@ test('a shadow goes below every entry of its cell, so a same-priority plugin doe
   assert.equal(freePriority([entry({}), entry({ priority: -100 })], { priority: -100 }), -101)
   assert.equal(freePriority([entry({ priority: -200 })], { priority: -100 }), -201)
   // Keyed and list cells: only the same key or id share the cell.
-  assert.equal(freePriority([entry({ key: 'tool-call', priority: -100 }), entry({ key: 'user', priority: -300 })], { key: 'tool-call', priority: -100 }), -101)
+  assert.equal(
+    freePriority([entry({ key: 'tool-call', priority: -100 }), entry({ key: 'user', priority: -300 })], {
+      key: 'tool-call',
+      priority: -100,
+    }),
+    -101,
+  )
   assert.equal(freePriority([entry({ id: 'usage', priority: -100 })], { id: 'activity', priority: -100 }), -100)
   assert.equal(freePriority([entry({ priority: -100 })], {}), undefined)
 })
 
 test('readMode falls back to bot when storage throws', () => {
-  assert.equal(readMode({ getItem: () => { throw new Error('denied') } } as unknown as Storage), 'bot')
+  assert.equal(
+    readMode({
+      getItem: () => {
+        throw new Error('denied')
+      },
+    } as unknown as Storage),
+    'bot',
+  )
 })

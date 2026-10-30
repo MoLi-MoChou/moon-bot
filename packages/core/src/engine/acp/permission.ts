@@ -27,12 +27,14 @@ export interface PermissionRequestParams {
 export type PermissionDecision = 'allowed-once' | 'allowed' | 'rejected' | 'cancelled'
 
 export interface RequestPermissionResult {
-  readonly outcome: {
-    readonly outcome: 'selected'
-    readonly optionId: string
-  } | {
-    readonly outcome: 'cancelled'
-  }
+  readonly outcome:
+    | {
+        readonly outcome: 'selected'
+        readonly optionId: string
+      }
+    | {
+        readonly outcome: 'cancelled'
+      }
 }
 
 export interface ApprovalDetailPayload {
@@ -49,7 +51,8 @@ export function detailOfPermission(toolCall: PermissionToolCall | undefined): Ap
     code = raw
   } else if (raw !== null && typeof raw === 'object') {
     const obj = raw as Record<string, unknown>
-    const firstStr = (keys: readonly string[]) => keys.map(k => obj[k]).find((v): v is string => typeof v === 'string' && v.trim() !== '')
+    const firstStr = (keys: readonly string[]) =>
+      keys.map(k => obj[k]).find((v): v is string => typeof v === 'string' && v.trim() !== '')
     code = firstStr(['command', 'cmd', 'file_path', 'path', 'url', 'query']) ?? JSON.stringify(raw)
   }
   const text = toolCall.title ?? toolCall.kind ?? undefined
@@ -60,24 +63,34 @@ export function detailOfPermission(toolCall: PermissionToolCall | undefined): Ap
 }
 
 /** Matches an approval outcome to the ACP options provided by the agent. */
-export function matchPermissionOutcome(options: readonly PermissionOption[] | undefined, decision: PermissionDecision | string): RequestPermissionResult {
+export function matchPermissionOutcome(
+  options: readonly PermissionOption[] | undefined,
+  decision: PermissionDecision | string,
+): RequestPermissionResult {
   if (decision === 'cancelled' || !options || options.length === 0) {
     return { outcome: { outcome: 'cancelled' } }
   }
   if (decision === 'allowed-once' || decision === 'allowed') {
-    const matched = options.find(o =>
-      o.kind === 'allow_once' || o.kind === 'allow' ||
-      o.optionId === 'allow_once' || o.optionId === 'allow' ||
-      o.optionId.toLowerCase().includes('allow'),
-    ) ?? options[0]
+    const matched =
+      options.find(
+        o =>
+          o.kind === 'allow_once' ||
+          o.kind === 'allow' ||
+          o.optionId === 'allow_once' ||
+          o.optionId === 'allow' ||
+          o.optionId.toLowerCase().includes('allow'),
+      ) ?? options[0]
     if (matched !== undefined) return { outcome: { outcome: 'selected', optionId: matched.optionId } }
     return { outcome: { outcome: 'cancelled' } }
   }
   if (decision === 'rejected') {
-    const matched = options.find(o =>
-      o.kind === 'reject' || o.kind === 'deny' ||
-      o.optionId === 'reject' || o.optionId === 'deny' ||
-      o.optionId.toLowerCase().includes('reject'),
+    const matched = options.find(
+      o =>
+        o.kind === 'reject' ||
+        o.kind === 'deny' ||
+        o.optionId === 'reject' ||
+        o.optionId === 'deny' ||
+        o.optionId.toLowerCase().includes('reject'),
     )
     if (matched !== undefined) return { outcome: { outcome: 'selected', optionId: matched.optionId } }
     return { outcome: { outcome: 'cancelled' } }

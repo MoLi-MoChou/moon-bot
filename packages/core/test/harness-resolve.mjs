@@ -9,5 +9,9 @@ const testHome = join(tmpdir(), `moon-bot-test-home-${process.pid}`)
 process.env.DSH_HOME = testHome
 process.env.MOON_BOT_DATA = testHome
 process.on('exit', () => {
-  try { rmSync(testHome, { recursive: true, force: true }) } catch { /* best effort */ }
+  try {
+    rmSync(testHome, { recursive: true, force: true })
+  } catch {
+    /* best effort */
+  }
 })

@@ -20,17 +20,28 @@ function checkSearchApi(api: unknown, index: number): void {
   const where = `web-search-auto: searchApis[${index}]`
   if (!isRecord(api)) throw new Error(`${where} must be an object`)
   if (str(api.id) === undefined) throw new Error(`${where} needs an id`)
-  if (!Array.isArray(api.hosts) || api.hosts.length === 0 || !api.hosts.every(host => typeof host === 'string' && /^(\*\.)?[a-z0-9-]+(\.[a-z0-9-]+)*$/i.test(host))) {
+  if (
+    !Array.isArray(api.hosts) ||
+    api.hosts.length === 0 ||
+    !api.hosts.every(host => typeof host === 'string' && /^(\*\.)?[a-z0-9-]+(\.[a-z0-9-]+)*$/i.test(host))
+  ) {
     throw new Error(`${where}.hosts must be a list of host names; a leading *. matches subdomains`)
   }
-  if (typeof api.path !== 'string' || !/^\/[^/]/.test(api.path)) throw new Error(`${where}.path must be a path on the route's host, starting with one /`)
+  if (typeof api.path !== 'string' || !/^\/[^/]/.test(api.path))
+    throw new Error(`${where}.path must be a path on the route's host, starting with one /`)
   if (!isRecord(api.body)) throw new Error(`${where}.body must be an object`)
-  if (api.auth !== undefined && (!Array.isArray(api.auth) || api.auth.length === 0 || !api.auth.every(style => typeof style === 'string' && Object.hasOwn(AUTH_STYLES, style)))) {
+  if (
+    api.auth !== undefined &&
+    (!Array.isArray(api.auth) ||
+      api.auth.length === 0 ||
+      !api.auth.every(style => typeof style === 'string' && Object.hasOwn(AUTH_STYLES, style)))
+  ) {
     throw new Error(`${where}.auth must be a list of ${Object.keys(AUTH_STYLES).join(', ')}`)
   }
   for (const key of ['maxResults', 'maxQueryChars'] as const) {
     const value = api[key]
-    if (value !== undefined && !(typeof value === 'number' && Number.isInteger(value) && value >= 1)) throw new Error(`${where}.${key} must be a positive integer`)
+    if (value !== undefined && !(typeof value === 'number' && Number.isInteger(value) && value >= 1))
+      throw new Error(`${where}.${key} must be a positive integer`)
   }
   if (api.name !== undefined && str(api.name) === undefined) throw new Error(`${where}.name must be text`)
 }
@@ -47,9 +58,13 @@ export interface ResolvedConfig {
 }
 
 const isEngineId = (value: unknown): value is EngineId => typeof value === 'string' && Object.hasOwn(ENGINES, value)
-const timeoutOf = (merged: Readonly<Record<string, unknown>>, key: 'nativeTimeoutMs' | 'guessTimeoutMs' | 'fallbackTimeoutMs'): number => {
+const timeoutOf = (
+  merged: Readonly<Record<string, unknown>>,
+  key: 'nativeTimeoutMs' | 'guessTimeoutMs' | 'fallbackTimeoutMs',
+): number => {
   const value = merged[key]
-  if (typeof value !== 'number' || !Number.isFinite(value) || value < 1000) throw new Error(`web-search-auto: ${key} must be at least 1000`)
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 1000)
+    throw new Error(`web-search-auto: ${key} must be at least 1000`)
   return value
 }
 

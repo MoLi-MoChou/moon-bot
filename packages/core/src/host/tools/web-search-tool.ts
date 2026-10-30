@@ -30,11 +30,13 @@ async function webFetch(request: { readonly url: string }, signal?: AbortSignal)
 
 const formatSources = (sources: readonly Source[]): string => {
   if (sources.length === 0) return '(no results)'
-  return sources.map((source, index) => {
-    const parts = [`${index + 1}. ${source.title || source.url}`, source.url]
-    if (source.snippet) parts.push(source.snippet)
-    return parts.join('\n')
-  }).join('\n\n')
+  return sources
+    .map((source, index) => {
+      const parts = [`${index + 1}. ${source.title || source.url}`, source.url]
+      if (source.snippet) parts.push(source.snippet)
+      return parts.join('\n')
+    })
+    .join('\n\n')
 }
 
 export function installWebSearchTool(_rt: HostRuntime, shared: ToolShared): void {
@@ -51,7 +53,8 @@ export function installWebSearchTool(_rt: HostRuntime, shared: ToolShared): void
   shared.register({
     name: 'web_search',
     label: 'Web search',
-    description: 'Search the public web. Prefer this over guessing URLs. Pass one or more short queries; results name which backend answered. When native search is unavailable for the model route, a keyless public results page is used.',
+    description:
+      'Search the public web. Prefer this over guessing URLs. Pass one or more short queries; results name which backend answered. When native search is unavailable for the model route, a keyless public results page is used.',
     parameters: {
       queries: {
         type: 'array',
@@ -60,10 +63,12 @@ export function installWebSearchTool(_rt: HostRuntime, shared: ToolShared): void
         description: 'One or more search queries; each is run in turn and the answers are joined',
       },
     },
-    schema: z.object({
-      queries: z.union([z.array(z.string()), z.string()]).optional(),
-      query: z.string().optional(),
-    }).passthrough(),
+    schema: z
+      .object({
+        queries: z.union([z.array(z.string()), z.string()]).optional(),
+        query: z.string().optional(),
+      })
+      .passthrough(),
     async execute(args: { readonly queries?: unknown; readonly query?: unknown }, context: ToolContext) {
       const raw = args.queries ?? args.query
       const queries = (Array.isArray(raw) ? raw : typeof raw === 'string' ? [raw] : [])

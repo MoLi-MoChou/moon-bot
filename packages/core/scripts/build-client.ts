@@ -39,7 +39,9 @@ export async function bundleClient() {
     jsxFragment: 'Fragment',
     external: PLATFORM_MODULES,
     // Moon Bot patch: the app's version, for the settings line that names it.
-    define: { __MOON_BOT_VERSION__: JSON.stringify(JSON.parse(readFileSync(join(PLUGIN, 'package.json'), 'utf8')).version) },
+    define: {
+      __MOON_BOT_VERSION__: JSON.stringify(JSON.parse(readFileSync(join(PLUGIN, 'package.json'), 'utf8')).version),
+    },
     // Every source declaration ships, used or not, as in the hand-written bundle.
     treeShaking: false,
     // Readable for debugging in the browser: no minification, and Chinese text stays text.
@@ -47,17 +49,18 @@ export async function bundleClient() {
     write: false,
     logLevel: 'silent',
   })
-  if (result.warnings.length > 0) throw new Error(`esbuild warnings:\n${result.warnings.map(warning => warning.text).join('\n')}`)
+  if (result.warnings.length > 0)
+    throw new Error(`esbuild warnings:\n${result.warnings.map(warning => warning.text).join('\n')}`)
   return [
     '// Generated from src/client by `pnpm run build` (scripts/build-client.ts). Do not edit by hand.',
     'window.__ModuleLoader__.load({',
-    '  id: \'moon-bot-core\',',
+    "  id: 'moon-bot-core',",
     '  factory: (require) => {',
     'const module = { exports: {} }',
     result.outputFiles[0].text.trimEnd(),
     // The loader gets a plain exports object tagged as a module, as the tsdown preset
     // emits, rather than esbuild's getter-based `__esModule` object.
-    'return Object.defineProperty({ ...module.exports }, Symbol.toStringTag, { value: \'Module\' })',
+    "return Object.defineProperty({ ...module.exports }, Symbol.toStringTag, { value: 'Module' })",
     '  },',
     '})',
     '',
@@ -68,7 +71,11 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const next = await bundleClient()
   if (process.argv.includes('--check')) {
     let current = null
-    try { current = readFileSync(OUTPUT, 'utf8') } catch { /* missing counts as stale */ }
+    try {
+      current = readFileSync(OUTPUT, 'utf8')
+    } catch {
+      /* missing counts as stale */
+    }
     if (current !== next) {
       console.error('client.js is stale: run `pnpm run build` in core (generated client.js is not committed)')
       process.exit(1)

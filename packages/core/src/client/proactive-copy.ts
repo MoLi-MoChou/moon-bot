@@ -15,12 +15,18 @@ export interface QuietLike {
 /** Why a candidate would not go out, in the user's words rather than the reason code. */
 export function reasonText(reason: string | undefined): string {
   switch (reason) {
-    case 'daily-cap': return t('it already spoke today')
-    case 'repeats': return t('it said this in the last week')
-    case 'mentioned-recently': return t('you brought it up yourself today')
-    case 'quiet-hours': return t('quiet hours')
-    case 'not-worth-it': return t('it judged this not worth interrupting for')
-    default: return t('not worth interrupting for')
+    case 'daily-cap':
+      return t('it already spoke today')
+    case 'repeats':
+      return t('it said this in the last week')
+    case 'mentioned-recently':
+      return t('you brought it up yourself today')
+    case 'quiet-hours':
+      return t('quiet hours')
+    case 'not-worth-it':
+      return t('it judged this not worth interrupting for')
+    default:
+      return t('not worth interrupting for')
   }
 }
 

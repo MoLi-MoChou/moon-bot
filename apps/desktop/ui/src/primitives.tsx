@@ -23,24 +23,43 @@ export interface MarkdownTextProps {
 
 const PLUGINS = [remarkGfm]
 
-function CodeBlock({ children, labels }: { readonly children?: React.ReactNode; readonly labels?: MarkdownLabels | undefined }): ReactElement {
+function CodeBlock({
+  children,
+  labels,
+}: {
+  readonly children?: React.ReactNode
+  readonly labels?: MarkdownLabels | undefined
+}): ReactElement {
   const [copied, setCopied] = useState(false)
   const block = useRef<HTMLPreElement>(null)
   const copy = (): void => {
     void navigator.clipboard?.writeText(block.current?.innerText ?? '').then(() => {
       setCopied(true)
-      setTimeout(() => { setCopied(false) }, 1000)
+      setTimeout(() => {
+        setCopied(false)
+      }, 1000)
     })
   }
-  return <div className='md-code'>
-    <button type='button' className='md-copy' onClick={copy}>{copied ? labels?.code?.copiedLabel : labels?.code?.copyLabel}</button>
-    <pre ref={block}>{children}</pre>
-  </div>
+  return (
+    <div className='md-code'>
+      <button type='button' className='md-copy' onClick={copy}>
+        {copied ? labels?.code?.copiedLabel : labels?.code?.copyLabel}
+      </button>
+      <pre ref={block}>{children}</pre>
+    </div>
+  )
 }
 
 // Links open outside the window; mention links stay for the chat's own click handler.
 const elements = (labels: MarkdownLabels | undefined): Components => ({
-  a: ({ node: _node, ...props }) => <a {...props} {...(typeof props.href === 'string' && props.href.startsWith(MENTION_ORIGIN) ? {} : { target: '_blank', rel: 'noreferrer' })} />,
+  a: ({ node: _node, ...props }) => (
+    <a
+      {...props}
+      {...(typeof props.href === 'string' && props.href.startsWith(MENTION_ORIGIN)
+        ? {}
+        : { target: '_blank', rel: 'noreferrer' })}
+    />
+  ),
   pre: ({ children }) => <CodeBlock labels={labels}>{children}</CodeBlock>,
 })
 
@@ -48,7 +67,11 @@ const elements = (labels: MarkdownLabels | undefined): Components => ({
 export function MarkdownText({ text, labels, variant }: MarkdownTextProps): ReactElement {
   // New element types on every render would remount each code block as a reply streams in.
   const components = useMemo(() => elements(labels), [labels?.code?.copyLabel, labels?.code?.copiedLabel])
-  return <div className={variant === 'compact' ? 'md_markdown md-compact' : 'md_markdown'}>
-    <Markdown remarkPlugins={PLUGINS} components={components}>{text ?? ''}</Markdown>
-  </div>
+  return (
+    <div className={variant === 'compact' ? 'md_markdown md-compact' : 'md_markdown'}>
+      <Markdown remarkPlugins={PLUGINS} components={components}>
+        {text ?? ''}
+      </Markdown>
+    </div>
+  )
 }

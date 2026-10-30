@@ -9,13 +9,16 @@ export interface SharedMap<T> {
   update(change: (base: T) => T, fallback?: T): T
 }
 
-export function sharedMap<T extends Record<string, unknown>>(key: string, storage: Storage | undefined = globalThis.localStorage): SharedMap<T> {
+export function sharedMap<T extends Record<string, unknown>>(
+  key: string,
+  storage: Storage | undefined = globalThis.localStorage,
+): SharedMap<T> {
   // `fallback` stands in when storage cannot be read, so the window keeps its own copy.
   const read = (fallback: T = {} as T): T => {
     if (!storage) return fallback
     try {
       const value: unknown = JSON.parse(storage.getItem(key) ?? '{}')
-      return value !== null && typeof value === 'object' && !Array.isArray(value) ? value as T : {} as T
+      return value !== null && typeof value === 'object' && !Array.isArray(value) ? (value as T) : ({} as T)
     } catch {
       return fallback
     }
@@ -25,7 +28,11 @@ export function sharedMap<T extends Record<string, unknown>>(key: string, storag
     const base = read(fallback)
     const next = change(base)
     if (next === base) return next
-    try { storage?.setItem(key, JSON.stringify(next)) } catch { /* storage unavailable */ }
+    try {
+      storage?.setItem(key, JSON.stringify(next))
+    } catch {
+      /* storage unavailable */
+    }
     return next
   }
   return { key, read, update }

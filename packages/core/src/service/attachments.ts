@@ -22,8 +22,9 @@ const readIndex = (file: string): Record<string, IndexEntry> => {
     if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) return {}
     const out: Record<string, IndexEntry> = {}
     for (const [id, entry] of Object.entries(parsed as Record<string, unknown>)) {
-      const view = entry as { name?: unknown, bytes?: unknown }
-      if (typeof view?.name === 'string') out[id] = { name: view.name, bytes: typeof view.bytes === 'number' ? view.bytes : 0 }
+      const view = entry as { name?: unknown; bytes?: unknown }
+      if (typeof view?.name === 'string')
+        out[id] = { name: view.name, bytes: typeof view.bytes === 'number' ? view.bytes : 0 }
     }
     return out
   } catch {
@@ -39,7 +40,7 @@ export class FileAttachments implements AttachmentsService {
     mkdirSync(this.dir, { recursive: true })
   }
 
-  async saveFile(input: { readonly data: Uint8Array, readonly name: string }): Promise<AttachmentRef> {
+  async saveFile(input: { readonly data: Uint8Array; readonly name: string }): Promise<AttachmentRef> {
     const attachmentId = `sha256:${createHash('sha256').update(input.data).digest('hex')}`
     const file = join(this.dir, attachmentId.replace(/^sha256:/, ''))
     if (!existsSync(file)) {

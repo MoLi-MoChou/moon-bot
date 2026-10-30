@@ -23,7 +23,9 @@ export function install(rt: HostRuntime): void {
   const presets = (): PermissionPresetsService | undefined => ctx.get<PermissionPresetsService>('permissionPresets')
 
   // The presets the host offers, or undefined when the profile has none.
-  function permissionCatalog(): { readonly options: readonly { readonly value: string }[]; readonly defaultPreset: string } | undefined {
+  function permissionCatalog():
+    | { readonly options: readonly { readonly value: string }[]; readonly defaultPreset: string }
+    | undefined {
     const service = presets()
     if (service === undefined) return undefined
     const { options, defaultPreset } = service.catalog()
@@ -39,7 +41,11 @@ export function install(rt: HostRuntime): void {
 
   // Sets the preset on one of the Bot's Sessions: its group's there, else its own; a Bot
   // without one keeps the host's default. `room` is for a group Session not indexed yet.
-  async function applyPermission(bot: StoredBot, sessionId: string, room: StoredRoom | undefined = roomOfSession(sessionId)): Promise<void> {
+  async function applyPermission(
+    bot: StoredBot,
+    sessionId: string,
+    room: StoredRoom | undefined = roomOfSession(sessionId),
+  ): Promise<void> {
     const name = room?.permission ?? bot.permission
     const service = presets()
     if (service === undefined || !name) return
@@ -50,24 +56,27 @@ export function install(rt: HostRuntime): void {
     const service = presets()
     if (service === undefined) throw new Error('Permission presets are not available here')
     const wanted = String(name ?? '').trim()
-    if (wanted === SESSION_ONLY) throw new Error(`Auto review applies to one Session only and cannot be ${whose} permission`)
+    if (wanted === SESSION_ONLY)
+      throw new Error(`Auto review applies to one Session only and cannot be ${whose} permission`)
     service.resolve(wanted)
     return wanted
   }
 
   async function setPermission(bot: StoredBot, name: unknown): Promise<void> {
-    const wanted = checkPreset(name, 'a Bot\'s')
+    const wanted = checkPreset(name, "a Bot's")
     await applyPermission({ ...bot, permission: wanted }, rt.chatOf(bot.id))
     bot.permission = wanted
     for (const sessionId of rt.groupSessionsOf(bot.id)) {
       if (roomOfSession(sessionId)?.permission) continue
-      await applyPermission(bot, sessionId)
-        .catch(error => rt.warn('moon-bot: permission for %s in a group not applied: %s', bot.name, error))
+      await applyPermission(bot, sessionId).catch(error =>
+        rt.warn('moon-bot: permission for %s in a group not applied: %s', bot.name, error),
+      )
     }
   }
 
   // A group's preset, or null when each member uses its own.
-  const cleanRoomPermission = (name: string | null | undefined): string | null => (name === null || name === '' ? null : checkPreset(name, 'a group\'s'))
+  const cleanRoomPermission = (name: string | null | undefined): string | null =>
+    name === null || name === '' ? null : checkPreset(name, "a group's")
 
   // Members' Sessions in the group change now; a member that has none there yet gets the
   // group's preset when its first turn there makes one. Returns whether it changed.
@@ -83,8 +92,9 @@ export function install(rt: HostRuntime): void {
       if (bot === undefined) continue
       // A member without a preset of its own goes back to the default its Session started on.
       const next = wanted ?? bot.permission ?? service.catalog().defaultPreset
-      await setPreset(service, sessionId, next)
-        .catch(error => rt.warn('moon-bot: permission for %s in %s not applied: %s', bot.name, room.name, error))
+      await setPreset(service, sessionId, next).catch(error =>
+        rt.warn('moon-bot: permission for %s in %s not applied: %s', bot.name, room.name, error),
+      )
     }
     return true
   }

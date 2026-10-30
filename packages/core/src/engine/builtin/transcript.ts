@@ -15,7 +15,14 @@ export interface StoredRow {
 
 /** The slice of the SQLite sessions module the transcript needs. */
 export interface SessionsLike {
-  appendMessage(input: { readonly sessionId: string; readonly role: StoredMessage['role']; readonly content: readonly unknown[]; readonly stopReason?: unknown; readonly turn?: unknown; readonly raw?: unknown }): unknown
+  appendMessage(input: {
+    readonly sessionId: string
+    readonly role: StoredMessage['role']
+    readonly content: readonly unknown[]
+    readonly stopReason?: unknown
+    readonly turn?: unknown
+    readonly raw?: unknown
+  }): unknown
   page(sessionId: string, limit: number): readonly StoredRow[]
 }
 

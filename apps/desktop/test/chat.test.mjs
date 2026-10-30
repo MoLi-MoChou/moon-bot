@@ -7,18 +7,36 @@ import { build } from 'esbuild'
 
 const APP = join(fileURLToPath(new URL('..', import.meta.url)))
 const STUBS = new Map([
-  [/\/core\/src\/client\/api\.ts$/, 'export const call = (endpoint, payload, signal) => globalThis.__chatCall(endpoint, payload, signal)'],
-  [/\/core\/src\/client\/icons\.tsx$/, 'export const ArrowUpIcon = () => null; export const CalendarIcon = () => null; export const GearIcon = () => null; export const MemoryIcon = () => null; export const MicIcon = () => null; export const PeopleIcon = () => null; export const PlugIcon = () => null; export const PlusIcon = () => null; export const SlidersIcon = () => null'],
-  [/\/core\/src\/client\/cells\.ts$/, 'export const Bubbles = () => null; export const ChatRows = () => null; export const Shimmer = ({ children }) => children; export const workPhrase = value => value'],
-  [/\/core\/src\/client\/composer\.tsx$/, 'export const ComposerPlus = () => null; export const ComposerVoice = () => null'],
+  [
+    /\/core\/src\/client\/api\.ts$/,
+    'export const call = (endpoint, payload, signal) => globalThis.__chatCall(endpoint, payload, signal)',
+  ],
+  [
+    /\/core\/src\/client\/icons\.tsx$/,
+    'export const ArrowUpIcon = () => null; export const CalendarIcon = () => null; export const GearIcon = () => null; export const MemoryIcon = () => null; export const MicIcon = () => null; export const PeopleIcon = () => null; export const PlugIcon = () => null; export const PlusIcon = () => null; export const SlidersIcon = () => null',
+  ],
+  [
+    /\/core\/src\/client\/cells\.ts$/,
+    'export const Bubbles = () => null; export const ChatRows = () => null; export const Shimmer = ({ children }) => children; export const workPhrase = value => value',
+  ],
+  [
+    /\/core\/src\/client\/composer\.tsx$/,
+    'export const ComposerPlus = () => null; export const ComposerVoice = () => null',
+  ],
   [/\/core\/src\/client\/i18n\.ts$/, 'export const t = key => key; export const language = () => "en"'],
   [/\/core\/src\/client\/model-menu\.tsx$/, 'export const ModelChoiceDock = () => null'],
   [/\/core\/src\/client\/questions\.tsx$/, 'export const PendingQuestion = () => null'],
   [/\/core\/src\/client\/characters\.ts$/, 'export const lookOf = () => ({ color: "" })'],
   [/\/core\/src\/client\/inks\.ts$/, 'export const inkText = value => value'],
-  [/\/core\/src\/client\/mention-chips\.tsx$/, 'export const MentionMirror = () => null; export const deleteMentionBefore = () => null; export const mentionChips = () => []'],
+  [
+    /\/core\/src\/client\/mention-chips\.tsx$/,
+    'export const MentionMirror = () => null; export const deleteMentionBefore = () => null; export const mentionChips = () => []',
+  ],
   [/\/apps\/desktop\/ui\/src\/team\.ts$/, 'export const asActions = value => value'],
-  [/\/apps\/desktop\/ui\/src\/composer-menu\.tsx$/, 'export const ComposerMenu = () => null; export const detectTrigger = () => null'],
+  [
+    /\/apps\/desktop\/ui\/src\/composer-menu\.tsx$/,
+    'export const ComposerMenu = () => null; export const detectTrigger = () => null',
+  ],
 ])
 
 const { outputFiles } = await build({
@@ -29,36 +47,51 @@ const { outputFiles } = await build({
   write: false,
   logLevel: 'silent',
   external: ['react', 'react-dom'],
-  plugins: [{
-    name: 'chat-test-stubs',
-    setup(plugin) {
-      plugin.onResolve({ filter: /.*/ }, args => {
-        const source = args.path.startsWith('.') ? join(args.resolveDir ?? '', args.path) : args.path
-        const index = [...STUBS].findIndex(([pattern]) => pattern.test(source))
-        return index < 0 ? undefined : { path: `chat-test:${String(index)}`, namespace: 'chat-test' }
-      })
-      plugin.onLoad({ filter: /.*/, namespace: 'chat-test' }, args => {
-        const index = Number(args.path.slice('chat-test:'.length))
-        const contents = [...STUBS][index]?.[1]
-        if (contents === undefined) throw new Error(`missing chat test stub ${args.path}`)
-        return { contents, loader: 'ts' }
-      })
+  plugins: [
+    {
+      name: 'chat-test-stubs',
+      setup(plugin) {
+        plugin.onResolve({ filter: /.*/ }, args => {
+          const source = args.path.startsWith('.') ? join(args.resolveDir ?? '', args.path) : args.path
+          const index = [...STUBS].findIndex(([pattern]) => pattern.test(source))
+          return index < 0 ? undefined : { path: `chat-test:${String(index)}`, namespace: 'chat-test' }
+        })
+        plugin.onLoad({ filter: /.*/, namespace: 'chat-test' }, args => {
+          const index = Number(args.path.slice('chat-test:'.length))
+          const contents = [...STUBS][index]?.[1]
+          if (contents === undefined) throw new Error(`missing chat test stub ${args.path}`)
+          return { contents, loader: 'ts' }
+        })
+      },
     },
-  }],
+  ],
 })
 
 const module = { exports: {} }
 const react = {
-  createElement: (type, props, ...children) => ({ type, props: { ...(props ?? {}), children: children.flat(Infinity) } }),
+  createElement: (type, props, ...children) => ({
+    type,
+    props: { ...(props ?? {}), children: children.flat(Infinity) },
+  }),
   Fragment: 'fragment',
   useState(initial) {
     const cell = slot(() => ({ value: typeof initial === 'function' ? initial() : initial }))
-    return [cell.value, next => { cell.value = typeof next === 'function' ? next(cell.value) : next }]
+    return [
+      cell.value,
+      next => {
+        cell.value = typeof next === 'function' ? next(cell.value) : next
+      },
+    ]
   },
-  useRef(initial) { return slot(() => ({ current: initial })) },
+  useRef(initial) {
+    return slot(() => ({ current: initial }))
+  },
   useCallback(fn, deps) {
     const cell = slot(() => ({ fn, deps }))
-    if (changed(deps, cell.deps)) { cell.fn = fn; cell.deps = deps }
+    if (changed(deps, cell.deps)) {
+      cell.fn = fn
+      cell.deps = deps
+    }
     return cell.fn
   },
   useEffect(effect, deps) {
@@ -72,7 +105,9 @@ const react = {
     }
   },
   useLayoutEffect() {},
-  useMemo(make) { return make() },
+  useMemo(make) {
+    return make()
+  },
 }
 const context = {
   module,
@@ -89,9 +124,13 @@ let active
 let pending = []
 const slot = make => {
   const index = active.index++
-  return active.slots[index] ??= make()
+  return (active.slots[index] ??= make())
 }
-const changed = (next, previous) => next === undefined || previous === undefined || next.length !== previous.length || next.some((value, index) => !Object.is(value, previous[index]))
+const changed = (next, previous) =>
+  next === undefined ||
+  previous === undefined ||
+  next.length !== previous.length ||
+  next.some((value, index) => !Object.is(value, previous[index]))
 runInNewContext(outputFiles[0].text, context)
 const { useChat } = module.exports
 
@@ -122,9 +161,10 @@ function mount(initial) {
 
 function deferredCalls() {
   const calls = []
-  context.__chatCall = (endpoint, payload, signal) => new Promise((resolve, reject) => {
-    calls.push({ endpoint, payload, signal, resolve, reject })
-  })
+  context.__chatCall = (endpoint, payload, signal) =>
+    new Promise((resolve, reject) => {
+      calls.push({ endpoint, payload, signal, resolve, reject })
+    })
   return calls
 }
 

@@ -16,9 +16,7 @@ export const COMPACT_REASONS = {
   missing: 'That chat is not open, so it was not condensed.',
 } as const
 
-export type CompactAnswer =
-  | { readonly compacted: true }
-  | { readonly compacted: false; readonly reason: string }
+export type CompactAnswer = { readonly compacted: true } | { readonly compacted: false; readonly reason: string }
 
 export interface CompactDeps {
   readOnly(): boolean
@@ -36,12 +34,17 @@ export interface CompactDeps {
 export function createContextCompact(deps: CompactDeps): (sessionId: string) => Promise<CompactAnswer> {
   const inflight = new Set<string>()
   return async function compactChat(sessionId: string): Promise<CompactAnswer> {
-    const refused = deps.readOnly() ? COMPACT_REASONS.readonly
-      : deps.running(sessionId) ? COMPACT_REASONS.running
-      : deps.unread(sessionId) ? COMPACT_REASONS.unread
-      : deps.switching(sessionId) ? COMPACT_REASONS.switching
-      : inflight.has(sessionId) ? COMPACT_REASONS.busy
-      : undefined
+    const refused = deps.readOnly()
+      ? COMPACT_REASONS.readonly
+      : deps.running(sessionId)
+        ? COMPACT_REASONS.running
+        : deps.unread(sessionId)
+          ? COMPACT_REASONS.unread
+          : deps.switching(sessionId)
+            ? COMPACT_REASONS.switching
+            : inflight.has(sessionId)
+              ? COMPACT_REASONS.busy
+              : undefined
     if (refused !== undefined) return { compacted: false, reason: refused }
     inflight.add(sessionId)
     try {

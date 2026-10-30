@@ -6,7 +6,8 @@ import type { UsageRow } from '../src/client/usage-data.ts'
 const range = id => RANGES.find(item => item.id === id)
 // [hour, owner, model, kind, input, cacheRead, cacheWrite, output, calls]; owners and
 // models are keyed by number in this file, so the tuple is cast to the loose row type.
-const row = (hour: string, owner: number, tokens: number, model = 0): UsageRow => [hour, owner, model, 0, tokens, 0, 0, 0, 1] as unknown as UsageRow
+const row = (hour: string, owner: number, tokens: number, model = 0): UsageRow =>
+  [hour, owner, model, 0, tokens, 0, 0, 0, 1] as unknown as UsageRow
 
 test('buckets end at the current hour, day, week, or month, after as many before them', () => {
   const hours = bucketsOf(range('24h'), '2026-10-09 22')
@@ -16,7 +17,10 @@ test('buckets end at the current hour, day, week, or month, after as many before
   assert.equal(hours[0].key, '2026-10-07 23')
 
   const days = bucketsOf(range('7d'), '2026-10-09 22')
-  assert.deepEqual(days.slice(7).map(bucket => bucket.key), ['2026-10-03', '2026-10-04', '2026-10-05', '2026-10-06', '2026-10-07', '2026-10-08', '2026-10-09'])
+  assert.deepEqual(
+    days.slice(7).map(bucket => bucket.key),
+    ['2026-10-03', '2026-10-04', '2026-10-05', '2026-10-06', '2026-10-07', '2026-10-08', '2026-10-09'],
+  )
 
   // 2026-10-09 is a Friday; its week starts on Monday the 5th.
   const weeks = bucketsOf(range('12w'), '2026-10-09 22')
@@ -47,7 +51,13 @@ test('a summary sums the range, the span before it, and each owner, model, and s
   assert.equal(week.previous, 50)
   assert.equal(week.buckets[2].key, '2026-10-05')
   assert.equal(week.buckets[2].sum.total, 165)
-  assert.deepEqual([...week.buckets[2].stacks], [['o0', 100], ['o1', 65]])
+  assert.deepEqual(
+    [...week.buckets[2].stacks],
+    [
+      ['o0', 100],
+      ['o1', 65],
+    ],
+  )
   assert.equal(week.owners.get(1 as unknown as string).total, 65)
   assert.equal(week.models.get(0 as unknown as string).total, 107)
   assert.equal(week.kinds.get(2 as unknown as string).calls, 2)
@@ -60,9 +70,27 @@ test('a summary sums the range, the span before it, and each owner, model, and s
 })
 
 test('a picked span sums by hour, day, week, or month by its length', () => {
-  const units = [['2026-10-09', '2026-10-09'], ['2026-10-08', '2026-10-09'], ['2026-10-07', '2026-10-09'], ['2026-08-09', '2026-10-09'], ['2026-08-08', '2026-10-09'], ['2026-04-11', '2026-10-09'], ['2026-04-10', '2026-10-09']]
-    .map(([from, to]) => { const span = spanRange(from, to); return [span.days, span.unit] })
-  assert.deepEqual(units, [[1, 'hour'], [2, 'hour'], [3, 'day'], [62, 'day'], [63, 'week'], [182, 'week'], [183, 'month']])
+  const units = [
+    ['2026-10-09', '2026-10-09'],
+    ['2026-10-08', '2026-10-09'],
+    ['2026-10-07', '2026-10-09'],
+    ['2026-08-09', '2026-10-09'],
+    ['2026-08-08', '2026-10-09'],
+    ['2026-04-11', '2026-10-09'],
+    ['2026-04-10', '2026-10-09'],
+  ].map(([from, to]) => {
+    const span = spanRange(from, to)
+    return [span.days, span.unit]
+  })
+  assert.deepEqual(units, [
+    [1, 'hour'],
+    [2, 'hour'],
+    [3, 'day'],
+    [62, 'day'],
+    [63, 'week'],
+    [182, 'week'],
+    [183, 'month'],
+  ])
   assert.deepEqual(spanRange('2026-10-09', '2026-10-01'), spanRange('2026-10-01', '2026-10-09'))
 
   const hours = spanRange('2026-10-08', '2026-10-09')
@@ -82,7 +110,10 @@ test('a picked span sums by hour, day, week, or month by its length', () => {
   assert.equal(weekSpan.buckets.at(-1).end, Date.UTC(2026, 9, 10))
 
   const months = spanOf(spanRange('2025-11-15', '2026-10-09'), '2026-10-09 22')
-  assert.deepEqual([months.buckets.length, months.buckets[0].key, months.buckets.at(-1).key], [12, '2025-11', '2026-10'])
+  assert.deepEqual(
+    [months.buckets.length, months.buckets[0].key, months.buckets.at(-1).key],
+    [12, '2025-11', '2026-10'],
+  )
   assert.equal(months.buckets[0].start, Date.UTC(2025, 10, 15))
   assert.equal(months.buckets[1].start, Date.UTC(2025, 11, 1))
 })
@@ -100,13 +131,23 @@ test('a picked span compares with as many days just before it and ignores the da
     ],
   }
   const days = summarize(view, spanRange('2026-10-01', '2026-10-03'))
-  assert.deepEqual(days.buckets.map(bucket => [bucket.key, bucket.sum.total]), [['2026-10-01', 10], ['2026-10-02', 0], ['2026-10-03', 20]])
+  assert.deepEqual(
+    days.buckets.map(bucket => [bucket.key, bucket.sum.total]),
+    [
+      ['2026-10-01', 10],
+      ['2026-10-02', 0],
+      ['2026-10-03', 20],
+    ],
+  )
   assert.equal(days.total.total, 30)
   assert.equal(days.previous, 11)
   assert.equal(days.owners.get(1 as unknown as string).total, 20)
 
   // The Tuesday before the span shares its first week's key but counts as the span before.
-  const weeks = summarize({ now: view.now, rows: [row('2026-06-30 10', 0, 4), row('2026-07-01 00', 0, 9)] }, spanRange('2026-07-01', '2026-10-09'))
+  const weeks = summarize(
+    { now: view.now, rows: [row('2026-06-30 10', 0, 4), row('2026-07-01 00', 0, 9)] },
+    spanRange('2026-07-01', '2026-10-09'),
+  )
   assert.equal(weeks.buckets[0].sum.total, 9)
   assert.equal(weeks.previous, 4)
 })

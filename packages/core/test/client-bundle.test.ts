@@ -8,7 +8,9 @@ import { bundleClient } from '../scripts/build-client.ts'
 const built = () => readFileSync(new URL('../client.js', import.meta.url), 'utf8')
 const builtOnce = existsSync(new URL('../client.js', import.meta.url))
 
-test('client.js is the build of src/client', { skip: builtOnce ? false : 'run npm run build (or npm ci) to make client.js' }, async () => {
+test('client.js is the build of src/client', {
+  skip: builtOnce ? false : 'run npm run build (or npm ci) to make client.js',
+}, async () => {
   assert.equal(await bundleClient(), built(), 'client.js is stale: run `npm run build`')
 })
 
@@ -24,10 +26,17 @@ test('client.js registers a factory that exports apply and inject', () => {
 
   const requested = []
   const platform = {
-    'react': { createElement: () => null, Fragment: Symbol('Fragment'), useState: initial => [initial, () => {}], useEffect: () => {}, useMemo: make => make(), useRef: current => ({ current }) },
+    react: {
+      createElement: () => null,
+      Fragment: Symbol('Fragment'),
+      useState: initial => [initial, () => {}],
+      useEffect: () => {},
+      useMemo: make => make(),
+      useRef: current => ({ current }),
+    },
     'react-dom': { createPortal: node => node },
   }
-  const exports = factory((specifier) => {
+  const exports = factory(specifier => {
     requested.push(specifier)
     if (!(specifier in platform)) throw new Error(`no platform module ${specifier}`)
     return platform[specifier]
@@ -41,5 +50,12 @@ test('client.js registers a factory that exports apply and inject', () => {
   assert.equal(typeof exports.apply, 'function')
   // No `configForms`: the client never writes the user's DSH settings, such as the
   // work-details mode it once held at `verbose`.
-  assert.deepEqual(Array.from(exports.inject), ['sessions', 'uiWorkspace', 'uiConversation', 'slots', 'theme', 'layout'])
+  assert.deepEqual(Array.from(exports.inject), [
+    'sessions',
+    'uiWorkspace',
+    'uiConversation',
+    'slots',
+    'theme',
+    'layout',
+  ])
 })

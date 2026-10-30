@@ -17,7 +17,9 @@ const doneSet = (): Set<string> => {
   try {
     const raw = localStorage.getItem(DONE_KEY) ?? localStorage.getItem(LEGACY_DONE_KEY) ?? '[]'
     return new Set(JSON.parse(raw) as string[])
-  } catch { return new Set() }
+  } catch {
+    return new Set()
+  }
 }
 
 // The roster and turn clock the plugin hands every injected view; only what this
@@ -42,15 +44,20 @@ export function StarterChips({ sessionId, useRoster, useTurnClock, actions }: St
   const [done, setDone] = useState(() => doneSet().has(sessionId))
   if (!bot || !bot.model || done || pending || turns > 1) return null
   const pick = (text: string): void => {
-    const set = doneSet(); set.add(sessionId)
-    try { localStorage.setItem(DONE_KEY, JSON.stringify([...set])) } catch {}
+    const set = doneSet()
+    set.add(sessionId)
+    try {
+      localStorage.setItem(DONE_KEY, JSON.stringify([...set]))
+    } catch {}
     setDone(true)
     void actions.send(sessionId, text)
   }
   return (
-    <div className="bt-starters" role="group" aria-label={t('Try a card')}>
+    <div className='bt-starters' role='group' aria-label={t('Try a card')}>
       {STARTERS.map(([label, text]) => (
-        <button key={label} type="button" className="bt-starter" title={text} onClick={() => pick(text)}>{t(label)}</button>
+        <button key={label} type='button' className='bt-starter' title={text} onClick={() => pick(text)}>
+          {t(label)}
+        </button>
       ))}
     </div>
   )

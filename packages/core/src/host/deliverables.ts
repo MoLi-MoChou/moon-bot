@@ -28,7 +28,10 @@ const DEFAULT_MAX_DEPTH = 8
 const EXCLUDED_DIRS = new Set(['node_modules', '.git', '__pycache__', '.venv'])
 const EXCLUDED_SUFFIXES = ['.tmp', '.part', '.crdownload', '.swp', '.lock']
 
-export async function collectDeliverables(root: string, options: CollectOptions): Promise<{ readonly files: readonly CollectedFile[], readonly truncated: boolean }> {
+export async function collectDeliverables(
+  root: string,
+  options: CollectOptions,
+): Promise<{ readonly files: readonly CollectedFile[]; readonly truncated: boolean }> {
   const maxFiles = options.maxFiles ?? DEFAULT_MAX_FILES
   const since = options.since - SKEW_MS
   const until = options.until + SKEW_MS

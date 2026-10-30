@@ -6,7 +6,13 @@
 // size gate and carry no declaration noise.
 import type { HostContext } from './host-types.js'
 import type {
-  HandoffLines, Lines, SwitchAgent, SwitchOwner, SwitchPart, SwitchSession, WrittenNote,
+  HandoffLines,
+  Lines,
+  SwitchAgent,
+  SwitchOwner,
+  SwitchPart,
+  SwitchSession,
+  WrittenNote,
 } from './parts-switch-move.ts'
 
 /** One message of a part, newest first, as the parts reader yields it. */
@@ -23,7 +29,11 @@ export interface PartLinesOptions {
 }
 
 /** Reads one part's messages newest first. */
-export type PartLinesReader = (sessionId: string, signal: AbortSignal, options?: PartLinesOptions) => AsyncGenerator<PartLine>
+export type PartLinesReader = (
+  sessionId: string,
+  signal: AbortSignal,
+  options?: PartLinesOptions,
+) => AsyncGenerator<PartLine>
 
 /** One route a Session last called; a note is written on the same one. */
 // The route a Session last called, as the switch's Session declares it, plus the output
@@ -127,10 +137,18 @@ export interface PartReadDeps {
 
 export interface PartNote {
   handoffLines(sessionId: string, options: PartSpan): Promise<HandoffLines>
-  writeNote(agent: SwitchAgent, signal: AbortSignal, options?: { readonly folder?: boolean | undefined }): Promise<WrittenNote>
+  writeNote(
+    agent: SwitchAgent,
+    signal: AbortSignal,
+    options?: { readonly folder?: boolean | undefined },
+  ): Promise<WrittenNote>
   keptMessages(sessionId: string, options: PartSpan): Promise<{ readonly kept: string[]; readonly more: boolean }>
   writeCheckpoint(input: CheckpointInput, agent: SwitchAgent, signal: AbortSignal): Promise<CheckpointResult>
   askSteward(agent: SwitchAgent, options: { readonly midTurn: boolean }): Promise<'switch' | 'compact' | undefined>
   decide(agent: SwitchAgent, options: { readonly midTurn: boolean }): Promise<'compact' | 'switch'>
-  condense(agent: SwitchAgent, lines: Lines, options: { readonly inTurn: boolean; readonly signal?: AbortSignal | undefined }): Promise<boolean | undefined>
+  condense(
+    agent: SwitchAgent,
+    lines: Lines,
+    options: { readonly inTurn: boolean; readonly signal?: AbortSignal | undefined },
+  ): Promise<boolean | undefined>
 }

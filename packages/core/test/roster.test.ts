@@ -10,7 +10,14 @@ import { apply } from '../index.js'
 import { fakeContext } from './fake-ctx.ts'
 
 // Enough of the dsh services for the roster to make Sessions; kickoff messages are dropped.
-function start(team = undefined, { models = [], reasoning = {}, archiveError }: { models?: unknown[], reasoning?: Record<string, unknown>, archiveError?: Error } = {}) {
+function start(
+  team = undefined,
+  {
+    models = [],
+    reasoning = {},
+    archiveError,
+  }: { models?: unknown[]; reasoning?: Record<string, unknown>; archiveError?: Error } = {},
+) {
   const home = mkdtempSync(join(tmpdir(), 'ds-bot-roster-'))
   if (team !== undefined) writeFileSync(join(home, 'state.json'), JSON.stringify(team))
   const ctx = fakeContext()
@@ -30,7 +37,7 @@ function start(team = undefined, { models = [], reasoning = {}, archiveError }: 
     workspaceRegistry: {
       get: id => workspaces.get(id),
       resolveByPath: async path => [...workspaces.values()].find(workspace => workspace.path === path),
-      create: async (path) => {
+      create: async path => {
         const workspace = { id: `w${workspaces.size + 1}`, path }
         workspaces.set(workspace.id, workspace)
         return workspace
@@ -42,21 +49,27 @@ function start(team = undefined, { models = [], reasoning = {}, archiveError }: 
     },
     sessionController: {
       create: async () => ({ sessionId: `s${++sessions}` }),
-      resolveAgent: async sessionId => ({ agent: { session: { id: sessionId }, followup: message => sent.push({ sessionId, message }) } }),
-      selectModel: async (request) => { selected.push(request) },
+      resolveAgent: async sessionId => ({
+        agent: { session: { id: sessionId }, followup: message => sent.push({ sessionId, message }) },
+      }),
+      selectModel: async request => {
+        selected.push(request)
+      },
     },
     sessionTitle: { rename: async () => {} },
     sessions: { flush: async () => {} },
   })
   let route
   const register = ctx.connection.fetch.register
-  ctx.connection.fetch.register = (options) => {
+  ctx.connection.fetch.register = options => {
     route = options
     return register(options)
   }
   apply(ctx, { home })
   const call = async (endpoint, payload) => {
-    const response = await route.fetch(new Request('http://localhost/api/bot', { method: 'POST', body: JSON.stringify({ endpoint, payload }) }))
+    const response = await route.fetch(
+      new Request('http://localhost/api/bot', { method: 'POST', body: JSON.stringify({ endpoint, payload }) }),
+    )
     return response.json()
   }
   const stop = async () => {
@@ -69,7 +82,7 @@ function start(team = undefined, { models = [], reasoning = {}, archiveError }: 
 const settle = () => new Promise(resolve => setTimeout(resolve, 20))
 // A greeting goes out after the team is saved, which can take longer than one settle() on a
 // busy machine.
-const until = async (check) => {
+const until = async check => {
   const end = Date.now() + 2000
   while (!check()) {
     if (Date.now() > end) throw new Error('until: the condition did not hold within 2 s')
@@ -77,7 +90,7 @@ const until = async (check) => {
   }
 }
 
-test('the first Main Bot waits for the user to pick a model, then greets', async (t) => {
+test('the first Main Bot waits for the user to pick a model, then greets', async t => {
   const { call, stop, sent, selected } = start(undefined, { models: ['deepseek-v4-flash', 'deepseek-v4-pro'] })
   t.after(stop)
   let team = (await call('state', {})).value
@@ -88,7 +101,10 @@ test('the first Main Bot waits for the user to pick a model, then greets', async
   assert.equal(main.kickoff, undefined)
   assert.equal(sent.length, 0)
   assert.equal(selected.length, 0)
-  assert.deepEqual(team.models.map(model => model.ref), ['deepseek/deepseek-v4-flash', 'deepseek/deepseek-v4-pro'])
+  assert.deepEqual(
+    team.models.map(model => model.ref),
+    ['deepseek/deepseek-v4-flash', 'deepseek/deepseek-v4-pro'],
+  )
   assert.equal(team.defaultModel, 'deepseek/deepseek-v4-flash')
 
   assert.equal((await call('update-bot', { id: main.id, model: 'deepseek/deepseek-v4-pro' })).ok, true)
@@ -97,7 +113,10 @@ test('the first Main Bot waits for the user to pick a model, then greets', async
   main = team.bots.find(bot => bot.id === team.mainBotId)
   assert.equal(main.model, 'deepseek/deepseek-v4-pro')
   assert.equal(main.waiting, undefined)
-  assert.deepEqual(selected.map(({ sessionId, model }) => [sessionId, model]), [[main.id, 'deepseek-v4-pro']])
+  assert.deepEqual(
+    selected.map(({ sessionId, model }) => [sessionId, model]),
+    [[main.id, 'deepseek-v4-pro']],
+  )
   assert.equal(sent.length, 1)
   assert.equal(sent[0].sessionId, main.id)
   assert.equal(sent[0].message.source.role, 'kickoff')
@@ -108,7 +127,7 @@ test('the first Main Bot waits for the user to pick a model, then greets', async
   assert.equal(sent.length, 1)
 })
 
-test('other Bots start on the default model and greet at once', async (t) => {
+test('other Bots start on the default model and greet at once', async t => {
   const { call, stop, sent } = start(undefined, { models: ['deepseek-v4-flash'] })
   t.after(stop)
   await call('state', {})
@@ -116,10 +135,13 @@ test('other Bots start on the default model and greet at once', async (t) => {
   await until(() => sent.length > 0)
   await settle()
   assert.equal(writer.model, 'deepseek/deepseek-v4-flash')
-  assert.deepEqual(sent.map(entry => entry.sessionId), [writer.id])
+  assert.deepEqual(
+    sent.map(entry => entry.sessionId),
+    [writer.id],
+  )
 })
 
-test('a new name must be one "@" can call; a name saved before the rule still saves', async (t) => {
+test('a new name must be one "@" can call; a name saved before the rule still saves', async t => {
   const { call, stop } = start(undefined, { models: ['deepseek-v4-flash'] })
   t.after(stop)
   await call('state', {})
@@ -132,7 +154,7 @@ test('a new name must be one "@" can call; a name saved before the rule still sa
 // The kickoff arrives as a user message, so it must not name a question tool the Bot's
 // instructions can rule out, and it gives way to those instructions.
 for (const kind of ['main', 'copy', 'made by a Main Bot', 'made by the user']) {
-  test(`the ${kind} kickoff asks in plain text and gives way to the Bot's instructions`, async (t) => {
+  test(`the ${kind} kickoff asks in plain text and gives way to the Bot's instructions`, async t => {
     const { call, stop, sent, ctx } = start(undefined, { models: ['deepseek-v4-flash'] })
     t.after(stop)
     const chief = (await call('state', { locale: 'zh-CN' })).value.mainBotId
@@ -145,7 +167,12 @@ for (const kind of ['main', 'copy', 'made by a Main Bot', 'made by the user']) {
       await until(() => sent.some(entry => entry.sessionId === original.id))
       bot = (await call('duplicate-bot', { id: original.id })).value
     } else if (kind === 'made by a Main Bot') {
-      await ctx.registeredTools.get('create_bot').execute({ name: 'Writer', role: 'Writer', instructions, brief: 'Review the team notes.', engine: 'builtin' }, { agent: { id: chief } })
+      await ctx.registeredTools
+        .get('create_bot')
+        .execute(
+          { name: 'Writer', role: 'Writer', instructions, brief: 'Review the team notes.', engine: 'builtin' },
+          { agent: { id: chief } },
+        )
       bot = (await call('state', {})).value.bots.find(entry => entry.name === 'Writer')
     } else {
       bot = (await call('create-bot', { name: 'Writer', instructions })).value
@@ -166,7 +193,7 @@ for (const kind of ['main', 'copy', 'made by a Main Bot', 'made by the user']) {
   })
 }
 
-test('a first message from the user is helped with, not replaced by an opening question', async (t) => {
+test('a first message from the user is helped with, not replaced by an opening question', async t => {
   const { call, stop, sent } = start(undefined, { models: ['deepseek-v4-flash'] })
   t.after(stop)
   await call('state', {})
@@ -179,7 +206,7 @@ test('a first message from the user is helped with, not replaced by an opening q
   assert.doesNotMatch(text, /\b(?:ask_user(?:_question)?|allowCustom)\b/)
 })
 
-test('a group the user makes without a first message opens with its admin asking what it is for', async (t) => {
+test('a group the user makes without a first message opens with its admin asking what it is for', async t => {
   const { call, stop, sent, ctx, home } = start(undefined, { models: ['deepseek-v4-flash'] })
   t.after(stop)
   const chief = (await call('state', {})).value.mainBotId
@@ -189,12 +216,18 @@ test('a group the user makes without a first message opens with its admin asking
   await call('create-room', { members: [chief, writer.id], admin: writer.id })
   assert.equal(sent.length, 0)
   const room = (await call('create-room', { members: [chief, writer.id], admin: writer.id, greet: true })).value
-  assert.deepEqual(sent.map(entry => [entry.sessionId, entry.message.source.role]), [[room.id, 'kickoff']])
+  assert.deepEqual(
+    sent.map(entry => [entry.sessionId, entry.message.source.role]),
+    [[room.id, 'kickoff']],
+  )
 
   // The relay gives the admin alone a turn, and the cue adds no line to the group.
-  for (const listener of ctx.listeners.get('session/event')) listener({ id: room.id }, { type: 'user/message', data: sent[0].message })
+  for (const listener of ctx.listeners.get('session/event'))
+    listener({ id: room.id }, { type: 'user/message', data: sent[0].message })
   const controller = new AbortController()
-  const relay = ctx.registeredTools.get('group_relay').execute({}, { agent: { id: room.id }, callId: 'relay', signal: controller.signal })
+  const relay = ctx.registeredTools
+    .get('group_relay')
+    .execute({}, { agent: { id: room.id }, callId: 'relay', signal: controller.signal })
   await until(() => sent.length > 1)
   controller.abort()
   const result = JSON.parse(await relay)
@@ -210,8 +243,18 @@ test('a group the user makes without a first message opens with its admin asking
   assert.deepEqual(saved.log, [])
 })
 
-test('a Bot takes a thinking level its model serves, applied with the model', async (t) => {
-  const reasoning = { 'deepseek/deepseek-v4-flash': { reasoning: { efforts: [{ id: 'low', name: 'Low' }, { id: 'high', name: 'High' }], defaultEffort: 'high' } } }
+test('a Bot takes a thinking level its model serves, applied with the model', async t => {
+  const reasoning = {
+    'deepseek/deepseek-v4-flash': {
+      reasoning: {
+        efforts: [
+          { id: 'low', name: 'Low' },
+          { id: 'high', name: 'High' },
+        ],
+        defaultEffort: 'high',
+      },
+    },
+  }
   const { call, stop, selected } = start(undefined, { models: ['deepseek-v4-flash'], reasoning })
   t.after(stop)
   const chief = (await call('state', {})).value.mainBotId
@@ -233,13 +276,14 @@ test('a Bot takes a thinking level its model serves, applied with the model', as
   assert.equal(cleared.appliedEffort, undefined)
 
   // Creating a Bot with a level stores and applies it.
-  const writer = (await call('create-bot', { name: 'Writer', model: 'deepseek/deepseek-v4-flash', effort: 'high' })).value
+  const writer = (await call('create-bot', { name: 'Writer', model: 'deepseek/deepseek-v4-flash', effort: 'high' }))
+    .value
   await settle()
   assert.equal(writer.effort, 'high')
   assert.equal(selected.at(-1).reasoningEffort, 'high')
 })
 
-test('the state reports a changed model list without a new revision', async (t) => {
+test('the state reports a changed model list without a new revision', async t => {
   const { call, stop } = start(undefined, { models: ['deepseek-v4-flash'] })
   t.after(stop)
   const first = (await call('state', {})).value
@@ -247,7 +291,7 @@ test('the state reports a changed model list without a new revision', async (t) 
   assert.equal((await call('state', { since: first.revision, models: 'stale' })).value.unchanged, undefined)
 })
 
-test('a new team starts with Moon Bot\'s lilac moon sprite as its Main Bot', async (t) => {
+test("a new team starts with Moon Bot's lilac moon sprite as its Main Bot", async t => {
   const { call, stop } = start()
   t.after(stop)
   const team = (await call('state', {})).value
@@ -273,7 +317,16 @@ const OLD_TEAM = {
   mainBotIds: ['m1', 'w2'],
   revision: 4,
   bots: {
-    m1: { id: 'm1', sessionId: 'm1', name: 'Chief', role: 'Chief of Staff', lab: 'deepseek', instructions: '', createdAt: 1, color: 'red' },
+    m1: {
+      id: 'm1',
+      sessionId: 'm1',
+      name: 'Chief',
+      role: 'Chief of Staff',
+      lab: 'deepseek',
+      instructions: '',
+      createdAt: 1,
+      color: 'red',
+    },
     w2: { id: 'w2', sessionId: 'w2', name: 'Writer', role: '写作', lab: 'kimi', instructions: '', createdAt: 2 },
   },
   rooms: {},
@@ -282,7 +335,7 @@ const OLD_TEAM = {
   questions: {},
 }
 
-test('a team from before the whale was stored gets it once, on its first Main Bot only', async (t) => {
+test('a team from before the whale was stored gets it once, on its first Main Bot only', async t => {
   const { call, stop, home } = start(OLD_TEAM)
   t.after(stop)
   const bots = async () => Object.fromEntries((await call('state', {})).value.bots.map(bot => [bot.id, bot]))
@@ -301,7 +354,7 @@ test('a team from before the whale was stored gets it once, on its first Main Bo
   assert.equal(team.w2.color, undefined)
 })
 
-test('another Bot takes the Main Bot place in one step', async (t) => {
+test('another Bot takes the Main Bot place in one step', async t => {
   const { call, stop } = start()
   t.after(stop)
   const chief = (await call('state', {})).value.mainBotId
@@ -315,24 +368,37 @@ test('another Bot takes the Main Bot place in one step', async (t) => {
   assert.equal((await call('delete-bot', { id: chief })).ok, true)
   const after = (await call('state', {})).value
   assert.deepEqual(after.mainBotIds, [writer.id])
-  assert.deepEqual(after.bots.map(bot => bot.id), [writer.id])
+  assert.deepEqual(
+    after.bots.map(bot => bot.id),
+    [writer.id],
+  )
 })
 
-test('a Main Bot moves to the front and the others keep their order', async (t) => {
+test('a Main Bot moves to the front and the others keep their order', async t => {
   const { call, stop } = start()
   t.after(stop)
   const chief = (await call('state', {})).value.mainBotId
   const writer = (await call('create-bot', { name: 'Writer' })).value
   const reader = (await call('create-bot', { name: 'Reader' })).value
   assert.deepEqual((await call('set-main', { id: writer.id, main: true })).value.mainBotIds, [chief, writer.id])
-  assert.deepEqual((await call('set-main', { id: writer.id, main: true, primary: true })).value.mainBotIds, [writer.id, chief])
-  assert.deepEqual((await call('set-main', { id: reader.id, main: true })).value.mainBotIds, [writer.id, chief, reader.id])
+  assert.deepEqual((await call('set-main', { id: writer.id, main: true, primary: true })).value.mainBotIds, [
+    writer.id,
+    chief,
+  ])
+  assert.deepEqual((await call('set-main', { id: reader.id, main: true })).value.mainBotIds, [
+    writer.id,
+    chief,
+    reader.id,
+  ])
   // Replacing a Main Bot that is not first keeps its place; one already a Main Bot moves into it.
-  assert.deepEqual((await call('set-main', { id: reader.id, main: true, replace: chief })).value.mainBotIds, [writer.id, reader.id])
+  assert.deepEqual((await call('set-main', { id: reader.id, main: true, replace: chief })).value.mainBotIds, [
+    writer.id,
+    reader.id,
+  ])
   assert.deepEqual((await call('set-main', { id: writer.id, main: false })).value.mainBotIds, [reader.id])
 })
 
-test('set-main keeps one Main Bot and replaces only a Main Bot', async (t) => {
+test('set-main keeps one Main Bot and replaces only a Main Bot', async t => {
   const { call, stop } = start()
   t.after(stop)
   const chief = (await call('state', {})).value.mainBotId
@@ -345,7 +411,7 @@ test('set-main keeps one Main Bot and replaces only a Main Bot', async (t) => {
   assert.deepEqual((await call('state', {})).value.mainBotIds, [chief])
 })
 
-test('deleting a Bot or group chat stops its Session, so its tasks are removed', async (t) => {
+test('deleting a Bot or group chat stops its Session, so its tasks are removed', async t => {
   const { call, stop, archived } = start(undefined, { models: ['deepseek-v4-flash'] })
   t.after(stop)
   const chief = (await call('state', {})).value.mainBotId
@@ -369,7 +435,15 @@ const TEAM_WITH_PART = {
   revision: 2,
   bots: {
     m1: { id: 'm1', sessionId: 'm1', name: 'Chief', role: 'Chief of Staff', instructions: '', createdAt: 1 },
-    w1: { id: 'w1', sessionId: 'w2', name: 'Writer', role: '', instructions: '', createdAt: 2, segments: [{ sessionId: 'w1', endedAt: 3 }] },
+    w1: {
+      id: 'w1',
+      sessionId: 'w2',
+      name: 'Writer',
+      role: '',
+      instructions: '',
+      createdAt: 2,
+      segments: [{ sessionId: 'w1', endedAt: 3 }],
+    },
   },
   rooms: {},
   exchanges: [],
@@ -377,7 +451,7 @@ const TEAM_WITH_PART = {
   questions: {},
 }
 
-test("deleting a Bot also stops its past parts' Sessions, where tasks can stay armed", async (t) => {
+test("deleting a Bot also stops its past parts' Sessions, where tasks can stay armed", async t => {
   const { call, stop, archived } = start(TEAM_WITH_PART, { models: ['deepseek-v4-flash'] })
   t.after(stop)
   archived.length = 0
@@ -390,8 +464,11 @@ test("deleting a Bot also stops its past parts' Sessions, where tasks can stay a
   ])
 })
 
-test('an archive failure on delete is warned instead of passing silently', async (t) => {
-  const { call, stop, warnings } = start(undefined, { models: ['deepseek-v4-flash'], archiveError: new Error('archive refused') })
+test('an archive failure on delete is warned instead of passing silently', async t => {
+  const { call, stop, warnings } = start(undefined, {
+    models: ['deepseek-v4-flash'],
+    archiveError: new Error('archive refused'),
+  })
   t.after(stop)
   const writer = (await call('create-bot', { name: 'Writer' })).value
   assert.equal((await call('delete-bot', { id: writer.id })).ok, true)
@@ -399,7 +476,7 @@ test('an archive failure on delete is warned instead of passing silently', async
   assert.equal(warnings.filter(text => text.includes('not archived')).length, 1)
 })
 
-test('a hidden Bot made Main Bot shows again, and a replaced Chief drops its held greeting', async (t) => {
+test('a hidden Bot made Main Bot shows again, and a replaced Chief drops its held greeting', async t => {
   const { call, stop, sent } = start(undefined, { models: ['deepseek-v4-flash'] })
   t.after(stop)
   const chief = (await call('state', {})).value.mainBotId
@@ -422,15 +499,27 @@ const takeover = (home, team) => {
   if (team !== undefined) writeFileSync(join(home, 'state.json'), JSON.stringify(team))
 }
 
-test('a host that loses its lock to another instance refuses changes instead of making a phantom Bot', async (t) => {
-  const { call, stop, home, ctx } = start({ version: 1, mainBotIds: ['chief'], bots: { chief: { id: 'chief', name: 'Chief' } } })
+test('a host that loses its lock to another instance refuses changes instead of making a phantom Bot', async t => {
+  const { call, stop, home, ctx } = start({
+    version: 1,
+    mainBotIds: ['chief'],
+    bots: { chief: { id: 'chief', name: 'Chief' } },
+  })
   t.after(stop)
   assert.equal((await call('state', {})).value.readOnly, null)
   let created = 0
   const create = ctx.sessionController.create
-  ctx.sessionController.create = async (...args) => { created += 1; return create(...args) }
+  ctx.sessionController.create = async (...args) => {
+    created += 1
+    return create(...args)
+  }
   // Another live dsh takes the lock and writes its own team.
-  takeover(home, { version: 1, revision: 9, mainBotIds: ['chief'], bots: { chief: { id: 'chief', name: 'Chief' }, other: { id: 'other', name: 'FromB' } } })
+  takeover(home, {
+    version: 1,
+    revision: 9,
+    mainBotIds: ['chief'],
+    bots: { chief: { id: 'chief', name: 'Chief' }, other: { id: 'other', name: 'FromB' } },
+  })
   const answer = await call('create-bot', { name: 'Phantom' })
   assert.equal(answer.ok, false)
   assert.equal(answer.error.code, 'bot/read-only')
@@ -439,10 +528,13 @@ test('a host that loses its lock to another instance refuses changes instead of 
   const team = (await call('state', {})).value
   assert.match(team.readOnly, /another Moon Bot/)
   assert.ok(team.bots.some(bot => bot.name === 'FromB'))
-  assert.equal(team.bots.some(bot => bot.name === 'Phantom'), false)
+  assert.equal(
+    team.bots.some(bot => bot.name === 'Phantom'),
+    false,
+  )
 })
 
-test('a delete whose save fails still stops the Sessions, and the next save writes it', async (t) => {
+test('a delete whose save fails still stops the Sessions, and the next save writes it', async t => {
   const { call, stop, home, archived } = start(TEAM_WITH_PART, { models: ['deepseek-v4-flash'] })
   t.after(stop)
   await call('state', {})
@@ -462,8 +554,12 @@ test('a delete whose save fails still stops the Sessions, and the next save writ
   assert.equal(saved.bots.w1, undefined)
 })
 
-test('a rolled-back Bot does not come back with a save queued before the rollback', async (t) => {
-  const { call, stop, home } = start({ version: 1, mainBotIds: ['chief'], bots: { chief: { id: 'chief', name: 'Chief' } } })
+test('a rolled-back Bot does not come back with a save queued before the rollback', async t => {
+  const { call, stop, home } = start({
+    version: 1,
+    mainBotIds: ['chief'],
+    bots: { chief: { id: 'chief', name: 'Chief' } },
+  })
   t.after(async () => {
     fsp.rename = rename
     syncBuiltinESMExports()
@@ -475,8 +571,12 @@ test('a rolled-back Bot does not come back with a save queued before the rollbac
   const rename = fsp.rename
   let entered
   let release
-  const first = new Promise(resolve => { entered = resolve })
-  const gate = new Promise(resolve => { release = resolve })
+  const first = new Promise(resolve => {
+    entered = resolve
+  })
+  const gate = new Promise(resolve => {
+    release = resolve
+  })
   let failed = false
   fsp.rename = async (from, to) => {
     if (to === statePath && !failed) {
@@ -498,13 +598,20 @@ test('a rolled-back Bot does not come back with a save queued before the rollbac
   assert.equal((await kept).ok, true)
   // The rollback queues a save after Kept's without waiting for it, and no later change may
   // be what drops Phantom, so wait for that save itself.
-  const names = () => Object.values(JSON.parse(readFileSync(statePath, 'utf8')).bots as Record<string, { name: string }>).map(bot => bot.name).sort()
+  const names = () =>
+    Object.values(JSON.parse(readFileSync(statePath, 'utf8')).bots as Record<string, { name: string }>)
+      .map(bot => bot.name)
+      .sort()
   await until(() => !names().includes('Phantom'))
   assert.deepEqual(names(), ['Chief', 'Kept', 'Warm'])
 })
 
-test('a write that fails at save time archives the Session it made', async (t) => {
-  const { call, stop, home, ctx } = start({ version: 1, mainBotIds: ['chief'], bots: { chief: { id: 'chief', name: 'Chief' } } })
+test('a write that fails at save time archives the Session it made', async t => {
+  const { call, stop, home, ctx } = start({
+    version: 1,
+    mainBotIds: ['chief'],
+    bots: { chief: { id: 'chief', name: 'Chief' } },
+  })
   t.after(stop)
   await call('state', {})
   const created = []
@@ -518,19 +625,28 @@ test('a write that fails at save time archives the Session it made', async (t) =
   }
   const archived = []
   const archive = ctx.workspaceRegistry.archiveSession
-  ctx.workspaceRegistry.archiveSession = async (id) => { archived.push(id); return archive(id) }
+  ctx.workspaceRegistry.archiveSession = async id => {
+    archived.push(id)
+    return archive(id)
+  }
   const answer = await call('create-bot', { name: 'Phantom' })
   assert.equal(answer.ok, false)
   assert.equal(answer.error.code, 'bot/internal')
   assert.deepEqual(archived, created)
   const team = (await call('state', {})).value
-  assert.equal(team.bots.some(bot => bot.name === 'Phantom'), false)
+  assert.equal(
+    team.bots.some(bot => bot.name === 'Phantom'),
+    false,
+  )
   const saved = JSON.parse(readFileSync(join(home, 'state.json'), 'utf8'))
-  assert.equal(Object.values(saved.bots as Record<string, { name: string }>).some(bot => bot.name === 'Phantom'), false)
+  assert.equal(
+    Object.values(saved.bots as Record<string, { name: string }>).some(bot => bot.name === 'Phantom'),
+    false,
+  )
 })
 
 // 公开#178: "User" is how a group log names the user, so a Bot may not take it.
-test('a Bot cannot be named or renamed like the user; one named so before keeps working', async (t) => {
+test('a Bot cannot be named or renamed like the user; one named so before keeps working', async t => {
   const team = {
     version: 1,
     mainBotIds: ['a'],
@@ -560,21 +676,29 @@ test('a Bot cannot be named or renamed like the user; one named so before keeps 
 
 // Holds every new Session until `release`, so creates that start together are all
 // waiting on it at once, as with a slow DSH.
-const holdSessions = (ctx) => {
+const holdSessions = ctx => {
   const create = ctx.sessionController.create
   let open
-  const gate = new Promise(resolve => { open = resolve })
+  const gate = new Promise(resolve => {
+    open = resolve
+  })
   let waiting = 0
-  ctx.sessionController.create = async (request) => {
+  ctx.sessionController.create = async request => {
     waiting += 1
     await gate
     return create(request)
   }
-  return { waiting: () => waiting, release: () => { ctx.sessionController.create = create; open() } }
+  return {
+    waiting: () => waiting,
+    release: () => {
+      ctx.sessionController.create = create
+      open()
+    },
+  }
 }
 
 // 公开#148: two Main Bots that each made a "Coder" at the same time both got one.
-test('Bots created with one name at the same time: one is made, the others are refused', async (t) => {
+test('Bots created with one name at the same time: one is made, the others are refused', async t => {
   const { call, stop, ctx } = start()
   t.after(stop)
   await call('state', {})
@@ -585,14 +709,17 @@ test('Bots created with one name at the same time: one is made, the others are r
   const rename = await call('update-bot', { id: chief, name: 'coder' })
   sessions.release()
   const results = await Promise.all(creates)
-  assert.deepEqual(results.map(result => result.ok), [true, false, false])
+  assert.deepEqual(
+    results.map(result => result.ok),
+    [true, false, false],
+  )
   assert.match(results[1].error.message, /A Bot named Coder already exists/)
   assert.equal(rename.ok, false)
   const names = (await call('state', {})).value.bots.map(bot => bot.name)
   assert.equal(names.filter(name => name.toLowerCase() === 'coder').length, 1)
 })
 
-test('copies of one Bot made at the same time get different names', async (t) => {
+test('copies of one Bot made at the same time get different names', async t => {
   const { call, stop, ctx } = start()
   t.after(stop)
   const writer = (await call('create-bot', { name: 'Writer' })).value
@@ -601,13 +728,16 @@ test('copies of one Bot made at the same time get different names', async (t) =>
   await until(() => sessions.waiting() === 3)
   sessions.release()
   const results = await Promise.all(copies)
-  assert.deepEqual(results.map(result => result.ok), [true, true, true])
+  assert.deepEqual(
+    results.map(result => result.ok),
+    [true, true, true],
+  )
   assert.deepEqual(results.map(result => result.value.name).sort(), ['Writer copy', 'Writer copy 2', 'Writer copy 3'])
 })
 
 // 公开#199: two groups made with one name at the same time were both made, and from then
 // on a Main Bot could reach neither by name.
-test('groups created or renamed to one name at the same time: only one gets it', async (t) => {
+test('groups created or renamed to one name at the same time: only one gets it', async t => {
   const { call, stop, ctx } = start()
   t.after(stop)
   const chief = (await call('state', {})).value.mainBotId
@@ -618,7 +748,10 @@ test('groups created or renamed to one name at the same time: only one gets it',
   const rename = await call('update-room', { id: other.id, name: 'ops' })
   sessions.release()
   const results = await Promise.all(creates)
-  assert.deepEqual(results.map(result => result.ok), [true, false])
+  assert.deepEqual(
+    results.map(result => result.ok),
+    [true, false],
+  )
   assert.match(results[1].error.message, /Another group chat is already called "Ops"/)
   assert.equal(rename.ok, false)
   const rooms = (await call('state', {})).value.rooms.map(room => room.name).sort()
@@ -629,12 +762,14 @@ test('groups created or renamed to one name at the same time: only one gets it',
   assert.equal(later.ok, true)
 })
 
-test('a create that fails lets its name go', async (t) => {
+test('a create that fails lets its name go', async t => {
   const { call, stop, ctx } = start()
   t.after(stop)
   await call('state', {})
   const create = ctx.sessionController.create
-  ctx.sessionController.create = async () => { throw new Error('dsh is busy') }
+  ctx.sessionController.create = async () => {
+    throw new Error('dsh is busy')
+  }
   assert.equal((await call('create-bot', { name: 'Coder' })).ok, false)
   ctx.sessionController.create = create
   assert.equal((await call('create-bot', { name: 'Coder' })).ok, true)
@@ -644,10 +779,18 @@ test('a create that fails lets its name go', async (t) => {
 // string returns to the model's default, and a level the model does not serve is
 // refused before anything about the Bot changes.
 const TOOL_REASONING = {
-  'deepseek/deepseek-v4-flash': { reasoning: { efforts: [{ id: 'low', name: 'Low' }, { id: 'high', name: 'High' }], defaultEffort: 'high' } },
+  'deepseek/deepseek-v4-flash': {
+    reasoning: {
+      efforts: [
+        { id: 'low', name: 'Low' },
+        { id: 'high', name: 'High' },
+      ],
+      defaultEffort: 'high',
+    },
+  },
 }
 
-test('create_bot and update_bot advertise an optional thinking level without a fixed enum', async (t) => {
+test('create_bot and update_bot advertise an optional thinking level without a fixed enum', async t => {
   const { ctx, stop } = start(undefined, { models: ['deepseek-v4-flash'] })
   t.after(stop)
   for (const name of ['create_bot', 'update_bot']) {
@@ -658,13 +801,17 @@ test('create_bot and update_bot advertise an optional thinking level without a f
   }
 })
 
-test('update_bot sets, keeps and clears the thinking level', async (t) => {
-  const { ctx, call, stop, selected, sent } = start(undefined, { models: ['deepseek-v4-flash'], reasoning: TOOL_REASONING })
+test('update_bot sets, keeps and clears the thinking level', async t => {
+  const { ctx, call, stop, selected, sent } = start(undefined, {
+    models: ['deepseek-v4-flash'],
+    reasoning: TOOL_REASONING,
+  })
   t.after(stop)
   const chief = (await call('state', {})).value.mainBotId
   const writer = (await call('create-bot', { name: 'Writer' })).value
   await until(() => sent.some(entry => entry.sessionId === writer.id))
-  const tool = args => ctx.registeredTools.get('update_bot').execute({ bot: 'Writer', ...args }, { agent: { id: chief } })
+  const tool = args =>
+    ctx.registeredTools.get('update_bot').execute({ bot: 'Writer', ...args }, { agent: { id: chief } })
   const current = async () => (await call('state', {})).value.bots.find(bot => bot.id === writer.id)
 
   assert.equal(await tool({ effort: 'low' }), 'Updated Writer.')
@@ -678,7 +825,7 @@ test('update_bot sets, keeps and clears the thinking level', async (t) => {
   assert.equal((await current()).effort, undefined)
 })
 
-test('update_bot checks a level against the model it names, and a failure changes nothing', async (t) => {
+test('update_bot checks a level against the model it names, and a failure changes nothing', async t => {
   const reasoning = {
     ...TOOL_REASONING,
     'deepseek/other': { reasoning: { efforts: [{ id: 'medium', name: 'Medium' }] } },
@@ -686,9 +833,11 @@ test('update_bot checks a level against the model it names, and a failure change
   const { ctx, call, stop, selected, sent } = start(undefined, { models: ['deepseek-v4-flash', 'other'], reasoning })
   t.after(stop)
   const chief = (await call('state', {})).value.mainBotId
-  const writer = (await call('create-bot', { name: 'Writer', model: 'deepseek/deepseek-v4-flash', effort: 'low' })).value
+  const writer = (await call('create-bot', { name: 'Writer', model: 'deepseek/deepseek-v4-flash', effort: 'low' }))
+    .value
   await until(() => sent.some(entry => entry.sessionId === writer.id))
-  const tool = args => ctx.registeredTools.get('update_bot').execute({ bot: 'Writer', ...args }, { agent: { id: chief } })
+  const tool = args =>
+    ctx.registeredTools.get('update_bot').execute({ bot: 'Writer', ...args }, { agent: { id: chief } })
   const current = async () => (await call('state', {})).value.bots.find(bot => bot.id === writer.id)
 
   // Model and level together resolve the level against the new model.
@@ -698,7 +847,10 @@ test('update_bot checks a level against the model it names, and a failure change
   await until(() => selected.at(-1)?.sessionId === writer.id && selected.at(-1).reasoningEffort === 'medium')
 
   // A level the new model does not serve leaves name, model and level as they were.
-  assert.match(await tool({ name: 'Renamed', model: 'deepseek/deepseek-v4-flash', effort: 'bogus' }), /^Could not update the Bot: Thinking level bogus is not available/)
+  assert.match(
+    await tool({ name: 'Renamed', model: 'deepseek/deepseek-v4-flash', effort: 'bogus' }),
+    /^Could not update the Bot: Thinking level bogus is not available/,
+  )
   assert.equal((await current()).name, 'Writer')
   assert.equal((await current()).model, 'deepseek/other')
   assert.equal((await current()).effort, 'medium')
@@ -706,27 +858,53 @@ test('update_bot checks a level against the model it names, and a failure change
   assert.match(await tool({ effort: 'low' }), /^Could not update the Bot: Thinking level low is not available/)
   assert.equal((await current()).effort, 'medium')
   // A model that is not served fails before anything changes too.
-  assert.match(await tool({ name: 'Renamed', model: 'deepseek/nothing' }), /^Could not update the Bot: Model deepseek\/nothing is not available/)
+  assert.match(
+    await tool({ name: 'Renamed', model: 'deepseek/nothing' }),
+    /^Could not update the Bot: Model deepseek\/nothing is not available/,
+  )
   assert.equal((await current()).name, 'Writer')
 })
 
-test('create_bot stores a named thinking level and refuses one without a model', async (t) => {
+test('create_bot stores a named thinking level and refuses one without a model', async t => {
   const { ctx, call, stop, sent } = start(undefined, { models: ['deepseek-v4-flash'], reasoning: TOOL_REASONING })
   t.after(stop)
   const chief = (await call('state', {})).value.mainBotId
   const exec = { agent: { id: chief } }
   const create = args => ctx.registeredTools.get('create_bot').execute(args, exec)
-  assert.match(await create({ name: 'Writer', role: 'Write', instructions: 'Write clearly', model: 'deepseek/deepseek-v4-flash', effort: 'low', engine: 'builtin' }), /^Created Writer/)
+  assert.match(
+    await create({
+      name: 'Writer',
+      role: 'Write',
+      instructions: 'Write clearly',
+      model: 'deepseek/deepseek-v4-flash',
+      effort: 'low',
+      engine: 'builtin',
+    }),
+    /^Created Writer/,
+  )
   const writer = (await call('state', {})).value.bots.find(bot => bot.name === 'Writer')
   assert.equal(writer.model, 'deepseek/deepseek-v4-flash')
   assert.equal(writer.effort, 'low')
   await until(() => sent.some(entry => entry.sessionId === writer.id))
   // A level the model does not serve leaves no Bot behind.
-  assert.match(await create({ name: 'Phantom', role: 'Write', instructions: 'Write', model: 'deepseek/deepseek-v4-flash', effort: 'bogus', engine: 'builtin' }), /^Could not create the Bot: Thinking level bogus is not available/)
-  assert.equal((await call('state', {})).value.bots.some(bot => bot.name === 'Phantom'), false)
+  assert.match(
+    await create({
+      name: 'Phantom',
+      role: 'Write',
+      instructions: 'Write',
+      model: 'deepseek/deepseek-v4-flash',
+      effort: 'bogus',
+      engine: 'builtin',
+    }),
+    /^Could not create the Bot: Thinking level bogus is not available/,
+  )
+  assert.equal(
+    (await call('state', {})).value.bots.some(bot => bot.name === 'Phantom'),
+    false,
+  )
 })
 
-test('create_bot with a level but no resolvable model fails before a Session is made', async (t) => {
+test('create_bot with a level but no resolvable model fails before a Session is made', async t => {
   // No models are served, so no model can be resolved and an effort has nothing to
   // resolve against.
   const { ctx, call, stop } = start(undefined, { models: [] })
@@ -734,47 +912,65 @@ test('create_bot with a level but no resolvable model fails before a Session is 
   const chief = (await call('state', {})).value.mainBotId
   let created = 0
   const create = ctx.sessionController.create
-  ctx.sessionController.create = async (...args) => { created += 1; return create(...args) }
-  const answer = await ctx.registeredTools.get('create_bot').execute({ name: 'Phantom', role: 'Write', instructions: 'Write', effort: 'low', engine: 'builtin' }, { agent: { id: chief } })
+  ctx.sessionController.create = async (...args) => {
+    created += 1
+    return create(...args)
+  }
+  const answer = await ctx.registeredTools
+    .get('create_bot')
+    .execute(
+      { name: 'Phantom', role: 'Write', instructions: 'Write', effort: 'low', engine: 'builtin' },
+      { agent: { id: chief } },
+    )
   assert.match(answer, /^Could not create the Bot: Pick a model before choosing a thinking level/)
   assert.equal(created, 0)
-  assert.equal((await call('state', {})).value.bots.some(bot => bot.name === 'Phantom'), false)
+  assert.equal(
+    (await call('state', {})).value.bots.some(bot => bot.name === 'Phantom'),
+    false,
+  )
 })
 
-test('a non-Main Bot still cannot change another Bot\u2019s thinking level', async (t) => {
+test('a non-Main Bot still cannot change another Bot\u2019s thinking level', async t => {
   const { ctx, call, stop, sent } = start(undefined, { models: ['deepseek-v4-flash'], reasoning: TOOL_REASONING })
   t.after(stop)
   await call('state', {})
-  const writer = (await call('create-bot', { name: 'Writer', model: 'deepseek/deepseek-v4-flash', effort: 'high' })).value
+  const writer = (await call('create-bot', { name: 'Writer', model: 'deepseek/deepseek-v4-flash', effort: 'high' }))
+    .value
   await until(() => sent.some(entry => entry.sessionId === writer.id))
   const exec = { agent: { id: writer.id } }
-  assert.match(await ctx.registeredTools.get('update_bot').execute({ bot: 'Chief', effort: 'low' }, exec), /^Only a Main Bot can change another Bot/)
+  assert.match(
+    await ctx.registeredTools.get('update_bot').execute({ bot: 'Chief', effort: 'low' }, exec),
+    /^Only a Main Bot can change another Bot/,
+  )
   // Its own level it may change.
   assert.equal(await ctx.registeredTools.get('update_bot').execute({ effort: 'low' }, exec), 'Updated Writer.')
   assert.equal((await call('state', {})).value.bots.find(bot => bot.id === writer.id).effort, 'low')
 })
 
-test('list_models names the thinking levels of the models a Bot runs on', async (t) => {
+test('list_models names the thinking levels of the models a Bot runs on', async t => {
   const { ctx, call, stop } = start(undefined, { models: ['deepseek-v4-flash', 'plain'], reasoning: TOOL_REASONING })
   t.after(stop)
   const chief = (await call('state', {})).value.mainBotId
   await call('update-bot', { id: chief, model: 'deepseek/deepseek-v4-flash' })
   const result = await ctx.registeredTools.get('list_models').execute({}, { agent: { id: chief } })
   assert.match(result, /deepseek\/deepseek-v4-flash.*thinking: low, high \(default: high\)/)
-  assert.doesNotMatch(result.split('\n').find(line => line.includes('deepseek/plain')), /thinking/)
+  assert.doesNotMatch(
+    result.split('\n').find(line => line.includes('deepseek/plain')),
+    /thinking/,
+  )
 })
 
 // #320: create_bot and update_bot take a photo from a local path or a data URL, and
 // store it in the same data URL the settings page writes.
 const PNG_BYTES = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(24, 1)])
 const PNG_DATA_URL = `data:image/png;base64,${PNG_BYTES.toString('base64')}`
-const tempAvatarDir = (t) => {
+const tempAvatarDir = t => {
   const dir = mkdtempSync(join(tmpdir(), 'ds-bot-avatar-'))
   t.after(() => rmSync(dir, { recursive: true, force: true }))
   return dir
 }
 
-test('create_bot and update_bot advertise an optional photo', async (t) => {
+test('create_bot and update_bot advertise an optional photo', async t => {
   const { ctx, stop } = start(undefined, { models: ['deepseek-v4-flash'] })
   t.after(stop)
   for (const name of ['create_bot', 'update_bot']) {
@@ -787,7 +983,7 @@ test('create_bot and update_bot advertise an optional photo', async (t) => {
   }
 })
 
-test('create_bot stores a photo, and update_bot changes and clears it', async (t) => {
+test('create_bot stores a photo, and update_bot changes and clears it', async t => {
   const { ctx, call, stop, sent } = start(undefined, { models: ['deepseek-v4-flash'] })
   t.after(stop)
   const chief = (await call('state', {})).value.mainBotId
@@ -795,7 +991,12 @@ test('create_bot stores a photo, and update_bot changes and clears it', async (t
   const photo = join(dir, 'photo.png')
   writeFileSync(photo, PNG_BYTES)
   const exec = { agent: { id: chief } }
-  assert.match(await ctx.registeredTools.get('create_bot').execute({ name: 'Writer', role: 'Write', instructions: 'Write', avatar: photo, engine: 'builtin' }, exec), /^Created Writer/)
+  assert.match(
+    await ctx.registeredTools
+      .get('create_bot')
+      .execute({ name: 'Writer', role: 'Write', instructions: 'Write', avatar: photo, engine: 'builtin' }, exec),
+    /^Created Writer/,
+  )
   const writer = async () => (await call('state', {})).value.bots.find(bot => bot.name === 'Writer')
   assert.equal((await writer()).avatar.image, PNG_DATA_URL)
   const writerId = (await writer()).id
@@ -813,12 +1014,17 @@ test('create_bot stores a photo, and update_bot changes and clears it', async (t
   assert.equal((await writer()).avatar.image, PNG_DATA_URL)
 })
 
-test('a photo through update_bot keeps the Bot\'s other avatar fields', async (t) => {
+test("a photo through update_bot keeps the Bot's other avatar fields", async t => {
   const { ctx, call, stop, sent } = start(undefined, { models: ['deepseek-v4-flash'] })
   t.after(stop)
   const chief = (await call('state', {})).value.mainBotId
   const exec = { agent: { id: chief } }
-  assert.match(await ctx.registeredTools.get('create_bot').execute({ name: 'Writer', role: 'Write', instructions: 'Write', engine: 'builtin' }, exec), /^Created Writer/)
+  assert.match(
+    await ctx.registeredTools
+      .get('create_bot')
+      .execute({ name: 'Writer', role: 'Write', instructions: 'Write', engine: 'builtin' }, exec),
+    /^Created Writer/,
+  )
   const writer = async () => (await call('state', {})).value.bots.find(bot => bot.name === 'Writer')
   const writerId = (await writer()).id
   await until(() => sent.some(entry => entry.sessionId === writerId))
@@ -831,7 +1037,7 @@ test('a photo through update_bot keeps the Bot\'s other avatar fields', async (t
   assert.deepEqual((await writer()).avatar, { shape: 'fox' })
 })
 
-test('a photo in the team\'s data is refused, and one in the team workspace there is read', async (t) => {
+test("a photo in the team's data is refused, and one in the team workspace there is read", async t => {
   const { ctx, call, stop, home } = start(undefined, { models: ['deepseek-v4-flash'] })
   t.after(stop)
   const chief = (await call('state', {})).value.mainBotId
@@ -841,14 +1047,15 @@ test('a photo in the team\'s data is refused, and one in the team workspace ther
   assert.match(await tool(join(home, 'photo.png')), /is in Moon Bot data, so it cannot be a Bot's photo/)
   assert.equal((await call('state', {})).value.bots.find(bot => bot.id === chief).avatar?.image, undefined)
   // The default team workspace lies in the team's data, and the Bots' own files are there.
-  const workspace = ctx.workspaceRegistry.get((await call('state', {})).value.workspaceId)?.path ?? join(home, 'workspace')
+  const workspace =
+    ctx.workspaceRegistry.get((await call('state', {})).value.workspaceId)?.path ?? join(home, 'workspace')
   mkdirSync(workspace, { recursive: true })
   writeFileSync(join(workspace, 'photo.png'), PNG_BYTES)
   assert.match(await tool(join(workspace, 'photo.png')), /^Updated /)
   assert.equal((await call('state', {})).value.bots.find(bot => bot.id === chief).avatar.image, PNG_DATA_URL)
 })
 
-test('a photo that cannot be read changes nothing, and a non-Main Bot cannot set another Bot\'s', async (t) => {
+test("a photo that cannot be read changes nothing, and a non-Main Bot cannot set another Bot's", async t => {
   const { ctx, call, stop, sent } = start(undefined, { models: ['deepseek-v4-flash'] })
   t.after(stop)
   const chief = (await call('state', {})).value.mainBotId
@@ -856,27 +1063,46 @@ test('a photo that cannot be read changes nothing, and a non-Main Bot cannot set
   const notes = join(dir, 'notes.png')
   writeFileSync(notes, 'this is not an image')
   const exec = { agent: { id: chief } }
-  assert.match(await ctx.registeredTools.get('create_bot').execute({ name: 'Phantom', role: 'Write', instructions: 'Write', avatar: notes, engine: 'builtin' }, exec), /^Could not create the Bot: The avatar must be a PNG, JPEG, WebP, or GIF image/)
-  assert.equal((await call('state', {})).value.bots.some(bot => bot.name === 'Phantom'), false)
+  assert.match(
+    await ctx.registeredTools
+      .get('create_bot')
+      .execute({ name: 'Phantom', role: 'Write', instructions: 'Write', avatar: notes, engine: 'builtin' }, exec),
+    /^Could not create the Bot: The avatar must be a PNG, JPEG, WebP, or GIF image/,
+  )
+  assert.equal(
+    (await call('state', {})).value.bots.some(bot => bot.name === 'Phantom'),
+    false,
+  )
 
   const writer = (await call('create-bot', { name: 'Writer' })).value
   await until(() => sent.some(entry => entry.sessionId === writer.id))
   const mine = { agent: { id: writer.id } }
   // Another Bot's photo is a Main Bot's to change, as its other settings are.
-  assert.match(await ctx.registeredTools.get('update_bot').execute({ bot: 'Chief', avatar: PNG_DATA_URL }, mine), /^Only a Main Bot can change another Bot/)
+  assert.match(
+    await ctx.registeredTools.get('update_bot').execute({ bot: 'Chief', avatar: PNG_DATA_URL }, mine),
+    /^Only a Main Bot can change another Bot/,
+  )
   assert.equal((await call('state', {})).value.bots.find(bot => bot.id === chief).avatar?.image, undefined)
   // Its own it may set; a later bad photo leaves the good one alone.
   assert.equal(await ctx.registeredTools.get('update_bot').execute({ avatar: PNG_DATA_URL }, mine), 'Updated Writer.')
   assert.equal((await call('state', {})).value.bots.find(bot => bot.id === writer.id).avatar.image, PNG_DATA_URL)
-  assert.match(await ctx.registeredTools.get('update_bot').execute({ avatar: notes }, mine), /^Could not update the Bot: The avatar must be a PNG/)
+  assert.match(
+    await ctx.registeredTools.get('update_bot').execute({ avatar: notes }, mine),
+    /^Could not update the Bot: The avatar must be a PNG/,
+  )
   assert.equal((await call('state', {})).value.bots.find(bot => bot.id === writer.id).avatar.image, PNG_DATA_URL)
 })
 
-test('a Main Bot still wearing the blue whale from setup moves to Moon Bot\'s sprite once', async (t) => {
-  const { call, stop } = start({ ...OLD_TEAM, mainBotIds: ['m1', 'w2'], whaleStored: true, bots: {
-    m1: { ...OLD_TEAM.bots.m1, color: 'deepseek', avatar: { shape: 'whale' } },
-    w2: { ...OLD_TEAM.bots.w2, color: 'red', avatar: { shape: 'whale' } },
-  } })
+test("a Main Bot still wearing the blue whale from setup moves to Moon Bot's sprite once", async t => {
+  const { call, stop } = start({
+    ...OLD_TEAM,
+    mainBotIds: ['m1', 'w2'],
+    whaleStored: true,
+    bots: {
+      m1: { ...OLD_TEAM.bots.m1, color: 'deepseek', avatar: { shape: 'whale' } },
+      w2: { ...OLD_TEAM.bots.w2, color: 'red', avatar: { shape: 'whale' } },
+    },
+  })
   t.after(stop)
   const team = Object.fromEntries((await call('state', {})).value.bots.map(bot => [bot.id, bot]))
   assert.deepEqual([team.m1.color, team.m1.avatar], ['lilac', { shape: 'moonbot' }])
@@ -884,7 +1110,7 @@ test('a Main Bot still wearing the blue whale from setup moves to Moon Bot\'s sp
   assert.deepEqual([team.w2.color, team.w2.avatar], ['red', { shape: 'whale' }])
 })
 
-test('create_bot asks which engine instead of picking the built-in one', async (t) => {
+test('create_bot asks which engine instead of picking the built-in one', async t => {
   const { call, stop, ctx } = start()
   t.after(stop)
   const chief = (await call('state', {})).value.mainBotIds[0]
@@ -898,11 +1124,13 @@ test('create_bot asks which engine instead of picking the built-in one', async (
   assert.equal(bots.filter(bot => bot.name === 'Writer').length, 0)
 })
 
-test('a name that is not an engine is refused with the list', async (t) => {
+test('a name that is not an engine is refused with the list', async t => {
   const { call, stop, ctx } = start()
   t.after(stop)
   const chief = (await call('state', {})).value.mainBotIds[0]
-  const answer = await ctx.registeredTools.get('create_bot').execute({ name: 'Writer', role: 'Write', instructions: 'Write', engine: 'claud' }, { agent: { id: chief } })
+  const answer = await ctx.registeredTools
+    .get('create_bot')
+    .execute({ name: 'Writer', role: 'Write', instructions: 'Write', engine: 'claud' }, { agent: { id: chief } })
   assert.match(answer, /There is no engine "claud"/)
   assert.match(answer, /builtin \(Moon Bot built-in\)/)
 })

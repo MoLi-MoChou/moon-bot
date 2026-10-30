@@ -28,7 +28,11 @@ export function install(rt: HostRuntime): void {
       leave(controller)
       return
     }
-    try { controller.enqueue(chunk) } catch { clients.delete(controller) }
+    try {
+      controller.enqueue(chunk)
+    } catch {
+      clients.delete(controller)
+    }
   }
   const publish = (event: string, data: unknown): void => {
     const chunk = encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
@@ -86,14 +90,20 @@ export function install(rt: HostRuntime): void {
   ctx.on<AssistantStreamEvent>('agent/assistant-stream', ({ agent, frame }) => {
     if (frame.type === 'start') {
       const botId = rt.chatOwners.get(agent.id)
-      if (clients.size === 0 || botId === undefined || frame.turn !== undefined && (state.exchangeTurns[agent.id] ?? []).includes(frame.turn)) return
+      if (
+        clients.size === 0 ||
+        botId === undefined ||
+        (frame.turn !== undefined && (state.exchangeTurns[agent.id] ?? []).includes(frame.turn))
+      )
+        return
       writing.set(frame.attemptId, { botId, sessionId: agent.id })
       publish('stream', { botId, sessionId: agent.id, attemptId: frame.attemptId, phase: 'start' })
       return
     }
     const target = writing.get(frame.attemptId)
     if (target === undefined) return
-    if (frame.type === 'chunk' && frame.chunk?.type === 'text-delta') publish('stream', { ...target, attemptId: frame.attemptId, text: frame.chunk.text })
+    if (frame.type === 'chunk' && frame.chunk?.type === 'text-delta')
+      publish('stream', { ...target, attemptId: frame.attemptId, text: frame.chunk.text })
     else if (frame.type === 'end') {
       writing.delete(frame.attemptId)
       publish('stream', { ...target, attemptId: frame.attemptId, phase: 'end' })
@@ -103,27 +113,40 @@ export function install(rt: HostRuntime): void {
   const leave = (controller: ReadableStreamDefaultController<Uint8Array>): void => {
     clients.delete(controller)
     if (clients.size === 0) writing.clear()
-    try { controller.close() } catch { /* already closed or errored */ }
+    try {
+      controller.close()
+    } catch {
+      /* already closed or errored */
+    }
   }
 
-  ctx.effect(() => ctx.connection.fetch.register({
-    path: FEED_ROUTE,
-    methods: ['GET'],
-    requestBody: 'buffered',
-    fetch: async (request: Request): Promise<Response> => {
-      let controller: ReadableStreamDefaultController<Uint8Array>
-      const body = new ReadableStream({
-        start(own) {
-          controller = own
-          clients.add(own)
-          send(own, encoder.encode(`event: hello\ndata: ${JSON.stringify({ revision: state.revision })}\n\n`))
+  ctx.effect(
+    () =>
+      ctx.connection.fetch.register({
+        path: FEED_ROUTE,
+        methods: ['GET'],
+        requestBody: 'buffered',
+        fetch: async (request: Request): Promise<Response> => {
+          let controller: ReadableStreamDefaultController<Uint8Array>
+          const body = new ReadableStream({
+            start(own) {
+              controller = own
+              clients.add(own)
+              send(own, encoder.encode(`event: hello\ndata: ${JSON.stringify({ revision: state.revision })}\n\n`))
+            },
+            cancel() {
+              leave(controller)
+            },
+          })
+          request.signal.addEventListener('abort', () => leave(controller), { once: true })
+          return new Response(body, {
+            status: 200,
+            headers: { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-store' },
+          })
         },
-        cancel() { leave(controller) },
-      })
-      request.signal.addEventListener('abort', () => leave(controller), { once: true })
-      return new Response(body, { status: 200, headers: { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-store' } })
-    },
-  }), 'moon-bot: live feed route')
+      }),
+    'moon-bot: live feed route',
+  )
 
   ctx.effect(() => {
     const keepalive = setInterval(() => {

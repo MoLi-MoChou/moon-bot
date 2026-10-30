@@ -7,18 +7,25 @@ type ResumeHost = HostRuntime & {
   closeWork?(id: string, name: string, text: string): string | undefined
 }
 
-export const resumeText = (record: TurnNote): string => [
-  'Moon Bot restarted while you were working on this, so your last turn stopped before it finished.',
-  record.approval ? `You were waiting for the user's approval to run ${record.approval.tool || 'a tool'}${record.approval.reason ? ` (${record.approval.reason})` : ''}; that request is gone, so ask again if you still need it.` : '',
-  'Check what is already done (files, commands, messages) before you repeat anything, then finish the task and give your reply.',
-].filter(Boolean).join(' ')
+export const resumeText = (record: TurnNote): string =>
+  [
+    'Moon Bot restarted while you were working on this, so your last turn stopped before it finished.',
+    record.approval
+      ? `You were waiting for the user's approval to run ${record.approval.tool || 'a tool'}${record.approval.reason ? ` (${record.approval.reason})` : ''}; that request is gone, so ask again if you still need it.`
+      : '',
+    'Check what is already done (files, commands, messages) before you repeat anything, then finish the task and give your reply.',
+  ]
+    .filter(Boolean)
+    .join(' ')
 
 const owes = (record: TurnNote): boolean => {
   const trigger = record.trigger
-  return (trigger?.role === 'request' || trigger?.role === 'stopped')
-    && trigger.senderSessionId !== undefined
-    && trigger.audience !== 'user'
-    && trigger.exchangeId !== undefined
+  return (
+    (trigger?.role === 'request' || trigger?.role === 'stopped') &&
+    trigger.senderSessionId !== undefined &&
+    trigger.audience !== 'user' &&
+    trigger.exchangeId !== undefined
+  )
 }
 
 /** Group log, or a result on the sender's open work. No model prompt. */
@@ -45,14 +52,42 @@ export async function deliverResume(rt: HostRuntime, sessionId: string, record: 
   if (record.roomId !== undefined) {
     const room = rt.roomOf(record.roomId)
     if (room === undefined || !(room.members?.includes(bot.id) ?? false)) return
-    await rt.deliver({ toId: bot.id, sessionId: room.sessions?.[bot.id] ?? sessionId, role: 'room', roomId: room.id, note: 'picking up after a restart', resumed: true, text, ...(record.trigger?.askedBy ? { askedBy: record.trigger.askedBy } : {}) })
+    await rt.deliver({
+      toId: bot.id,
+      sessionId: room.sessions?.[bot.id] ?? sessionId,
+      role: 'room',
+      roomId: room.id,
+      note: 'picking up after a restart',
+      resumed: true,
+      text,
+      ...(record.trigger?.askedBy ? { askedBy: record.trigger.askedBy } : {}),
+    })
     return
   }
   const trigger = record.trigger
   const role = trigger?.role
-  if (owes(record) && role !== undefined && trigger?.senderSessionId !== undefined && rt.botOf(trigger.senderSessionId)) {
-    await rt.deliver({ fromId: trigger.senderSessionId, toId: bot.id, role, ...(trigger.exchangeId ? { exchangeId: trigger.exchangeId } : {}), ...(trigger.senderRoomId ? { fromRoomId: trigger.senderRoomId } : {}), resumed: true, text })
+  if (
+    owes(record) &&
+    role !== undefined &&
+    trigger?.senderSessionId !== undefined &&
+    rt.botOf(trigger.senderSessionId)
+  ) {
+    await rt.deliver({
+      fromId: trigger.senderSessionId,
+      toId: bot.id,
+      role,
+      ...(trigger.exchangeId ? { exchangeId: trigger.exchangeId } : {}),
+      ...(trigger.senderRoomId ? { fromRoomId: trigger.senderRoomId } : {}),
+      resumed: true,
+      text,
+    })
     return
   }
-  await rt.deliver({ toId: bot.id, role: 'resume', resumed: true, text, ...(trigger?.work ? { work: trigger.work } : {}) })
+  await rt.deliver({
+    toId: bot.id,
+    role: 'resume',
+    resumed: true,
+    text,
+    ...(trigger?.work ? { work: trigger.work } : {}),
+  })
 }

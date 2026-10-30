@@ -37,7 +37,19 @@ try {
   const tarball = readdirSync(work).find(name => name.endsWith('.tgz'))
   if (tarball === undefined) throw new Error('npm pack produced no tarball')
   const prefix = join(work, 'prefix')
-  must(attempt('npm', ['install', '--prefix', prefix, '--no-audit', '--no-fund', '--loglevel', 'error', join(work, tarball)]), 'installing the tarball')
+  must(
+    attempt('npm', [
+      'install',
+      '--prefix',
+      prefix,
+      '--no-audit',
+      '--no-fund',
+      '--loglevel',
+      'error',
+      join(work, tarball),
+    ]),
+    'installing the tarball',
+  )
 
   const bin = join(prefix, 'node_modules', 'moon-bot-connect', 'dist', 'main.js')
   const help = must(attempt(process.execPath, [bin, '--help']), 'the installed bin --help')
@@ -48,11 +60,15 @@ try {
   // Assert the output, never the exit code.
   const doctor = attempt(process.execPath, [bin, 'doctor'])
   if (doctor.status > 1) throw new Error(`doctor crashed (${doctor.status}):\n${doctor.stderr.slice(-1500)}`)
-  if (!doctor.stdout.includes('ok   node:')) throw new Error(`doctor did not report the node check:\n${doctor.stdout}${doctor.stderr}`)
+  if (!doctor.stdout.includes('ok   node:'))
+    throw new Error(`doctor did not report the node check:\n${doctor.stdout}${doctor.stderr}`)
 
   const files = readdirSync(join(prefix, 'node_modules', 'moon-bot-connect'))
-  if (!files.includes('dist') || files.includes('src')) throw new Error(`the package shipped the wrong files: ${files.join(', ')}`)
-  console.log(`connect: the packed ${tarball} installs and runs (${files.join(', ')}); doctor exits ${doctor.status} here`)
+  if (!files.includes('dist') || files.includes('src'))
+    throw new Error(`the package shipped the wrong files: ${files.join(', ')}`)
+  console.log(
+    `connect: the packed ${tarball} installs and runs (${files.join(', ')}); doctor exits ${doctor.status} here`,
+  )
 } finally {
   rmSync(work, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 })
 }

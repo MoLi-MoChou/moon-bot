@@ -16,18 +16,31 @@ function env(t) {
   return store
 }
 
-const candidate = (store, id) => store.proactive.addCandidate({
-  id, subscriptionId: 's1', sessionId: 'b1', text: `thing ${id}`,
-  evidence: ['10-29 · you said so'], whyCare: 'because', ttl: 'short',
-  topicKeys: [id], fingerprint: id, triggerSource: 'schedule',
-})
+const candidate = (store, id) =>
+  store.proactive.addCandidate({
+    id,
+    subscriptionId: 's1',
+    sessionId: 'b1',
+    text: `thing ${id}`,
+    evidence: ['10-29 · you said so'],
+    whyCare: 'because',
+    ttl: 'short',
+    topicKeys: [id],
+    fingerprint: id,
+    triggerSource: 'schedule',
+  })
 
-test('an empty window reports zeros rather than nothing', (t) => {
+test('an empty window reports zeros rather than nothing', t => {
   const store = env(t)
-  assert.deepEqual(statsSince(store.raw, Date.now() - 86_400_000), { prepared: 0, delivered: 0, rejected: 0, disabled: 0 })
+  assert.deepEqual(statsSince(store.raw, Date.now() - 86_400_000), {
+    prepared: 0,
+    delivered: 0,
+    rejected: 0,
+    disabled: 0,
+  })
 })
 
-test('prepared, sent and dropped are counted apart', (t) => {
+test('prepared, sent and dropped are counted apart', t => {
   const store = env(t)
   candidate(store, 'a')
   candidate(store, 'b')
@@ -41,7 +54,7 @@ test('prepared, sent and dropped are counted apart', (t) => {
   assert.equal(stats.rejected, 1, 'a delayed candidate is neither sent nor dropped')
 })
 
-test('the delivery rate the panel shows comes from these two numbers', (t) => {
+test('the delivery rate the panel shows comes from these two numbers', t => {
   const store = env(t)
   for (const id of ['a', 'b', 'c', 'd']) candidate(store, id)
   store.proactive.decide('a', 'delivered')
@@ -53,14 +66,14 @@ test('the delivery rate the panel shows comes from these two numbers', (t) => {
   assert.equal(stats.delivered / stats.prepared, 0.25)
 })
 
-test('a switched-off subscription is counted, because that is the intrusive signal', (t) => {
+test('a switched-off subscription is counted, because that is the intrusive signal', t => {
   const store = env(t)
   assert.equal(statsSince(store.raw, Date.now() - 86_400_000).disabled, 0)
   store.proactive.setEnabled('s1', false)
   assert.equal(statsSince(store.raw, Date.now() - 86_400_000).disabled, 1)
 })
 
-test('the window excludes what happened before it', (t) => {
+test('the window excludes what happened before it', t => {
   const store = env(t)
   candidate(store, 'a')
   store.proactive.decide('a', 'delivered')

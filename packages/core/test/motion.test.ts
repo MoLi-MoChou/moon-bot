@@ -8,21 +8,41 @@ import { findStyles } from '../scripts/style-debt.mjs'
 
 const bundle = await build({
   entryPoints: [fileURLToPath(new URL('../src/client/motion.tsx', import.meta.url))],
-  bundle: true, format: 'cjs', platform: 'node', write: false,
+  bundle: true,
+  format: 'cjs',
+  platform: 'node',
+  write: false,
   external: ['react'],
 })
 
 function loadMotion(prefersReduced = false) {
-  interface Spring { duration: number, easing: string }
-  const mod = { exports: {} as {
-    MENU_EXIT_MS: number, DIALOG_EXIT_MS: number, SHEET_EXIT_MS: number, PANEL_LINGER_MS: number,
-    SPRING_SHAPE: Spring, SPRING_TAP: Spring, SPRING_ROW_GLIDE: Spring,
-    PANEL_TAB_EDGES: { lead: Spring, trail: Spring },
-    MOTION_PRESETS: { sidebar: { rowGlide: Spring }, overlay: { exitMs: number }, menu: { exitMs: number }, panel: { lingerMs: number }, message: { enter: Spring }, [key: string]: unknown },
-    reducedMotion: () => boolean,
-    useLinger: (node: unknown, ms: number) => void,
-    [key: string]: unknown,
-  } }
+  interface Spring {
+    duration: number
+    easing: string
+  }
+  const mod = {
+    exports: {} as {
+      MENU_EXIT_MS: number
+      DIALOG_EXIT_MS: number
+      SHEET_EXIT_MS: number
+      PANEL_LINGER_MS: number
+      SPRING_SHAPE: Spring
+      SPRING_TAP: Spring
+      SPRING_ROW_GLIDE: Spring
+      PANEL_TAB_EDGES: { lead: Spring; trail: Spring }
+      MOTION_PRESETS: {
+        sidebar: { rowGlide: Spring }
+        overlay: { exitMs: number }
+        menu: { exitMs: number }
+        panel: { lingerMs: number }
+        message: { enter: Spring }
+        [key: string]: unknown
+      }
+      reducedMotion: () => boolean
+      useLinger: (node: unknown, ms: number) => void
+      [key: string]: unknown
+    },
+  }
   const timeouts = []
   runInNewContext(bundle.outputFiles[0].text, {
     module: mod,
@@ -41,7 +61,7 @@ function loadMotion(prefersReduced = false) {
       return timeouts.length
     },
     clearTimeout: () => {},
-    require: (name) => {
+    require: name => {
       if (name !== 'react') throw new Error(`unexpected module ${name}`)
       return {
         createElement: (type, props, ...children) => ({ type, props: props ?? {}, children }),
@@ -88,8 +108,20 @@ test('reducedMotion and useLinger respect prefers-reduced-motion', () => {
 })
 
 test('client stylesheets guard sidebar, overlays, panels, and message entry with prefers-reduced-motion', () => {
-  for (const file of ['design/marks.ts', 'design/overlays.ts', 'design/panels.ts', 'design/conversation.ts', 'design/composer.ts', 'sidebar-css.ts', 'browser-pane-css.ts', 'work-process.tsx']) {
+  for (const file of [
+    'design/marks.ts',
+    'design/overlays.ts',
+    'design/panels.ts',
+    'design/conversation.ts',
+    'design/composer.ts',
+    'sidebar-css.ts',
+    'browser-pane-css.ts',
+    'work-process.tsx',
+  ]) {
     const text = readFileSync(new URL(`../src/client/${file}`, import.meta.url), 'utf8')
-    assert.ok(text.includes('@media (prefers-reduced-motion:reduce)'), `${file} should include prefers-reduced-motion guard`)
+    assert.ok(
+      text.includes('@media (prefers-reduced-motion:reduce)'),
+      `${file} should include prefers-reduced-motion guard`,
+    )
   }
 })

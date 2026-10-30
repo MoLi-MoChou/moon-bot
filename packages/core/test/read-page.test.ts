@@ -46,10 +46,14 @@ const PAGE = `<!doctype html><html lang="en"><head><title>Sample</title>
 </body></html>`
 
 function makePage() {
-  const dom = new JSDOM(PAGE, { url: 'https://example.com/sample', runScripts: 'outside-only', pretendToBeVisual: true })
+  const dom = new JSDOM(PAGE, {
+    url: 'https://example.com/sample',
+    runScripts: 'outside-only',
+    pretendToBeVisual: true,
+  })
   const { window } = dom
   // jsdom has no layout: every box is 100×20 unless marked data-zero.
-  const layout = (frame) => {
+  const layout = frame => {
     frame.Element.prototype.getBoundingClientRect = function () {
       const zero = this.hasAttribute('data-zero')
       return { width: zero ? 0 : 100, height: zero ? 0 : 20, top: 0, left: 0, right: 0, bottom: 0 }
@@ -58,8 +62,9 @@ function makePage() {
   layout(window)
   const doc = window.document
   const host = doc.getElementById('host')
-  host.attachShadow({ mode: 'open' }).innerHTML = '<style>.x{}</style><h3>Bot: <slot name="name">nobody</slot></h3><p><slot name="missing">Fallback</slot></p><button>Message</button>'
-  const frameDoc = (iframe) => {
+  host.attachShadow({ mode: 'open' }).innerHTML =
+    '<style>.x{}</style><h3>Bot: <slot name="name">nobody</slot></h3><p><slot name="missing">Fallback</slot></p><button>Message</button>'
+  const frameDoc = iframe => {
     layout(iframe.contentWindow)
     return iframe.contentDocument
   }
@@ -91,7 +96,9 @@ test('the reader turns the visible page into Markdown with marked links and cont
   const has = fragment => assert.ok(text.includes(fragment), `missing:\n${fragment}\n--- in ---\n${text}`)
   has('# Sample page[#1]\n\nSome `code` and a doc link[#2].\nNext line.')
   has('- Fruit\n  3. Apple\n  4. Pear ripe green\n- Vegetables')
-  has('Table: Plan\n\n| Day | Who | Task |\n| --- | --- | --- |\n| Mon | Writer | Draft \\| review |\n| Mon | Coder | Fix |\n| All |  | Retro |')
+  has(
+    'Table: Plan\n\n| Day | Who | Task |\n| --- | --- | --- |\n| Mon | Writer | Draft \\| review |\n| Mon | Coder | Fix |\n| All |  | Retro |',
+  )
   has('```js\nlet a = 1\n  indented()\n```')
   has('> Quoted one.\n>\n> Quoted two.\n\n---')
   has('shown child')
@@ -108,11 +115,24 @@ test('the reader turns the visible page into Markdown with marked links and cont
   // A text box's value is listed with the control, not repeated in the text.
   assert.ok(!text.includes('DRAFT'))
   assert.equal(page.items[11].value, 'DRAFT-IN-TEXTAREA')
-  assert.deepEqual(page.items.map(item => [item.role, item.name]), [
-    ['link', 'page'], ['link', 'doc link'], ['button', 'More'], ['button', 'Message'],
-    ['textbox', 'User'], ['textbox', 'Password'], ['textbox', 'Card'], ['textbox', 'Code'],
-    ['checkbox', 'Remember'], ['select', 'Color'], ['button', 'Send'], ['textbox', ''], ['link', 'inner link'],
-  ])
+  assert.deepEqual(
+    page.items.map(item => [item.role, item.name]),
+    [
+      ['link', 'page'],
+      ['link', 'doc link'],
+      ['button', 'More'],
+      ['button', 'Message'],
+      ['textbox', 'User'],
+      ['textbox', 'Password'],
+      ['textbox', 'Card'],
+      ['textbox', 'Code'],
+      ['checkbox', 'Remember'],
+      ['select', 'Color'],
+      ['button', 'Send'],
+      ['textbox', ''],
+      ['link', 'inner link'],
+    ],
+  )
   const byName = Object.fromEntries(page.items.map(item => [item.name, item]))
   assert.equal(byName['doc link'].href, 'https://example.com/docs')
   assert.equal(byName.User.value, 'writer@example.com')
@@ -126,7 +146,10 @@ test('the reader turns the visible page into Markdown with marked links and cont
 test('the numbers in the text and the list agree, frames and shadow roots included', () => {
   const page = read(makePage())
   const marks = [...page.text.matchAll(/\[#(\d+)\]/g)].map(match => Number(match[1]))
-  assert.deepEqual(marks, page.items.map((_, index) => index + 1))
+  assert.deepEqual(
+    marks,
+    page.items.map((_, index) => index + 1),
+  )
   assert.equal(page.items[marks[marks.length - 1] - 1].name, 'inner link')
 })
 
@@ -148,7 +171,18 @@ test('a big table is cut at the row limit with a note', () => {
 })
 
 test('the bundled reader reads the same as the source', async () => {
-  const result = await build({ absWorkingDir: PLUGIN, entryPoints: ['src/client/read-page.ts'], bundle: true, format: 'esm', platform: 'browser', target: 'es2022', write: false, logLevel: 'silent' })
-  const bundled = await import(`data:text/javascript;base64,${Buffer.from(result.outputFiles[0].text).toString('base64')}`)
+  const result = await build({
+    absWorkingDir: PLUGIN,
+    entryPoints: ['src/client/read-page.ts'],
+    bundle: true,
+    format: 'esm',
+    platform: 'browser',
+    target: 'es2022',
+    write: false,
+    logLevel: 'silent',
+  })
+  const bundled = await import(
+    `data:text/javascript;base64,${Buffer.from(result.outputFiles[0].text).toString('base64')}`
+  )
   assert.deepEqual(read(makePage(), bundled.READ_PAGE_SCRIPT), read(makePage()))
 })

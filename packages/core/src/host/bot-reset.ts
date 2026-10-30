@@ -65,7 +65,14 @@ export async function resetBot(rt: HostRuntime, id: string, reset: BotReset): Pr
   // the Bot's own view of a group is a Session too, so a reset has to cover all of them.
   const sessionsOf = (): readonly string[] => {
     const live = rt.botOf(id) ?? bot
-    return [...new Set([id, rt.chatOf(id), ...(live.segments ?? []).map(segment => segment.sessionId), ...rt.groupSessionsOf(id)])]
+    return [
+      ...new Set([
+        id,
+        rt.chatOf(id),
+        ...(live.segments ?? []).map(segment => segment.sessionId),
+        ...rt.groupSessionsOf(id),
+      ]),
+    ]
   }
 
   if (parts.includes('memory')) {

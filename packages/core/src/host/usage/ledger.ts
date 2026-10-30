@@ -71,7 +71,18 @@ export interface Ledger {
 function addTo(groups: Map<string, LedgerGroup>, row: LedgerCall): void {
   const slot = Math.floor(row.time / SLOT_MS)
   const id = `${row.session}\n${row.provider}\n${row.model}\n${row.kind}\n${slot}`
-  const group: LedgerGroup = groups.get(id) ?? { session: row.session, provider: row.provider, model: row.model, kind: row.kind, slot, input: 0, cacheRead: 0, cacheWrite: 0, output: 0, calls: 0 }
+  const group: LedgerGroup = groups.get(id) ?? {
+    session: row.session,
+    provider: row.provider,
+    model: row.model,
+    kind: row.kind,
+    slot,
+    input: 0,
+    cacheRead: 0,
+    cacheWrite: 0,
+    output: 0,
+    calls: 0,
+  }
   group.input += row.input
   group.cacheRead += row.cacheRead
   group.cacheWrite += row.cacheWrite
@@ -92,11 +103,17 @@ export function memoryLedger(): Ledger {
       for (const row of rows) calls.set(row.key, row)
       marks.set(sessionId, mark)
     },
-    add: (row) => { calls.set(row.key, { ...row, live: true }) },
+    add: row => {
+      calls.set(row.key, { ...row, live: true })
+    },
     owners: () => new Map(owners),
-    setOwner: (sessionId, owner) => { owners.set(sessionId, owner) },
+    setOwner: (sessionId, owner) => {
+      owners.set(sessionId, owner)
+    },
     kinds: () => new Map(kinds),
-    setKind: (sessionId, kind) => { kinds.set(sessionId, kind) },
+    setKind: (sessionId, kind) => {
+      kinds.set(sessionId, kind)
+    },
     groups() {
       const groups = new Map<string, LedgerGroup>()
       for (const row of calls.values()) addTo(groups, row)
@@ -161,7 +178,9 @@ export function sqliteLedger(DatabaseSync: typeof import('node:sqlite').Database
         CREATE TABLE kinds (session TEXT PRIMARY KEY, kind TEXT NOT NULL);
         PRAGMA user_version = ${LEDGER_VERSION};`)
     }
-    const put = db.prepare('INSERT OR REPLACE INTO calls (key, session, time, provider, model, kind, live, input, cache_read, cache_write, output) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    const put = db.prepare(
+      'INSERT OR REPLACE INTO calls (key, session, time, provider, model, kind, live, input, cache_read, cache_write, output) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    )
     const dropLogged = db.prepare('DELETE FROM calls WHERE session = ? AND live = 0')
     const getMark = db.prepare('SELECT through, fold, sealed FROM marks WHERE session = ?')
     const setMark = db.prepare('INSERT OR REPLACE INTO marks (session, through, fold, sealed) VALUES (?, ?, ?, ?)')
@@ -169,14 +188,30 @@ export function sqliteLedger(DatabaseSync: typeof import('node:sqlite').Database
     const putOwner = db.prepare('INSERT OR REPLACE INTO owners (session, owner, name) VALUES (?, ?, ?)')
     const allKinds = db.prepare('SELECT session, kind FROM kinds')
     const putKind = db.prepare('INSERT OR REPLACE INTO kinds (session, kind) VALUES (?, ?)')
-    const grouped = db.prepare(`SELECT session, provider, model, kind, time / ${SLOT_MS} AS slot, SUM(input) AS input, SUM(cache_read) AS cacheRead, SUM(cache_write) AS cacheWrite, SUM(output) AS output, COUNT(*) AS calls FROM calls GROUP BY session, provider, model, kind, slot`)
+    const grouped = db.prepare(
+      `SELECT session, provider, model, kind, time / ${SLOT_MS} AS slot, SUM(input) AS input, SUM(cache_read) AS cacheRead, SUM(cache_write) AS cacheWrite, SUM(output) AS output, COUNT(*) AS calls FROM calls GROUP BY session, provider, model, kind, slot`,
+    )
     const insert = (row: LedgerCall, live: boolean): void => {
-      put.run(row.key, row.session, row.time, row.provider, row.model, row.kind, live ? 1 : 0, row.input, row.cacheRead, row.cacheWrite, row.output)
+      put.run(
+        row.key,
+        row.session,
+        row.time,
+        row.provider,
+        row.model,
+        row.kind,
+        live ? 1 : 0,
+        row.input,
+        row.cacheRead,
+        row.cacheWrite,
+        row.output,
+      )
     }
     return {
       mark(session) {
         const row = getMark.get(session) as MarkRow | undefined
-        return row === undefined ? undefined : { through: row.through, fold: JSON.parse(row.fold) as FoldSnapshot, sealed: row.sealed === 1 }
+        return row === undefined
+          ? undefined
+          : { through: row.through, fold: JSON.parse(row.fold) as FoldSnapshot, sealed: row.sealed === 1 }
       },
       commit(session, { rows, reset, mark }) {
         db.exec('BEGIN')
@@ -190,11 +225,24 @@ export function sqliteLedger(DatabaseSync: typeof import('node:sqlite').Database
           throw error
         }
       },
-      add: (row) => insert(row, true),
-      owners: () => new Map((allOwners.all() as unknown as readonly OwnerRow[]).map((row): [string, OwnerRecord] => [row.session, { owner: row.owner, name: row.name }])),
-      setOwner: (session, owner) => { putOwner.run(session, owner.owner, owner.name) },
-      kinds: () => new Map((allKinds.all() as unknown as readonly KindRow[]).map((row): [string, string] => [row.session, row.kind])),
-      setKind: (session, kind) => { putKind.run(session, kind) },
+      add: row => insert(row, true),
+      owners: () =>
+        new Map(
+          (allOwners.all() as unknown as readonly OwnerRow[]).map((row): [string, OwnerRecord] => [
+            row.session,
+            { owner: row.owner, name: row.name },
+          ]),
+        ),
+      setOwner: (session, owner) => {
+        putOwner.run(session, owner.owner, owner.name)
+      },
+      kinds: () =>
+        new Map(
+          (allKinds.all() as unknown as readonly KindRow[]).map((row): [string, string] => [row.session, row.kind]),
+        ),
+      setKind: (session, kind) => {
+        putKind.run(session, kind)
+      },
       groups: () => (grouped.all() as unknown as readonly GroupRow[]).map(row => ({ ...row, slot: Number(row.slot) })),
       close: () => db.close(),
     }
@@ -203,4 +251,3 @@ export function sqliteLedger(DatabaseSync: typeof import('node:sqlite').Database
     throw error
   }
 }
-

@@ -14,13 +14,19 @@ export interface PresetSession {
 export class PermissionPresets {
   private readonly bySession = new Map<string, string>()
 
-  catalog(): { readonly options: readonly { readonly value: string, readonly name: string, readonly description: string }[], readonly defaultPreset: string } {
+  catalog(): {
+    readonly options: readonly { readonly value: string; readonly name: string; readonly description: string }[]
+    readonly defaultPreset: string
+  } {
     return { options: PRESETS, defaultPreset: DEFAULT_PRESET }
   }
 
   /** The known preset, or a refusal that names the ones there are. */
   resolve(name: string): string {
-    if (!hasPreset(name)) throw new Error(`"${name}" is not a permission preset. Use one of: ${PRESETS.map(option => option.value).join(', ')}.`)
+    if (!hasPreset(name))
+      throw new Error(
+        `"${name}" is not a permission preset. Use one of: ${PRESETS.map(option => option.value).join(', ')}.`,
+      )
     return name
   }
 

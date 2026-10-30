@@ -43,7 +43,8 @@ function executorWaits(executor) {
 function isClockWait(statement) {
   if (!ts.isExpressionStatement(statement) || !ts.isAwaitExpression(statement.expression)) return false
   const created = statement.expression.expression
-  if (!ts.isNewExpression(created) || !ts.isIdentifier(created.expression) || created.expression.text !== 'Promise') return false
+  if (!ts.isNewExpression(created) || !ts.isIdentifier(created.expression) || created.expression.text !== 'Promise')
+    return false
   const executor = created.arguments?.[0]
   return executor !== undefined && executorWaits(executor)
 }

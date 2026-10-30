@@ -7,24 +7,46 @@ import { mentionSpans, nameProblem, referenceSpans, speakerOf } from 'moon-bot-c
 import { mentionsIn } from '../src/host/groups.ts'
 import { linkMentions, MENTION_ORIGIN } from '../src/client/text.ts'
 
-const bots = [{ id: 'a', name: '新 Bot' }, { id: 'b', name: '新 Bot 2' }, { id: 'c', name: 'Chief' }, { id: 'k', name: 'K' }]
+const bots = [
+  { id: 'a', name: '新 Bot' },
+  { id: 'b', name: '新 Bot 2' },
+  { id: 'c', name: 'Chief' },
+  { id: 'k', name: 'K' },
+]
 
 // The user's bubble is drawn by a module that needs the DSH platform; only its pure part runs here.
 const bundle = await build({
   entryPoints: [fileURLToPath(new URL('../src/client/user-message.tsx', import.meta.url))],
-  bundle: true, format: 'cjs', platform: 'node', write: false,
+  bundle: true,
+  format: 'cjs',
+  platform: 'node',
+  write: false,
   external: ['react', 'react-dom'],
 })
-const module = { exports: {} as {
-  userTextParts: (text: string, bots: unknown[]) => { bot?: { id: string }, text?: string }[]
-  mentionableBots: (roster: unknown, roomId: string) => { id: string }[]
-  canDrawUserMessages: () => boolean
-  contentParts: (parts: unknown[]) => { text: string }
-} }
+const module = {
+  exports: {} as {
+    userTextParts: (text: string, bots: unknown[]) => { bot?: { id: string }; text?: string }[]
+    mentionableBots: (roster: unknown, roomId: string) => { id: string }[]
+    canDrawUserMessages: () => boolean
+    contentParts: (parts: unknown[]) => { text: string }
+  },
+}
 runInNewContext(bundle.outputFiles[0].text, {
-  module, exports: module.exports,
-  require: (name) => {
-    const platform = { react: { createElement: () => null, Fragment: 'fragment', useState: initial => [initial, () => {}], useEffect: () => {}, useRef: initial => ({ current: initial }), useLayoutEffect: () => {}, useId: () => 'id' }, 'react-dom': {} }
+  module,
+  exports: module.exports,
+  require: name => {
+    const platform = {
+      react: {
+        createElement: () => null,
+        Fragment: 'fragment',
+        useState: initial => [initial, () => {}],
+        useEffect: () => {},
+        useRef: initial => ({ current: initial }),
+        useLayoutEffect: () => {},
+        useId: () => 'id',
+      },
+      'react-dom': {},
+    }
     if (!(name in platform)) throw new Error(`no platform module ${name}`)
     return platform[name]
   },
@@ -58,15 +80,30 @@ test('a file or folder reference that starts with a Bot name is not a call', () 
 
 test('a referenced conversation\'s "@label" is a reference, once per label', () => {
   assert.deepEqual(plain(referenceSpans('see @K notes and @K', ['K notes'])), [{ start: 4, end: 12, label: 'K notes' }])
-  assert.deepEqual(mentionSpans('Read @Chief, then @Chief please', bots, { references: ['Chief'] }).map(span => span.start), [18])
+  assert.deepEqual(
+    mentionSpans('Read @Chief, then @Chief please', bots, { references: ['Chief'] }).map(span => span.start),
+    [18],
+  )
 })
 
 test('the group host and the bubbles call the same Bots', () => {
-  const texts = ['@新 Bot 提权', '@新 Bot 2 来一下', 'a@K.com @K', '`@Chief` @新 Bot', '@Chief，@K。', '@Chief.md @K', '[see @K](https://x.dev "t") @Chief']
+  const texts = [
+    '@新 Bot 提权',
+    '@新 Bot 2 来一下',
+    'a@K.com @K',
+    '`@Chief` @新 Bot',
+    '@Chief，@K。',
+    '@Chief.md @K',
+    '[see @K](https://x.dev "t") @Chief',
+  ]
   for (const text of texts) {
     const host = mentionsIn(text, bots).found.map(bot => bot.id)
-    const linked = [...linkMentions(text, bots, undefined).matchAll(new RegExp(`\\]\\(${MENTION_ORIGIN}([^)]+)\\)`, 'g'))].map(match => match[1])
-    const drawn = userTextParts(text, bots).filter(part => part.bot).map(part => part.bot.id)
+    const linked = [
+      ...linkMentions(text, bots, undefined).matchAll(new RegExp(`\\]\\(${MENTION_ORIGIN}([^)]+)\\)`, 'g')),
+    ].map(match => match[1])
+    const drawn = userTextParts(text, bots)
+      .filter(part => part.bot)
+      .map(part => part.bot.id)
     assert.deepEqual(linked, host, text)
     assert.deepEqual(plain(drawn), host, text)
   }
@@ -77,10 +114,17 @@ test('the user bubble keeps the text around a mention, and a group only calls it
   assert.deepEqual(plain(userTextParts('看 @a/b.md', bots)), [{ text: '看 @a/b.md' }])
   assert.deepEqual(plain(userTextParts('打开 @K.md', bots)), [{ text: '打开 @K.md' }])
   // Text blocks join as the group host joins them, so "@新" + " Bot" is not "@新 Bot".
-  const { text } = contentParts([{ type: 'text', text: 'hi @新' }, { type: 'text', text: ' Bot' }])
+  const { text } = contentParts([
+    { type: 'text', text: 'hi @新' },
+    { type: 'text', text: ' Bot' },
+  ])
   assert.equal(text, 'hi @新\n Bot')
   assert.deepEqual(plain(userTextParts(text, bots).filter(part => part.bot)), [])
-  const roster = { bots, byId: Object.fromEntries(bots.map(bot => [bot.id, bot])), roomsById: { r: { members: ['c', 'k'] } } }
+  const roster = {
+    bots,
+    byId: Object.fromEntries(bots.map(bot => [bot.id, bot])),
+    roomsById: { r: { members: ['c', 'k'] } },
+  }
   assert.deepEqual(plain(mentionableBots(roster, 'r').map(bot => bot.id)), ['c', 'k'])
   assert.equal(mentionableBots(roster, 'a').length, 4)
   assert.equal(mentionableBots(roster, 'elsewhere').length, 0)
@@ -91,7 +135,8 @@ test('the user bubble keeps the text around a mention, and a group only calls it
 test('a Bot name is something "@" can call without a second reading', () => {
   assert.equal(nameProblem('新 Bot'), undefined)
   assert.equal(nameProblem('  '), 'A Bot needs a name')
-  for (const name of ['a@b', 'x`y', 'two\nlines']) assert.equal(nameProblem(name), 'A Bot name cannot contain @, ` or a line break')
+  for (const name of ['a@b', 'x`y', 'two\nlines'])
+    assert.equal(nameProblem(name), 'A Bot name cannot contain @, ` or a line break')
   assert.match(nameProblem('All'), /calls everyone in a group/)
   // 公开#178: a Bot called "User" spoke in the group log exactly like the user.
   for (const name of ['User', 'you', ' USER ']) assert.match(nameProblem(name), /stands for the user in a chat/)

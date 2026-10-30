@@ -5,25 +5,37 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { doctor, type DoctorDeps, type SocketLike } from '../src/doctor.ts'
 
-const lines = (): { out: string[], err: string[], print: (line: string) => void } => {
+const lines = (): { out: string[]; err: string[]; print: (line: string) => void } => {
   const out: string[] = []
   const err: string[] = []
-  return { out, err, print: (line: string) => { out.push(line) } }
+  return {
+    out,
+    err,
+    print: (line: string) => {
+      out.push(line)
+    },
+  }
 }
 
 const agent = { id: 'claude', label: 'Claude', command: 'claude', path: '/usr/bin/claude' }
 
-const fakeSocket = (behaviour: 'open' | 'reject' | 'revoked' | 'error'): DoctorDeps['connect'] => (_url, box) => {
-  const socket: SocketLike = { close: () => { box.current = undefined } }
-  box.current = socket
-  setImmediate(() => {
-    if (behaviour === 'open') socket.onopen?.()
-    else if (behaviour === 'error') socket.onerror?.()
-    else if (behaviour === 'reject') socket.onclose?.({ code: 4401 })
-    else socket.onclose?.({ code: 4403 })
-  })
-  return socket
-}
+const fakeSocket =
+  (behaviour: 'open' | 'reject' | 'revoked' | 'error'): DoctorDeps['connect'] =>
+  (_url, box) => {
+    const socket: SocketLike = {
+      close: () => {
+        box.current = undefined
+      },
+    }
+    box.current = socket
+    setImmediate(() => {
+      if (behaviour === 'open') socket.onopen?.()
+      else if (behaviour === 'error') socket.onerror?.()
+      else if (behaviour === 'reject') socket.onclose?.({ code: 4401 })
+      else socket.onclose?.({ code: 4403 })
+    })
+    return socket
+  }
 
 test('a healthy machine and a live invite pass every check', async () => {
   const print = lines()
@@ -38,7 +50,10 @@ test('a healthy machine and a live invite pass every check', async () => {
 })
 
 test('an unknown or revoked invite fails with the fix, not the code alone', async () => {
-  for (const [behaviour, expected] of [['reject', /ask a Main Bot for a new one/], ['revoked', /was revoked/]] as const) {
+  for (const [behaviour, expected] of [
+    ['reject', /ask a Main Bot for a new one/],
+    ['revoked', /was revoked/],
+  ] as const) {
     const print = lines()
     const code = await doctor(
       { url: 'wss://host/api/bot/relay', token: 't', stdout: print.print, stderr: print.print },
@@ -51,10 +66,7 @@ test('an unknown or revoked invite fails with the fix, not the code alone', asyn
 
 test('no agents, an old Node, and no invite named: three failures and no relay check', async () => {
   const print = lines()
-  const code = await doctor(
-    { stdout: print.print, stderr: print.print },
-    { nodeVersion: '20.9.0', agents: [] },
-  )
+  const code = await doctor({ stdout: print.print, stderr: print.print }, { nodeVersion: '20.9.0', agents: [] })
   assert.equal(code, 1)
   const text = print.out.join('\n')
   assert.match(text, /FAIL node: v20\.9\.0 — need 22\.18 or newer/)

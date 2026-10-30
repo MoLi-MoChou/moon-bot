@@ -14,23 +14,35 @@ const DAY_MESSAGES = 120
 
 export interface TriggerDeps {
   /** Every run is noted here, so the panel can show that it happened even when it was silent. */
-  readonly noteRound?: ((round: { readonly subscriptionId: string, readonly botId: string, readonly outcome: string }) => void) | undefined
+  readonly noteRound?:
+    | ((round: { readonly subscriptionId: string; readonly botId: string; readonly outcome: string }) => void)
+    | undefined
   readonly pipeline: RunDeps
   readonly send: SendDeps
   /** Everything one run needs to read, resolved at fire time. */
-  readonly contextOf: (subscriptionId: string, botId: string) => Promise<{
-    readonly topics: string
-    readonly dailyCap: number
-    readonly sessionId: string
-    readonly quietFrom: string | null
-    readonly quietTo: string | null
-    readonly memory: readonly { readonly topic: string | null, readonly text: string, readonly added: string | null }[]
-    readonly messages: readonly { readonly role: string, readonly text: string, readonly at: number }[]
-    readonly earlier: readonly EarlierCandidate[]
-    readonly alreadySaid: readonly string[]
-    readonly deliveredToday: number
-    readonly mentionedRecently: boolean
-  } | undefined>
+  readonly contextOf: (
+    subscriptionId: string,
+    botId: string,
+  ) => Promise<
+    | {
+        readonly topics: string
+        readonly dailyCap: number
+        readonly sessionId: string
+        readonly quietFrom: string | null
+        readonly quietTo: string | null
+        readonly memory: readonly {
+          readonly topic: string | null
+          readonly text: string
+          readonly added: string | null
+        }[]
+        readonly messages: readonly { readonly role: string; readonly text: string; readonly at: number }[]
+        readonly earlier: readonly EarlierCandidate[]
+        readonly alreadySaid: readonly string[]
+        readonly deliveredToday: number
+        readonly mentionedRecently: boolean
+      }
+    | undefined
+  >
   readonly localTime: () => string
   readonly localDayStart: () => number
   readonly log: (message: string, ...rest: readonly unknown[]) => void
@@ -41,9 +53,18 @@ export interface TriggerDeps {
  * happened so a caller can log it; nothing is thrown, because a trigger that throws takes
  * the poller down with it.
  */
-export async function trigger(deps: TriggerDeps, subscriptionId: string, botId: string, source: 'schedule' | 'event'): Promise<string> {
+export async function trigger(
+  deps: TriggerDeps,
+  subscriptionId: string,
+  botId: string,
+  source: 'schedule' | 'event',
+): Promise<string> {
   const context = await deps.contextOf(subscriptionId, botId).catch((error: unknown) => {
-    deps.log('moon-bot: active message context failed for %s: %s', subscriptionId, error instanceof Error ? error.message : error)
+    deps.log(
+      'moon-bot: active message context failed for %s: %s',
+      subscriptionId,
+      error instanceof Error ? error.message : error,
+    )
     return undefined
   })
   if (context === undefined) return 'no-context'
@@ -65,11 +86,19 @@ export async function trigger(deps: TriggerDeps, subscriptionId: string, botId: 
       earlier: context.earlier,
       mentionedRecently: context.mentionedRecently,
       localTime: deps.localTime(),
-      quiet: context.quietFrom === null || context.quietTo === null ? null : { from: context.quietFrom, to: context.quietTo },
+      quiet:
+        context.quietFrom === null || context.quietTo === null
+          ? null
+          : { from: context.quietFrom, to: context.quietTo },
     },
   }
   const outcome = await deliverOnce(request, deps.pipeline, deps.send)
-  const noted = outcome.kind === 'nothing' || outcome.kind === 'failed' ? outcome.kind : outcome.kind === 'sent' ? 'sent' : `withheld:${outcome.reason}`
+  const noted =
+    outcome.kind === 'nothing' || outcome.kind === 'failed'
+      ? outcome.kind
+      : outcome.kind === 'sent'
+        ? 'sent'
+        : `withheld:${outcome.reason}`
   deps.noteRound?.({ subscriptionId, botId, outcome: noted })
   // The quiet round: a run that produced nothing leaves no trace the user sees.
   if (outcome.kind === 'nothing' || outcome.kind === 'failed') return outcome.kind

@@ -63,7 +63,8 @@ export function createStoreLock({ home, statePath, warn }: StoreLockOptions): St
     }
   }
   const readOnly = (): string | undefined => {
-    if (stuck !== undefined) return `The Bot team file ${statePath} could not be read (${stuck}). Moon Bot does not change it; fix or move the file and reload.`
+    if (stuck !== undefined)
+      return `The Bot team file ${statePath} could not be read (${stuck}). Moon Bot does not change it; fix or move the file and reload.`
     if (holder === undefined) return undefined
     const where = holder?.pid ? `pid ${holder.pid}${holder.host ? ` on ${holder.host}` : ''}` : 'unknown process'
     return `The Bot team in ${home} is open in another Moon Bot (Web or Desktop, ${where}). This window shows the team but cannot change it; close the other one and reload.`
@@ -95,8 +96,9 @@ export function createStoreLock({ home, statePath, warn }: StoreLockOptions): St
         stuck = undefined
         warn('moon-bot: unreadable state %s: %s; backed up as %s', statePath, error, backup)
       } catch (copyError) {
-        stuck = (copyError as { readonly code?: string } | undefined)?.code
-          ?? (copyError instanceof Error ? copyError.message : String(copyError))
+        stuck =
+          (copyError as { readonly code?: string } | undefined)?.code ??
+          (copyError instanceof Error ? copyError.message : String(copyError))
         warn('moon-bot: unreadable state %s: %s; backup failed: %s', statePath, error, copyError)
       }
       return undefined
@@ -120,6 +122,8 @@ export function createStoreLock({ home, statePath, warn }: StoreLockOptions): St
     readFileState,
     seen: () => seen,
     warned: () => warnedReadOnly,
-    markWarned: () => { warnedReadOnly = true },
+    markWarned: () => {
+      warnedReadOnly = true
+    },
   }
 }

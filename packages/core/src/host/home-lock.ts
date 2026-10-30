@@ -52,14 +52,17 @@ export function pidAlive(pid: number): boolean {
   }
 }
 
-export function homeLock(path: string, {
-  staleMs = 60_000,
-  beatMs = 15_000,
-  host = hostname(),
-  pid = process.pid,
-  isAlive = pidAlive,
-  now = Date.now,
-}: HomeLockOptions = {}): HomeLock {
+export function homeLock(
+  path: string,
+  {
+    staleMs = 60_000,
+    beatMs = 15_000,
+    host = hostname(),
+    pid = process.pid,
+    isAlive = pidAlive,
+    now = Date.now,
+  }: HomeLockOptions = {},
+): HomeLock {
   const token = randomUUID()
   let timer: ReturnType<typeof setInterval> | undefined
 
@@ -72,7 +75,11 @@ export function homeLock(path: string, {
     }
   }
   const age = (): number => {
-    try { return now() - statSync(path).mtimeMs } catch { return Infinity }
+    try {
+      return now() - statSync(path).mtimeMs
+    } catch {
+      return Infinity
+    }
   }
   const live = (holder: HomeLockHolder | null | undefined): boolean => {
     if (holder === undefined) return false
@@ -88,7 +95,11 @@ export function homeLock(path: string, {
       return
     }
     const time = new Date(now())
-    try { utimesSync(path, time, time) } catch { /* the lock file is gone: the next beat stops */ }
+    try {
+      utimesSync(path, time, time)
+    } catch {
+      /* the lock file is gone: the next beat stops */
+    }
   }
   const stop = (): void => {
     if (timer !== undefined) clearInterval(timer)
@@ -112,13 +123,18 @@ export function homeLock(path: string, {
       const holder = read()
       if (live(holder)) return holder ?? {}
       const current = read()
-      const unchanged = holder === null
-        ? current === null
-        : holder?.token !== undefined
-          ? current?.token === holder.token
-          : JSON.stringify(current) === JSON.stringify(holder)
+      const unchanged =
+        holder === null
+          ? current === null
+          : holder?.token !== undefined
+            ? current?.token === holder.token
+            : JSON.stringify(current) === JSON.stringify(holder)
       if (unchanged) {
-        try { unlinkSync(path) } catch { /* someone else removed it first */ }
+        try {
+          unlinkSync(path)
+        } catch {
+          /* someone else removed it first */
+        }
       }
     }
     return read() ?? {}
@@ -127,7 +143,11 @@ export function homeLock(path: string, {
   function release(): void {
     stop()
     if (owns()) {
-      try { unlinkSync(path) } catch { /* someone else removed it first */ }
+      try {
+        unlinkSync(path)
+      } catch {
+        /* someone else removed it first */
+      }
     }
   }
 

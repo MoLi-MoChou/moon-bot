@@ -6,7 +6,10 @@ import { build } from 'esbuild'
 
 const bundle = await build({
   entryPoints: [fileURLToPath(new URL('../src/client/cells.ts', import.meta.url))],
-  bundle: true, format: 'cjs', platform: 'node', write: false,
+  bundle: true,
+  format: 'cjs',
+  platform: 'node',
+  write: false,
   external: ['react', 'react-dom'],
 })
 // The bundled module's exports, as this test drives them.
@@ -15,15 +18,26 @@ interface Row {
   props: Record<string, unknown> & { onToggle?: (event: unknown) => void }
   children: Row[]
 }
-const module = { exports: {} as { ChatRows: (props: Record<string, unknown>) => unknown[], ThinkingRow: (props: Record<string, unknown>) => Row } }
+const module = {
+  exports: {} as {
+    ChatRows: (props: Record<string, unknown>) => unknown[]
+    ThinkingRow: (props: Record<string, unknown>) => Row
+  },
+}
 runInNewContext(bundle.outputFiles[0].text, {
-  module, exports: module.exports, Intl, Date,
-  require: (name) => {
+  module,
+  exports: module.exports,
+  Intl,
+  Date,
+  require: name => {
     const platform = {
       react: {
         createElement: (type, props, ...children) => ({ type, props: props ?? {}, children: children.flat(Infinity) }),
-        useState: initial => [initial, () => {}], useRef: current => ({ current }),
-        useLayoutEffect() {}, useEffect() {}, useMemo: make => make(),
+        useState: initial => [initial, () => {}],
+        useRef: current => ({ current }),
+        useLayoutEffect() {},
+        useEffect() {},
+        useMemo: make => make(),
       },
       'react-dom': {},
     }
@@ -35,9 +49,16 @@ const { ChatRows, ThinkingRow } = module.exports
 
 const roster = { byId: { b: { id: 'b', name: 'Writer' } }, roomsById: {} }
 const MINUTE = 60_000
-const shape = rows => [...rows].map(row => (row.props.className === 'bt-time-sep' ? 'clock' : row.type.name === 'Bubbles' ? `bot:${row.props.texts.join('+')}` : row.type.name))
+const shape = rows =>
+  [...rows].map(row =>
+    row.props.className === 'bt-time-sep'
+      ? 'clock'
+      : row.type.name === 'Bubbles'
+        ? `bot:${row.props.texts.join('+')}`
+        : row.type.name,
+  )
 
-test('a Bot\'s messages in a row are one block', () => {
+test("a Bot's messages in a row are one block", () => {
   const items = [
     { kind: 'user', text: 'hi', time: MINUTE },
     { kind: 'bot', text: 'one', time: 2 * MINUTE },
@@ -45,17 +66,22 @@ test('a Bot\'s messages in a row are one block', () => {
     { kind: 'user', text: 'and?', time: 3 * MINUTE },
     { kind: 'bot', text: 'three', time: 4 * MINUTE },
   ]
-  assert.deepEqual(shape(ChatRows({ items, sessionId: 'b', roster, actions: {} })), ['EarlierUser', 'bot:one+two', 'EarlierUser', 'bot:three'])
+  assert.deepEqual(shape(ChatRows({ items, sessionId: 'b', roster, actions: {} })), [
+    'EarlierUser',
+    'bot:one+two',
+    'EarlierUser',
+    'bot:three',
+  ])
 })
 
-test('a failed turn is one row of its own, with the reason and the model\'s words under it', () => {
+test("a failed turn is one row of its own, with the reason and the model's words under it", () => {
   const items = [
     { kind: 'user', text: 'hi', time: MINUTE },
     { kind: 'error', code: 'TRANSPORT', text: 'Connection error.', time: 2 * MINUTE },
   ]
   const rows = ChatRows({ items, sessionId: 'b', roster, actions: {} })
   assert.deepEqual(shape(rows), ['EarlierUser', 'TurnErrorRow'])
-  const row = rows[1] as { type: (props: Record<string, unknown>) => Row, props: Record<string, unknown> }
+  const row = rows[1] as { type: (props: Record<string, unknown>) => Row; props: Record<string, unknown> }
   assert.equal(row.props.code, 'TRANSPORT')
   const text = (node: Row): string[] => node.children.filter(Boolean).map(child => (child as Row).children.join(''))
   const rendered = row.type(row.props)
@@ -75,7 +101,14 @@ test('with the clock, a time separator sits above the first entry and after each
     { kind: 'bot', text: 'two', time: 40 * MINUTE },
     { kind: 'user', text: 'back', time: 75 * MINUTE },
   ]
-  assert.deepEqual(shape(ChatRows({ items, sessionId: 'b', roster, actions: {}, clock: true })), ['PartLine', 'clock', 'EarlierUser', 'bot:one+two', 'clock', 'EarlierUser'])
+  assert.deepEqual(shape(ChatRows({ items, sessionId: 'b', roster, actions: {}, clock: true })), [
+    'PartLine',
+    'clock',
+    'EarlierUser',
+    'bot:one+two',
+    'clock',
+    'EarlierUser',
+  ])
 })
 
 test('a reasoning row the reader opened stays open when the turn moves it to a later step', () => {
@@ -101,7 +134,7 @@ test('a live reasoning row titles "Thinking" with a ticking clock', () => {
   const row = ThinkingRow({ text: 'one\ntwo', live: true, at: Date.now() - 4000 })
   const title = row.children[0]
   assert.equal(title.children[0], 'Thinking')
-  const elapsed = title.children[1] as unknown as { type: { name?: string }, props: { at: number } } | undefined
+  const elapsed = title.children[1] as unknown as { type: { name?: string }; props: { at: number } } | undefined
   assert.equal(elapsed?.type?.name, 'Elapsed')
   assert.equal(elapsed?.props.at <= Date.now() - 4000, true)
 })

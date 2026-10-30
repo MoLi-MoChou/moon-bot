@@ -49,7 +49,12 @@ export interface ToolDefinition<TInput = Readonly<Record<string, unknown>>> {
 
 /** The input a schema refused, as the model sees it. */
 const invalidOutcome = (name: string, issues: readonly z.ZodIssue[]): ToolOutcome => ({
-  content: [{ type: 'text', text: `${name} received arguments it cannot accept: ${issues.map(issue => `${issue.path.join('.') || 'input'} ${issue.message}`).join('; ')}` }],
+  content: [
+    {
+      type: 'text',
+      text: `${name} received arguments it cannot accept: ${issues.map(issue => `${issue.path.join('.') || 'input'} ${issue.message}`).join('; ')}`,
+    },
+  ],
   isError: true,
 })
 
@@ -88,7 +93,10 @@ export class ToolRegistry {
   /** Releases one mount's claim; the tool goes when the last claim does. */
   unregister(name: string): void {
     const left = (this.refs.get(name) ?? 1) - 1
-    if (left > 0) { this.refs.set(name, left); return }
+    if (left > 0) {
+      this.refs.set(name, left)
+      return
+    }
     this.refs.delete(name)
     this.entries.delete(name)
   }

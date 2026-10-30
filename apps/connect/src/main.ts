@@ -111,15 +111,21 @@ const run = (): void => {
   socket.addEventListener('error', event => {
     // undici's error event often carries neither message nor error (a refused
     // connection reports nothing), so fall back to a plain diagnosis.
-    const detail = event.message !== '' ? event.message
-      : event.error instanceof Error && event.error.message !== '' ? event.error.message
-        : 'connection failed'
+    const detail =
+      event.message !== ''
+        ? event.message
+        : event.error instanceof Error && event.error.message !== ''
+          ? event.error.message
+          : 'connection failed'
     finish(`Relay error: ${detail}.`, EXIT_BRIDGE_DOWN)
   })
   socket.addEventListener('open', () => {
     log(`Connected to ${shownUrl}; bridging ${launch.label}.`)
     // All three stdio pipes are open, so the child's streams are never null.
-    child = spawn(launch.command, [...launch.args], { stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true }) as ChildProcessWithoutNullStreams
+    child = spawn(launch.command, [...launch.args], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      windowsHide: true,
+    }) as ChildProcessWithoutNullStreams
     const splitter = new LineSplitter()
     child.stdout.setEncoding('utf8')
     child.stdout.on('data', (chunk: string) => {
@@ -129,10 +135,14 @@ const run = (): void => {
     })
     // The agent's own chatter stays on stderr; it is not ours to interpret.
     child.stderr.setEncoding('utf8')
-    child.stderr.on('data', (chunk: string) => { process.stderr.write(chunk) })
+    child.stderr.on('data', (chunk: string) => {
+      process.stderr.write(chunk)
+    })
     // EPIPE here only means the agent died first; its exit event reports that.
     child.stdin.on('error', () => {})
-    child.on('error', error => { finish(`Failed to start "${launch.command}": ${error.message}.`, EXIT_BRIDGE_DOWN) })
+    child.on('error', error => {
+      finish(`Failed to start "${launch.command}": ${error.message}.`, EXIT_BRIDGE_DOWN)
+    })
     child.on('exit', (code, signal) => {
       const how = signal !== null ? ` by signal ${signal}` : code !== null ? ` with code ${code}` : ''
       finish(`Agent ${launch.label} exited${how}.`, EXIT_BRIDGE_DOWN)
@@ -144,8 +154,12 @@ const run = (): void => {
     child?.kill('SIGTERM')
     finish(`Received ${signal}; stopping.`, code)
   }
-  process.on('SIGINT', () => { stop('SIGINT', EXIT_SIGINT) })
-  process.on('SIGTERM', () => { stop('SIGTERM', EXIT_SIGTERM) })
+  process.on('SIGINT', () => {
+    stop('SIGINT', EXIT_SIGINT)
+  })
+  process.on('SIGTERM', () => {
+    stop('SIGTERM', EXIT_SIGTERM)
+  })
 }
 
 // `doctor` answers "why can this machine not join" without joining; everything else bridges.

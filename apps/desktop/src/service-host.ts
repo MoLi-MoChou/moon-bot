@@ -8,17 +8,25 @@ import { join } from 'node:path'
 
 const MAX_FATAL_DIAGNOSTIC_CHARS = 64 * 1024
 
-type ShellMessage = { readonly type: 'ready'; readonly url: string; readonly injections: readonly unknown[] }
+type ShellMessage =
+  | { readonly type: 'ready'; readonly url: string; readonly injections: readonly unknown[] }
   | { readonly type: 'shutdown-complete' }
   | { readonly type: 'fatal'; readonly message: string; readonly diagnostic: string }
 
 const record = (value: unknown): Record<string, unknown> | undefined =>
-  typeof value === 'object' && value !== null ? value as Record<string, unknown> : undefined
+  typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : undefined
 
-const send = (message: ShellMessage): Promise<void> => new Promise((resolve, reject) => {
-  if (!process.connected || process.send === undefined) { resolve(); return }
-  process.send(message, (error) => { if (error === null) resolve(); else reject(error) })
-})
+const send = (message: ShellMessage): Promise<void> =>
+  new Promise((resolve, reject) => {
+    if (!process.connected || process.send === undefined) {
+      resolve()
+      return
+    }
+    process.send(message, error => {
+      if (error === null) resolve()
+      else reject(error)
+    })
+  })
 
 async function main(): Promise<void> {
   const { startService } = await import('moon-bot-core/service')
@@ -33,13 +41,18 @@ async function main(): Promise<void> {
     uiDir: ui,
   })
   let stopping: Promise<void> | undefined
-  const stop = (): Promise<void> => stopping ??= (async () => {
-    await service.close().catch(() => {})
-    await send({ type: 'shutdown-complete' })
-    if (process.connected) process.disconnect()
-  })()
-  process.on('message', (raw: unknown) => { if (record(raw)?.type === 'shutdown') void stop() })
-  process.once('disconnect', () => { void stop() })
+  const stop = (): Promise<void> =>
+    (stopping ??= (async () => {
+      await service.close().catch(() => {})
+      await send({ type: 'shutdown-complete' })
+      if (process.connected) process.disconnect()
+    })())
+  process.on('message', (raw: unknown) => {
+    if (record(raw)?.type === 'shutdown') void stop()
+  })
+  process.once('disconnect', () => {
+    void stop()
+  })
   await send({ type: 'ready', url: service.url, injections: [] })
 }
 

@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import { luminance } from '../src/client/inks.ts'
 import { allThemes, shellTokens, themeCss } from '../src/client/themes.ts'
 
-const parse = (color) => {
+const parse = color => {
   const c = color.trim()
   if (/^#[0-9a-f]{3}$/i.test(c)) {
     return { hex: `#${c[1]}${c[1]}${c[2]}${c[2]}${c[3]}${c[3]}`.toLowerCase(), alpha: 1 }
@@ -13,7 +13,10 @@ const parse = (color) => {
   if (!match) throw new Error(`Cannot parse color: ${color}`)
   const parts = match[1].split(',').map(Number)
   return {
-    hex: `#${parts.slice(0, 3).map(part => Math.round(part).toString(16).padStart(2, '0')).join('')}`,
+    hex: `#${parts
+      .slice(0, 3)
+      .map(part => Math.round(part).toString(16).padStart(2, '0'))
+      .join('')}`,
     alpha: parts[3] ?? 1,
   }
 }
@@ -23,7 +26,13 @@ const over = (top, under) => {
   if (alpha === 1) return hex
   const base = parse(under).hex
   const ch = (color, index) => parseInt(color.slice(index, index + 2), 16)
-  return `#${[1, 3, 5].map(index => Math.round(ch(hex, index) * alpha + ch(base, index) * (1 - alpha)).toString(16).padStart(2, '0')).join('')}`
+  return `#${[1, 3, 5]
+    .map(index =>
+      Math.round(ch(hex, index) * alpha + ch(base, index) * (1 - alpha))
+        .toString(16)
+        .padStart(2, '0'),
+    )
+    .join('')}`
 }
 
 const contrast = (ink, paper) => {
@@ -34,9 +43,7 @@ const contrast = (ink, paper) => {
 function effectiveVars(id, theme, dark) {
   const css = themeCss(theme)
   const baseSelector = dark ? 'html body[data-bt-dark]{' : 'html body{'
-  const themeSelector = dark
-    ? `html body[data-bt-theme=${id}][data-bt-dark]{`
-    : `html body[data-bt-theme=${id}]{`
+  const themeSelector = dark ? `html body[data-bt-theme=${id}][data-bt-dark]{` : `html body[data-bt-theme=${id}]{`
   const vars = {}
   for (const line of css.split(/\r?\n/)) {
     if (line.startsWith(baseSelector) || line.startsWith(themeSelector)) {
@@ -62,7 +69,7 @@ test('all four built-in themes (moon, deepseek, claude, grok) in light and dark 
       const main = vars['--bt-main']
       const sidebar = over(vars['--bt-sidebar'], main)
       const card = over(vars['--bt-card'], main)
-      const bubble = (id === 'claude' || id === 'grok') ? main : over(vars['--bt-bubble'], main)
+      const bubble = id === 'claude' || id === 'grok' ? main : over(vars['--bt-bubble'], main)
       const activeSidebar = over(vars['--bt-active'], sidebar)
       const tagBgMain = over(vars['--bt-tag-bg'], main)
       const tagBgSidebar = over(vars['--bt-tag-bg'], sidebar)
@@ -84,9 +91,19 @@ test('all four built-in themes (moon, deepseek, claude, grok) in light and dark 
         ['--bt-user-ink on --bt-user', over(vars['--bt-user-ink'], userBg), userBg, 4.5],
         ['--bt-tag-ink on --bt-tag-bg (main)', over(vars['--bt-tag-ink'], tagBgMain), tagBgMain, 4.5],
         ['--bt-tag-ink on --bt-tag-bg (sidebar)', over(vars['--bt-tag-ink'], tagBgSidebar), tagBgSidebar, 4.5],
-        ['--bt-accent-ink on --bt-accent', over(vars['--bt-accent-ink'], vars['--bt-accent']), vars['--bt-accent'], 4.5],
+        [
+          '--bt-accent-ink on --bt-accent',
+          over(vars['--bt-accent-ink'], vars['--bt-accent']),
+          vars['--bt-accent'],
+          4.5,
+        ],
         ['--bt-accent on --bt-main', over(vars['--bt-accent'], main), main, 4.5],
-        ['--dsw-alias-label-secondary on --bt-main', over(tokens['--dsw-alias-label-secondary'][mode], main), main, 4.5],
+        [
+          '--dsw-alias-label-secondary on --bt-main',
+          over(tokens['--dsw-alias-label-secondary'][mode], main),
+          main,
+          4.5,
+        ],
         ['--dsw-alias-label-tertiary on --bt-main', over(tokens['--dsw-alias-label-tertiary'][mode], main), main, 4.5],
       ]
 

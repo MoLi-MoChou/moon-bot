@@ -32,13 +32,20 @@ export interface ServiceOptions {
 }
 
 /** The cookie's signed session token: `id.mac`, both hex. */
-const sign = (secret: Buffer, id: string): string => `${id}.${createHash('sha256').update(`${id}:${secret.toString('hex')}`).digest('hex').slice(0, 32)}`
+const sign = (secret: Buffer, id: string): string =>
+  `${id}.${createHash('sha256')
+    .update(`${id}:${secret.toString('hex')}`)
+    .digest('hex')
+    .slice(0, 32)}`
 
 const verify = (secret: Buffer, cookie: string | undefined): boolean => {
   if (cookie === undefined) return false
   const [id, mac] = cookie.split('.')
   if (id === undefined || mac === undefined) return false
-  const expected = createHash('sha256').update(`${id}:${secret.toString('hex')}`).digest('hex').slice(0, 32)
+  const expected = createHash('sha256')
+    .update(`${id}:${secret.toString('hex')}`)
+    .digest('hex')
+    .slice(0, 32)
   return timingSafeEqual(Buffer.from(mac), Buffer.from(expected))
 }
 
@@ -100,7 +107,10 @@ export async function startService(options: ServiceOptions): Promise<StandaloneS
     if (password === '') return true
     const cookie = request.headers?.cookie
     const value = Array.isArray(cookie) ? cookie.join('; ') : cookie
-    const token = value?.split(';').map(part => part.trim()).find(part => part.startsWith('mb-session='))
+    const token = value
+      ?.split(';')
+      .map(part => part.trim())
+      .find(part => part.startsWith('mb-session='))
     return verify(secret, token?.slice('mb-session='.length))
   }
 
@@ -131,7 +141,9 @@ export async function startService(options: ServiceOptions): Promise<StandaloneS
     try {
       const built = readFileSync('/opt/moon-bot/REVISION', 'utf8').trim()
       if (built !== '') return built
-    } catch { /* not an image build: fall through to the environment */ }
+    } catch {
+      /* not an image build: fall through to the environment */
+    }
     const named = process.env.MOON_BOT_REVISION?.trim()
     return named === undefined || named === '' ? undefined : named
   }
@@ -151,7 +163,9 @@ export async function startService(options: ServiceOptions): Promise<StandaloneS
   })
 
   // Password page for browsers (the desktop web.ts wrapper also has one; Docker runs this service directly).
-  const loginHtml = (note: string): string => `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  const loginHtml = (
+    note: string,
+  ): string => `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Moon Bot · 登录</title><style>
 :root{color-scheme:light dark;--bg:#fcfafd;--glow:#efe6fa;--card:#fff;--ink:#2a2233;--ink2:rgba(42,34,51,.6);--line:rgba(70,45,110,.12);--accent:#8a6bd1;--btn:#8a6bd1;--btn-ink:#fff}
 @media (prefers-color-scheme:dark){:root{--bg:#17131d;--glow:#2a2138;--card:#221c2b;--ink:#f1ecf7;--ink2:rgba(241,236,247,.6);--line:rgba(210,190,255,.14);--accent:#b9a3f5;--btn:#b9a3f5;--btn-ink:#1a1422}}
@@ -170,19 +184,26 @@ button{margin-top:14px;width:100%;padding:10px;border:0;border-radius:999px;back
   app.get('/login', async (request, reply) => {
     if (password === '') return await reply.redirect('/')
     const q = (request.query ?? {}) as { wrong?: string; wait?: string }
-    const note = 'wait' in q ? '尝试次数过多，请 10 分钟后再试。 Too many tries, wait 10 minutes.'
-      : 'wrong' in q ? '密码不对。 Wrong password.' : ''
+    const note =
+      'wait' in q
+        ? '尝试次数过多，请 10 分钟后再试。 Too many tries, wait 10 minutes.'
+        : 'wrong' in q
+          ? '密码不对。 Wrong password.'
+          : ''
     return await reply.type('text/html; charset=utf-8').header('cache-control', 'no-store').send(loginHtml(note))
   })
 
   // POST the password (JSON from the UI client, or form fields from this page), get the session cookie.
   app.post('/login', async (request: FastifyRequest<{ Body: { password?: unknown } }>, reply: FastifyReply) => {
     const ip = request.socket.remoteAddress ?? '?'
-    const wantsHtml = String(request.headers.accept ?? '').includes('text/html')
-      || String(request.headers['content-type'] ?? '').includes('application/x-www-form-urlencoded')
+    const wantsHtml =
+      String(request.headers.accept ?? '').includes('text/html') ||
+      String(request.headers['content-type'] ?? '').includes('application/x-www-form-urlencoded')
     if (blocked(ip)) {
       if (wantsHtml) return await reply.redirect('/login?wait')
-      return await reply.code(429).send({ ok: false, error: { code: 'bot/refused', message: 'too many attempts; wait ten minutes' } })
+      return await reply
+        .code(429)
+        .send({ ok: false, error: { code: 'bot/refused', message: 'too many attempts; wait ten minutes' } })
     }
     const body = request.body as { password?: unknown } | undefined
     const given = String(body?.password ?? '')
@@ -200,12 +221,17 @@ button{margin-top:14px;width:100%;padding:10px;border:0;border-radius:999px;back
 
   if (apiRoute !== undefined) {
     app.post('/api/bot', async (request, reply) => {
-      const response = await apiRoute.fetch(new Request(`http://service${request.url}`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(request.body ?? {}),
-      }))
-      return await reply.code(response.status).type('application/json').send(await response.text())
+      const response = await apiRoute.fetch(
+        new Request(`http://service${request.url}`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(request.body ?? {}),
+        }),
+      )
+      return await reply
+        .code(response.status)
+        .type('application/json')
+        .send(await response.text())
     })
   }
 
@@ -214,27 +240,42 @@ button{margin-top:14px;width:100%;padding:10px;border:0;border-radius:999px;back
   if (feedRoute !== undefined) {
     app.get('/api/bot/feed', (request, reply) => {
       feedSockets.add(request.raw)
-      request.raw.on('close', () => { feedSockets.delete(request.raw) })
-      void feedRoute.fetch(new Request('http://service/api/bot/feed'))
+      request.raw.on('close', () => {
+        feedSockets.delete(request.raw)
+      })
+      void feedRoute
+        .fetch(new Request('http://service/api/bot/feed'))
         .then(async response => {
-          reply.raw.writeHead(200, { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-store', connection: 'keep-alive' })
-          if (response.body === null) { reply.raw.end(); return }
+          reply.raw.writeHead(200, {
+            'content-type': 'text/event-stream; charset=utf-8',
+            'cache-control': 'no-store',
+            connection: 'keep-alive',
+          })
+          if (response.body === null) {
+            reply.raw.end()
+            return
+          }
           const reader = response.body.getReader()
           for (;;) {
             const { value, done } = await reader.read()
             if (done) break
             reply.raw.write(value)
           }
-            reply.raw.end()
+          reply.raw.end()
         })
-        .catch(() => { if (!reply.raw.headersSent) reply.raw.writeHead(502).end() })
+        .catch(() => {
+          if (!reply.raw.headersSent) reply.raw.writeHead(502).end()
+        })
       return reply
     })
   }
 
   if (options.uiDir !== undefined && existsSync(options.uiDir)) {
     const { default: fastifyStatic } = await import('@fastify/static')
-    await app.register(fastifyStatic, { root: isAbsolute(options.uiDir) ? options.uiDir : resolve(options.uiDir), prefix: '/' })
+    await app.register(fastifyStatic, {
+      root: isAbsolute(options.uiDir) ? options.uiDir : resolve(options.uiDir),
+      prefix: '/',
+    })
   }
 
   const address = await app.listen({ host, port: options.port ?? 0 })

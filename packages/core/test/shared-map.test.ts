@@ -10,15 +10,27 @@ function sharedStorage() {
   return {
     items,
     getItem: key => items.get(key) ?? null,
-    setItem: (key, value) => { items.set(key, String(value)) },
-    removeItem: (key) => { items.delete(key) },
+    setItem: (key, value) => {
+      items.set(key, String(value))
+    },
+    removeItem: key => {
+      items.delete(key)
+    },
   } as Storage & { items: Map<string, string> }
 }
 // A window as index.ts keeps one: a copy read at load, updated by its own changes.
 function windowOn(storage, key) {
   const store = sharedMap(key, storage)
   let copy = store.read()
-  return { change: (edit) => { copy = store.update(edit, copy); return copy }, get copy() { return copy } }
+  return {
+    change: edit => {
+      copy = store.update(edit, copy)
+      return copy
+    },
+    get copy() {
+      return copy
+    },
+  }
 }
 
 // #215: each window wrote its whole copy back, so the window that wrote last erased what
@@ -29,7 +41,10 @@ test('reactions made in two windows are both kept, and one taken back leaves the
   const b = windowOn(storage, STORAGE.reactions)
   a.change(saved => toggleReaction(saved, 'writer:3:step3', 0, '👍'))
   b.change(saved => toggleReaction(saved, 'writer:4:step4', 1, '❤️'))
-  assert.deepEqual(JSON.parse(storage.getItem(STORAGE.reactions)), { 'writer:3:step3': { 0: ['👍'] }, 'writer:4:step4': { 1: ['❤️'] } })
+  assert.deepEqual(JSON.parse(storage.getItem(STORAGE.reactions)), {
+    'writer:3:step3': { 0: ['👍'] },
+    'writer:4:step4': { 1: ['❤️'] },
+  })
   // A window learns of the other's change through the storage event and reads again.
   assert.deepEqual(sharedMap(STORAGE.reactions, storage).read(a.copy), JSON.parse(storage.getItem(STORAGE.reactions)))
   a.change(saved => toggleReaction(saved, 'writer:3:step3', 0, '👍'))
@@ -60,25 +75,57 @@ test('a window that closes with an old copy does not move a visit time back', ()
 
 test('storage that cannot be read leaves the window its own copy, and nothing unchanged is written', () => {
   const storage = sharedStorage()
-  const store = sharedMap<Record<string, boolean>>(STORAGE.unread, { ...storage, getItem: () => { throw new Error('blocked') }, setItem: () => { throw new Error('blocked') } } as Storage)
-  assert.deepEqual(store.update(marks => setUnread(marks, 'umber', true), { viewer: true }), { viewer: true, umber: true })
+  const store = sharedMap<Record<string, boolean>>(STORAGE.unread, {
+    ...storage,
+    getItem: () => {
+      throw new Error('blocked')
+    },
+    setItem: () => {
+      throw new Error('blocked')
+    },
+  } as Storage)
+  assert.deepEqual(
+    store.update(marks => setUnread(marks, 'umber', true), { viewer: true }),
+    { viewer: true, umber: true },
+  )
   assert.deepEqual(sharedMap(STORAGE.unread, undefined).read({ viewer: true }), { viewer: true })
   storage.setItem(STORAGE.unread, 'not json')
   assert.deepEqual(sharedMap(STORAGE.unread, storage).read({ kept: true }), { kept: true })
 
   let writes = 0
-  const counted = sharedMap<Record<string, boolean>>(STORAGE.unread, { ...storage, getItem: () => '{"umber":true}', setItem: () => { writes += 1 } } as Storage)
+  const counted = sharedMap<Record<string, boolean>>(STORAGE.unread, {
+    ...storage,
+    getItem: () => '{"umber":true}',
+    setItem: () => {
+      writes += 1
+    },
+  } as Storage)
   counted.update(marks => setUnread(marks, 'umber', true))
   assert.equal(writes, 0)
 })
 
 test('Bot browser tabs saved by two windows are both kept', () => {
   const storage = sharedStorage()
-  const createSource = (initial) => {
+  const createSource = initial => {
     let value = initial
-    return { getSnapshot: () => value, set: (next) => { value = typeof next === 'function' ? next(value) : next }, subscribe: () => () => {} }
+    return {
+      getSnapshot: () => value,
+      set: next => {
+        value = typeof next === 'function' ? next(value) : next
+      },
+      subscribe: () => () => {},
+    }
   }
-  const open = () => createBotBrowsers({ bridge: {}, createSource, storage, document: { body: { append() {} }, createElement: () => ({ style: {}, append() {}, remove() {} }) } as unknown as Document })
+  const open = () =>
+    createBotBrowsers({
+      bridge: {},
+      createSource,
+      storage,
+      document: {
+        body: { append() {} },
+        createElement: () => ({ style: {}, append() {}, remove() {} }),
+      } as unknown as Document,
+    })
   const first = open()
   const second = open()
   first.openTab('writer')

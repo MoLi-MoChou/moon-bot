@@ -47,7 +47,7 @@ function lockHeld(path: string, host: string, now: number): boolean {
   let holder: Record<string, unknown> | undefined
   try {
     const value: unknown = JSON.parse(readFileSync(path, 'utf8'))
-    holder = typeof value === 'object' && value !== null ? value as Record<string, unknown> : undefined
+    holder = typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : undefined
   } catch {
     return fresh
   }
@@ -98,7 +98,9 @@ export async function copyData(from: string, to: string, signal?: AbortSignal | 
   await mkdir(parent, { recursive: true })
   // A run that was killed can leave its staging folder behind.
   const staging = new RegExp(`^\\.${escaped(basename(to))}\\.moving-\\d+$`, 'u')
-  for (const name of readdirSync(parent).filter(entry => staging.test(entry) && existsSync(join(parent, entry, MARK)))) {
+  for (const name of readdirSync(parent).filter(
+    entry => staging.test(entry) && existsSync(join(parent, entry, MARK)),
+  )) {
     await rm(join(parent, name), { recursive: true, force: true, maxRetries: 5 })
   }
   const stage = join(parent, `.${basename(to)}.moving-${String(Date.now())}`)

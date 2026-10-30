@@ -24,18 +24,28 @@ const shapeOf = (row: {
   readonly enabled: boolean
   readonly when: string
 }) => ({
-  id: row.id, botId: row.botId, topics: row.topics, dailyCap: row.dailyCap,
-  quietFrom: row.quietFrom, quietTo: row.quietTo, eventHook: row.eventHook,
-  eventMinutes: row.eventMinutes, enabled: row.enabled, when: row.when,
+  id: row.id,
+  botId: row.botId,
+  topics: row.topics,
+  dailyCap: row.dailyCap,
+  quietFrom: row.quietFrom,
+  quietTo: row.quietTo,
+  eventHook: row.eventHook,
+  eventMinutes: row.eventMinutes,
+  enabled: row.enabled,
+  when: row.when,
 })
 
 /** The text of a stored message, for the day a review reads. */
-const textOf = (row: { readonly content: readonly { readonly type: string, readonly text?: unknown }[] }): string =>
-  row.content.filter(block => block.type === 'text').map(block => String(block.text ?? '')).join(' ')
+const textOf = (row: { readonly content: readonly { readonly type: string; readonly text?: unknown }[] }): string =>
+  row.content
+    .filter(block => block.type === 'text')
+    .map(block => String(block.text ?? ''))
+    .join(' ')
 
 /** The dependencies both polls share: how to ask, how to send, what to read. */
 function triggerDepsOf(runtime: HostRuntime, store: Store, timeZone: string | undefined): DueDeps {
-  const ask = async ({ system, prompt }: { readonly system: string, readonly prompt: string }): Promise<string> => {
+  const ask = async ({ system, prompt }: { readonly system: string; readonly prompt: string }): Promise<string> => {
     const small = runtime.smallShot
     if (small === undefined || currentBot === undefined) throw new Error('No model is available')
     return small(currentBot, system, prompt)
@@ -64,9 +74,12 @@ function triggerDepsOf(runtime: HostRuntime, store: Store, timeZone: string | un
     },
     localTime: () => localTimeAt(Date.now(), timeZone),
     localDayStart: () => dayStartFor(timeZone),
-    dueSubscriptions: () => store.proactive.enabledSubscriptions().map(row => ({ id: row.id, botId: row.botId, when: row.when })),
+    dueSubscriptions: () =>
+      store.proactive.enabledSubscriptions().map(row => ({ id: row.id, botId: row.botId, when: row.when })),
     lastFiredAt: id => store.proactive.subscription(id)?.lastFiredAt ?? undefined,
-    noteFired: (id, at) => { store.proactive.noteFired(id, at) },
+    noteFired: (id, at) => {
+      store.proactive.noteFired(id, at)
+    },
     now: () => Date.now(),
     log: (message, ...rest) => runtime.warn(message, ...rest),
     noteRound: round => {
@@ -76,7 +89,11 @@ function triggerDepsOf(runtime: HostRuntime, store: Store, timeZone: string | un
 }
 
 /** Starts the poll that lets a subscription fire on its own; returns the disposer. */
-export function startProactivePoll(runtime: HostRuntime, store: Store, agentOf: (sessionId: string) => unknown): () => void {
+export function startProactivePoll(
+  runtime: HostRuntime,
+  store: Store,
+  agentOf: (sessionId: string) => unknown,
+): () => void {
   agentOfRef = agentOf
   const shared = triggerDepsOf(runtime, store, runtime.config.timeZone)
   return startDuePoll({
@@ -105,7 +122,9 @@ async function contextFor(runtime: HostRuntime, store: Store, subscriptionId: st
     quietFrom: subscription.quietFrom,
     quietTo: subscription.quietTo,
     memory: runtime.memoryLinesOf?.(botId) ?? [],
-    messages: store.sessions.since(sessionId, dayStart).map(row => ({ role: row.role, text: textOf(row), at: row.createdAt })),
+    messages: store.sessions
+      .since(sessionId, dayStart)
+      .map(row => ({ role: row.role, text: textOf(row), at: row.createdAt })),
     earlier: earlier.map(item => ({
       fingerprint: item.fingerprint,
       topicKeys: JSON.parse(item.topicKeys) as readonly string[],
@@ -131,40 +150,64 @@ export function startProgress(runtime: HostRuntime, store: Store): () => void {
   const timeZone = runtime.config.timeZone
   const deps: ProgressDeps = {
     ...triggerDepsOf(runtime, store, timeZone),
-    watched: () => store.proactive.enabledSubscriptions()
-      .filter(row => row.eventHook === 'no-progress' && (row.eventMinutes ?? 0) > 0)
-      .map(row => ({ subscriptionId: row.id, botId: row.botId, sessionId: runtime.chatOf(row.botId), minutes: row.eventMinutes ?? 0 })),
+    watched: () =>
+      store.proactive
+        .enabledSubscriptions()
+        .filter(row => row.eventHook === 'no-progress' && (row.eventMinutes ?? 0) > 0)
+        .map(row => ({
+          subscriptionId: row.id,
+          botId: row.botId,
+          sessionId: runtime.chatOf(row.botId),
+          minutes: row.eventMinutes ?? 0,
+        })),
     lastActivityAt: sessionId => progressWatch.lastActivityAt(sessionId),
     busy: sessionId => runtime.live.get(sessionId) !== undefined,
-    noteFired: (id, at) => { store.proactive.noteFired(id, at) },
+    noteFired: (id, at) => {
+      store.proactive.noteFired(id, at)
+    },
     now: () => Date.now(),
   }
   return startProgressPoll(deps)
 }
 
 /** Retries the candidates quiet hours held back. Called from the same poll as the schedule. */
-export async function retryDelayedNow(runtime: HostRuntime, store: Store, agentOf: (sessionId: string) => unknown): Promise<void> {
+export async function retryDelayedNow(
+  runtime: HostRuntime,
+  store: Store,
+  agentOf: (sessionId: string) => unknown,
+): Promise<void> {
   const timeZone = runtime.config.timeZone
   await retryFrom(runtime, {
-    delayedOf: now => store.proactive.delayedSince(now - 7 * 24 * 60 * 60_000).map(row => ({
-      id: row.id, subscriptionId: row.subscriptionId, sessionId: row.sessionId,
-      text: row.text, evidence: JSON.parse(row.evidence) as readonly string[], ttl: row.ttl,
-      fingerprint: row.fingerprint, topicKeys: JSON.parse(row.topicKeys) as readonly string[],
-      createdAt: row.createdAt, decidedAt: row.decidedAt,
-    })),
-    earlierOf: subscriptionId => store.proactive.recentCandidates(subscriptionId, Date.now() - 7 * 24 * 60 * 60_000)
-      .filter(item => item.decision?.decision !== 'delayed')
-      .map(item => ({
-        fingerprint: item.fingerprint,
-        topicKeys: JSON.parse(item.topicKeys) as readonly string[],
-        decision: item.decision?.decision as 'delivered' | 'quiet' | 'dropped' | undefined,
-        decidedAt: item.decision?.decidedAt,
+    delayedOf: now =>
+      store.proactive.delayedSince(now - 7 * 24 * 60 * 60_000).map(row => ({
+        id: row.id,
+        subscriptionId: row.subscriptionId,
+        sessionId: row.sessionId,
+        text: row.text,
+        evidence: JSON.parse(row.evidence) as readonly string[],
+        ttl: row.ttl,
+        fingerprint: row.fingerprint,
+        topicKeys: JSON.parse(row.topicKeys) as readonly string[],
+        createdAt: row.createdAt,
+        decidedAt: row.decidedAt,
       })),
+    earlierOf: subscriptionId =>
+      store.proactive
+        .recentCandidates(subscriptionId, Date.now() - 7 * 24 * 60 * 60_000)
+        .filter(item => item.decision?.decision !== 'delayed')
+        .map(item => ({
+          fingerprint: item.fingerprint,
+          topicKeys: JSON.parse(item.topicKeys) as readonly string[],
+          decision: item.decision?.decision as 'delivered' | 'quiet' | 'dropped' | undefined,
+          decidedAt: item.decision?.decidedAt,
+        })),
     deliveredToday: subscriptionId => store.proactive.deliveredOn(subscriptionId, dayStartFor(timeZone), Date.now()),
     dailyCapOf: subscriptionId => store.proactive.subscription(subscriptionId)?.dailyCap ?? 1,
     quietOf: subscriptionId => {
       const row = store.proactive.subscription(subscriptionId)
-      return row === undefined || row.quietFrom === null || row.quietTo === null ? null : { from: row.quietFrom, to: row.quietTo }
+      return row === undefined || row.quietFrom === null || row.quietTo === null
+        ? null
+        : { from: row.quietFrom, to: row.quietTo }
     },
     mentionedRecently: () => false,
     localTime: () => localTimeAt(Date.now(), timeZone),
@@ -181,7 +224,11 @@ export async function retryDelayedNow(runtime: HostRuntime, store: Store, agentO
 }
 
 /** Installs the surface and starts both polls. Returns the combined disposer. */
-export function installProactive(runtime: HostRuntime, store: Store, agentOf: (sessionId: string) => unknown): () => void {
+export function installProactive(
+  runtime: HostRuntime,
+  store: Store,
+  agentOf: (sessionId: string) => unknown,
+): () => void {
   installProactiveFrom(runtime, store, agentOf)
   installRounds(runtime, roundLog)
   // Movement is any turn event: a message landing, a turn starting or ending. The hook only
@@ -192,10 +239,17 @@ export function installProactive(runtime: HostRuntime, store: Store, agentOf: (s
   })
   const stopDue = startProactivePoll(runtime, store, agentOf)
   const stopProgress = startProgress(runtime, store)
-  return () => { stopDue(); stopProgress() }
+  return () => {
+    stopDue()
+    stopProgress()
+  }
 }
 
-export function installProactiveFrom(runtime: HostRuntime, store: Store, agentOf: (sessionId: string) => unknown): void {
+export function installProactiveFrom(
+  runtime: HostRuntime,
+  store: Store,
+  agentOf: (sessionId: string) => unknown,
+): void {
   // The rules surface the channel reads; the gate itself lives in proactive-gate.
   Object.assign(runtime, {
     proactiveRules: () => store.proactiveRules,
@@ -205,9 +259,12 @@ export function installProactiveFrom(runtime: HostRuntime, store: Store, agentOf
   install(runtime, {
     deps: {
       store: () => store.proactive,
-      messagesSince: (sessionId, since) => store.sessions.since(sessionId, since).map(row => ({
-        role: row.role, text: textOf(row), at: row.createdAt,
-      })),
+      messagesSince: (sessionId, since) =>
+        store.sessions.since(sessionId, since).map(row => ({
+          role: row.role,
+          text: textOf(row),
+          at: row.createdAt,
+        })),
       // Memory is read through the host in a later step; a review with none still works,
       // it just has less to notice.
       memoryOf: botId => runtime.memoryLinesOf?.(botId) ?? [],

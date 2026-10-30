@@ -12,9 +12,13 @@ import { SOURCE_KIND } from '../src/host/constants.ts'
 
 test('cleanText hides keys, tokens and the home folder', () => {
   const home = '/home/user'
-  const text = 'key sk-abcdef123456 and Bearer abc.def.ghi.jkl at http://h:1/?token=XYZ123&x=1 in /home/user/.dsh/bot, "api_key": "zzzzzzzzz", saved VALUE1234'
+  const text =
+    'key sk-abcdef123456 and Bearer abc.def.ghi.jkl at http://h:1/?token=XYZ123&x=1 in /home/user/.dsh/bot, "api_key": "zzzzzzzzz", saved VALUE1234'
   const out = cleanText(text, { home, redact: value => value.replaceAll('VALUE1234', '[secret:DEMO]') })
-  assert.equal(out, 'key sk-[hidden] and Bearer [hidden] at http://h:1/?token=[hidden]&x=1 in ~/.dsh/bot, "api_key": "[hidden]", saved [secret:DEMO]')
+  assert.equal(
+    out,
+    'key sk-[hidden] and Bearer [hidden] at http://h:1/?token=[hidden]&x=1 in ~/.dsh/bot, "api_key": "[hidden]", saved [secret:DEMO]',
+  )
   assert.equal(cleanText('C:\\Users\\Shared\\x and C:/Users/Shared/y', { home: 'C:\\Users\\Shared' }), '~\\x and ~/y')
   assert.ok(cleanText('x'.repeat(5000)).length < 2100)
 })
@@ -22,14 +26,17 @@ test('cleanText hides keys, tokens and the home folder', () => {
 test('cleanText hides standalone credentials it was never given', () => {
   // Synthetic shapes only, built from parts so no string looks like a real key.
   const made = (...parts) => parts.join('')
-  const out = cleanText([
-    made('ghp_', 'A1'.repeat(12)),
-    made('github_pat_', 'B2'.repeat(12)),
-    made('AKIA', '0'.repeat(16)),
-    made('xoxb-', '1234', '-', 'abcd'.repeat(3)),
-    made('AIza', 'C3'.repeat(12)),
-    made('eyJ', 'hbGciOiJIUzI1NiJ9', '.', 'eyJzdWIiOiIxIn0', '.', 'dGVzdC1zaWduYXR1cmUtcGFydA'),
-  ].join(' '), { home: '' })
+  const out = cleanText(
+    [
+      made('ghp_', 'A1'.repeat(12)),
+      made('github_pat_', 'B2'.repeat(12)),
+      made('AKIA', '0'.repeat(16)),
+      made('xoxb-', '1234', '-', 'abcd'.repeat(3)),
+      made('AIza', 'C3'.repeat(12)),
+      made('eyJ', 'hbGciOiJIUzI1NiJ9', '.', 'eyJzdWIiOiIxIn0', '.', 'dGVzdC1zaWduYXR1cmUtcGFydA'),
+    ].join(' '),
+    { home: '' },
+  )
   assert.equal(out, '[hidden] [hidden] [hidden] [hidden] [hidden] [hidden]')
 })
 
@@ -37,7 +44,7 @@ test('cleanText hides standalone credentials it was never given', () => {
 function host(home, extra = {}) {
   const warnings = []
   const cleanups = []
-  const effect = (execute) => {
+  const effect = execute => {
     const cleanup = execute()
     if (typeof cleanup === 'function') cleanups.push(cleanup)
   }
@@ -52,21 +59,33 @@ function host(home, extra = {}) {
     stop(): Promise<unknown>
     warn(template: string, ...args: unknown[]): void
     noteFailure(entry: Record<string, unknown>): void
-    diagnostics: { entries(): Promise<{ level: string, code: string, text: string, stack: string }[]>, report(input: unknown): Promise<{ markdown: string, entries: { code: string }[] }>, logText(): Promise<string>, clear: () => void }
+    diagnostics: {
+      entries(): Promise<{ level: string; code: string; text: string; stack: string }[]>
+      report(input: unknown): Promise<{ markdown: string; entries: { code: string }[] }>
+      logText(): Promise<string>
+      clear: () => void
+    }
   }
   installDiagnostics(rt)
   rt.stop = () => Promise.all(cleanups.map(cleanup => cleanup()))
   return rt
 }
 
-test('warnings are kept, cleaned, written to the log, and read back after a restart', async (t) => {
+test('warnings are kept, cleaned, written to the log, and read back after a restart', async t => {
   const home = mkdtempSync(join(tmpdir(), 'ds-bot-diag-'))
   t.after(() => rmSync(home, { recursive: true, force: true, maxRetries: 5 }))
   const error = Object.assign(new Error(`cannot open ${homedir()}/x with sk-abcdefghij`), { code: 'EACCES' })
   const quiet = t.mock.method(console, 'error', () => {})
   const rt = host(home)
   rt.warn('moon-bot: state write failed: %s', error)
-  rt.noteFailure({ source: 'turn', text: 'Rate limited', code: 'RATE_LIMIT', status: 429, bot: 'Chief', where: 'own chat' })
+  rt.noteFailure({
+    source: 'turn',
+    text: 'Rate limited',
+    code: 'RATE_LIMIT',
+    status: 429,
+    bot: 'Chief',
+    where: 'own chat',
+  })
   const [first, second] = await rt.diagnostics.entries()
   assert.equal(first.level, 'warn')
   assert.equal(first.code, 'EACCES')
@@ -74,7 +93,10 @@ test('warnings are kept, cleaned, written to the log, and read back after a rest
   assert.match(first.stack, /^at TestContext/)
   assert.equal(second.code, 'RATE_LIMIT')
 
-  const report = await rt.diagnostics.report({ client: { surface: 'Web', language: 'zh-CN', userAgent: 'Test/1' }, clientErrors: [{ time: 1, text: 'state: HTTP 502' }] })
+  const report = await rt.diagnostics.report({
+    client: { surface: 'Web', language: 'zh-CN', userAgent: 'Test/1' },
+    clientErrors: [{ time: 1, text: 'state: HTTP 502' }],
+  })
   assert.match(report.markdown, /\| Moon Bot \| \d+\.\d+\.\d+ \|/)
   assert.match(report.markdown, /\| Surface \| Web \|/)
   assert.match(report.markdown, /\| Models \| deepseek\/deepseek-chat \|/)
@@ -86,9 +108,17 @@ test('warnings are kept, cleaned, written to the log, and read back after a rest
 
   // Written as JSON lines; a new host reads them back.
   await rt.stop()
-  assert.equal(readFileSync(join(home, 'logs', 'diagnostics.jsonl'), 'utf8').trim().split('\n').length, 2)
+  assert.equal(
+    readFileSync(join(home, 'logs', 'diagnostics.jsonl'), 'utf8')
+      .trim()
+      .split('\n').length,
+    2,
+  )
   const again = host(home)
-  assert.deepEqual((await again.diagnostics.entries()).map(entry => entry.code), ['EACCES', 'RATE_LIMIT'])
+  assert.deepEqual(
+    (await again.diagnostics.entries()).map(entry => entry.code),
+    ['EACCES', 'RATE_LIMIT'],
+  )
   assert.match(await again.diagnostics.logText(), /\n {4}at TestContext/)
   await again.diagnostics.clear()
   assert.deepEqual(await again.diagnostics.entries(), [])
@@ -96,7 +126,7 @@ test('warnings are kept, cleaned, written to the log, and read back after a rest
   quiet.mock.restore()
 })
 
-test('warnings send only cleaned text to the logger and stderr', (t) => {
+test('warnings send only cleaned text to the logger and stderr', t => {
   const home = mkdtempSync(join(tmpdir(), 'ds-bot-diag-'))
   t.after(() => rmSync(home, { recursive: true, force: true, maxRetries: 5 }))
   const values = ['synthetic-api-key-123456', 'synthetic-bearer-token-12345', 'synthetic-query-token-12345']
@@ -120,7 +150,7 @@ test('warnings send only cleaned text to the logger and stderr', (t) => {
   }
 })
 
-test('diagnostics append fallback redacts an error message', async (t) => {
+test('diagnostics append fallback redacts an error message', async t => {
   const home = mkdtempSync(join(tmpdir(), 'ds-bot-diag-'))
   t.after(() => rmSync(home, { recursive: true, force: true, maxRetries: 5 }))
   const value = 'synthetic-api-key-append-123456'
@@ -147,16 +177,20 @@ test('diagnostics append fallback redacts an error message', async (t) => {
 
 // #226: a test removed `home` right after the stop while a warning was still being
 // written there, and the removal failed with ENOTEMPTY.
-test('a stop waits for the log writes queued before it, and nothing is written after it', async (t) => {
+test('a stop waits for the log writes queued before it, and nothing is written after it', async t => {
   const home = mkdtempSync(join(tmpdir(), 'ds-bot-diag-'))
   t.after(() => rmSync(home, { recursive: true, force: true, maxRetries: 5 }))
   t.mock.method(console, 'error', () => {})
   const log = join(home, 'logs', 'diagnostics.jsonl')
   const originalAppend = fsp.appendFile
   let reached
-  const appending = new Promise((resolve) => { reached = resolve })
+  const appending = new Promise(resolve => {
+    reached = resolve
+  })
   let release
-  const gate = new Promise((resolve) => { release = resolve })
+  const gate = new Promise(resolve => {
+    release = resolve
+  })
   fsp.appendFile = async (...args) => {
     reached()
     await gate
@@ -171,7 +205,9 @@ test('a stop waits for the log writes queued before it, and nothing is written a
   rt.warn('moon-bot: before the stop')
   await appending
   let stopped = false
-  const stopping = rt.stop().then(() => { stopped = true })
+  const stopping = rt.stop().then(() => {
+    stopped = true
+  })
   await Promise.resolve()
   assert.equal(stopped, false, 'the stop waits for the write in progress')
   release()
@@ -189,7 +225,9 @@ test('a stop waits for the log writes queued before it, and nothing is written a
 })
 
 test('reportMarkdown says when nothing went wrong', () => {
-  const text = reportMarkdown({ facts: { botVersion: '0.1.0', os: 'linux' } as unknown as Parameters<typeof reportMarkdown>[0]['facts'] })
+  const text = reportMarkdown({
+    facts: { botVersion: '0.1.0', os: 'linux' } as unknown as Parameters<typeof reportMarkdown>[0]['facts'],
+  })
   assert.match(text, /No host errors recorded\./)
   assert.doesNotMatch(text, /DSH \|/)
 })
@@ -204,8 +242,16 @@ test('errorCode tells refusals from Moon Bot faults', () => {
 })
 
 test('turnFailure drops AUTH messages and keeps the facts', () => {
-  assert.deepEqual(turnFailure({ code: 'AUTH', message: 'bad key sk-12***34', status: 401 }), { code: 'AUTH', message: '', status: 401 })
-  assert.deepEqual(turnFailure({ code: 'RATE_LIMIT', message: ' slow down ', requestId: 'r1' }), { code: 'RATE_LIMIT', message: 'slow down', requestId: 'r1' })
+  assert.deepEqual(turnFailure({ code: 'AUTH', message: 'bad key sk-12***34', status: 401 }), {
+    code: 'AUTH',
+    message: '',
+    status: 401,
+  })
+  assert.deepEqual(turnFailure({ code: 'RATE_LIMIT', message: ' slow down ', requestId: 'r1' }), {
+    code: 'RATE_LIMIT',
+    message: 'slow down',
+    requestId: 'r1',
+  })
   assert.deepEqual(turnFailure(undefined), { code: 'UNKNOWN', message: '' })
   assert.equal(failureLine({ code: 'SERVER', status: 503, message: 'busy' }), 'SERVER 503: busy')
   // What a group posts for a failed member is words a person reads, in their language.
@@ -220,9 +266,16 @@ function turnsHost() {
   let listener
   const delivered = []
   const noted = []
-  const bots: Record<string, { id: string, name: string }> = { a: { id: 'a', name: 'Chief' }, b: { id: 'b', name: 'Writer' } }
+  const bots: Record<string, { id: string; name: string }> = {
+    a: { id: 'a', name: 'Chief' },
+    b: { id: 'b', name: 'Writer' },
+  }
   const rt = {
-    ctx: { on: (name, fn) => { if (name === 'session/event') listener = fn } },
+    ctx: {
+      on: (name, fn) => {
+        if (name === 'session/event') listener = fn
+      },
+    },
     state: { exchangeTurns: {}, questions: {} },
     bots,
     isBotSession: () => true,
@@ -232,7 +285,9 @@ function turnsHost() {
     botOf: id => bots[id],
     selfOf: id => id,
     save: async () => {},
-    deliver: async (args) => { delivered.push(args) },
+    deliver: async args => {
+      delivered.push(args)
+    },
     noteFailure: entry => noted.push(entry),
     warn() {},
     switchJobs: () => [],
@@ -249,26 +304,43 @@ const failed = { kind: 'error', error: { code: 'SERVER', message: 'upstream busy
 test('a failed reply to message_bot tells the sender instead of leaving it waiting', () => {
   const { emit, delivered, noted } = turnsHost()
   emit('b', 'turn/start', { turn: 1 })
-  emit('b', 'user/message', { content: [{ type: 'text', text: 'hi' }], source: { kind: SOURCE_KIND, role: 'request', senderSessionId: 'a', exchangeId: 'x1' } })
+  emit('b', 'user/message', {
+    content: [{ type: 'text', text: 'hi' }],
+    source: { kind: SOURCE_KIND, role: 'request', senderSessionId: 'a', exchangeId: 'x1' },
+  })
   emit('b', 'turn/end', { turn: 1, reason: failed })
   assert.equal(delivered.length, 1)
   assert.equal(delivered[0].toId, 'a')
   assert.equal(delivered[0].role, 'reply')
   assert.equal(delivered[0].replyTo, 'x1')
-  assert.match(delivered[0].text, /^Writer could not answer your message: its model call failed \(SERVER 503: upstream busy\)/)
-  assert.deepEqual(noted.map(entry => [entry.source, entry.code, entry.bot, entry.where]), [['turn', 'SERVER', 'Writer', 'own chat']])
+  assert.match(
+    delivered[0].text,
+    /^Writer could not answer your message: its model call failed \(SERVER 503: upstream busy\)/,
+  )
+  assert.deepEqual(
+    noted.map(entry => [entry.source, entry.code, entry.bot, entry.where]),
+    [['turn', 'SERVER', 'Writer', 'own chat']],
+  )
 })
 
 test('a failed group turn fails its waiter; a stopped one counts as no answer', () => {
   const { rt, emit } = turnsHost()
-  rt.roomWaiters.set('r1', { resolve: () => assert.fail('resolved'), fail: failure => rt.roomWaiters.failed = failure })
+  rt.roomWaiters.set('r1', {
+    resolve: () => assert.fail('resolved'),
+    fail: failure => (rt.roomWaiters.failed = failure),
+  })
   emit('b', 'turn/start', { turn: 1 })
   emit('b', 'user/message', { content: [], source: { kind: SOURCE_KIND, role: 'room', exchangeId: 'r1' } })
   emit('b', 'turn/end', { turn: 1, reason: failed })
   assert.deepEqual(rt.roomWaiters.failed, { code: 'SERVER', message: 'upstream busy', status: 503 })
 
   let value
-  rt.roomWaiters.set('r2', { resolve: reply => { value = reply }, fail: () => assert.fail('failed') })
+  rt.roomWaiters.set('r2', {
+    resolve: reply => {
+      value = reply
+    },
+    fail: () => assert.fail('failed'),
+  })
   emit('b', 'turn/start', { turn: 2 })
   emit('b', 'user/message', { content: [], source: { kind: SOURCE_KIND, role: 'room', exchangeId: 'r2' } })
   emit('b', 'turn/end', { turn: 2, reason: { kind: 'aborted', reason: { kind: 'user' } } })
@@ -291,7 +363,10 @@ test('issueUrl fills the issue form, keeps the versions when the errors are too 
   assert.match(new URL(long.url).searchParams.get('diagnostics'), /clipboard/)
   assert.equal(new URL(long.url).searchParams.has('title'), false)
   const table = '| | |\n|---|---|\n| Moon Bot | 0.1.2 |'
-  const errors = issueUrl(base, { what: 'Writer failed', diagnostics: `${table}\n\nRecent host errors:\n${'错误'.repeat(2000)}` })
+  const errors = issueUrl(base, {
+    what: 'Writer failed',
+    diagnostics: `${table}\n\nRecent host errors:\n${'错误'.repeat(2000)}`,
+  })
   assert.equal(errors.inline, false)
   assert.ok(errors.url.length < 7000)
   const kept = new URL(errors.url).searchParams.get('diagnostics')
@@ -310,7 +385,10 @@ test('a browser error is noted once, repeats are counted, and clear empties the 
   noteClientError('state', failed)
   noteClientError('menu', failed)
   noteClientError('state', new Error('HTTP 502'))
-  assert.deepEqual(clientErrors().map(entry => entry.text), ['state: HTTP 502 (×2)'])
+  assert.deepEqual(
+    clientErrors().map(entry => entry.text),
+    ['state: HTTP 502 (×2)'],
+  )
   clearClientErrors()
   assert.equal(clientErrors().length, 0)
 })

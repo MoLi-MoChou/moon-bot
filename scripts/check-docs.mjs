@@ -16,7 +16,8 @@ const ALLOW = [
   {
     file: 'CHANGELOG.md',
     target: 'README.md#install',
-    reason: 'That release note names the Install heading it linked. The heading was renamed later; the entry stays as published.',
+    reason:
+      'That release note names the Install heading it linked. The heading was renamed later; the entry stays as published.',
   },
 ]
 
@@ -37,11 +38,17 @@ function markdownFiles(dir) {
     return listed.split('\n').filter(file => file !== '' && !file.includes('/fixtures/'))
   }
   const found = []
-  const walk = (at) => {
+  const walk = at => {
     for (const name of readdirSync(at, { withFileTypes: true })) {
       const path = join(at, name.name)
       if (name.isDirectory()) walk(path)
-      else if (name.name.endsWith('.md')) found.push(path.slice(dir.length + 1).split(sep).join('/'))
+      else if (name.name.endsWith('.md'))
+        found.push(
+          path
+            .slice(dir.length + 1)
+            .split(sep)
+            .join('/'),
+        )
     }
   }
   walk(dir)

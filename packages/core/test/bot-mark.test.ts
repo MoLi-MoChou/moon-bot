@@ -6,25 +6,47 @@ import { fileURLToPath } from 'node:url'
 import { build } from 'esbuild'
 
 const bundle = await build({
-  stdin: { contents: "export { botState, BotAvatar, BotMark } from './src/client/mark.tsx'\nexport { SHELL_CSS } from './src/client/design/index.ts'", resolveDir: dirname(dirname(fileURLToPath(import.meta.url))) },
-  bundle: true, format: 'cjs', platform: 'node', write: false, logLevel: 'silent',
+  stdin: {
+    contents:
+      "export { botState, BotAvatar, BotMark } from './src/client/mark.tsx'\nexport { SHELL_CSS } from './src/client/design/index.ts'",
+    resolveDir: dirname(dirname(fileURLToPath(import.meta.url))),
+  },
+  bundle: true,
+  format: 'cjs',
+  platform: 'node',
+  write: false,
+  logLevel: 'silent',
   external: ['react', 'react-dom'],
 })
-interface MarkNode { type: unknown, props: Record<string, unknown> & { onError?: () => void }, children: MarkNode[] }
-const module = { exports: {} as {
-  botState: (turn: boolean | undefined, wait: string | undefined, question: boolean) => string
-  BotAvatar: (props: Record<string, unknown>) => MarkNode
-  BotMark: (props: Record<string, unknown>) => MarkNode
-  SHELL_CSS: string
-} }
+interface MarkNode {
+  type: unknown
+  props: Record<string, unknown> & { onError?: () => void }
+  children: MarkNode[]
+}
+const module = {
+  exports: {} as {
+    botState: (turn: boolean | undefined, wait: string | undefined, question: boolean) => string
+    BotAvatar: (props: Record<string, unknown>) => MarkNode
+    BotMark: (props: Record<string, unknown>) => MarkNode
+    SHELL_CSS: string
+  },
+}
 // A test can queue the values the next useState calls return, and read what was set.
 const states = []
 const sets = []
 const react = {
   createElement: (type, props, ...children) => ({ type, props: props ?? {}, children: children.flat(Infinity) }),
-  useState: initial => [states.length > 0 ? states.shift() : initial, value => sets.push(value)], useEffect: () => {}, useRef: current => ({ current }), useLayoutEffect: () => {}, Fragment: 'fragment',
+  useState: initial => [states.length > 0 ? states.shift() : initial, value => sets.push(value)],
+  useEffect: () => {},
+  useRef: current => ({ current }),
+  useLayoutEffect: () => {},
+  Fragment: 'fragment',
 }
-runInNewContext(bundle.outputFiles[0].text, { module, exports: module.exports, require: name => (name === 'react' ? react : {}) })
+runInNewContext(bundle.outputFiles[0].text, {
+  module,
+  exports: module.exports,
+  require: name => (name === 'react' ? react : {}),
+})
 const { botState, BotAvatar, BotMark, SHELL_CSS } = module.exports
 
 test('a Bot that waits for work it handed on has a mark of its own, behind a running turn and a question', () => {
@@ -39,12 +61,16 @@ test('a Bot that waits for work it handed on has a mark of its own, behind a run
 })
 
 test('a waiting Bot does not wear the working badge, since no turn of it runs', () => {
-  const badges = state => BotAvatar({ bot: { id: 'b', name: 'Writer' }, size: 36, state }).children.slice(1).filter(Boolean).map(child => child.props.className)
+  const badges = state =>
+    BotAvatar({ bot: { id: 'b', name: 'Writer' }, size: 36, state })
+      .children.slice(1)
+      .filter(Boolean)
+      .map(child => child.props.className)
   assert.deepEqual(badges('waiting'), [])
   assert.deepEqual(badges('working'), ['bt-badge bt-badge-working'])
 })
 
-test('a photo that does not load shows the Bot\'s character instead', () => {
+test("a photo that does not load shows the Bot's character instead", () => {
   const photo = 'data:image/png;base64,iVBORw0KGgo='
   const bot = { id: 'b', name: 'Writer', avatar: { shape: 'fox', image: photo } }
   const img = BotMark({ bot }).children[0]
@@ -65,6 +91,12 @@ test('a photo that does not load shows the Bot\'s character instead', () => {
 test('Moon Bot working ring stays concentric with its face at both tile and row sizes', () => {
   assert.match(SHELL_CSS, /\.bt-busy>\.bt-mark::after\{[^}]*box-sizing:border-box/)
   assert.match(SHELL_CSS, /\.bt-mark\[data-shape=moonbot\] \.bt-b\{transform-origin:50% 60\.4%\}/)
-  assert.match(SHELL_CSS, /\.bt-busy>\.bt-mark:has\(> \.bt-mark\[data-shape=moonbot\]\)::after\{inset:auto;z-index:-1;left:calc\(var\(--bt-size,36px\) \* \.11 - 4px\);top:calc\(var\(--bt-size,36px\) \* \.214 - 4px\);width:calc\(var\(--bt-size,36px\) \* \.78 \+ 8px\);height:calc\(var\(--bt-size,36px\) \* \.78 \+ 8px\)\}/)
-  assert.match(SHELL_CSS, /\.bt-busy \.bt-mark\[data-shape=moonbot\]:not\(\[data-state=idle\]\):not\(\[data-state=done\]\) \.bt-b\{animation-name:bt-sway\}/)
+  assert.match(
+    SHELL_CSS,
+    /\.bt-busy>\.bt-mark:has\(> \.bt-mark\[data-shape=moonbot\]\)::after\{inset:auto;z-index:-1;left:calc\(var\(--bt-size,36px\) \* \.11 - 4px\);top:calc\(var\(--bt-size,36px\) \* \.214 - 4px\);width:calc\(var\(--bt-size,36px\) \* \.78 \+ 8px\);height:calc\(var\(--bt-size,36px\) \* \.78 \+ 8px\)\}/,
+  )
+  assert.match(
+    SHELL_CSS,
+    /\.bt-busy \.bt-mark\[data-shape=moonbot\]:not\(\[data-state=idle\]\):not\(\[data-state=done\]\) \.bt-b\{animation-name:bt-sway\}/,
+  )
 })

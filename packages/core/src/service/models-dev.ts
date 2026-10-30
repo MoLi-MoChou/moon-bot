@@ -12,7 +12,7 @@ interface ModelsDevModel {
   readonly name?: string
   readonly reasoning?: boolean
   readonly modalities?: { readonly input?: readonly string[] }
-  readonly limit?: { readonly context?: number, readonly output?: number }
+  readonly limit?: { readonly context?: number; readonly output?: number }
 }
 
 export class ModelsDevSync {
@@ -49,11 +49,11 @@ export class ModelsDevSync {
 
     try {
       const response = await fetch(MODELS_DEV_URL, {
-        headers: { 'accept': 'application/json' },
+        headers: { accept: 'application/json' },
         signal: AbortSignal.timeout(SYNC_TIMEOUT_MS),
       })
       if (!response.ok) return false
-      const body = await response.json() as Record<string, ModelsDevModel>
+      const body = (await response.json()) as Record<string, ModelsDevModel>
       if (!body || typeof body !== 'object') return false
 
       const toSave: Record<string, ModelCapability> = {}

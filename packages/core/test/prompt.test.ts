@@ -11,16 +11,16 @@ function start() {
   ])
   install({
     ctx,
-    selfOf: id => id === 'group-worker' ? 'worker' : id,
+    selfOf: id => (id === 'group-worker' ? 'worker' : id),
     botOf: id => bots.get(id),
-    roomOf: id => id === 'room' ? {} : undefined,
+    roomOf: id => (id === 'room' ? {} : undefined),
     isMain: id => id === 'main',
   } as unknown as Parameters<typeof install>[0])
   const prompt = id => ctx.sections.get('bot-identity').text({ agent: { id } })
   return { ctx, prompt }
 }
 
-test('Bots get a scoped progress rule without changing the private/group prompt prefix', (t) => {
+test('Bots get a scoped progress rule without changing the private/group prompt prefix', t => {
   const { ctx, prompt } = start()
   t.after(() => ctx.dispose())
   const rules = [
@@ -37,7 +37,7 @@ test('Bots get a scoped progress rule without changing the private/group prompt 
   assert.equal(prompt('group-worker'), prompt('worker'))
 })
 
-test('the group relay and non-Bot sessions do not get progress instructions', (t) => {
+test('the group relay and non-Bot sessions do not get progress instructions', t => {
   const { ctx, prompt } = start()
   t.after(() => ctx.dispose())
   assert.match(prompt('room'), /end your turn with an empty reply/)
@@ -45,7 +45,7 @@ test('the group relay and non-Bot sessions do not get progress instructions', (t
   assert.equal(prompt('outside'), '')
 })
 
-test('a Bot is told it can set reminders, so the tool is not left unreachable', (t) => {
+test('a Bot is told it can set reminders, so the tool is not left unreachable', t => {
   const { ctx, prompt } = start()
   t.after(() => ctx.dispose())
   const text = prompt('worker')
@@ -66,7 +66,7 @@ test('every tool a Bot is told about is one the host actually registers', async 
   }
 })
 
-test('every tool a Bot receives either has a rule or is named in its own description', async (t) => {
+test('every tool a Bot receives either has a rule or is named in its own description', async t => {
   // A tool that reaches the model but is never named in the prompt is only discoverable
   // from its schema, and a Bot asked to use it may answer that it cannot — which is what
   // happened with create_schedule. This lists the ones with no rule so a new tool is a
@@ -79,14 +79,29 @@ test('every tool a Bot receives either has a rule or is named in its own descrip
   // internal (the relay is synthesized by the host, never chosen by a model), or they are
   // Main-Bot-only and covered by MAIN_RULES rather than the team rules.
   const NEEDS_NO_RULE = [
-    'forget', 'recall', 'read_browser', 'list_capabilities', 'save_capability',
-    'delete_capability', 'attach_capability', 'detach_capability', 'list_engines',
-    'list_models', 'stop_bot', 'group_relay',
+    'forget',
+    'recall',
+    'read_browser',
+    'list_capabilities',
+    'save_capability',
+    'delete_capability',
+    'attach_capability',
+    'detach_capability',
+    'list_engines',
+    'list_models',
+    'stop_bot',
+    'group_relay',
     // Main Bot tools: MAIN_RULES names them, an ordinary Bot has no rule because it
     // cannot use them.
-    'create_bot', 'create_group', 'delete_group',
+    'create_bot',
+    'create_group',
+    'delete_group',
   ]
   const unnamed = TEAM_TOOLS.filter(tool => !text.includes(tool))
   const unexplained = unnamed.filter(tool => !NEEDS_NO_RULE.includes(tool))
-  assert.deepEqual(unexplained, [], 'a tool reaches the model with no prompt rule; add one or list it as self-explanatory')
+  assert.deepEqual(
+    unexplained,
+    [],
+    'a tool reaches the model with no prompt rule; add one or list it as self-explanatory',
+  )
 })

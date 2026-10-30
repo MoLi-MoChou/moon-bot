@@ -28,15 +28,21 @@ async function loadOverlayHooks() {
     removeEventListener(type, fn) {
       listeners.get(type)?.delete(fn)
     },
-    dispatchKey(key, extra: { defaultPrevented?: boolean, isComposing?: boolean } = {}) {
+    dispatchKey(key, extra: { defaultPrevented?: boolean; isComposing?: boolean } = {}) {
       let defaultPrevented = Boolean(extra.defaultPrevented)
       let stopped = false
       const event = {
         key,
         isComposing: Boolean(extra.isComposing),
-        get defaultPrevented() { return defaultPrevented },
-        preventDefault() { defaultPrevented = true },
-        stopPropagation() { stopped = true },
+        get defaultPrevented() {
+          return defaultPrevented
+        },
+        preventDefault() {
+          defaultPrevented = true
+        },
+        stopPropagation() {
+          stopped = true
+        },
       }
       for (const fn of Array.from(listeners.get('keydown') ?? [])) {
         fn(event)
@@ -48,22 +54,36 @@ async function loadOverlayHooks() {
     useRef: value => ({ current: value }),
     useState: init => [typeof init === 'function' ? init() : init, () => {}],
     useLayoutEffect: () => {},
-    useEffect: (fn, deps) => { effects.push({ fn, deps, cleanup: null }) },
+    useEffect: (fn, deps) => {
+      effects.push({ fn, deps, cleanup: null })
+    },
   }
-  const mod = { exports: {} as { useEscape: (handler: () => void, enabled: boolean) => void, stepMenuFocus: (menu: unknown, key: string) => boolean } }
+  const mod = {
+    exports: {} as {
+      useEscape: (handler: () => void, enabled: boolean) => void
+      stepMenuFocus: (menu: unknown, key: string) => boolean
+    },
+  }
   runInNewContext(outputFiles[0].text, {
     module: mod,
     exports: mod.exports,
-    require: (id) => {
+    require: id => {
       if (id === 'react') return reactStub
       throw new Error(`unexpected require: ${id}`)
     },
     window: windowStub,
     document: {
-      get activeElement() { return activeElement },
-      set activeElement(el) { activeElement = el },
+      get activeElement() {
+        return activeElement
+      },
+      set activeElement(el) {
+        activeElement = el
+      },
     },
-    requestAnimationFrame: fn => { fn(); return 1 },
+    requestAnimationFrame: fn => {
+      fn()
+      return 1
+    },
     cancelAnimationFrame: () => {},
     HTMLElement: class HTMLElement {},
   })
@@ -71,8 +91,12 @@ async function loadOverlayHooks() {
     ...mod.exports,
     windowStub,
     effects,
-    setActive(el) { activeElement = el },
-    getActive() { return activeElement },
+    setActive(el) {
+      activeElement = el
+    },
+    getActive() {
+      return activeElement
+    },
   }
 }
 
@@ -106,10 +130,12 @@ describe('Keyboard navigation, Escape stack, and focus-visible rings', () => {
 
   it('cycles focus across enabled menu items with ArrowDown, ArrowUp, Home, and End', async () => {
     const { stepMenuFocus, setActive, getActive } = await loadOverlayHooks()
-    const makeItem = (label) => {
+    const makeItem = label => {
       const item = {
         label,
-        focus() { setActive(item) },
+        focus() {
+          setActive(item)
+        },
       }
       return item
     }
@@ -144,14 +170,13 @@ describe('Keyboard navigation, Escape stack, and focus-visible rings', () => {
     assert.equal(getActive(), a)
   })
 
-
   it('folds + menu, memory ⋯ menu, and anchored menus into the useEscape stack (no capture Esc)', () => {
     const composer = readFileSync(join(ROOT, 'src/client/composer.tsx'), 'utf8')
     const memory = readFileSync(join(ROOT, 'src/client/memory-panel.tsx'), 'utf8')
     const model = readFileSync(join(ROOT, 'src/client/model-menu.tsx'), 'utf8')
-    assert.match(composer, /useEscape\(\(\) => \{ setOpen\(null\)/)
+    assert.match(composer, /useEscape\(\(\) => \{\s*setOpen\(null\)/)
     assert.doesNotMatch(composer, /addEventListener\('keydown', onKey, true\)/)
-    assert.match(memory, /useEscape\(\(\) => \{ setMenu\(false\)/)
+    assert.match(memory, /useEscape\(\(\) => \{\s*setMenu\(false\)/)
     assert.doesNotMatch(memory, /addEventListener\('keydown', onKey, true\)/)
     assert.match(model, /useEscape\(\(\) => \{[\s\S]*escapeRef\.current/)
     assert.doesNotMatch(model, /addEventListener\('keydown', onKey, true\)/)

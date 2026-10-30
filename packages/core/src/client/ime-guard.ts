@@ -9,7 +9,9 @@
 const COMPOSER = '[data-composer-input],[contenteditable=true],textarea'
 const WEBKIT_STRAY_MS = 500
 
-interface ComposingEvent extends KeyboardEvent { keyCode: number }
+interface ComposingEvent extends KeyboardEvent {
+  keyCode: number
+}
 
 const isAppleWebKit = (): boolean => {
   if (typeof navigator === 'undefined') return false
@@ -22,16 +24,16 @@ export function installImeGuard(
   { webkit = isAppleWebKit() }: { webkit?: boolean } = {},
 ): () => void {
   let endedAt = -Infinity
-  const ended = (): void => { endedAt = performance.now() }
+  const ended = (): void => {
+    endedAt = performance.now()
+  }
   const keydown = (event: Event): void => {
     const key = event as ComposingEvent
     if (key.key !== 'Enter' && key.keyCode !== 229) return
     if (!(key.target instanceof Element) || key.target.closest(COMPOSER) === null) return
     const composing = key.isComposing || key.keyCode === 229
-    const stray = webkit
-      && key.key === 'Enter'
-      && endedAt !== -Infinity
-      && performance.now() - endedAt < WEBKIT_STRAY_MS
+    const stray =
+      webkit && key.key === 'Enter' && endedAt !== -Infinity && performance.now() - endedAt < WEBKIT_STRAY_MS
     if (!composing && !stray) return
     key.stopImmediatePropagation()
     if (stray) {

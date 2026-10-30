@@ -26,7 +26,10 @@ export interface SpeechAnswer<T> {
 // The remote the host voice-input plugin mounts; only the members used here are declared.
 export interface SpeechService {
   catalog(): Promise<SpeechAnswer<SpeechCatalogValue>>
-  transcribe(request: { readonly audioBase64: string; readonly [key: string]: unknown }, signal?: AbortSignal): Promise<SpeechAnswer<{ readonly text?: string }>>
+  transcribe(
+    request: { readonly audioBase64: string; readonly [key: string]: unknown },
+    signal?: AbortSignal,
+  ): Promise<SpeechAnswer<{ readonly text?: string }>>
 }
 
 export interface SpeechCatalog {
@@ -45,7 +48,9 @@ export async function speechCatalog(speech: SpeechService): Promise<SpeechCatalo
 export function waveBytes(samples: ArrayLike<number>, rate = 16000): Uint8Array {
   const bytes = new Uint8Array(44 + samples.length * 2)
   const view = new DataView(bytes.buffer)
-  const ascii = (at: number, text: string): void => { for (let index = 0; index < text.length; index += 1) bytes[at + index] = text.charCodeAt(index) }
+  const ascii = (at: number, text: string): void => {
+    for (let index = 0; index < text.length; index += 1) bytes[at + index] = text.charCodeAt(index)
+  }
   ascii(0, 'RIFF')
   view.setUint32(4, 36 + samples.length * 2, true)
   ascii(8, 'WAVEfmt ')
@@ -67,7 +72,8 @@ export function waveBytes(samples: ArrayLike<number>, rate = 16000): Uint8Array 
 
 export function base64Of(bytes: Uint8Array): string {
   let text = ''
-  for (let index = 0; index < bytes.length; index += 0x8000) text += String.fromCharCode(...bytes.subarray(index, index + 0x8000))
+  for (let index = 0; index < bytes.length; index += 0x8000)
+    text += String.fromCharCode(...bytes.subarray(index, index + 0x8000))
   return btoa(text)
 }
 
@@ -102,7 +108,9 @@ export async function openCapture(): Promise<Capture> {
   const frame = new Float32Array(analyser.fftSize)
   const recorder = new MediaRecorder(stream)
   const chunks: Blob[] = []
-  recorder.ondataavailable = (event: BlobEvent) => { if (event.data.size > 0) chunks.push(event.data) }
+  recorder.ondataavailable = (event: BlobEvent) => {
+    if (event.data.size > 0) chunks.push(event.data)
+  }
   recorder.start()
   let closed = false
   const close = (): void => {
@@ -122,9 +130,15 @@ export async function openCapture(): Promise<Capture> {
     },
     cancel: close,
     async finish(maxSeconds: number): Promise<Uint8Array | null> {
-      if (closed || recorder.state === 'inactive') { close(); return null }
+      if (closed || recorder.state === 'inactive') {
+        close()
+        return null
+      }
       try {
-        await new Promise<void>((resolve) => { recorder.onstop = () => resolve(); recorder.stop() })
+        await new Promise<void>(resolve => {
+          recorder.onstop = () => resolve()
+          recorder.stop()
+        })
         stream.getTracks().forEach(track => track.stop())
         const blob = new Blob(chunks, { type: recorder.mimeType })
         if (blob.size === 0) return null
@@ -136,12 +150,19 @@ export async function openCapture(): Promise<Capture> {
         source.connect(offline.destination)
         source.start()
         return waveBytes((await offline.startRendering()).getChannelData(0))
-      } finally { close() }
+      } finally {
+        close()
+      }
     },
   }
 }
 
-export async function transcribeWave(speech: SpeechService, catalog: SpeechCatalogValue, wave: Uint8Array, signal?: AbortSignal): Promise<string> {
+export async function transcribeWave(
+  speech: SpeechService,
+  catalog: SpeechCatalogValue,
+  wave: Uint8Array,
+  signal?: AbortSignal,
+): Promise<string> {
   if (wave.byteLength > catalog.maxAudioBytes) throw captureError('too-long')
   const result = await speech.transcribe({ audioBase64: base64Of(wave), ...catalog.selection }, signal)
   if (!result.ok) throw Object.assign(new Error(result.error?.message ?? 'Transcription failed'), { kind: 'service' })
@@ -158,11 +179,19 @@ export interface TurnDetectorOptions {
 
 // Voice activity on the loudness of each animation frame: speech starts above
 // `loud`, and the turn ends after `quietMs` below `quiet`.
-export function turnDetector({ loud = 0.12, quiet = 0.06, quietMs = 1200 }: TurnDetectorOptions = {}): (level: number, now: number) => Turn {
+export function turnDetector({
+  loud = 0.12,
+  quiet = 0.06,
+  quietMs = 1200,
+}: TurnDetectorOptions = {}): (level: number, now: number) => Turn {
   let spokeAt = 0
   let quietSince = 0
   return (level: number, now: number): Turn => {
-    if (level >= loud) { spokeAt ||= now; quietSince = 0; return 'speech' }
+    if (level >= loud) {
+      spokeAt ||= now
+      quietSince = 0
+      return 'speech'
+    }
     if (!spokeAt) return 'waiting'
     if (level < quiet) quietSince ||= now
     return quietSince && now - quietSince >= quietMs ? 'done' : 'speech'

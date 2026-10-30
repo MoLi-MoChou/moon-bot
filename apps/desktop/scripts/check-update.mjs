@@ -11,11 +11,19 @@ import { setTimeout as sleep } from 'node:timers/promises'
 
 const [executable, source, mode] = process.argv.slice(2)
 const mac = process.platform === 'darwin'
-if (!executable || !source || !existsSync(executable)
-  || (mac ? mode !== undefined : !existsSync(join(source, 'latest.yml')))) {
-  console.error(`check-update: usage: ${mac
-    ? 'node scripts/check-update.mjs <app executable> <version>'
-    : 'node scripts/check-update.mjs <app executable> <feed folder with latest.yml> [--kill]'}`)
+if (
+  !executable ||
+  !source ||
+  !existsSync(executable) ||
+  (mac ? mode !== undefined : !existsSync(join(source, 'latest.yml')))
+) {
+  console.error(
+    `check-update: usage: ${
+      mac
+        ? 'node scripts/check-update.mjs <app executable> <version>'
+        : 'node scripts/check-update.mjs <app executable> <feed folder with latest.yml> [--kill]'
+    }`,
+  )
   process.exit(2)
 }
 const version = mac ? source : /^version:\s*(\S+)/mu.exec(readFileSync(join(source, 'latest.yml'), 'utf8'))?.[1]
@@ -26,25 +34,37 @@ const served = []
 const server = createServer((request, response) => {
   if (mac) {
     const pathname = new URL(request.url, 'http://feed/').pathname
-    if (request.method !== 'GET' || pathname !== '/') { response.writeHead(404).end(); return }
+    if (request.method !== 'GET' || pathname !== '/') {
+      response.writeHead(404).end()
+      return
+    }
     served.push(pathname)
-    response.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify([{
-      tag_name: `v${version}`,
-      html_url: `https://github.com/Fei2411/DeepSeek-Bot/releases/tag/v${version}`,
-      draft: false,
-      prerelease: false,
-      assets: [{ name: `Moon-Bot-${version}-mac-${process.arch}.zip` }],
-    }]))
+    response.writeHead(200, { 'content-type': 'application/json' }).end(
+      JSON.stringify([
+        {
+          tag_name: `v${version}`,
+          html_url: `https://github.com/Fei2411/DeepSeek-Bot/releases/tag/v${version}`,
+          draft: false,
+          prerelease: false,
+          assets: [{ name: `Moon-Bot-${version}-mac-${process.arch}.zip` }],
+        },
+      ]),
+    )
     return
   }
   const name = basename(decodeURIComponent(new URL(request.url, 'http://feed/').pathname))
   const file = join(source, name)
   served.push(name)
-  if (!existsSync(file) || !statSync(file).isFile()) { response.writeHead(404).end(); return }
+  if (!existsSync(file) || !statSync(file).isFile()) {
+    response.writeHead(404).end()
+    return
+  }
   response.writeHead(200, { 'content-length': statSync(file).size })
   createReadStream(file).pipe(response)
 })
-await new Promise((done) => { server.listen(0, '127.0.0.1', done) })
+await new Promise(done => {
+  server.listen(0, '127.0.0.1', done)
+})
 const feed = `http://127.0.0.1:${String(server.address().port)}/`
 
 // Closes the window from inside the page, as check-packed does; the app then quits as it does
@@ -53,11 +73,16 @@ async function closeWindow(port, waitForReady = false) {
   // Until the Host is ready the window shows a note of its own.
   const find = async () => {
     const targets = await (await fetch(`http://127.0.0.1:${String(port)}/json/list`)).json()
-    const pages = targets.filter(target => target.type === 'page' && (/^http:\/\/127\.0\.0\.1:\d+\//u.test(target.url) || target.url.startsWith('data:text/html')))
+    const pages = targets.filter(
+      target =>
+        target.type === 'page' &&
+        (/^http:\/\/127\.0\.0\.1:\d+\//u.test(target.url) || target.url.startsWith('data:text/html')),
+    )
     return pages.find(target => target.url.startsWith('http:')) ?? (waitForReady ? undefined : pages[0])
   }
   let page = await find()
-  for (const end = Date.now() + 120_000; page === undefined && waitForReady && Date.now() < end; page = await find()) await sleep(500)
+  for (const end = Date.now() + 120_000; page === undefined && waitForReady && Date.now() < end; page = await find())
+    await sleep(500)
   if (!page) throw new Error('the app window is not there')
   const socket = new WebSocket(page.webSocketDebuggerUrl)
   await new Promise((done, reject) => {
@@ -66,23 +91,28 @@ async function closeWindow(port, waitForReady = false) {
   })
   if (waitForReady) {
     const ready = await new Promise((done, reject) => {
-      const timer = setTimeout(() => { reject(new Error('the app window did not finish booting')) }, 120_000)
-      socket.addEventListener('message', (event) => {
+      const timer = setTimeout(() => {
+        reject(new Error('the app window did not finish booting'))
+      }, 120_000)
+      socket.addEventListener('message', event => {
         const message = JSON.parse(String(event.data))
         if (message.id !== 1) return
         clearTimeout(timer)
         if (message.error) reject(new Error(message.error.message))
         else done(message.result?.result?.value === true)
       })
-      socket.send(JSON.stringify({
-        id: 1,
-        method: 'Runtime.evaluate',
-        params: {
-          expression: "new Promise(resolve => { const end = Date.now() + 120000; const check = () => { if (document.querySelector('.bt-tile, .bt-row')) resolve(true); else if (Date.now() >= end) resolve(false); else setTimeout(check, 250) }; check() })",
-          returnByValue: true,
-          awaitPromise: true,
-        },
-      }))
+      socket.send(
+        JSON.stringify({
+          id: 1,
+          method: 'Runtime.evaluate',
+          params: {
+            expression:
+              "new Promise(resolve => { const end = Date.now() + 120000; const check = () => { if (document.querySelector('.bt-tile, .bt-row')) resolve(true); else if (Date.now() >= end) resolve(false); else setTimeout(check, 250) }; check() })",
+            returnByValue: true,
+            awaitPromise: true,
+          },
+        }),
+      )
     })
     if (!ready) throw new Error('the app window did not finish booting')
   }
@@ -94,14 +124,28 @@ let app
 try {
   // A terminal inside an Electron-based editor may set ELECTRON_RUN_AS_NODE, which turns the app into plain Node.
   const { ELECTRON_RUN_AS_NODE: _runAsNode, ...env } = process.env
-  Object.assign(env, { MOON_BOT_DATA: join(work, 'home'), MOON_BOT_SHELL_DATA: join(work, 'shell'), MOON_BOT_UPDATE_URL: feed })
+  Object.assign(env, {
+    MOON_BOT_DATA: join(work, 'home'),
+    MOON_BOT_SHELL_DATA: join(work, 'shell'),
+    MOON_BOT_UPDATE_URL: feed,
+  })
   const port = 9300 + Math.floor(Math.random() * 600)
-  app = spawn(resolve(executable), [`--remote-debugging-port=${String(port)}`], { env, stdio: ['ignore', 'pipe', 'pipe'] })
-  const exited = new Promise((done) => { app.once('exit', (code) => { done(code) }) })
+  app = spawn(resolve(executable), [`--remote-debugging-port=${String(port)}`], {
+    env,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  })
+  const exited = new Promise(done => {
+    app.once('exit', code => {
+      done(code)
+    })
+  })
   let output = ''
   for (const stream of [app.stdout, app.stderr]) {
     stream.setEncoding('utf8')
-    stream.on('data', (chunk) => { output += chunk; process.stdout.write(chunk) })
+    stream.on('data', chunk => {
+      output += chunk
+      process.stdout.write(chunk)
+    })
   }
   const updateLine = `Moon Bot: update ${String(version)} ${mac ? 'available' : 'downloaded'}`
   const end = Date.now() + (mac ? 3 : 5) * 60_000
@@ -113,7 +157,10 @@ try {
       const status = mac ? 'the update was found' : 'the update was downloaded'
       throw new Error(`the app exited (code ${String(app.exitCode)}) before ${status}`)
     }
-    if (Date.now() > end) throw new Error(mac ? 'the update was not found within 3 minutes' : 'the update was not downloaded within 5 minutes')
+    if (Date.now() > end)
+      throw new Error(
+        mac ? 'the update was not found within 3 minutes' : 'the update was not downloaded within 5 minutes',
+      )
     await sleep(500)
   }
   if (mac && !served.includes('/')) throw new Error('the release feed was not requested')

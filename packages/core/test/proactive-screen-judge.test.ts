@@ -47,15 +47,19 @@ test('a candidate with no evidence is dropped without asking anyone', () => {
   const verdict = parseJudgeAnswer('INTERRUPT')
   assert.equal(verdict.kind, 'send')
   // The real check: judge() refuses before spending a request.
-  return judge({ ...candidate, evidence: [] }, async () => { asked = true; return 'INTERRUPT' })
-    .then((answer) => {
-      assert.equal(answer.kind, 'drop')
-      assert.equal(asked, false)
-    })
+  return judge({ ...candidate, evidence: [] }, async () => {
+    asked = true
+    return 'INTERRUPT'
+  }).then(answer => {
+    assert.equal(answer.kind, 'drop')
+    assert.equal(asked, false)
+  })
 })
 
 test('a failed call is a drop, not an error the caller has to handle', async () => {
-  const verdict = await judge(candidate, async () => { throw new Error('no model today') })
+  const verdict = await judge(candidate, async () => {
+    throw new Error('no model today')
+  })
   assert.equal(verdict.kind, 'drop')
   if (verdict.kind === 'drop') assert.match(verdict.reason, /no model today/)
 })

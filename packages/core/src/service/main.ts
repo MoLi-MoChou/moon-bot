@@ -31,7 +31,9 @@ const service = await startService({
   host,
   port,
 })
-console.log(`moon-bot: ${service.url}${password !== '' ? ' (password set)' : host === '127.0.0.1' ? ' (loopback, no password)' : ''}`)
+console.log(
+  `moon-bot: ${service.url}${password !== '' ? ' (password set)' : host === '127.0.0.1' ? ' (loopback, no password)' : ''}`,
+)
 
 const stop = (): void => {
   void service.close().finally(() => process.exit(0))

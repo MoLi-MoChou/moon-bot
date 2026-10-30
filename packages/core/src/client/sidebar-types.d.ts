@@ -59,7 +59,11 @@ export interface TSidebarRoster {
 
 /** The projection the preview line reads: a turn outline. */
 export interface TSidebarProjection {
-  readonly turnOutline?: readonly { readonly turn?: number; readonly response?: string; readonly prompt?: string | undefined }[]
+  readonly turnOutline?: readonly {
+    readonly turn?: number
+    readonly response?: string
+    readonly prompt?: string | undefined
+  }[]
 }
 
 /** One row of the shell's Session list. */
@@ -172,14 +176,19 @@ export interface TSidebarActions {
   openSettings: (page: string, id?: string) => void
   openConnectors: () => void
   landOn: (botId: string, last?: { readonly botId: string; readonly sessionId: string } | null) => void
-  isAgentSession?: ((id: string) => boolean)
+  isAgentSession?: (id: string) => boolean
 }
 
 /** A store hook: one selected slice of a shell store, re-rendered on change. */
 export type TSidebarHook<T> = <R>(select: (state: T) => R) => R
 
 /** The retain-info hook: whether a Session is kept by one of the shell's views. */
-export type TSidebarRetainHook = (id: string, select: (info: { readonly retainedBy?: { readonly mainView?: number | undefined } | undefined } | undefined) => boolean) => boolean
+export type TSidebarRetainHook = (
+  id: string,
+  select: (
+    info: { readonly retainedBy?: { readonly mainView?: number | undefined } | undefined } | undefined,
+  ) => boolean,
+) => boolean
 
 /** One entry of the list, before it is drawn: a Bot, a group, or the Agent. */
 export type TSidebarEntry =
@@ -212,7 +221,7 @@ export interface TSidebarRowProps {
 
 /** The props the shell hands the whole sidebar. */
 export interface TSidebarProps extends TSidebarRowProps {
-  readonly expandSidebar?: (() => void)
+  readonly expandSidebar?: () => void
   readonly useRoster: TSidebarHook<TSidebarRoster>
   readonly useUpdate: TSidebarHook<TSidebarUpdate | null>
   readonly useRegistry: TSidebarHook<unknown>

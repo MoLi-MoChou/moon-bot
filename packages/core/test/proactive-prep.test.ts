@@ -39,7 +39,11 @@ test('the prompt says an empty answer is the normal one', () => {
 })
 
 test('a well-formed answer becomes a candidate', async () => {
-  const candidate = await prepare(input(), async () => answer(good), () => 'c1')
+  const candidate = await prepare(
+    input(),
+    async () => answer(good),
+    () => 'c1',
+  )
   assert.equal(candidate?.id, 'c1')
   assert.equal(candidate?.ttl, 'long')
   assert.equal(candidate?.evidence.length, 1)
@@ -50,26 +54,82 @@ test('a well-formed answer becomes a candidate', async () => {
 })
 
 test('a model that says nothing produces no candidate', async () => {
-  assert.equal(await prepare(input(), async () => 'NOTHING', () => 'c1'), undefined)
-  assert.equal(await prepare(input(), async () => '  nothing  ', () => 'c1'), undefined)
-  assert.equal(await prepare(input(), async () => '', () => 'c1'), undefined)
+  assert.equal(
+    await prepare(
+      input(),
+      async () => 'NOTHING',
+      () => 'c1',
+    ),
+    undefined,
+  )
+  assert.equal(
+    await prepare(
+      input(),
+      async () => '  nothing  ',
+      () => 'c1',
+    ),
+    undefined,
+  )
+  assert.equal(
+    await prepare(
+      input(),
+      async () => '',
+      () => 'c1',
+    ),
+    undefined,
+  )
 })
 
 test('an answer with no evidence is refused, however good it sounds', async () => {
   // The rule that matters most: no source, no message.
   const unsourced = { ...good, evidence: [] }
-  assert.equal(await prepare(input(), async () => answer(unsourced), () => 'c1'), undefined)
+  assert.equal(
+    await prepare(
+      input(),
+      async () => answer(unsourced),
+      () => 'c1',
+    ),
+    undefined,
+  )
 })
 
 test('evidence made only of blank lines counts as no evidence', async () => {
   const blank = { ...good, evidence: ['', '   '] }
-  assert.equal(await prepare(input(), async () => answer(blank), () => 'c1'), undefined)
+  assert.equal(
+    await prepare(
+      input(),
+      async () => answer(blank),
+      () => 'c1',
+    ),
+    undefined,
+  )
 })
 
 test('broken JSON is a silent failure, not an exception', async () => {
-  assert.equal(await prepare(input(), async () => '{"text": ', () => 'c1'), undefined)
-  assert.equal(await prepare(input(), async () => '[1,2,3]', () => 'c1'), undefined)
-  assert.equal(await prepare(input(), async () => '"just a string"', () => 'c1'), undefined)
+  assert.equal(
+    await prepare(
+      input(),
+      async () => '{"text": ',
+      () => 'c1',
+    ),
+    undefined,
+  )
+  assert.equal(
+    await prepare(
+      input(),
+      async () => '[1,2,3]',
+      () => 'c1',
+    ),
+    undefined,
+  )
+  assert.equal(
+    await prepare(
+      input(),
+      async () => '"just a string"',
+      () => 'c1',
+    ),
+    undefined,
+  )
 })
 
 test('a fenced JSON block is read as JSON', () => {
@@ -92,7 +152,14 @@ test('a deadline is treated as long-lived even when the model says short', () =>
 
 test('nothing to read means no model call at all', async () => {
   let asked = 0
-  const candidate = await prepare(input({ memory: [], messages: [] }), async () => { asked += 1; return answer(good) }, () => 'c1')
+  const candidate = await prepare(
+    input({ memory: [], messages: [] }),
+    async () => {
+      asked += 1
+      return answer(good)
+    },
+    () => 'c1',
+  )
   assert.equal(candidate, undefined)
   assert.equal(asked, 0, 'an empty day must not cost a request')
 })

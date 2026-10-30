@@ -26,7 +26,11 @@ test('a single-line relay keeps its inline body, including later brackets', () =
 })
 
 test('a header strip never reaches into a later body line or unrelated bracketed text', () => {
-  for (const text of ['[Message from Writer\n[Keep this line]', '[Someone else]\nHello', 'Hello\n[Message from Writer]']) {
+  for (const text of [
+    '[Message from Writer\n[Keep this line]',
+    '[Someone else]\nHello',
+    'Hello\n[Message from Writer]',
+  ]) {
     assert.equal(stripHeader(text), text)
   }
 })

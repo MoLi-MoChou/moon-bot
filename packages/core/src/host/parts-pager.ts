@@ -41,7 +41,8 @@ export function createPartPager(options: PartPagerOptions): PartPager {
         const content: readonly unknown[] = Array.isArray(message?.content) ? message.content : []
         for (const raw of content) {
           const block = raw as { readonly type?: unknown; readonly text?: unknown } | undefined
-          if (block?.type === 'text' && typeof block.text === 'string' && block.text.trim() !== '') items.push({ kind: 'bot', text: block.text, time })
+          if (block?.type === 'text' && typeof block.text === 'string' && block.text.trim() !== '')
+            items.push({ kind: 'bot', text: block.text, time })
         }
         continue
       }
@@ -50,11 +51,13 @@ export function createPartPager(options: PartPagerOptions): PartPager {
       if (event.type === 'turn/end' || event.type === 'turn/error') {
         const turn = Number(data.turn)
         if (hidden.has(turn)) continue
-        const error = (event.type === 'turn/end'
-          ? (data.reason as { readonly kind?: unknown; readonly error?: unknown } | undefined)?.kind === 'error'
-            ? (data.reason as { readonly error?: unknown }).error
-            : undefined
-          : data.error) as { readonly code?: unknown; readonly message?: unknown } | undefined
+        const error = (
+          event.type === 'turn/end'
+            ? (data.reason as { readonly kind?: unknown; readonly error?: unknown } | undefined)?.kind === 'error'
+              ? (data.reason as { readonly error?: unknown }).error
+              : undefined
+            : data.error
+        ) as { readonly code?: unknown; readonly message?: unknown } | undefined
         if (error === null || typeof error !== 'object') continue
         items.push({
           kind: 'error',
@@ -65,48 +68,73 @@ export function createPartPager(options: PartPagerOptions): PartPager {
         continue
       }
       if (event.type !== 'user/message') continue
-      const source = data.source as {
-        readonly kind?: unknown
-        readonly handoff?: unknown
-        readonly deferred?: unknown
-        readonly role?: unknown
-        readonly senderSessionId?: unknown
-        readonly senderName?: unknown
-        readonly roomId?: unknown
-      } | undefined
+      const source = data.source as
+        | {
+            readonly kind?: unknown
+            readonly handoff?: unknown
+            readonly deferred?: unknown
+            readonly role?: unknown
+            readonly senderSessionId?: unknown
+            readonly senderName?: unknown
+            readonly roomId?: unknown
+          }
+        | undefined
       if (source?.kind === 'user' || source?.kind === PROACTIVE_KIND) {
         const content: readonly unknown[] = Array.isArray(data.content) ? data.content : []
         const images = content.filter(raw => (raw as { readonly type?: unknown } | undefined)?.type === 'image').length
         // A message the Bot brought up itself reads as a user row — the Bot answers it — but
         // it carries the mark so the interface never pretends the user typed it.
         const proactive = source?.kind === PROACTIVE_KIND || undefined
-        items.push({ kind: 'user', text: textOf(content), ...(images > 0 ? { images } : {}), ...(proactive === true ? { proactive: true } : {}), time })
+        items.push({
+          kind: 'user',
+          text: textOf(content),
+          ...(images > 0 ? { images } : {}),
+          ...(proactive === true ? { proactive: true } : {}),
+          time,
+        })
       } else if (source?.kind === REPLY_KIND) {
         const text = textOf(data.content)
         const reply = readReply(text)
-        if (reply?.questions !== undefined) items.push({ kind: 'answer', questions: reply.questions, answers: reply.answers, time })
-        else if (reply?.views !== undefined) items.push({ kind: 'answer', text: replyText(text), views: reply.views, answers: reply.answers, time })
-      } else if (source?.kind === SOURCE_KIND && source.handoff !== true && source.deferred !== true && ['request', 'reply', 'report', 'stopped'].includes(source.role as string)) {
+        if (reply?.questions !== undefined)
+          items.push({ kind: 'answer', questions: reply.questions, answers: reply.answers, time })
+        else if (reply?.views !== undefined)
+          items.push({ kind: 'answer', text: replyText(text), views: reply.views, answers: reply.answers, time })
+      } else if (
+        source?.kind === SOURCE_KIND &&
+        source.handoff !== true &&
+        source.deferred !== true &&
+        ['request', 'reply', 'report', 'stopped'].includes(source.role as string)
+      ) {
         items.push({
-          kind: 'event', role: source.role,
-          botId: (source.senderSessionId ?? null) as string | null, name: (source.senderName ?? null) as string | null,
-          roomId: (source.roomId ?? null) as string | null, time,
+          kind: 'event',
+          role: source.role,
+          botId: (source.senderSessionId ?? null) as string | null,
+          name: (source.senderName ?? null) as string | null,
+          roomId: (source.roomId ?? null) as string | null,
+          time,
         })
       }
     }
     return items
   }
 
-  async function partPage(parts: readonly SwitchPart[], index: number, cursor: PageCursor | undefined): Promise<PartPage> {
+  async function partPage(
+    parts: readonly SwitchPart[],
+    index: number,
+    cursor: PageCursor | undefined,
+  ): Promise<PartPage> {
     const part = parts[index] as SwitchPart
     const agent = await rt.resolveAgent(part.sessionId)
-    const beforeSeq = Number.isInteger(cursor?.beforeSeq) ? cursor?.beforeSeq as number : undefined
-    const page = await ctx.sessionController.page({
-      address: { kind: 'session', sessionId: part.sessionId },
-      throughSeq: Number(agent.session.seq) - 1,
-      ...(beforeSeq === undefined ? {} : { beforeSeq }),
-      maxMessages: EARLIER_PAGE,
-    }, AbortSignal.timeout(HISTORY_TIMEOUT_MS))
+    const beforeSeq = Number.isInteger(cursor?.beforeSeq) ? (cursor?.beforeSeq as number) : undefined
+    const page = await ctx.sessionController.page(
+      {
+        address: { kind: 'session', sessionId: part.sessionId },
+        throughSeq: Number(agent.session.seq) - 1,
+        ...(beforeSeq === undefined ? {} : { beforeSeq }),
+        maxMessages: EARLIER_PAGE,
+      },
+      AbortSignal.timeout(HISTORY_TIMEOUT_MS),
+    )
     const events = page.records.map(record => record.event)
     const items = displayItems(part.sessionId, events)
     const more = page.hasMore && events.length > 0
@@ -120,7 +148,7 @@ export function createPartPager(options: PartPagerOptions): PartPager {
     const botId = rt.chatOwners.get(sessionId) ?? (past?.roomId === undefined ? past?.botId : undefined)
     const parts = botId === undefined ? [] : partsOf(botId)
     const at = parts.findIndex(part => part.sessionId === sessionId)
-    const index = Number.isInteger(cursor?.part) ? cursor?.part as number : at - 1
+    const index = Number.isInteger(cursor?.part) ? (cursor?.part as number) : at - 1
     if (at <= 0 || index < 0 || index >= at) return { items: [], cursor: null, startedAt: parts[at]?.startedAt ?? null }
     return { ...(await partPage(parts, index, cursor)), startedAt: (parts[at] as SwitchPart).startedAt }
   }

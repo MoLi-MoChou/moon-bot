@@ -1,6 +1,14 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { ACP_CANDIDATES, findAgents, firstPathOf, lookupToolFor, pickAgent, pickFailureMessage, type FoundAgent } from '../src/discovery.ts'
+import {
+  ACP_CANDIDATES,
+  findAgents,
+  firstPathOf,
+  lookupToolFor,
+  pickAgent,
+  pickFailureMessage,
+  type FoundAgent,
+} from '../src/discovery.ts'
 
 const agent = (id: string, path: string): FoundAgent => {
   const candidate = ACP_CANDIDATES.find(entry => entry.id === id)
@@ -10,12 +18,21 @@ const agent = (id: string, path: string): FoundAgent => {
 
 test('the candidates are the ACP agents core discovers', () => {
   // Keep in step with the kind: 'acp' entries of CANDIDATES in core/src/engine/acp/discovery.ts.
-  assert.deepEqual(ACP_CANDIDATES.map(candidate => candidate.command), ['claude-agent-acp', 'claude', 'codex-acp', 'opencode', 'gemini'])
+  assert.deepEqual(
+    ACP_CANDIDATES.map(candidate => candidate.command),
+    ['claude-agent-acp', 'claude', 'codex-acp', 'opencode', 'gemini'],
+  )
 })
 
 test('a found agent carries the version its --version prints', () => {
-  const found = findAgents([ACP_CANDIDATES[1] as (typeof ACP_CANDIDATES)[number]], () => ({ status: 0, stdout: '/usr/bin/claude\n' }), path => path === '/usr/bin/claude' ? '1.2.3 (Claude Code)' : undefined)
-  assert.deepEqual(found, [{ id: 'claude', label: 'Claude', command: 'claude', path: '/usr/bin/claude', version: '1.2.3 (Claude Code)' }])
+  const found = findAgents(
+    [ACP_CANDIDATES[1] as (typeof ACP_CANDIDATES)[number]],
+    () => ({ status: 0, stdout: '/usr/bin/claude\n' }),
+    path => (path === '/usr/bin/claude' ? '1.2.3 (Claude Code)' : undefined),
+  )
+  assert.deepEqual(found, [
+    { id: 'claude', label: 'Claude', command: 'claude', path: '/usr/bin/claude', version: '1.2.3 (Claude Code)' },
+  ])
 })
 
 test('the lookup tool follows the platform: which, except where.exe on windows', () => {
@@ -37,7 +54,10 @@ test('findAgents probes every candidate command through the lookup', () => {
     probed.push([tool, args[0] ?? ''])
     return args[0] === 'gemini' ? { status: 0, stdout: '/opt/gemini/bin/gemini\n' } : { status: 1, stdout: '' }
   })
-  assert.deepEqual(probed, ACP_CANDIDATES.map(candidate => [lookupToolFor(process.platform), candidate.command]))
+  assert.deepEqual(
+    probed,
+    ACP_CANDIDATES.map(candidate => [lookupToolFor(process.platform), candidate.command]),
+  )
   assert.deepEqual(found, [agent('gemini', '/opt/gemini/bin/gemini')])
 })
 

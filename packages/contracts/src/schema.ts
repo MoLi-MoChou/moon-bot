@@ -13,7 +13,10 @@ const color = z.string().regex(/^[a-z][\w-]{0,31}$/)
 
 /** A Bot's stored look; either a built-in character or an uploaded image. */
 export const AvatarSchema = z.object({
-  shape: z.string().regex(/^[a-z][\w-]{0,31}$/).optional(),
+  shape: z
+    .string()
+    .regex(/^[a-z][\w-]{0,31}$/)
+    .optional(),
   image: z.string().startsWith('data:image/').optional(),
 })
 export type Avatar = z.infer<typeof AvatarSchema>

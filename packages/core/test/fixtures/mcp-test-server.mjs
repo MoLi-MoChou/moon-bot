@@ -21,12 +21,20 @@ const tools = [
       required: ['names'],
     },
   },
-  { name: 'argv', description: 'Report the arguments after the script.', inputSchema: { type: 'object', properties: {} } },
+  {
+    name: 'argv',
+    description: 'Report the arguments after the script.',
+    inputSchema: { type: 'object', properties: {} },
+  },
 ]
 
 for await (const line of createInterface({ input: process.stdin })) {
   let request
-  try { request = JSON.parse(line) } catch { continue }
+  try {
+    request = JSON.parse(line)
+  } catch {
+    continue
+  }
   if (!request || request.id === undefined) continue
   let result
   switch (request.method) {
@@ -49,7 +57,9 @@ for await (const line of createInterface({ input: process.stdin })) {
       const args = request.params?.arguments ?? {}
       if (name === 'env') {
         const names = Array.isArray(args.names) ? args.names : []
-        result = text(JSON.stringify(Object.fromEntries(names.map(key => [String(key), process.env[String(key)] ?? null]))))
+        result = text(
+          JSON.stringify(Object.fromEntries(names.map(key => [String(key), process.env[String(key)] ?? null]))),
+        )
       } else if (name === 'argv') {
         result = text(JSON.stringify(process.argv.slice(2)))
       } else {

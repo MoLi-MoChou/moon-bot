@@ -22,33 +22,54 @@ if (!name || !webPort || !repo || !rendererPort) {
 const ROOT = dirname(dirname(dirname(dirname(fileURLToPath(import.meta.url)))))
 const HOME = join(ROOT, `.moon-bot-test-desktop-${name}`)
 const saved = () => JSON.parse(readFileSync(join(HOME, 'bot', 'state.json'), 'utf8'))
-const names = team => Object.values(team.bots).map(bot => bot.name).sort()
+const names = team =>
+  Object.values(team.bots)
+    .map(bot => bot.name)
+    .sort()
 const mainNames = team => team.mainBotIds.map(id => team.bots[id]?.name ?? id)
 
 const log = readFileSync(join(HOME, 'web.log'), 'utf8')
 const login = log.match(new RegExp(`http://127\\.0\\.0\\.1:${webPort}/\\?token=[^\\s]+`))?.[0]
 if (!login) throw new Error('no login URL in web.log')
-const cookie = (await fetch(login, { redirect: 'manual' })).headers.getSetCookie().map(value => value.split(';')[0]).join('; ')
-const web = (endpoint, payload = {}) => fetch(`http://127.0.0.1:${webPort}/api/bot`, {
-  method: 'POST', headers: { 'content-type': 'application/json', cookie }, body: JSON.stringify({ endpoint, payload }),
-}).then(response => response.json())
+const cookie = (await fetch(login, { redirect: 'manual' })).headers
+  .getSetCookie()
+  .map(value => value.split(';')[0])
+  .join('; ')
+const web = (endpoint, payload = {}) =>
+  fetch(`http://127.0.0.1:${webPort}/api/bot`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', cookie },
+    body: JSON.stringify({ endpoint, payload }),
+  }).then(response => response.json())
 
 const { browser, page } = await connectApp(repo, rendererPort, 60_000)
-const desktop = (endpoint, payload = {}) => page.evaluate(([e, p]) => fetch('api/bot', {
-  method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ endpoint: e, payload: p }),
-}).then(response => response.json()), [endpoint, payload])
+const desktop = (endpoint, payload = {}) =>
+  page.evaluate(
+    ([e, p]) =>
+      fetch('api/bot', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ endpoint: e, payload: p }),
+      }).then(response => response.json()),
+    [endpoint, payload],
+  )
 const ends = { web, desktop }
 
 const created = []
 const refused = []
-const report = (label) => {
+const report = label => {
   const team = saved()
-  console.log(`${label}: state.json has ${names(team).join(', ') || 'no Bots'} (Main: ${mainNames(team).join(', ')}, revision ${team.revision})`)
+  console.log(
+    `${label}: state.json has ${names(team).join(', ') || 'no Bots'} (Main: ${mainNames(team).join(', ')}, revision ${team.revision})`,
+  )
 }
-const viewOf = async (end) => {
+const viewOf = async end => {
   const result = await ends[end]('state', {})
   if (!result.ok) return `error: ${result.error?.message}`
-  return `${result.value.bots.map(bot => bot.name).sort().join(', ')}${result.value.readOnly ? ` (read-only: ${result.value.readOnly})` : ''}`
+  return `${result.value.bots
+    .map(bot => bot.name)
+    .sort()
+    .join(', ')}${result.value.readOnly ? ` (read-only: ${result.value.readOnly})` : ''}`
 }
 
 // Each end loads (and, on a new team, bootstraps) its team.
@@ -56,7 +77,11 @@ for (const end of ['desktop', 'web']) console.log(`${end} sees: ${await viewOf(e
 await sleep(2000)
 report('after both loaded')
 
-for (const [end, botName] of [['web', 'WebBot'], ['desktop', 'DeskBot'], ['web', 'WebBot2']]) {
+for (const [end, botName] of [
+  ['web', 'WebBot'],
+  ['desktop', 'DeskBot'],
+  ['web', 'WebBot2'],
+]) {
   const result = await ends[end]('create-bot', { name: botName })
   if (result.ok) {
     created.push(botName)
@@ -78,5 +103,9 @@ const lost = created.filter(botName => !names(team).includes(botName))
 const failures = []
 if (lost.length > 0) failures.push(`lost Bots: ${lost.join(', ')}`)
 if (team.mainBotIds.length !== 1) failures.push(`Main Bots: ${mainNames(team).join(', ') || 'none'}`)
-console.log(failures.length === 0 ? `shared home: no lost updates (${refused.length} refused)` : `shared home: FAILED, ${failures.join('; ')}`)
+console.log(
+  failures.length === 0
+    ? `shared home: no lost updates (${refused.length} refused)`
+    : `shared home: FAILED, ${failures.join('; ')}`,
+)
 process.exitCode = failures.length === 0 ? 0 : 1

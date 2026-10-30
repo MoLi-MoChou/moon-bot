@@ -12,23 +12,41 @@ export interface UserMessage {
   readonly source?: Readonly<Record<string, unknown>> | undefined
 }
 
-export function createUserMessage(input: { content: readonly unknown[], source?: Readonly<Record<string, unknown>> | undefined }): UserMessage {
-  return structuredClone({ role: 'user', id: randomUUID(), content: input.content, ...(input.source !== undefined ? { source: input.source } : {}) }) as UserMessage
+export function createUserMessage(input: {
+  content: readonly unknown[]
+  source?: Readonly<Record<string, unknown>> | undefined
+}): UserMessage {
+  return structuredClone({
+    role: 'user',
+    id: randomUUID(),
+    content: input.content,
+    ...(input.source !== undefined ? { source: input.source } : {}),
+  }) as UserMessage
 }
 
 /** One chunk of a model stream, as the loop hands it to the assembler. */
 export type LlmStreamChunk =
-  | { readonly type: 'block-start', readonly index: number, readonly blockType: 'text' | 'reasoning' | 'tool-call' }
-  | { readonly type: 'text-delta' | 'reasoning-delta', readonly index: number, readonly text: string }
-  | { readonly type: 'tool-call-delta', readonly index: number, readonly id?: string, readonly name?: string, readonly argumentsDelta: string }
-  | { readonly type: 'block-end', readonly index: number, readonly block: { readonly type: string, readonly [key: string]: unknown } }
-  | { readonly type: 'usage', readonly usage: Readonly<Record<string, unknown>> }
-  | { readonly type: 'finish', readonly reason: StreamFinish }
+  | { readonly type: 'block-start'; readonly index: number; readonly blockType: 'text' | 'reasoning' | 'tool-call' }
+  | { readonly type: 'text-delta' | 'reasoning-delta'; readonly index: number; readonly text: string }
+  | {
+      readonly type: 'tool-call-delta'
+      readonly index: number
+      readonly id?: string
+      readonly name?: string
+      readonly argumentsDelta: string
+    }
+  | {
+      readonly type: 'block-end'
+      readonly index: number
+      readonly block: { readonly type: string; readonly [key: string]: unknown }
+    }
+  | { readonly type: 'usage'; readonly usage: Readonly<Record<string, unknown>> }
+  | { readonly type: 'finish'; readonly reason: StreamFinish }
 
 /** How a stream ended; an error or abort carries its failure. */
 export interface StreamFinish {
   readonly kind: string
-  readonly failure?: { readonly message?: string | undefined, readonly [key: string]: unknown } | undefined
+  readonly failure?: { readonly message?: string | undefined; readonly [key: string]: unknown } | undefined
   readonly [key: string]: unknown
 }
 
@@ -82,7 +100,10 @@ export class BlockAssembler {
       return
     }
     if (chunk.type === 'block-end') {
-      this.ensure(chunk.index, chunk.block.type === 'reasoning' ? 'reasoning' : chunk.block.type === 'tool-call' ? 'tool-call' : 'text').block = chunk.block as AssembledBlock
+      this.ensure(
+        chunk.index,
+        chunk.block.type === 'reasoning' ? 'reasoning' : chunk.block.type === 'tool-call' ? 'tool-call' : 'text',
+      ).block = chunk.block as AssembledBlock
       return
     }
     if (chunk.type === 'usage') {

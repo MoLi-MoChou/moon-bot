@@ -26,7 +26,11 @@ interface SessionIndexOptions {
 }
 
 export function createSessionIndex({
-  state, botOf, onIndexed, cancelApprovals, archiveSession,
+  state,
+  botOf,
+  onIndexed,
+  cancelApprovals,
+  archiveSession,
 }: SessionIndexOptions): SessionIndex {
   const chatOwners = new Map<string, string>()
   const groupOwners = new Map<string, { readonly botId: string; readonly roomId: string }>()
@@ -45,7 +49,8 @@ export function createSessionIndex({
       for (const [botId, segments] of Object.entries(room.segments ?? {})) {
         for (const segment of segments) pastOwners.set(segment.sessionId, { botId, roomId: room.id })
       }
-      for (const [botId, sessionId] of Object.entries(room.sessions ?? {})) groupOwners.set(sessionId, { botId, roomId: room.id })
+      for (const [botId, sessionId] of Object.entries(room.sessions ?? {}))
+        groupOwners.set(sessionId, { botId, roomId: room.id })
     }
     onIndexed?.()
   }
@@ -58,7 +63,9 @@ export function createSessionIndex({
   // A Session where the Bot speaks now, as opposed to an archived segment.
   const isBotSession = (id: string): boolean => chatOwners.has(id) || groupOwners.has(id)
   const groupSessionsOf = (botId: string): readonly string[] =>
-    Object.values(state.rooms).map(room => room.sessions?.[botId]).filter((id): id is string => id !== undefined)
+    Object.values(state.rooms)
+      .map(room => room.sessions?.[botId])
+      .filter((id): id is string => id !== undefined)
   const dropGroupSession = (room: StoredRoom, botId: string): void => {
     const sessionId = room.sessions?.[botId]
     if (sessionId === undefined) return
@@ -84,7 +91,15 @@ export function createSessionIndex({
   }
 
   return {
-    chatOwners, groupOwners, pastOwners,
-    indexSessions, chatOf, selfOf, isBotSession, groupSessionsOf, dropGroupSession, retireGroupSession,
+    chatOwners,
+    groupOwners,
+    pastOwners,
+    indexSessions,
+    chatOf,
+    selfOf,
+    isBotSession,
+    groupSessionsOf,
+    dropGroupSession,
+    retireGroupSession,
   }
 }

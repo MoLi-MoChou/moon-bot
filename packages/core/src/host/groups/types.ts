@@ -60,8 +60,15 @@ export interface ReadyRoom extends GroupRoom {
 }
 
 export type SlotStatus =
-  | 'waiting' | 'speaking' | 'posted' | 'passed' | 'missed'
-  | 'working' | 'waiting-approval' | 'failed' | 'left'
+  | 'waiting'
+  | 'speaking'
+  | 'posted'
+  | 'passed'
+  | 'missed'
+  | 'working'
+  | 'waiting-approval'
+  | 'failed'
+  | 'left'
 
 /** One member's place in a round. */
 export interface GroupSlot {
@@ -199,7 +206,13 @@ export interface GroupRuntime extends Omit<HostRuntime, 'own' | 'postToRoom'> {
   /** `own` accepts a missing table: a group that has no Sessions yet has none. */
   own<T>(record: Readonly<Record<string, T>> | null | undefined, id: string): T | undefined
   roomOf(roomId: string | undefined): GroupRoom | undefined
-  postToRoom(room: GroupRoom, sender: StoredBot, text: string, options?: RoomPostOptions, files?: readonly AttachmentRef[]): Promise<void>
+  postToRoom(
+    room: GroupRoom,
+    sender: StoredBot,
+    text: string,
+    options?: RoomPostOptions,
+    files?: readonly AttachmentRef[],
+  ): Promise<void>
   roomWaiters: Map<string | undefined, RoomWaiter>
   roomProgress: Map<string | undefined, GroupRound>
   roomInbox: Map<string, RoomPost[]>
@@ -215,7 +228,12 @@ export interface GroupRuntime extends Omit<HostRuntime, 'own' | 'postToRoom'> {
   roomStepText?: (sessionId: string, info: TurnInfo | undefined, raw: string, first: boolean) => Promise<void>
   takeRoomSteps?: (sessionId: string) => string
   withRoomSteps?: (lines: string, reply: string) => string
-  lateRoomReply: (sessionId: string, info: TurnInfo, reply: string, options?: { readonly shown?: boolean }) => Promise<void>
+  lateRoomReply: (
+    sessionId: string,
+    info: TurnInfo,
+    reply: string,
+    options?: { readonly shown?: boolean },
+  ) => Promise<void>
   lateRoomFailure: (sessionId: string, info: TurnInfo, failure: FailureDetail) => Promise<void>
   dropGroupLines: (roomId: string) => void
   greetRoom: (roomId: string) => Promise<void>
@@ -225,14 +243,26 @@ export interface GroupRuntime extends Omit<HostRuntime, 'own' | 'postToRoom'> {
   createSession(title: string, options?: { readonly dir?: string | undefined }): Promise<string>
   workDirOf(place: { readonly botId?: string | undefined; readonly roomId?: string | undefined }): string | undefined
   desiredModel(bot: StoredBot): Promise<string | undefined>
-  selectSessionModel(sessionId: string, route: { readonly provider: string; readonly model: string; readonly reasoningEffort?: string | undefined } | undefined): Promise<unknown>
+  selectSessionModel(
+    sessionId: string,
+    route:
+      | { readonly provider: string; readonly model: string; readonly reasoningEffort?: string | undefined }
+      | undefined,
+  ): Promise<unknown>
   applyPermission(bot: StoredBot, sessionId: string, room?: StoredRoom): Promise<void>
   ownChatBrief(member: { readonly id: string; readonly name: string }): Promise<string>
   noteText(part: ChatPart): string | undefined
   partIndex(parts: readonly ChatPart[]): string
   aroundOwnChat(botId: string, anchor: string): Promise<AroundOwnChatError | AroundOwnChatFound>
-  latestOwnChat(botId: string, options?: { readonly askingId?: string | undefined; readonly limit?: number }): Promise<readonly string[]>
-  searchOwnChat(botId: string, query: string, options?: { readonly askingId?: string | undefined; readonly limit?: number }): Promise<{ readonly lines: readonly string[]; readonly every: boolean }>
+  latestOwnChat(
+    botId: string,
+    options?: { readonly askingId?: string | undefined; readonly limit?: number },
+  ): Promise<readonly string[]>
+  searchOwnChat(
+    botId: string,
+    query: string,
+    options?: { readonly askingId?: string | undefined; readonly limit?: number },
+  ): Promise<{ readonly lines: readonly string[]; readonly every: boolean }>
 
   imagesForGroup(attachments: readonly AttachmentRef[], sessionId: string): Promise<readonly string[]>
   closeWork?: (id: string, name: string, text: string) => string | undefined

@@ -21,23 +21,34 @@ export function installMentions(client: ClientState): Disposer {
   const style = installStyles('', 'mentions')
   let last = ''
   const render = (): void => {
-    const next = client.roster.getSnapshot().bots.map((bot) => {
-      const anchor = `.bt-bubble a[href="${MENTION_ORIGIN}${bot.id}"]`
-      const chip = /\s/.test(bot.name) ? '' : `[class*="_userRow"] [data-ref-chip="file"][title="@${bot.name.replace(/["\\]/g, '\\$&')}" i]`
-      const look = lookOf(bot)
-      const marks = chip ? `${anchor}::before,${chip}::before` : `${anchor}::before`
-      const mark = look.image
-        ? `${marks}{background:center/cover url("${look.image}");-webkit-mask:none;mask:none;border-radius:50%}`
-        : `${marks}{background:${paintCss(look.color)};-webkit-mask-image:${maskOf(look.shape)};mask-image:${maskOf(look.shape)}}`
-      const chipBase = chip ? `${chip}{color:inherit;font-weight:600}${chip}>svg{display:none}${chip}::before{content:"";display:inline-block;flex:none;width:16px;height:16px;margin-right:3px;vertical-align:-3px;-webkit-mask:${DEFAULT_MASK} center/contain no-repeat;mask:${DEFAULT_MASK} center/contain no-repeat}` : ''
-      return `${anchor}{color:${inkText(look.color)}}${chipBase}${mark}`
-    }).join('\n')
+    const next = client.roster
+      .getSnapshot()
+      .bots.map(bot => {
+        const anchor = `.bt-bubble a[href="${MENTION_ORIGIN}${bot.id}"]`
+        const chip = /\s/.test(bot.name)
+          ? ''
+          : `[class*="_userRow"] [data-ref-chip="file"][title="@${bot.name.replace(/["\\]/g, '\\$&')}" i]`
+        const look = lookOf(bot)
+        const marks = chip ? `${anchor}::before,${chip}::before` : `${anchor}::before`
+        const mark = look.image
+          ? `${marks}{background:center/cover url("${look.image}");-webkit-mask:none;mask:none;border-radius:50%}`
+          : `${marks}{background:${paintCss(look.color)};-webkit-mask-image:${maskOf(look.shape)};mask-image:${maskOf(look.shape)}}`
+        const chipBase = chip
+          ? `${chip}{color:inherit;font-weight:600}${chip}>svg{display:none}${chip}::before{content:"";display:inline-block;flex:none;width:16px;height:16px;margin-right:3px;vertical-align:-3px;-webkit-mask:${DEFAULT_MASK} center/contain no-repeat;mask:${DEFAULT_MASK} center/contain no-repeat}`
+          : ''
+        return `${anchor}{color:${inkText(look.color)}}${chipBase}${mark}`
+      })
+      .join('\n')
     if (next !== last) style.textContent = last = next
   }
   render()
   const offRoster = client.roster.subscribe(render)
   const offRegistry = registry.subscribe(render)
-  return () => { offRoster(); offRegistry(); style.remove() }
+  return () => {
+    offRoster()
+    offRegistry()
+    style.remove()
+  }
 }
 
 // The chosen theme lives in the team state so every device shares it; the local
@@ -62,10 +73,20 @@ export function installTheme({ ctx, client }: { ctx: ClientContext; client: Clie
     if (theme === undefined) return
     style.textContent = themeCss(theme, accent)
     const release = releaseTokens
-    releaseTokens = ctx.theme.overrideTokens('moon-bot', shellTokens(accent ? { ...theme, light: { ...theme.light, accent }, dark: { ...theme.dark, accent } } : theme))
+    releaseTokens = ctx.theme.overrideTokens(
+      'moon-bot',
+      shellTokens(accent ? { ...theme, light: { ...theme.light, accent }, dark: { ...theme.dark, accent } } : theme),
+    )
     if (typeof release === 'function') release()
     if (snapshot.ready) {
-      try { localStorage.setItem(PREFS_KEY, JSON.stringify({ theme: prefs.theme, accent: prefs.accent, motion: prefs.motion })) } catch { /* storage unavailable */ }
+      try {
+        localStorage.setItem(
+          PREFS_KEY,
+          JSON.stringify({ theme: prefs.theme, accent: prefs.accent, motion: prefs.motion }),
+        )
+      } catch {
+        /* storage unavailable */
+      }
     }
   }
   render()
@@ -87,11 +108,25 @@ export function installTheme({ ctx, client }: { ctx: ClientContext; client: Clie
 // calls on `window.moonBotQueue` before this plugin loads.
 export function installRegistry(ctx: ClientContext): Disposer {
   return ctx.effect(() => {
-    const hub: BotHub = { registerShape, registerTheme, themes: () => Object.keys(allThemes()), shapes: () => Object.keys(SHAPES) }
+    const hub: BotHub = {
+      registerShape,
+      registerTheme,
+      themes: () => Object.keys(allThemes()),
+      shapes: () => Object.keys(SHAPES),
+    }
     const queue = window.moonBotQueue
     const queued: readonly BotTask[] = Array.isArray(queue) ? queue : []
     window.moonBot = hub
-    window.moonBotQueue = { push: (task: BotTask) => { try { task(hub) } catch (error) { console.warn('[moon-bot] registration', error); noteClientError('registration', error) } } }
+    window.moonBotQueue = {
+      push: (task: BotTask) => {
+        try {
+          task(hub)
+        } catch (error) {
+          console.warn('[moon-bot] registration', error)
+          noteClientError('registration', error)
+        }
+      },
+    }
     for (const task of queued) window.moonBotQueue.push(task)
     return () => {
       if (window.moonBot === hub) delete window.moonBot

@@ -27,7 +27,13 @@ interface ScheduleSelector {
   readonly at?: string | undefined
   readonly every_seconds?: number | undefined
   readonly daily?: { readonly time: string | undefined; readonly time_zone: string | undefined } | undefined
-  readonly weekly?: { readonly time: string | undefined; readonly time_zone: string | undefined; readonly weekdays: readonly number[] | undefined } | undefined
+  readonly weekly?:
+    | {
+        readonly time: string | undefined
+        readonly time_zone: string | undefined
+        readonly weekdays: readonly number[] | undefined
+      }
+    | undefined
   readonly cron?: { readonly expression: string | undefined; readonly time_zone: string | undefined } | undefined
 }
 
@@ -91,7 +97,9 @@ export function reminderText(text: string): string {
   const batch = /^reminders_json: (.*)$/m.exec(text)
   try {
     if (one) prompts.push(JSON.parse(one[1] ?? 'null'))
-    if (batch) for (const entry of JSON.parse(batch[1] ?? 'null') as readonly { readonly reminder_prompt?: unknown }[]) prompts.push(entry.reminder_prompt)
+    if (batch)
+      for (const entry of JSON.parse(batch[1] ?? 'null') as readonly { readonly reminder_prompt?: unknown }[])
+        prompts.push(entry.reminder_prompt)
   } catch {
     // A framing this module cannot read goes to the group as it came.
     return text
@@ -106,7 +114,8 @@ function requestOf(record: ScheduleRecord): ScheduleRequest | null {
   if (record.kind === 'after' || record.kind === 'at') return { ...base, at: record.scheduledAt }
   if (record.kind === 'every') return { ...base, every_seconds: record.everySeconds }
   if (record.kind === 'daily') return { ...base, daily: { time: record.time, time_zone: record.timeZone } }
-  if (record.kind === 'weekly') return { ...base, weekly: { time: record.time, time_zone: record.timeZone, weekdays: record.weekdays } }
+  if (record.kind === 'weekly')
+    return { ...base, weekly: { time: record.time, time_zone: record.timeZone, weekdays: record.weekdays } }
   if (record.kind === 'cron') return { ...base, cron: { expression: record.expression, time_zone: record.timeZone } }
   return null
 }
@@ -129,18 +138,22 @@ function selectorOf(when: SelectorInput | undefined): ScheduleSelector {
       return { daily: { time: `${when.time}:00`, time_zone: zone } }
     case 'weekly': {
       if (!TIME.test(String(when.time))) throw invalid('Pick a time of day')
-      const weekdays = [...new Set((Array.isArray(when.weekdays) ? when.weekdays : []).map(Number))].filter(day => Number.isInteger(day) && day >= 1 && day <= 7).sort()
+      const weekdays = [...new Set((Array.isArray(when.weekdays) ? when.weekdays : []).map(Number))]
+        .filter(day => Number.isInteger(day) && day >= 1 && day <= 7)
+        .sort()
       if (weekdays.length === 0) throw invalid('Pick at least one day')
       return { weekly: { time: `${when.time}:00`, time_zone: zone, weekdays } }
     }
     case 'cron': {
       const expression = String((when as unknown as { expression?: unknown }).expression ?? '').trim()
-      if (expression.split(/\s+/).length !== 5) throw invalid('A cron expression has five fields, such as "0 9 * * 1-5"')
+      if (expression.split(/\s+/).length !== 5)
+        throw invalid('A cron expression has five fields, such as "0 9 * * 1-5"')
       return { cron: { expression, time_zone: zone } }
     }
     case 'every': {
       const minutes = Number(when.minutes)
-      if (!Number.isInteger(minutes) || minutes < 1 || minutes > 7 * 24 * 60) throw invalid('Repeat every 1 minute to 7 days')
+      if (!Number.isInteger(minutes) || minutes < 1 || minutes > 7 * 24 * 60)
+        throw invalid('Repeat every 1 minute to 7 days')
       return { every_seconds: minutes * 60 }
     }
     default:
@@ -159,12 +172,18 @@ export function install(rt: HostRuntime): void {
    * provides `schedule` after this module installs — so a value captured at install time is
    * null forever. Every caller goes through this instead.
    */
-  const live = (): ScheduleService | null => service ?? (typeof ctx.get === 'function' ? (ctx.get<ScheduleService>('schedule') ?? null) : null)
+  const live = (): ScheduleService | null =>
+    service ?? (typeof ctx.get === 'function' ? (ctx.get<ScheduleService>('schedule') ?? null) : null)
 
   const attach = (sub: ScheduleHost): void => {
     const own = sub.schedule
     service = own ?? null
-    sub.effect(() => () => { if (service === own) service = null }, 'moon-bot: schedule service')
+    sub.effect(
+      () => () => {
+        if (service === own) service = null
+      },
+      'moon-bot: schedule service',
+    )
   }
   if (typeof ctx.inject === 'function') ctx.inject(['schedule'], sub => attach(sub))
   else {
@@ -180,9 +199,14 @@ export function install(rt: HostRuntime): void {
     if (rt.roomOf(sessionId) !== undefined) return { roomId: sessionId }
     return rt.groupOwners.get(sessionId) ?? rt.pastOwners.get(sessionId)
   }
-  const known = (owner: ScheduleOwner | undefined): boolean => owner !== undefined && (owner.botId === undefined ? rt.roomOf(owner.roomId) !== undefined : rt.botOf(owner.botId) !== undefined)
+  const known = (owner: ScheduleOwner | undefined): boolean =>
+    owner !== undefined &&
+    (owner.botId === undefined ? rt.roomOf(owner.roomId) !== undefined : rt.botOf(owner.botId) !== undefined)
 
-  async function schedulesView(): Promise<{ readonly available: boolean; readonly tasks: readonly Record<string, unknown>[] }> {
+  async function schedulesView(): Promise<{
+    readonly available: boolean
+    readonly tasks: readonly Record<string, unknown>[]
+  }> {
     const current = live()
     if (current === null) return { available: false, tasks: [] }
     const tasks: Record<string, unknown>[] = []
@@ -242,7 +266,11 @@ export function install(rt: HostRuntime): void {
         await current.create(toId, request)
         await current.delete({ sessionId: fromId, id: record.id })
       } catch (error) {
-        rt.warn('moon-bot: task %s stayed with the earlier part: %s', record.title, error instanceof Error ? error.message : error)
+        rt.warn(
+          'moon-bot: task %s stayed with the earlier part: %s',
+          record.title,
+          error instanceof Error ? error.message : error,
+        )
       }
     }
   }
@@ -260,12 +288,17 @@ export function install(rt: HostRuntime): void {
     scheduleFor: (): ScheduleService | null => live(),
     scheduleOwnerOf: ownerOf,
     // `when` is the settings form's shape, so a tool and the form accept the same timings.
-    createScheduleFrom: async (sessionId: string, title: string, prompt: string, when: SelectorInput | undefined): Promise<void> => {
+    createScheduleFrom: async (
+      sessionId: string,
+      title: string,
+      prompt: string,
+      when: SelectorInput | undefined,
+    ): Promise<void> => {
       const current = live()
       if (current === null) throw invalid('Scheduled tasks are turned off')
       await current.create(sessionId, { title, prompt, ...selectorOf(when) })
     },
-    listSchedulesOf: async (sessionId: string): Promise<readonly ScheduleRecord[]> => (live()?.list({ sessionId }) ?? []),
+    listSchedulesOf: async (sessionId: string): Promise<readonly ScheduleRecord[]> => live()?.list({ sessionId }) ?? [],
     // Only a task of this Session may go: another conversation's id is refused rather
     // than deleted, so a Bot cannot cancel someone else's reminder by guessing an id.
     deleteScheduleOf: async (sessionId: string, id: string): Promise<void> => {

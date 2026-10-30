@@ -12,11 +12,17 @@ const APP = dirname(dirname(fileURLToPath(import.meta.url)))
 const CORE = join(APP, '..', '..', 'packages', 'core')
 
 // The UI is TypeScript with TSX imports; bundle it the way vite would, then import it.
-const bundleOf = async (entry) => {
+const bundleOf = async entry => {
   const built = await build({
     entryPoints: [join(APP, entry)],
-    bundle: true, format: 'esm', platform: 'node', write: false, logLevel: 'silent',
-    jsx: 'transform', jsxFactory: 'h', jsxFragment: 'Fragment',
+    bundle: true,
+    format: 'esm',
+    platform: 'node',
+    write: false,
+    logLevel: 'silent',
+    jsx: 'transform',
+    jsxFactory: 'h',
+    jsxFragment: 'Fragment',
     external: ['react', 'react-dom'],
   })
   const path = join(APP, `.test-${entry.replaceAll('/', '-')}.mjs`)
@@ -34,9 +40,12 @@ const pluginGroups = () => {
   const source = readFileSync(join(CORE, 'src/client/index.ts'), 'utf8')
   const shell = source.slice(source.indexOf('const installShell'), source.indexOf('const installConversation'))
   const conversation = source.slice(source.indexOf('const installConversation'))
-  const tags = [...source.matchAll(/installCompiledStyles\((?:[A-Z_]+ \+ )*[A-Z_]+, '([a-z-]+)'\)/g)].map(match => match[1])
+  const tags = [...source.matchAll(/installCompiledStyles\((?:[A-Z_]+ \+ )*[A-Z_]+, '([a-z-]+)'\)/g)].map(
+    match => match[1],
+  )
   const parts = new Set([...source.matchAll(/([A-Z][A-Z0-9_]*_CSS)/g)].map(match => match[1]))
-  void shell; void conversation
+  void shell
+  void conversation
   return { tags: new Set(tags), parts }
 }
 
@@ -53,7 +62,10 @@ test('the window installs every sheet group the plugin host installs', async () 
   for (const group of SHEET_GROUPS) {
     assert.ok(group.css.length > 0, `the "${group.tag}" group is empty`)
     for (const part of group.parts) {
-      assert.ok(plugin.parts.has(part) || WINDOW_ONLY.has(part), `the window names a sheet the plugin does not: ${part}`)
+      assert.ok(
+        plugin.parts.has(part) || WINDOW_ONLY.has(part),
+        `the window names a sheet the plugin does not: ${part}`,
+      )
     }
   }
   const named = new Set(SHEET_GROUPS.flatMap(group => group.parts))
@@ -64,7 +76,10 @@ test('the empty state and welcome sheets ride with the work-process group', asyn
   const { SHEET_GROUPS } = await bundleOf('ui/src/sheets.ts')
   const group = SHEET_GROUPS.find(entry => entry.tag === 'work-process')
   assert.ok(group !== undefined)
-  assert.deepEqual([...group.parts], ['EMPTY_STATE_CSS', 'WELCOME_CSS', 'PROCESS_CSS', 'RETRY_CSS', 'STARTERS_CSS', 'FILES_PANEL_CSS', 'DELIVER_CSS'])
+  assert.deepEqual(
+    [...group.parts],
+    ['EMPTY_STATE_CSS', 'WELCOME_CSS', 'PROCESS_CSS', 'RETRY_CSS', 'STARTERS_CSS', 'FILES_PANEL_CSS', 'DELIVER_CSS'],
+  )
 })
 
 test('a window with no saved theme paints Moon', async () => {

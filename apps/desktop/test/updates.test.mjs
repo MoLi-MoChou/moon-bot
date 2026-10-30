@@ -21,15 +21,31 @@ class FakeUpdater extends EventEmitter {
     }
     return Promise.resolve(this.found?.() ?? { isUpdateAvailable: false, updateInfo: { version: '0.1.7' } })
   }
-  setFeedURL(options) { this.feeds.push(options) }
-  quitAndInstall(...args) { this.installs.push(args) }
+  setFeedURL(options) {
+    this.feeds.push(options)
+  }
+  quitAndInstall(...args) {
+    this.installs.push(args)
+  }
 }
 
-const finds = (version, download) => () => ({ isUpdateAvailable: true, updateInfo: { version }, downloadPromise: download() })
+const finds = (version, download) => () => ({
+  isUpdateAvailable: true,
+  updateInfo: { version },
+  downloadPromise: download(),
+})
 
 const quietLog = () => {
   const lines = []
-  return { lines, info: (line) => { lines.push(line) }, error: (line) => { lines.push(line) } }
+  return {
+    lines,
+    info: line => {
+      lines.push(line)
+    },
+    error: line => {
+      lines.push(line)
+    },
+  }
 }
 
 const release = (version, options = {}) => {
@@ -68,7 +84,7 @@ describe('isNewer', () => {
 })
 
 describe('watchReleases', () => {
-  test('checks the latest release at once with the GitHub headers, or uses a given feed', async (t) => {
+  test('checks the latest release at once with the GitHub headers, or uses a given feed', async t => {
     const calls = []
     const fetch = async (url, options) => {
       calls.push({ url, options })
@@ -89,15 +105,23 @@ describe('watchReleases', () => {
     assert.equal(calls[1].url, feed)
   })
 
-  test('reports a newer release and opens its page only when accepted', async (t) => {
+  test('reports a newer release and opens its page only when accepted', async t => {
     const page = 'https://github.com/Fei2411/DeepSeek-Bot/releases/tag/v0.1.9'
     for (const accepted of [true, false]) {
       const asked = []
       const opened = []
       const updates = watchReleases({
-        current: '0.1.7', arch: 'arm64', fetch: async () => releaseResponse([release('0.1.9', { page })]), log: quietLog(),
-        ask: async version => { asked.push(version); return accepted },
-        open: url => { opened.push(url) },
+        current: '0.1.7',
+        arch: 'arm64',
+        fetch: async () => releaseResponse([release('0.1.9', { page })]),
+        log: quietLog(),
+        ask: async version => {
+          asked.push(version)
+          return accepted
+        },
+        open: url => {
+          opened.push(url)
+        },
       })
       t.after(updates.stop)
       assert.deepEqual(await updates.latest(), { version: '0.1.9', page })
@@ -107,12 +131,19 @@ describe('watchReleases', () => {
     }
   })
 
-  test('ignores the same or an older release', async (t) => {
+  test('ignores the same or an older release', async t => {
     for (const version of ['0.1.7', '0.1.6']) {
       const asked = []
       const updates = watchReleases({
-        current: '0.1.7', arch: 'arm64', fetch: async () => releaseResponse([release(version)]), log: quietLog(),
-        ask: async value => { asked.push(value); return true }, open: () => {},
+        current: '0.1.7',
+        arch: 'arm64',
+        fetch: async () => releaseResponse([release(version)]),
+        log: quietLog(),
+        ask: async value => {
+          asked.push(value)
+          return true
+        },
+        open: () => {},
       })
       t.after(updates.stop)
       assert.equal(await updates.latest(), null)
@@ -120,7 +151,7 @@ describe('watchReleases', () => {
     }
   })
 
-  test('asks once per version and asks again for a later version', async (t) => {
+  test('asks once per version and asks again for a later version', async t => {
     t.mock.timers.enable({ apis: ['setInterval'] })
     let version = '0.1.9'
     let checks = 0
@@ -128,8 +159,14 @@ describe('watchReleases', () => {
     const updates = watchReleases({
       current: '0.1.7',
       arch: 'arm64',
-      fetch: async () => { checks += 1; return releaseResponse([release(version)]) },
-      ask: async value => { asked.push(value); return false },
+      fetch: async () => {
+        checks += 1
+        return releaseResponse([release(version)])
+      },
+      ask: async value => {
+        asked.push(value)
+        return false
+      },
       open: () => {},
       log: quietLog(),
     })
@@ -149,23 +186,46 @@ describe('watchReleases', () => {
     assert.deepEqual(asked, ['0.1.9', '0.1.10'])
   })
 
-  test('reports releases without asking in throwaway runs', async (t) => {
+  test('reports releases without asking in throwaway runs', async t => {
     let opens = 0
     const updates = watchReleases({
-      current: '0.1.7', arch: 'arm64', fetch: async () => releaseResponse([release('0.1.9')]),
-      ask: undefined, open: () => { opens += 1 }, log: quietLog(),
+      current: '0.1.7',
+      arch: 'arm64',
+      fetch: async () => releaseResponse([release('0.1.9')]),
+      ask: undefined,
+      open: () => {
+        opens += 1
+      },
+      log: quietLog(),
     })
     t.after(updates.stop)
     assert.equal((await updates.latest()).version, '0.1.9')
     assert.equal(opens, 0)
   })
 
-  test('logs failed requests, invalid JSON, and non-HTTPS release pages without throwing', async (t) => {
+  test('logs failed requests, invalid JSON, and non-HTTPS release pages without throwing', async t => {
     const cases = [
       [async () => releaseResponse({}, 403), 'Moon Bot: update check failed: HTTP 403'],
-      [async () => { throw new Error('offline') }, 'Moon Bot: update check failed: offline'],
-      [async () => ({ ok: true, status: 200, json: async () => { throw new Error('bad JSON') } }), 'Moon Bot: update check failed: bad JSON'],
-      [async () => releaseResponse([release('0.1.9', { page: 'http://github.com/Fei2411/DeepSeek-Bot' })]), 'Moon Bot: update check failed: release page URL is not HTTPS'],
+      [
+        async () => {
+          throw new Error('offline')
+        },
+        'Moon Bot: update check failed: offline',
+      ],
+      [
+        async () => ({
+          ok: true,
+          status: 200,
+          json: async () => {
+            throw new Error('bad JSON')
+          },
+        }),
+        'Moon Bot: update check failed: bad JSON',
+      ],
+      [
+        async () => releaseResponse([release('0.1.9', { page: 'http://github.com/Fei2411/DeepSeek-Bot' })]),
+        'Moon Bot: update check failed: release page URL is not HTTPS',
+      ],
     ]
     for (const [fetch, message] of cases) {
       const log = quietLog()
@@ -176,17 +236,20 @@ describe('watchReleases', () => {
     }
   })
 
-  test('logs a non-array release response once', async (t) => {
+  test('logs a non-array release response once', async t => {
     const log = quietLog()
     const updates = watchReleases({
-      current: '0.1.7', arch: 'arm64', fetch: async () => releaseResponse({ releases: [] }), log,
+      current: '0.1.7',
+      arch: 'arm64',
+      fetch: async () => releaseResponse({ releases: [] }),
+      log,
     })
     t.after(updates.stop)
     assert.equal(await updates.latest(), null)
     assert.deepEqual(log.lines, ['Moon Bot: update check failed: releases response is not an array'])
   })
 
-  test('waits for the matching-architecture zip before asking', async (t) => {
+  test('waits for the matching-architecture zip before asking', async t => {
     t.mock.timers.enable({ apis: ['setInterval'] })
     let attached = false
     const asked = []
@@ -194,7 +257,10 @@ describe('watchReleases', () => {
       current: '0.1.7',
       arch: 'arm64',
       fetch: async () => releaseResponse([release('0.1.9', { arch: attached ? 'arm64' : 'x64' })]),
-      ask: async version => { asked.push(version); return false },
+      ask: async version => {
+        asked.push(version)
+        return false
+      },
       open: () => {},
       log: quietLog(),
     })
@@ -206,15 +272,17 @@ describe('watchReleases', () => {
     attached = true
     t.mock.timers.tick(4 * 60 * 60_000)
     assert.deepEqual(await updates.latest(), {
-      version: '0.1.9', page: 'https://github.com/Fei2411/DeepSeek-Bot/releases/tag/v0.1.9',
+      version: '0.1.9',
+      page: 'https://github.com/Fei2411/DeepSeek-Bot/releases/tag/v0.1.9',
     })
     await sleep(0)
     assert.deepEqual(asked, ['0.1.9'])
   })
 
-  test('ignores prereleases for a stable installation', async (t) => {
+  test('ignores prereleases for a stable installation', async t => {
     const updates = watchReleases({
-      current: '0.1.7', arch: 'arm64',
+      current: '0.1.7',
+      arch: 'arm64',
       fetch: async () => releaseResponse([release('0.2.0-rc.2', { prerelease: true })]),
       log: quietLog(),
     })
@@ -222,21 +290,24 @@ describe('watchReleases', () => {
     assert.equal(await updates.latest(), null)
   })
 
-  test('includes prereleases when the installed version is a prerelease', async (t) => {
+  test('includes prereleases when the installed version is a prerelease', async t => {
     const updates = watchReleases({
-      current: '0.2.0-rc.1', arch: 'arm64',
+      current: '0.2.0-rc.1',
+      arch: 'arm64',
       fetch: async () => releaseResponse([release('0.2.0-rc.2', { prerelease: true })]),
       log: quietLog(),
     })
     t.after(updates.stop)
     assert.deepEqual(await updates.latest(), {
-      version: '0.2.0-rc.2', page: 'https://github.com/Fei2411/DeepSeek-Bot/releases/tag/v0.2.0-rc.2',
+      version: '0.2.0-rc.2',
+      page: 'https://github.com/Fei2411/DeepSeek-Bot/releases/tag/v0.2.0-rc.2',
     })
   })
 
-  test('ignores draft releases', async (t) => {
+  test('ignores draft releases', async t => {
     const updates = watchReleases({
-      current: '0.1.7', arch: 'arm64',
+      current: '0.1.7',
+      arch: 'arm64',
       fetch: async () => releaseResponse([release('0.1.9', { draft: true })]),
       log: quietLog(),
     })
@@ -244,41 +315,61 @@ describe('watchReleases', () => {
     assert.equal(await updates.latest(), null)
   })
 
-  test('chooses the highest newer release with a matching zip', async (t) => {
+  test('chooses the highest newer release with a matching zip', async t => {
     const updates = watchReleases({
-      current: '0.1.7', arch: 'arm64',
+      current: '0.1.7',
+      arch: 'arm64',
       fetch: async () => releaseResponse([release('0.1.9'), release('0.1.10'), release('0.1.8')]),
       log: quietLog(),
     })
     t.after(updates.stop)
     assert.deepEqual(await updates.latest(), {
-      version: '0.1.10', page: 'https://github.com/Fei2411/DeepSeek-Bot/releases/tag/v0.1.10',
+      version: '0.1.10',
+      page: 'https://github.com/Fei2411/DeepSeek-Bot/releases/tag/v0.1.10',
     })
   })
 
-  test('logs a rejected prompt without an unhandled rejection', async (t) => {
+  test('logs a rejected prompt without an unhandled rejection', async t => {
     const unhandled = []
-    const note = error => { unhandled.push(error) }
+    const note = error => {
+      unhandled.push(error)
+    }
     process.on('unhandledRejection', note)
-    t.after(() => { process.off('unhandledRejection', note) })
+    t.after(() => {
+      process.off('unhandledRejection', note)
+    })
     const log = quietLog()
     const updates = watchReleases({
-      current: '0.1.7', arch: 'arm64', fetch: async () => releaseResponse([release('0.1.9')]),
-      ask: async () => { throw new Error('dialog failed') }, open: () => {}, log,
+      current: '0.1.7',
+      arch: 'arm64',
+      fetch: async () => releaseResponse([release('0.1.9')]),
+      ask: async () => {
+        throw new Error('dialog failed')
+      },
+      open: () => {},
+      log,
     })
     t.after(updates.stop)
     await updates.latest()
     await sleep(20)
-    assert.deepEqual(log.lines, ['Moon Bot: update 0.1.9 available', 'Moon Bot: update 0.1.9 not opened: dialog failed'])
+    assert.deepEqual(log.lines, [
+      'Moon Bot: update 0.1.9 available',
+      'Moon Bot: update 0.1.9 not opened: dialog failed',
+    ])
     assert.deepEqual(unhandled, [])
   })
 
-  test('stop clears the interval', async (t) => {
+  test('stop clears the interval', async t => {
     t.mock.timers.enable({ apis: ['setInterval'] })
     let checks = 0
     const updates = watchReleases({
-      current: '0.1.7', arch: 'arm64',
-      fetch: async () => { checks += 1; return releaseResponse([release('0.1.7')]) }, log: quietLog(),
+      current: '0.1.7',
+      arch: 'arm64',
+      fetch: async () => {
+        checks += 1
+        return releaseResponse([release('0.1.7')])
+      },
+      log: quietLog(),
     })
     await updates.latest()
     updates.stop()
@@ -288,7 +379,7 @@ describe('watchReleases', () => {
 })
 
 describe('watchUpdates', () => {
-  test('downloads in the background, installs at the quit, and checks at once', (t) => {
+  test('downloads in the background, installs at the quit, and checks at once', t => {
     const updater = new FakeUpdater()
     t.after(watchUpdates({ updater, beforeInstall: async () => {}, log: quietLog() }).stop)
     assert.equal(updater.autoDownload, true)
@@ -297,22 +388,37 @@ describe('watchUpdates', () => {
     assert.deepEqual(updater.feeds, [])
   })
 
-  test('reads a given feed in place of the GitHub releases', (t) => {
+  test('reads a given feed in place of the GitHub releases', t => {
     const updater = new FakeUpdater()
-    t.after(watchUpdates({ updater, beforeInstall: async () => {}, feed: 'http://127.0.0.1:8080/', log: quietLog() }).stop)
-    assert.deepEqual(updater.feeds, [{ provider: 'generic', url: 'http://127.0.0.1:8080/', useMultipleRangeRequest: false }])
+    t.after(
+      watchUpdates({ updater, beforeInstall: async () => {}, feed: 'http://127.0.0.1:8080/', log: quietLog() }).stop,
+    )
+    assert.deepEqual(updater.feeds, [
+      { provider: 'generic', url: 'http://127.0.0.1:8080/', useMultipleRangeRequest: false },
+    ])
   })
 
-  test('asks once per downloaded version, and on restart stops the Host before the installer runs', async (t) => {
+  test('asks once per downloaded version, and on restart stops the Host before the installer runs', async t => {
     const updater = new FakeUpdater()
     const steps = []
     const asked = []
-    t.after(watchUpdates({
-      updater, log: quietLog(),
-      ask: async (version) => { asked.push(version); return true },
-      beforeInstall: async () => { await sleep(10); steps.push('host stopped') },
-    }).stop)
-    updater.quitAndInstall = (...args) => { steps.push(['install', ...args]) }
+    t.after(
+      watchUpdates({
+        updater,
+        log: quietLog(),
+        ask: async version => {
+          asked.push(version)
+          return true
+        },
+        beforeInstall: async () => {
+          await sleep(10)
+          steps.push('host stopped')
+        },
+      }).stop,
+    )
+    updater.quitAndInstall = (...args) => {
+      steps.push(['install', ...args])
+    }
     updater.emit('update-downloaded', { version: '0.1.9' })
     updater.emit('update-downloaded', { version: '0.1.9' })
     await sleep(50)
@@ -320,12 +426,21 @@ describe('watchUpdates', () => {
     assert.deepEqual(steps, ['host stopped', ['install', true, true]])
   })
 
-  test('leaves the update for the next quit when the user says later, or when it may not ask', async (t) => {
+  test('leaves the update for the next quit when the user says later, or when it may not ask', async t => {
     for (const ask of [async () => false, undefined]) {
       const updater = new FakeUpdater()
       const log = quietLog()
       let stopped = false
-      t.after(watchUpdates({ updater, ask, log, beforeInstall: async () => { stopped = true } }).stop)
+      t.after(
+        watchUpdates({
+          updater,
+          ask,
+          log,
+          beforeInstall: async () => {
+            stopped = true
+          },
+        }).stop,
+      )
       updater.emit('update-downloaded', { version: '0.1.9' })
       await sleep(20)
       assert.deepEqual(updater.installs, [])
@@ -334,7 +449,7 @@ describe('watchUpdates', () => {
     }
   })
 
-  test('logs a failed check and does not throw', async (t) => {
+  test('logs a failed check and does not throw', async t => {
     const updater = new FakeUpdater()
     updater.failCheck = true
     const log = quietLog()
@@ -344,7 +459,7 @@ describe('watchUpdates', () => {
     assert.deepEqual(log.lines, ['Moon Bot: update failed: offline'])
   })
 
-  test('tells what the newest check found and whether its download finished', async (t) => {
+  test('tells what the newest check found and whether its download finished', async t => {
     const cases = [
       [null, null],
       [finds('0.1.9', () => Promise.resolve(['installer.exe'])), true],
@@ -364,11 +479,15 @@ describe('watchUpdates', () => {
     }
   })
 
-  test('a failed download, which electron-updater also reports as an error, is not left unhandled', async (t) => {
+  test('a failed download, which electron-updater also reports as an error, is not left unhandled', async t => {
     const unhandled = []
-    const note = (error) => { unhandled.push(error) }
+    const note = error => {
+      unhandled.push(error)
+    }
     process.on('unhandledRejection', note)
-    t.after(() => { process.off('unhandledRejection', note) })
+    t.after(() => {
+      process.off('unhandledRejection', note)
+    })
     const updater = new FakeUpdater()
     updater.found = finds('0.1.9', () => Promise.reject(new Error('sha512 checksum mismatch')))
     t.after(watchUpdates({ updater, beforeInstall: async () => {}, log: quietLog() }).stop)
@@ -376,17 +495,25 @@ describe('watchUpdates', () => {
     assert.deepEqual(unhandled, [])
   })
 
-  test('installs on request: the Host stops first, then the installer runs and opens the app again', async (t) => {
+  test('installs on request: the Host stops first, then the installer runs and opens the app again', async t => {
     const updater = new FakeUpdater()
     const steps = []
-    const updates = watchUpdates({ updater, beforeInstall: async () => { steps.push('host stopped') }, log: quietLog() })
+    const updates = watchUpdates({
+      updater,
+      beforeInstall: async () => {
+        steps.push('host stopped')
+      },
+      log: quietLog(),
+    })
     t.after(updates.stop)
-    updater.quitAndInstall = (...args) => { steps.push(['install', ...args]) }
+    updater.quitAndInstall = (...args) => {
+      steps.push(['install', ...args])
+    }
     await updates.install()
     assert.deepEqual(steps, ['host stopped', ['install', true, true]])
   })
 
-  test('checks again every few hours until stopped', (t) => {
+  test('checks again every few hours until stopped', t => {
     t.mock.timers.enable({ apis: ['setInterval'] })
     const updater = new FakeUpdater()
     const { stop } = watchUpdates({ updater, beforeInstall: async () => {}, log: quietLog() })

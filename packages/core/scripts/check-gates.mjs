@@ -84,7 +84,17 @@ for (let index = 0; index < argv.length; index += 1) {
 const sourceRoot = join(root, 'src')
 if (!existsSync(sourceRoot)) usage(`no src directory under ${root}`)
 
-const findings = { boundaries: [], lines: [], floating: [], tsx: [], typeOnly: [], declarationValues: [], intrinsicH: [], staleExemptions: [], sleep: [] }
+const findings = {
+  boundaries: [],
+  lines: [],
+  floating: [],
+  tsx: [],
+  typeOnly: [],
+  declarationValues: [],
+  intrinsicH: [],
+  staleExemptions: [],
+  sleep: [],
+}
 
 // ---------------------------------------------------------------------------
 // Source discovery and path helpers.
@@ -226,9 +236,7 @@ function checkBoundaries() {
     for (const { specifier, position } of importsOf(text)) {
       const violation = boundaryViolation(layer, file, specifier)
       if (!violation) continue
-      findings.boundaries.push(
-        `${relPath(file)}:${lineOf(text, position)} - boundary: ${violation} (${specifier})`,
-      )
+      findings.boundaries.push(`${relPath(file)}:${lineOf(text, position)} - boundary: ${violation} (${specifier})`)
     }
   }
 }
@@ -270,26 +278,42 @@ const SHARED_FORBIDDEN_PACKAGE = /^(?:react|react-dom|fastify|@fastify\/|better-
 
 function boundaryViolation(layer, file, specifier) {
   const target = targetLayer(file, specifier)
-  if (layer === 'client' && (target === 'host' || target === 'engine' || target === 'store')) return `client may not import ${target}`
+  if (layer === 'client' && (target === 'host' || target === 'engine' || target === 'store'))
+    return `client may not import ${target}`
   if (layer === 'host' && target === 'client') return 'host may not import client'
   if (layer === 'engine' && (target === 'host' || target === 'client')) return `engine may not import ${target}`
-  if (layer === 'store' && target !== undefined && target !== 'shared' && target !== 'store') return 'store may import only shared and its own files'
+  if (layer === 'store' && target !== undefined && target !== 'shared' && target !== 'store')
+    return 'store may import only shared and its own files'
   // The service is the composition root: it may wire every server-side layer, but the
   // UI (client) never reaches into it, and it never reaches into the UI.
   if (layer === 'client' && target === 'service') return 'client may not import service'
   if (layer === 'service' && target === 'client') return 'service may not import client'
   if (layer === 'ui') {
-    if (specifier === 'react' || specifier.startsWith('react/') || specifier === 'react-dom' || specifier.startsWith('react-dom/')) return undefined
+    if (
+      specifier === 'react' ||
+      specifier.startsWith('react/') ||
+      specifier === 'react-dom' ||
+      specifier.startsWith('react-dom/')
+    )
+      return undefined
     if (specifier === 'moon-bot-ui' || specifier.startsWith('moon-bot-ui/')) return undefined
     if (SHARED_FORBIDDEN_PACKAGE.test(specifier) && !/^react(?:-dom)?(?:\/|$)/.test(specifier)) {
       return `ui kit may not import ${specifier.split('/')[0]}`
     }
     if (target === 'ui' || target === undefined) {
       // Relative climbs into client/host/… are caught via target; bare moon-bot-core blocked below.
-      if (specifier === 'moon-bot-core' || specifier.startsWith('moon-bot-core/')) return 'ui kit may not import moon-bot-core'
+      if (specifier === 'moon-bot-core' || specifier.startsWith('moon-bot-core/'))
+        return 'ui kit may not import moon-bot-core'
       return undefined
     }
-    if (target === 'host' || target === 'client' || target === 'engine' || target === 'store' || target === 'service' || target === 'shared') {
+    if (
+      target === 'host' ||
+      target === 'client' ||
+      target === 'engine' ||
+      target === 'store' ||
+      target === 'service' ||
+      target === 'shared'
+    ) {
       return `ui kit may not import ${target}`
     }
     return undefined
@@ -365,7 +389,6 @@ function stripComments(text) {
   }
   return output
 }
-
 
 // Value declarations inside `declare module`/`declare global` describe modules the
 // typesheet does not own (a platform's runtime, a package's API). Those are fine; only a
@@ -580,9 +603,7 @@ function checkFloatingPromises() {
       if (promised === undefined) return
       const position = sourceFile.getLineAndCharacterOfPosition(candidate.getStart(sourceFile))
       const call = candidate.getText(sourceFile).replace(/\s+/g, ' ').trim().slice(0, 160)
-      findings.floating.push(
-        `${relPath(fileName)}:${position.line + 1} - floating promise: ${call}`,
-      )
+      findings.floating.push(`${relPath(fileName)}:${position.line + 1} - floating promise: ${call}`)
     }
     inspect(statement.expression, 'discarded')
   }
@@ -653,7 +674,6 @@ function buildProgram() {
 // Run after every declaration above: ESM evaluates the module body top to bottom, so
 // calling this earlier would read the regex/glob constants before they exist.
 
-
 // An exemption is debt: it must point at a real file that the line gate would
 // still refuse. A stale entry hides a file that quietly grew back over the limit.
 const NATURE_EXEMPTIONS = new Set(['src/client/brand-art.ts'])
@@ -671,7 +691,9 @@ function checkTestSleep() {
     if (actual > allowed) {
       for (const line of lines[file] ?? []) findings.sleep.push(`${file}:${line} - test waits on the clock`)
     } else if (actual < allowed) {
-      findings.sleep.push(`${file}: ${actual} clock waits, baseline ${allowed}; run node scripts/sleep-debt.mjs --write`)
+      findings.sleep.push(
+        `${file}: ${actual} clock waits, baseline ${allowed}; run node scripts/sleep-debt.mjs --write`,
+      )
     }
   }
 }
@@ -683,9 +705,13 @@ function checkStaleExemptions() {
   for (const entry of LINE_EXEMPTIONS) {
     if (entry.includes('*') || NATURE_EXEMPTIONS.has(entry)) continue
     const file = join(root, entry)
-    if (!existsSync(file)) { findings.staleExemptions.push(`stale exemption: ${entry} does not exist`); continue }
+    if (!existsSync(file)) {
+      findings.staleExemptions.push(`stale exemption: ${entry} does not exist`)
+      continue
+    }
     const lines = readFileSync(file, 'utf8').split('\n').length
-    if (lines <= MAX_LINES) findings.staleExemptions.push(`stale exemption: ${entry} is ${lines} lines, the limit no longer needs it`)
+    if (lines <= MAX_LINES)
+      findings.staleExemptions.push(`stale exemption: ${entry} is ${lines} lines, the limit no longer needs it`)
   }
 }
 
@@ -701,9 +727,15 @@ function main() {
   checkStaleExemptions()
 
   const all = [
-    ...findings.boundaries, ...findings.lines, ...findings.floating, ...findings.tsx,
-    ...findings.typeOnly, ...findings.declarationValues, ...findings.intrinsicH,
-    ...findings.staleExemptions, ...findings.sleep,
+    ...findings.boundaries,
+    ...findings.lines,
+    ...findings.floating,
+    ...findings.tsx,
+    ...findings.typeOnly,
+    ...findings.declarationValues,
+    ...findings.intrinsicH,
+    ...findings.staleExemptions,
+    ...findings.sleep,
   ]
   if (all.length === 0) {
     console.log('gates: ok')

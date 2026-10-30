@@ -11,32 +11,48 @@ import { DEFAULT_DAILY_CAP, MAX_DAILY_CAP } from '../src/store/proactive.ts'
 function store(t) {
   const home = mkdtempSync(join(tmpdir(), 'moon-bot-proactive-'))
   const db = openStore(home)
-  t.after(() => { db.close(); rmSync(home, { recursive: true, force: true, maxRetries: 20, retryDelay: 50 }) })
+  t.after(() => {
+    db.close()
+    rmSync(home, { recursive: true, force: true, maxRetries: 20, retryDelay: 50 })
+  })
   return db.proactive
 }
 
 const sub = (over = {}) => ({
-  id: 's1', botId: 'b1', sessionId: 'b1', topics: 'work', when: '{"kind":"daily","time":"08:00"}',
+  id: 's1',
+  botId: 'b1',
+  sessionId: 'b1',
+  topics: 'work',
+  when: '{"kind":"daily","time":"08:00"}',
   ...over,
 })
 
 const candidate = (over = {}) => ({
-  id: 'c1', subscriptionId: 's1', sessionId: 'b1', text: 'The weekly report is still empty in section 3.',
-  evidence: ['10-28 14:22 · you said you would finish it by Friday'], whyCare: 'you set the deadline',
-  ttl: 'long', topicKeys: ['weekly', 'report'], fingerprint: 'fp-1', triggerSource: 'schedule',
+  id: 'c1',
+  subscriptionId: 's1',
+  sessionId: 'b1',
+  text: 'The weekly report is still empty in section 3.',
+  evidence: ['10-28 14:22 · you said you would finish it by Friday'],
+  whyCare: 'you set the deadline',
+  ttl: 'long',
+  topicKeys: ['weekly', 'report'],
+  fingerprint: 'fp-1',
+  triggerSource: 'schedule',
   ...over,
 })
 
-test('a subscription keeps the cap between one and five', (t) => {
+test('a subscription keeps the cap between one and five', t => {
   const proactive = store(t)
   assert.equal(proactive.addSubscription(sub({ id: 'a', dailyCap: 0 })).dailyCap, DEFAULT_DAILY_CAP)
   assert.equal(proactive.addSubscription(sub({ id: 'b', dailyCap: 99 })).dailyCap, MAX_DAILY_CAP)
   assert.equal(proactive.addSubscription(sub({ id: 'c' })).dailyCap, DEFAULT_DAILY_CAP)
 })
 
-test('a subscription round-trips, and only enabled ones are listed for work', (t) => {
+test('a subscription round-trips, and only enabled ones are listed for work', t => {
   const proactive = store(t)
-  const made = proactive.addSubscription(sub({ quietFrom: '22:00', quietTo: '08:00', eventHook: 'no-progress', eventMinutes: 10 }))
+  const made = proactive.addSubscription(
+    sub({ quietFrom: '22:00', quietTo: '08:00', eventHook: 'no-progress', eventMinutes: 10 }),
+  )
   assert.equal(made.quietFrom, '22:00')
   assert.equal(made.eventMinutes, 10)
   assert.equal(made.enabled, true)
@@ -47,7 +63,7 @@ test('a subscription round-trips, and only enabled ones are listed for work', (t
   assert.equal(proactive.subscription('s1')?.enabled, false)
 })
 
-test('a delivered candidate counts against the day, a dropped one does not', (t) => {
+test('a delivered candidate counts against the day, a dropped one does not', t => {
   const proactive = store(t)
   proactive.addSubscription(sub())
   proactive.addCandidate(candidate({ id: 'c1' }))
@@ -60,7 +76,7 @@ test('a delivered candidate counts against the day, a dropped one does not', (t)
   assert.equal(proactive.deliveredOn('s1', day.since, day.until), 1)
 })
 
-test('a decision is written once and never overwritten', (t) => {
+test('a decision is written once and never overwritten', t => {
   const proactive = store(t)
   proactive.addSubscription(sub())
   proactive.addCandidate(candidate())
@@ -70,7 +86,7 @@ test('a decision is written once and never overwritten', (t) => {
   assert.equal(proactive.decision('c1')?.reason, 'first')
 })
 
-test('the window returns recent candidates with their decisions, newest first', (t) => {
+test('the window returns recent candidates with their decisions, newest first', t => {
   const proactive = store(t)
   proactive.addSubscription(sub())
   proactive.addCandidate(candidate({ id: 'c1', fingerprint: 'a' }))
@@ -84,14 +100,14 @@ test('the window returns recent candidates with their decisions, newest first', 
   assert.deepEqual(JSON.parse(recent[0]?.topicKeys ?? '[]'), candidate().topicKeys)
 })
 
-test('candidates outside the window are not returned', (t) => {
+test('candidates outside the window are not returned', t => {
   const proactive = store(t)
   proactive.addSubscription(sub())
   proactive.addCandidate(candidate())
   assert.equal(proactive.recentCandidates('s1', Date.now() + 60_000).length, 0)
 })
 
-test('one subscription does not see another\'s candidates', (t) => {
+test("one subscription does not see another's candidates", t => {
   const proactive = store(t)
   proactive.addSubscription(sub({ id: 's1' }))
   proactive.addSubscription(sub({ id: 's2' }))
@@ -99,7 +115,7 @@ test('one subscription does not see another\'s candidates', (t) => {
   assert.equal(proactive.recentCandidates('s2', Date.now() - 60_000).length, 0)
 })
 
-test('removing a subscription takes its candidates with it', (t) => {
+test('removing a subscription takes its candidates with it', t => {
   const proactive = store(t)
   proactive.addSubscription(sub())
   proactive.addCandidate(candidate())
@@ -109,14 +125,17 @@ test('removing a subscription takes its candidates with it', (t) => {
   assert.equal(proactive.decision('c1'), undefined)
 })
 
-test('the subscriptions of one Bot are its own', (t) => {
+test('the subscriptions of one Bot are its own', t => {
   const proactive = store(t)
   proactive.addSubscription(sub({ id: 's1', botId: 'b1' }))
   proactive.addSubscription(sub({ id: 's2', botId: 'b2' }))
-  assert.deepEqual(proactive.subscriptionsOf('b1').map(item => item.id), ['s1'])
+  assert.deepEqual(
+    proactive.subscriptionsOf('b1').map(item => item.id),
+    ['s1'],
+  )
 })
 
-test('a store from before this feature gains the tables without losing anything', async (t) => {
+test('a store from before this feature gains the tables without losing anything', async t => {
   const { DatabaseSync } = await import('node:sqlite')
   const home = mkdtempSync(join(tmpdir(), 'moon-bot-proactive-old-'))
   // A database at the previous schema version, with a session in it already.

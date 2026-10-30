@@ -23,30 +23,50 @@ const PALETTES = new Set(['themes', 'inks', 'characters'])
 // A file's name without its directory or extension: the palettes keep the same stem when
 // they migrate to TypeScript.
 const stemOf = file => (file.split('/').pop() ?? '').replace(/\.(?:js|ts|tsx)$/, '')
-export const RADII = ['0', '4px', '6px', '8px', '10px', '12px', '16px', '18px', '20px', '22px', '999px', '50%', 'inherit']
+export const RADII = [
+  '0',
+  '4px',
+  '6px',
+  '8px',
+  '10px',
+  '12px',
+  '16px',
+  '18px',
+  '20px',
+  '22px',
+  '999px',
+  '50%',
+  'inherit',
+]
 
 const COLOR = /#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})\b|\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\([^)]*\)/gi
 // Named colors count in the value of a CSS declaration that takes a color. A quoted
 // value is JavaScript data, such as a Bot's color name, not CSS.
-const NAMES = ('aliceblue antiquewhite aqua aquamarine azure beige bisque black blanchedalmond blue blueviolet brown burlywood '
-  + 'cadetblue chartreuse chocolate coral cornflowerblue cornsilk crimson cyan darkblue darkcyan darkgoldenrod darkgray darkgreen '
-  + 'darkgrey darkkhaki darkmagenta darkolivegreen darkorange darkorchid darkred darksalmon darkseagreen darkslateblue darkslategray '
-  + 'darkslategrey darkturquoise darkviolet deeppink deepskyblue dimgray dimgrey dodgerblue firebrick floralwhite forestgreen fuchsia '
-  + 'gainsboro ghostwhite gold goldenrod gray green greenyellow grey honeydew hotpink indianred indigo ivory khaki lavender '
-  + 'lavenderblush lawngreen lemonchiffon lightblue lightcoral lightcyan lightgoldenrodyellow lightgray lightgreen lightgrey lightpink '
-  + 'lightsalmon lightseagreen lightskyblue lightslategray lightslategrey lightsteelblue lightyellow lime limegreen linen magenta maroon '
-  + 'mediumaquamarine mediumblue mediumorchid mediumpurple mediumseagreen mediumslateblue mediumspringgreen mediumturquoise '
-  + 'mediumvioletred midnightblue mintcream mistyrose moccasin navajowhite navy oldlace olive olivedrab orange orangered orchid '
-  + 'palegoldenrod palegreen paleturquoise palevioletred papayawhip peachpuff peru pink plum powderblue purple rebeccapurple red '
-  + 'rosybrown royalblue saddlebrown salmon sandybrown seagreen seashell sienna silver skyblue slateblue slategray slategrey snow '
-  + 'springgreen steelblue tan teal thistle tomato turquoise violet wheat white whitesmoke yellow yellowgreen').split(' ')
+const NAMES = (
+  'aliceblue antiquewhite aqua aquamarine azure beige bisque black blanchedalmond blue blueviolet brown burlywood ' +
+  'cadetblue chartreuse chocolate coral cornflowerblue cornsilk crimson cyan darkblue darkcyan darkgoldenrod darkgray darkgreen ' +
+  'darkgrey darkkhaki darkmagenta darkolivegreen darkorange darkorchid darkred darksalmon darkseagreen darkslateblue darkslategray ' +
+  'darkslategrey darkturquoise darkviolet deeppink deepskyblue dimgray dimgrey dodgerblue firebrick floralwhite forestgreen fuchsia ' +
+  'gainsboro ghostwhite gold goldenrod gray green greenyellow grey honeydew hotpink indianred indigo ivory khaki lavender ' +
+  'lavenderblush lawngreen lemonchiffon lightblue lightcoral lightcyan lightgoldenrodyellow lightgray lightgreen lightgrey lightpink ' +
+  'lightsalmon lightseagreen lightskyblue lightslategray lightslategrey lightsteelblue lightyellow lime limegreen linen magenta maroon ' +
+  'mediumaquamarine mediumblue mediumorchid mediumpurple mediumseagreen mediumslateblue mediumspringgreen mediumturquoise ' +
+  'mediumvioletred midnightblue mintcream mistyrose moccasin navajowhite navy oldlace olive olivedrab orange orangered orchid ' +
+  'palegoldenrod palegreen paleturquoise palevioletred papayawhip peachpuff peru pink plum powderblue purple rebeccapurple red ' +
+  'rosybrown royalblue saddlebrown salmon sandybrown seagreen seashell sienna silver skyblue slateblue slategray slategrey snow ' +
+  'springgreen steelblue tan teal thistle tomato turquoise violet wheat white whitesmoke yellow yellowgreen'
+).split(' ')
 const NAMED = new RegExp(`(?<![\\w-])(?:${NAMES.join('|')})(?![\\w-])`, 'gi')
-const TAKES_COLOR = /(?<![\w-])(--[\w-]+|color|background(?:-color)?|border(?:-[a-z]+)*|outline(?:-color)?|fill|stroke|(?:box|text)-shadow|(?:caret|accent|text-decoration|column-rule)(?:-color)?)\s*:\s*([^;{}'"`]*)/g
-const RADIUS = new RegExp([
-  /border(?:-[a-z]+)*-radius\s*:\s*((?:\$\{[^}]*\}|[^;{}`'"])+)/.source,
-  /['"]?\bborder\w*Radius['"]?\s*[:=]\s*['"]?((?:\$\{[^}]*\}|[^,;}'"])+)/.source,
-  /setProperty\(\s*['"]border(?:-[a-z]+)*-radius['"]\s*,\s*['"]((?:\$\{[^}]*\}|[^'"])+)/.source,
-].join('|'), 'g')
+const TAKES_COLOR =
+  /(?<![\w-])(--[\w-]+|color|background(?:-color)?|border(?:-[a-z]+)*|outline(?:-color)?|fill|stroke|(?:box|text)-shadow|(?:caret|accent|text-decoration|column-rule)(?:-color)?)\s*:\s*([^;{}'"`]*)/g
+const RADIUS = new RegExp(
+  [
+    /border(?:-[a-z]+)*-radius\s*:\s*((?:\$\{[^}]*\}|[^;{}`'"])+)/.source,
+    /['"]?\bborder\w*Radius['"]?\s*[:=]\s*['"]?((?:\$\{[^}]*\}|[^,;}'"])+)/.source,
+    /setProperty\(\s*['"]border(?:-[a-z]+)*-radius['"]\s*,\s*['"]((?:\$\{[^}]*\}|[^'"])+)/.source,
+  ].join('|'),
+  'g',
+)
 const SPRING = /\bspringEasing\([^)]*\)|\blinear\([^)]*\)/g
 
 // Every literal color in `text` and where it starts.
@@ -54,7 +74,8 @@ function* colorLiterals(text) {
   for (const { 0: value, index } of text.matchAll(COLOR)) yield { value: plain(value), index }
   for (const declaration of text.matchAll(TAKES_COLOR)) {
     const start = declaration.index + declaration[0].length - declaration[2].length
-    for (const { 0: value, index } of declaration[2].matchAll(NAMED)) yield { value: value.toLowerCase(), index: start + index }
+    for (const { 0: value, index } of declaration[2].matchAll(NAMED))
+      yield { value: value.toLowerCase(), index: start + index }
   }
 }
 
@@ -95,31 +116,49 @@ function exempt(file, value, text, index) {
   return /<mask\b(?!.*<\/mask>)/.test(before) || gradientAround(line, index - start).includes('transparent')
 }
 
-const squeeze = value => value.replace(/\s*([(),/])\s*/g, '$1').replace(/\s+/g, ' ').trim()
+const squeeze = value =>
+  value
+    .replace(/\s*([(),/])\s*/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim()
 const plain = value => squeeze(value.toLowerCase())
 
 // A step is one corner of a border-radius value; a bare number in a React style is px.
-const steps = value => value.replace(/!important/g, '').replace(/\([^)]*\)/g, group => group.replace(/\s+/g, '')).trim().split(/\s*\/\s*|\s+/)
-  .map(step => (/^\d*\.?\d+$/.test(step) && step !== '0' ? `${step}px` : step))
+const steps = value =>
+  value
+    .replace(/!important/g, '')
+    .replace(/\([^)]*\)/g, group => group.replace(/\s+/g, ''))
+    .trim()
+    .split(/\s*\/\s*|\s+/)
+    .map(step => (/^\d*\.?\d+$/.test(step) && step !== '0' ? `${step}px` : step))
 
 // Each check takes a file name and its code, and returns the values that skip the shared ones.
 export const checks = {
-  colors: (file, text) => (PALETTES.has(stemOf(file)) ? [] : [...colorLiterals(text)]
-    .filter(({ value, index }) => !exempt(file, value, text, index))
-    .map(({ value }) => value)),
-  radii: (file, text) => [...text.matchAll(RADIUS)]
-    .flatMap(match => steps(match[1] ?? match[2] ?? match[3]))
-    .filter(step => !RADII.includes(step) && !step.startsWith('var(')),
-  springs: (file, text) => (file === 'motion.tsx' || file === 'spring.ts' ? [] : [...text.matchAll(SPRING)].map(({ 0: call }) => squeeze(call))),
+  colors: (file, text) =>
+    PALETTES.has(stemOf(file))
+      ? []
+      : [...colorLiterals(text)]
+          .filter(({ value, index }) => !exempt(file, value, text, index))
+          .map(({ value }) => value),
+  radii: (file, text) =>
+    [...text.matchAll(RADIUS)]
+      .flatMap(match => steps(match[1] ?? match[2] ?? match[3]))
+      .filter(step => !RADII.includes(step) && !step.startsWith('var(')),
+  springs: (file, text) =>
+    file === 'motion.tsx' || file === 'spring.ts' ? [] : [...text.matchAll(SPRING)].map(({ 0: call }) => squeeze(call)),
 }
 
 // Comments are not styles. A trailing comment follows a space, which a URL's `://` lacks.
-const code = text => text.split(/\r?\n/)
-  .map(line => (/^\s*(\/\/|\/\*|\*\/|\*\s|\*$)/.test(line) ? '' : line.replace(/\s\/\/\s.*$/, '')))
-  .join('\n')
+const code = text =>
+  text
+    .split(/\r?\n/)
+    .map(line => (/^\s*(\/\/|\/\*|\*\/|\*\s|\*$)/.test(line) ? '' : line.replace(/\s\/\/\s.*$/, '')))
+    .join('\n')
 
 function scanStyles(dir, prefix, found) {
-  for (const file of readdirSync(dir, { recursive: true }).filter(name => /\.(?:js|ts|tsx)$/.test(name) && !name.replaceAll('\\', '/').startsWith('vendor/')).map(name => name.replaceAll('\\', '/'))) {
+  for (const file of readdirSync(dir, { recursive: true })
+    .filter(name => /\.(?:js|ts|tsx)$/.test(name) && !name.replaceAll('\\', '/').startsWith('vendor/'))
+    .map(name => name.replaceAll('\\', '/'))) {
     const key = prefix ? `${prefix}${file}` : file
     const text = code(readFileSync(join(dir, file), 'utf8'))
     for (const [kind, check] of Object.entries(checks)) {
@@ -141,9 +180,14 @@ export function findStyles(dir = CLIENT) {
 
 export const readDebt = () => JSON.parse(readFileSync(DEBT, 'utf8'))
 
-const sorted = item => (typeof item === 'object'
-  ? Object.fromEntries(Object.entries(item).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)).map(([key, value]) => [key, sorted(value)]))
-  : item)
+const sorted = item =>
+  typeof item === 'object'
+    ? Object.fromEntries(
+        Object.entries(item)
+          .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+          .map(([key, value]) => [key, sorted(value)]),
+      )
+    : item
 const format = debt => `${JSON.stringify(sorted(debt), null, 2)}\n`
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

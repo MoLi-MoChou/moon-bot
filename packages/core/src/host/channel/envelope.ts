@@ -211,8 +211,12 @@ export const failureCodeOf = (error: unknown): string | undefined => codeOf(erro
 
 // Programming and file system errors are DS Bot's own faults, logged with their stack;
 // any other error is a refusal whose message is meant for the user.
-const isInternal = (error: unknown): boolean => error instanceof TypeError || error instanceof ReferenceError || error instanceof RangeError
-  || error instanceof SyntaxError || /^E[A-Z_]+$/.test(codeOf(error) ?? '')
+const isInternal = (error: unknown): boolean =>
+  error instanceof TypeError ||
+  error instanceof ReferenceError ||
+  error instanceof RangeError ||
+  error instanceof SyntaxError ||
+  /^E[A-Z_]+$/.test(codeOf(error) ?? '')
 
 /** The envelope code for a thrown value: its own `bot/*` code, else internal/refused. */
 export function errorCode(error: unknown): RpcErrorCode {
@@ -223,8 +227,7 @@ export function errorCode(error: unknown): RpcErrorCode {
 
 /** A JSON value read as an object, for fields the contract declares as records. */
 export const recordOf = (value: unknown): Readonly<Record<string, unknown>> | undefined =>
-  value !== null && typeof value === 'object' ? value as Readonly<Record<string, unknown>> : undefined
-
+  value !== null && typeof value === 'object' ? (value as Readonly<Record<string, unknown>>) : undefined
 
 /** A pending question, as `parts.ts` stores and answers it. */
 export interface PendingQuestion {

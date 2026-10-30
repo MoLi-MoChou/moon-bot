@@ -57,7 +57,8 @@ export class RelayRegistry implements RelayPort {
     const connection: AgentConnection = { socket, line: undefined, closed: undefined }
     this.connections.set(agentId, connection)
     socket.on('message', data => {
-      const text = typeof data === 'string' ? data : Array.isArray(data) ? data.map(part => String(part)).join('') : String(data)
+      const text =
+        typeof data === 'string' ? data : Array.isArray(data) ? data.map(part => String(part)).join('') : String(data)
       for (const line of text.split('\n')) if (line.trim() !== '') connection.line?.(line.trim())
     })
     const gone = () => {
@@ -78,9 +79,15 @@ export class RelayRegistry implements RelayPort {
     const connection = this.connections.get(agentId)
     if (connection === undefined) return undefined
     return {
-      write: line => { connection.socket.send(line) },
-      onLine: receive => { connection.line = receive },
-      onClosed: receive => { connection.closed = receive },
+      write: line => {
+        connection.socket.send(line)
+      },
+      onLine: receive => {
+        connection.line = receive
+      },
+      onClosed: receive => {
+        connection.closed = receive
+      },
     }
   }
 
@@ -105,9 +112,21 @@ export class RelayRegistry implements RelayPort {
 
   // The invite admin the channel ops call; revoke also cuts the live wire, so a
   // revoked token dies the second it is revoked, not at the next reconnect.
-  invitesView(): readonly { readonly agentId: string; readonly createdAt: number; readonly revokedAt: number | null; readonly lastSeenAt: number | null; readonly online: boolean }[] {
+  invitesView(): readonly {
+    readonly agentId: string
+    readonly createdAt: number
+    readonly revokedAt: number | null
+    readonly lastSeenAt: number | null
+    readonly online: boolean
+  }[] {
     const online = new Set(this.connections.keys())
-    return this.invites.list().map(row => ({ agentId: row.agentId, createdAt: row.createdAt, revokedAt: row.revokedAt, lastSeenAt: row.lastSeenAt, online: online.has(row.agentId) }))
+    return this.invites.list().map(row => ({
+      agentId: row.agentId,
+      createdAt: row.createdAt,
+      revokedAt: row.revokedAt,
+      lastSeenAt: row.lastSeenAt,
+      online: online.has(row.agentId),
+    }))
   }
 
   inviteCreate(agentId: string): { readonly agentId: string; readonly token: string } {

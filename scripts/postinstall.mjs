@@ -12,8 +12,12 @@ const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const core = join(root, 'packages', 'core')
 const contracts = join(root, 'packages', 'contracts')
 const ui = join(root, 'packages', 'ui')
-const esbuild = [join(root, 'node_modules', 'esbuild'), join(core, 'node_modules', 'esbuild'), join(contracts, 'node_modules', 'esbuild'), join(ui, 'node_modules', 'esbuild')]
-  .find(path => existsSync(join(path, 'bin', 'esbuild')))
+const esbuild = [
+  join(root, 'node_modules', 'esbuild'),
+  join(core, 'node_modules', 'esbuild'),
+  join(contracts, 'node_modules', 'esbuild'),
+  join(ui, 'node_modules', 'esbuild'),
+].find(path => existsSync(join(path, 'bin', 'esbuild')))
 if (esbuild === undefined) process.exit(0)
 if (!existsSync(join(core, 'scripts', 'build-host.mjs'))) process.exit(0)
 

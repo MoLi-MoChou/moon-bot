@@ -5,7 +5,11 @@ import { install as installThinking, thinkingMs } from '../src/host/thinking.ts'
 
 const reasoningRun = (time0, gaps, texts) => ({ type: 'reasoning-chunks', time0, index: 0, dt: gaps, texts })
 const textRun = (time0, gaps, texts) => ({ type: 'text-chunks', time0, index: 0, dt: gaps, texts })
-const message = (turn, step, stream, extra = {}) => ({ seq: turn * 10 + step, type: 'assistant/message', data: { turn, step, message: { content: [] }, stream, ...extra } })
+const message = (turn, step, stream, extra = {}) => ({
+  seq: turn * 10 + step,
+  type: 'assistant/message',
+  data: { turn, step, message: { content: [] }, stream, ...extra },
+})
 
 test('a Turn’s thinking time sums its steps’ reasoning spans', () => {
   const events = [
@@ -42,15 +46,28 @@ test('assistant/attempt streams are skipped', () => {
 test('a turn with reasoning text but no stream records is unknown, not 0', () => {
   const events = [message(1, 1, undefined)]
   assert.equal(thinkingMs(events, 1), undefined)
-  assert.equal(thinkingMs([{ type: 'assistant/message', data: { turn: 1, step: 1, message: { content: [{ type: 'reasoning', text: 'old' }] } } }], 1), undefined)
+  assert.equal(
+    thinkingMs(
+      [
+        {
+          type: 'assistant/message',
+          data: { turn: 1, step: 1, message: { content: [{ type: 'reasoning', text: 'old' }] } },
+        },
+      ],
+      1,
+    ),
+    undefined,
+  )
 })
 
 test('several reasoning runs in one step span first to last', () => {
-  const events = [message(1, 1, [
-    reasoningRun(1000, [100], ['a', 'b']),
-    textRun(2000, [50], ['tool intro']),
-    reasoningRun(5000, [200], ['c', 'd']),
-  ])]
+  const events = [
+    message(1, 1, [
+      reasoningRun(1000, [100], ['a', 'b']),
+      textRun(2000, [50], ['tool intro']),
+      reasoningRun(5000, [200], ['c', 'd']),
+    ]),
+  ]
   assert.equal(thinkingMs(events, 1), 4200)
 })
 
@@ -61,7 +78,9 @@ test('thinkingOf caches only a closed turn', async () => {
       pages += 1
       for (const event of [...EVENTS].reverse()) yield event
     },
-  } as unknown as Parameters<typeof installThinking>[0] & { thinkingOf: (sessionId: string, turn: number) => Promise<number | undefined> }
+  } as unknown as Parameters<typeof installThinking>[0] & {
+    thinkingOf: (sessionId: string, turn: number) => Promise<number | undefined>
+  }
   installThinking(rt)
   // Open turn: computed each call.
   assert.equal(await rt.thinkingOf('s', 1), 1000)
@@ -75,12 +94,21 @@ test('thinkingOf caches only a closed turn', async () => {
 
 test('reading an older turn also answers the closed turns read on the way', async () => {
   const events = [
-    message(1, 1, [reasoningRun(1000, [1000], ['a', 'b'])]), { type: 'turn/end', data: { turn: 1 } },
-    message(2, 1, [reasoningRun(5000, [2000], ['a', 'b'])]), { type: 'turn/end', data: { turn: 2 } },
+    message(1, 1, [reasoningRun(1000, [1000], ['a', 'b'])]),
+    { type: 'turn/end', data: { turn: 1 } },
+    message(2, 1, [reasoningRun(5000, [2000], ['a', 'b'])]),
+    { type: 'turn/end', data: { turn: 2 } },
     message(3, 1, [reasoningRun(9000, [3000], ['a', 'b'])]),
   ]
   let pages = 0
-  const rt = { eventsBackwards: async function* () { pages += 1; for (const event of [...events].reverse()) yield event } } as unknown as Parameters<typeof installThinking>[0] & { thinkingOf: (sessionId: string, turn: number) => Promise<number | undefined> }
+  const rt = {
+    eventsBackwards: async function* () {
+      pages += 1
+      for (const event of [...events].reverse()) yield event
+    },
+  } as unknown as Parameters<typeof installThinking>[0] & {
+    thinkingOf: (sessionId: string, turn: number) => Promise<number | undefined>
+  }
   installThinking(rt)
   assert.equal(await rt.thinkingOf('s', 1), 1000)
   assert.equal(await rt.thinkingOf('s', 2), 2000)
@@ -91,21 +119,44 @@ test('reading an older turn also answers the closed turns read on the way', asyn
 
 const EVENTS: unknown[] = [message(1, 1, [reasoningRun(1000, [400, 600], ['a', 'b', 'c'])])]
 
-const api = (handlers: { selfOf?: (id: string) => string | undefined, thinkingOf?: (sessionId: string, turn: number) => Promise<number | undefined> } = {}) => {
+const api = (
+  handlers: {
+    selfOf?: (id: string) => string | undefined
+    thinkingOf?: (sessionId: string, turn: number) => Promise<number | undefined>
+  } = {},
+) => {
   let route
   const ctx = {
     logger: { warn() {}, info() {} },
     get: () => undefined,
     on: () => () => {},
-    effect: execute => { execute() },
+    effect: execute => {
+      execute()
+    },
     tools: { register: () => () => {}, guard: () => () => {}, schemas: () => [] },
     systemPrompt: { section: () => () => {} },
-    connection: { fetch: { register(r) { route = r; return () => {} } } },
+    connection: {
+      fetch: {
+        register(r) {
+          route = r
+          return () => {}
+        },
+      },
+    },
     llm: { listProviders: () => [] },
   }
   const rt = {
     ctx,
-    state: { revision: 0, bots: {}, rooms: {}, exchanges: [], questions: {}, agents: {}, secretRequests: {}, prefs: {} },
+    state: {
+      revision: 0,
+      bots: {},
+      rooms: {},
+      exchanges: [],
+      questions: {},
+      agents: {},
+      secretRequests: {},
+      prefs: {},
+    },
     save: async () => {},
     refresh: async () => {},
     readOnly: () => undefined,
@@ -135,7 +186,10 @@ const api = (handlers: { selfOf?: (id: string) => string | undefined, thinkingOf
   } as unknown as Parameters<typeof installChannel>[0]
   installChannel(rt)
   const post = async (endpoint, payload) => {
-    const response = await route.fetch({ json: async () => ({ endpoint, payload }), signal: new AbortController().signal })
+    const response = await route.fetch({
+      json: async () => ({ endpoint, payload }),
+      signal: new AbortController().signal,
+    })
     return response.json()
   }
   return { post }

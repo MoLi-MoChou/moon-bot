@@ -16,7 +16,8 @@ import type { Api, Model } from '@earendil-works/pi-ai'
 import { streamSimple } from '@earendil-works/pi-ai/api/openai-completions'
 
 // The text of a message's blocks, whatever else the kernel mixes into them.
-const textOfBlocks = (blocks: readonly unknown[]): string => blocks.map(block => (block as { text?: string }).text ?? '').join('')
+const textOfBlocks = (blocks: readonly unknown[]): string =>
+  blocks.map(block => (block as { text?: string }).text ?? '').join('')
 
 // A scripted OpenAI-compatible /chat/completions endpoint. Each reply is a list of
 // deltas; tool calls stream in the standard incremental form, each with its own index.
@@ -38,10 +39,15 @@ const openaiMock = () => {
       const id = `chatcmpl-${requests.length}`
       const send = delta => {
         state.chunks += 1
-        res.write(`data: ${JSON.stringify({
-          id, object: 'chat.completion.chunk', created: 1, model: body.model,
-          choices: [{ index: 0, delta, finish_reason: null }],
-        })}\n\n`)
+        res.write(
+          `data: ${JSON.stringify({
+            id,
+            object: 'chat.completion.chunk',
+            created: 1,
+            model: body.model,
+            choices: [{ index: 0, delta, finish_reason: null }],
+          })}\n\n`,
+        )
       }
       send({ role: 'assistant', content: '' })
       for (const delta of reply) {
@@ -51,38 +57,59 @@ const openaiMock = () => {
         } else send(delta)
       }
       const tools = reply.some(delta => delta.tool_calls !== undefined)
-      res.write(`data: ${JSON.stringify({
-        id, object: 'chat.completion.chunk', created: 1, model: body.model,
-        choices: [{ index: 0, delta: {}, finish_reason: tools ? 'tool_calls' : 'stop' }],
-      })}\n\n`)
+      res.write(
+        `data: ${JSON.stringify({
+          id,
+          object: 'chat.completion.chunk',
+          created: 1,
+          model: body.model,
+          choices: [{ index: 0, delta: {}, finish_reason: tools ? 'tool_calls' : 'stop' }],
+        })}\n\n`,
+      )
       res.write('data: [DONE]\n\n')
       res.end()
     })
   })
   return {
-    requests, state,
-    reply(...deltas) { script.push(deltas) },
-    listen: (): Promise<{ port: number }> => new Promise(resolve => server.listen(0, '127.0.0.1', () => resolve(server.address() as { port: number }))),
+    requests,
+    state,
+    reply(...deltas) {
+      script.push(deltas)
+    },
+    listen: (): Promise<{ port: number }> =>
+      new Promise(resolve => server.listen(0, '127.0.0.1', () => resolve(server.address() as { port: number }))),
     close: () => new Promise(resolve => server.close(resolve)),
   }
 }
 
 // A Model as pi-ai's catalog would serve it, pointed at whatever OpenAI-compatible
 // base URL the caller runs. `input` is required: image-support checks read it.
-const model = (baseUrl): Model<Api> => ({
-  id: 'mock-1', name: 'Mock', api: 'openai-completions', provider: 'mock', baseUrl,
-  input: ['text'], reasoning: false, contextWindow: 100000, maxTokens: 4096,
-  cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-} as unknown as Model<Api>)
+const model = (baseUrl): Model<Api> =>
+  ({
+    id: 'mock-1',
+    name: 'Mock',
+    api: 'openai-completions',
+    provider: 'mock',
+    baseUrl,
+    input: ['text'],
+    reasoning: false,
+    contextWindow: 100000,
+    maxTokens: 4096,
+    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+  }) as unknown as Model<Api>
 
 const tool = (name, execute) => ({
-  name, label: name, description: `test tool ${name}`,
+  name,
+  label: name,
+  description: `test tool ${name}`,
   parameters: Type.Object({}),
   execute,
 })
 
 // One streamed tool-call delta at `index`.
-const call = (index, id, name) => ({ tool_calls: [{ index, id, type: 'function', function: { name, arguments: '{}' } }] })
+const call = (index, id, name) => ({
+  tool_calls: [{ index, id, type: 'function', function: { name, arguments: '{}' } }],
+})
 
 test('an OpenAI-compatible endpoint with a custom base URL and key drives the agent', async () => {
   const mock = openaiMock()
@@ -98,7 +125,10 @@ test('an OpenAI-compatible endpoint with a custom base URL and key drives the ag
   assert.equal(mock.requests[0].url, '/v1/chat/completions')
   assert.equal(mock.requests[0].auth, 'Bearer sk-prototype')
   assert.equal(mock.requests[0].body.model, 'mock-1')
-  const said = agent.state.messages.filter(m => m.role === 'assistant').map(m => textOfBlocks(m.content)).join('')
+  const said = agent.state.messages
+    .filter(m => m.role === 'assistant')
+    .map(m => textOfBlocks(m.content))
+    .join('')
   assert.equal(said, 'hello from the custom endpoint')
   await mock.close()
 })
@@ -108,11 +138,14 @@ test('a tool call can be allowed, denied, and held until a gate opens', async ()
   const address = await mock.listen()
   const seen = []
   let openGate
-  const gate = new Promise(resolve => { openGate = resolve })
-  const mk = (name) => tool(name, async () => ({ content: [{ type: 'text', text: `${name} ran` }] }))
+  const gate = new Promise(resolve => {
+    openGate = resolve
+  })
+  const mk = name => tool(name, async () => ({ content: [{ type: 'text', text: `${name} ran` }] }))
   const agent = new Agent({
     initialState: {
-      systemPrompt: 'proto', model: model(`http://127.0.0.1:${address.port}/v1`),
+      systemPrompt: 'proto',
+      model: model(`http://127.0.0.1:${address.port}/v1`),
       tools: [mk('allowed'), mk('denied'), mk('held')],
     },
     streamFn: streamSimple,
@@ -152,13 +185,21 @@ test('the system prompt and the frozen memory segment keep the order we set', as
     getApiKey: () => 'sk',
     // The dynamic segment is injected on every request, after the frozen one, without
     // touching the stored transcript: the stable prefix keeps its bytes.
-    transformContext: async messages => [...messages, { role: 'system', content: '## Now\n10:00', timestamp: Date.now() }],
+    transformContext: async messages => [
+      ...messages,
+      { role: 'system', content: '## Now\n10:00', timestamp: Date.now() },
+    ],
   })
   mock.reply({ content: 'a' })
   await agent.prompt('first')
   mock.reply({ content: 'b' })
   await agent.prompt('second')
-  const systems = mock.requests.map(request => request.body.messages.filter(m => m.role === 'system').map(m => m.content).join('\n'))
+  const systems = mock.requests.map(request =>
+    request.body.messages
+      .filter(m => m.role === 'system')
+      .map(m => m.content)
+      .join('\n'),
+  )
   assert.equal(systems.length, 2)
   for (const system of systems) {
     assert.ok(system.indexOf('You are Moon Bot.') < system.indexOf('## Frozen memory'), 'base before frozen memory')
@@ -170,12 +211,20 @@ test('the system prompt and the frozen memory segment keep the order we set', as
 test('a run cancels mid-stream and resumes from the same transcript', async () => {
   const mock = openaiMock()
   const address = await mock.listen()
-  const agent = new Agent({ initialState: { systemPrompt: 'proto', model: model(`http://127.0.0.1:${address.port}/v1`) }, streamFn: streamSimple, getApiKey: () => 'sk' })
+  const agent = new Agent({
+    initialState: { systemPrompt: 'proto', model: model(`http://127.0.0.1:${address.port}/v1`) },
+    streamFn: streamSimple,
+    getApiKey: () => 'sk',
+  })
   // The first reply says a word, then stalls: the abort lands inside the stream, after
   // the client has the word.
   mock.reply({ content: 'partial' }, { stall: 5000 }, { content: ' more' })
   const first = agent.prompt('start')
-  while (!String((agent.state.streamingMessage?.content?.[0] as { text?: string } | undefined)?.text ?? '').startsWith('partial')) {
+  while (
+    !String((agent.state.streamingMessage?.content?.[0] as { text?: string } | undefined)?.text ?? '').startsWith(
+      'partial',
+    )
+  ) {
     await new Promise(resolve => setTimeout(resolve, 5))
   }
   agent.abort()
@@ -190,10 +239,19 @@ test('a run cancels mid-stream and resumes from the same transcript', async () =
   agent.followUp({ role: 'user', content: 'go on', timestamp: Date.now() })
   await agent.continue()
   const kept = agent.state.messages.filter(m => m.role === 'assistant').map(m => textOfBlocks(m.content))
-  assert.ok(kept.some(text => text.startsWith('partial')), 'the aborted partial answer stays in the transcript')
+  assert.ok(
+    kept.some(text => text.startsWith('partial')),
+    'the aborted partial answer stays in the transcript',
+  )
   const wire = mock.requests.at(-1).body.messages
-  assert.ok(wire.some(m => m.role === 'user' && JSON.stringify(m).includes('start')), 'the earlier turn is still in context')
-  assert.ok(wire.some(m => m.role === 'user' && JSON.stringify(m).includes('go on')), 'the follow-up was sent')
+  assert.ok(
+    wire.some(m => m.role === 'user' && JSON.stringify(m).includes('start')),
+    'the earlier turn is still in context',
+  )
+  assert.ok(
+    wire.some(m => m.role === 'user' && JSON.stringify(m).includes('go on')),
+    'the follow-up was sent',
+  )
   const finalText = textOfBlocks(agent.state.messages.filter(m => m.role === 'assistant').at(-1).content)
   assert.equal(finalText, 'resumed')
   await mock.close()
@@ -204,7 +262,8 @@ test('agent events map onto the session/event shapes this host routes', async ()
   const address = await mock.listen()
   const agent = new Agent({
     initialState: {
-      systemPrompt: 'proto', model: model(`http://127.0.0.1:${address.port}/v1`),
+      systemPrompt: 'proto',
+      model: model(`http://127.0.0.1:${address.port}/v1`),
       tools: [tool('note', async () => ({ content: [{ type: 'text', text: 'noted' }] }))],
     },
     streamFn: streamSimple,
@@ -215,14 +274,31 @@ test('agent events map onto the session/event shapes this host routes', async ()
   const events = []
   let turn = 0
   agent.subscribe(event => {
-    if (event.type === 'agent_start') { turn += 1; events.push({ type: 'turn/start', data: { turn } }) }
-    if (event.type === 'message_end' && event.message.role === 'assistant') {
-      events.push({ type: 'assistant/message', data: { message: { content: event.message.content.map(block => (
-        block.type === 'toolCall' ? { type: 'tool-call', id: block.id, name: block.name, arguments: JSON.stringify(block.arguments) }
-          : block.type === 'text' ? { type: 'text', text: block.text } : block
-      )) } } })
+    if (event.type === 'agent_start') {
+      turn += 1
+      events.push({ type: 'turn/start', data: { turn } })
     }
-    if (event.type === 'tool_execution_start') events.push({ type: 'tool/call', data: { callId: event.toolCallId, name: event.toolName, arguments: JSON.stringify(event.args ?? {}) } })
+    if (event.type === 'message_end' && event.message.role === 'assistant') {
+      events.push({
+        type: 'assistant/message',
+        data: {
+          message: {
+            content: event.message.content.map(block =>
+              block.type === 'toolCall'
+                ? { type: 'tool-call', id: block.id, name: block.name, arguments: JSON.stringify(block.arguments) }
+                : block.type === 'text'
+                  ? { type: 'text', text: block.text }
+                  : block,
+            ),
+          },
+        },
+      })
+    }
+    if (event.type === 'tool_execution_start')
+      events.push({
+        type: 'tool/call',
+        data: { callId: event.toolCallId, name: event.toolName, arguments: JSON.stringify(event.args ?? {}) },
+      })
     if (event.type === 'tool_execution_end') events.push({ type: 'tool/result', data: { callId: event.toolCallId } })
     if (event.type === 'agent_end') events.push({ type: 'turn/end', data: { turn, reason: { kind: 'completed' } } })
   })
@@ -230,8 +306,17 @@ test('agent events map onto the session/event shapes this host routes', async ()
   mock.reply({ content: 'Noted and done.' })
   await agent.prompt('take a note')
   const kinds = events.map(event => event.type)
-  assert.deepEqual(kinds, ['turn/start', 'assistant/message', 'tool/call', 'tool/result', 'assistant/message', 'turn/end'])
-  const firstAnswer = events.find(event => event.type === 'assistant/message').data.message.content.find(b => b.type === 'text').text
+  assert.deepEqual(kinds, [
+    'turn/start',
+    'assistant/message',
+    'tool/call',
+    'tool/result',
+    'assistant/message',
+    'turn/end',
+  ])
+  const firstAnswer = events
+    .find(event => event.type === 'assistant/message')
+    .data.message.content.find(b => b.type === 'text').text
   assert.equal(firstAnswer, 'One moment.')
   await mock.close()
 })

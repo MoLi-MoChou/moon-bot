@@ -64,7 +64,8 @@ export function newer(a: unknown, b: unknown): boolean {
   }
   const x = parse(a)
   const y = parse(b)
-  for (let index = 0; index < 3; index++) if (x.nums[index] !== y.nums[index]) return (x.nums[index] ?? 0) > (y.nums[index] ?? 0)
+  for (let index = 0; index < 3; index++)
+    if (x.nums[index] !== y.nums[index]) return (x.nums[index] ?? 0) > (y.nums[index] ?? 0)
   if (x.pre === y.pre) return false
   if (x.pre === null) return true
   if (y.pre === null) return false
@@ -81,13 +82,18 @@ export function sourceOf(spec: unknown): UpdateSource {
   const text = typeof spec === 'string' ? spec.trim() : ''
   if (text === '') return { kind: 'unknown' }
   if (/^(link|file):/i.test(text) || /^([a-z]:[\\/]|[\\/]|~|\.)/i.test(text)) return { kind: 'path' }
-  const github = /^(?:github:|git\+https:\/\/github\.com\/|https:\/\/github\.com\/|git@github\.com:)?([\w.-]+)\/([\w.-]+?)(?:\.git)?(?:#(.*))?$/i.exec(text)
+  const github =
+    /^(?:github:|git\+https:\/\/github\.com\/|https:\/\/github\.com\/|git@github\.com:)?([\w.-]+)\/([\w.-]+?)(?:\.git)?(?:#(.*))?$/i.exec(
+      text,
+    )
   const gitLike = /^(git\+|git:|git@|github:|gitlab:|bitbucket:)/i.test(text) || /\.git(#|$)/i.test(text)
   if (github && (gitLike || !text.startsWith('@'))) {
     const parts = (github[3] ?? '').split('&').filter(Boolean)
     const ref = parts.find(part => !part.includes(':')) ?? ''
     return {
-      kind: 'git', owner: github[1] ?? '', repo: github[2] ?? '',
+      kind: 'git',
+      owner: github[1] ?? '',
+      repo: github[2] ?? '',
       ...(cleanVersion(ref) ? { ref } : {}),
       rest: parts.filter(part => part !== ref),
     }
@@ -98,10 +104,17 @@ export function sourceOf(spec: unknown): UpdateSource {
 }
 
 const normalizeRegistry = (url: unknown): string => `${String(url).trim().replace(/\/+$/, '')}/`
-export const encodeName = (name: string): string => (name.startsWith('@') ? `@${encodeURIComponent(name.slice(1))}` : encodeURIComponent(name))
+export const encodeName = (name: string): string =>
+  name.startsWith('@') ? `@${encodeURIComponent(name.slice(1))}` : encodeURIComponent(name)
 
-export const fetchJson = async (url: string, headers: Readonly<Record<string, string>> = {}): Promise<Record<string, unknown>> => {
-  const response = await fetch(url, { headers: { accept: 'application/json', ...headers }, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
+export const fetchJson = async (
+  url: string,
+  headers: Readonly<Record<string, string>> = {},
+): Promise<Record<string, unknown>> => {
+  const response = await fetch(url, {
+    headers: { accept: 'application/json', ...headers },
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+  })
   if (!response.ok) throw new Error(`${url} answered ${response.status}`)
   return response.json() as Promise<Record<string, unknown>>
 }
@@ -109,12 +122,13 @@ export const fetchJson = async (url: string, headers: Readonly<Record<string, st
 // The registries the plugin manager installs from, in its order: its configured
 // first one (else pnpm's own), then the fallbacks, unless that first one is private.
 export async function registryPlan(config: HostConfig, manager: PluginManagerService | undefined): Promise<string[]> {
-  if (typeof config.updateRegistry === 'string' && config.updateRegistry !== '') return [normalizeRegistry(config.updateRegistry)]
+  if (typeof config.updateRegistry === 'string' && config.updateRegistry !== '')
+    return [normalizeRegistry(config.updateRegistry)]
   const configured = await Promise.resolve(manager?.registries?.()).catch(() => null)
   if (!configured) return [OFFICIAL_REGISTRY, MIRROR_REGISTRY]
   const fallbacks = (configured.fallbackRegistries ?? []).map(normalizeRegistry)
   const own = configured.resolved ? normalizeRegistry(configured.resolved) : null
-  const first = configured.registry ? normalizeRegistry(configured.registry) : own ?? OFFICIAL_REGISTRY
+  const first = configured.registry ? normalizeRegistry(configured.registry) : (own ?? OFFICIAL_REGISTRY)
   const isPublic = first === OFFICIAL_REGISTRY || fallbacks.includes(first)
   return isPublic ? [...new Set([first, ...fallbacks])] : [first]
 }
@@ -129,14 +143,19 @@ export async function installSpecOf(ctx: { get<T>(name: string): T | undefined }
   const dir = ctx.get<{ readonly dir?: string }>('profileContext')?.dir
   if (typeof dir !== 'string') return undefined
   try {
-    const manifest = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8')) as { readonly dependencies?: Record<string, string> }
+    const manifest = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8')) as {
+      readonly dependencies?: Record<string, string>
+    }
     return manifest.dependencies?.[PKG.name]
-  } catch { return undefined }
+  } catch {
+    return undefined
+  }
 }
 
 // The public repository the releases live in, for tags and the "what's new" link.
 export const repoSlug = () =>
-  /github\.com[/:]([\w.-]+\/[\w.-]+?)(?:\.git)?$/i.exec(String(PKG.repository?.url ?? PKG.repository ?? ''))?.[1] ?? null
+  /github\.com[/:]([\w.-]+\/[\w.-]+?)(?:\.git)?$/i.exec(String(PKG.repository?.url ?? PKG.repository ?? ''))?.[1] ??
+  null
 
 const repoUrl = () => {
   const repo = repoSlug()
@@ -155,18 +174,34 @@ export function install(rt: HostRuntime): void {
   const manager = (): PluginManagerService | undefined => ctx.get<PluginManagerService>('pluginManager')
 
   const status: UpdateStatus = {
-    name: PKG.name, current: PKG.version, latest: null, source: 'unknown', notesUrl: releasesUrl(),
-    checkedAt: 0, phase: 'idle', installed: null, error: null,
+    name: PKG.name,
+    current: PKG.version,
+    latest: null,
+    source: 'unknown',
+    notesUrl: releasesUrl(),
+    checkedAt: 0,
+    phase: 'idle',
+    installed: null,
+    error: null,
   }
   // Where the newest version was found, and the spec that installs it.
   let target: UpdateTarget | null = null
   let checking: Promise<void> | null = null
 
   const view = (): Record<string, unknown> => ({
-    name: status.name, current: status.current, latest: status.latest, source: status.source, notesUrl: status.notesUrl,
-    repoUrl: repoUrl(), enabled,
-    checkedAt: status.checkedAt, phase: status.phase, installed: status.installed, error: status.error,
-    available: status.phase !== 'installed' && target !== null && status.latest !== null && newer(status.latest, status.current),
+    name: status.name,
+    current: status.current,
+    latest: status.latest,
+    source: status.source,
+    notesUrl: status.notesUrl,
+    repoUrl: repoUrl(),
+    enabled,
+    checkedAt: status.checkedAt,
+    phase: status.phase,
+    installed: status.installed,
+    error: status.error,
+    available:
+      status.phase !== 'installed' && target !== null && status.latest !== null && newer(status.latest, status.current),
   })
 
   // Asked only while the About page is open, so a closed page never calls GitHub.
@@ -178,9 +213,15 @@ export function install(rt: HostRuntime): void {
     if (repo === null) return null
     if (Date.now() - stars.at < STARS_TTL_MS) return stars.count
     starring ??= fetchJson(`https://api.github.com/repos/${repo}`, { 'user-agent': `${PKG.name}/${PKG.version}` })
-      .then((info) => { if (Number.isInteger(info.stargazers_count)) stars = { count: Number(info.stargazers_count), at: Date.now() } })
-      .catch((error: unknown) => rt.warn('moon-bot: star count failed: %s', error instanceof Error ? error.message : error))
-      .finally(() => { starring = null })
+      .then(info => {
+        if (Number.isInteger(info.stargazers_count)) stars = { count: Number(info.stargazers_count), at: Date.now() }
+      })
+      .catch((error: unknown) =>
+        rt.warn('moon-bot: star count failed: %s', error instanceof Error ? error.message : error),
+      )
+      .finally(() => {
+        starring = null
+      })
     await starring
     return stars.count
   }
@@ -190,14 +231,18 @@ export function install(rt: HostRuntime): void {
       try {
         const version = cleanVersion((await fetchJson(`${registry}${encodeName(PKG.name)}/latest`)).version)
         if (version) return { version, spec: `${PKG.name}@${version}`, registry }
-      } catch { /* unreachable, or no copy there yet: ask the next one */ }
+      } catch {
+        /* unreachable, or no copy there yet: ask the next one */
+      }
     }
     return null
   }
 
   async function newestFromGitHub(source: Extract<UpdateSource, { kind: 'git' }>): Promise<UpdateTarget | null> {
     if (!source.ref) return null
-    const release = await fetchJson(`https://api.github.com/repos/${source.owner}/${source.repo}/releases/latest`, { 'user-agent': `${PKG.name}/${PKG.version}` })
+    const release = await fetchJson(`https://api.github.com/repos/${source.owner}/${source.repo}/releases/latest`, {
+      'user-agent': `${PKG.name}/${PKG.version}`,
+    })
     const version = cleanVersion(release?.tag_name)
     if (!version) return null
     // The API answers through redirects, so the release's html_url names the
@@ -211,7 +256,12 @@ export function install(rt: HostRuntime): void {
   async function runCheck(): Promise<void> {
     // The desktop app updates as a whole, with this package inside it.
     // Moon Bot: the web build updates with its server deploy, never from the page.
-    const source: UpdateSource = process.env.DS_BOT_WEB === '1' ? { kind: 'web' } : process.env.DS_BOT_APP === '1' ? { kind: 'app' } : sourceOf(await installSpecOf(ctx))
+    const source: UpdateSource =
+      process.env.DS_BOT_WEB === '1'
+        ? { kind: 'web' }
+        : process.env.DS_BOT_APP === '1'
+          ? { kind: 'app' }
+          : sourceOf(await installSpecOf(ctx))
     status.source = source.kind
     let found: { version: string; spec: string; registry?: string } | null = null
     try {
@@ -234,11 +284,17 @@ export function install(rt: HostRuntime): void {
   }
 
   /** Ask where the package came from for its newest version; a fresh check ignores the last answer. */
-  async function check({ fresh = false }: { readonly fresh?: boolean } = {}): Promise<Record<string, unknown> | undefined> {
+  async function check({
+    fresh = false,
+  }: {
+    readonly fresh?: boolean
+  } = {}): Promise<Record<string, unknown> | undefined> {
     if (!enabled) return view()
     if (checking !== null) return checking.then(() => undefined)
     if (!fresh && Date.now() - status.checkedAt < CHECK_TTL_MS) return view()
-    checking = runCheck().finally(() => { checking = null })
+    checking = runCheck().finally(() => {
+      checking = null
+    })
     await checking
     return view()
   }
@@ -248,27 +304,41 @@ export function install(rt: HostRuntime): void {
     if (status.phase === 'installing') return view()
     if (target === null) throw new Error('No Moon Bot update is available')
     const service = manager()
-    if (typeof service?.installBundle !== 'function') throw new Error('Updates are installed by the desktop app, not by this window')
+    if (typeof service?.installBundle !== 'function')
+      throw new Error('Updates are installed by the desktop app, not by this window')
     const chosen = target
     Object.assign(status, { phase: 'installing', error: null })
     void Promise.resolve(service.installBundle(chosen.spec, chosen.registry ? { registry: chosen.registry } : {}))
-      .then((result) => {
-        const answer = result as { readonly error?: { readonly diagnostic?: string; readonly code?: string }; readonly application?: string; readonly version?: unknown } | undefined
+      .then(result => {
+        const answer = result as
+          | {
+              readonly error?: { readonly diagnostic?: string; readonly code?: string }
+              readonly application?: string
+              readonly version?: unknown
+            }
+          | undefined
         if (answer?.error !== undefined || !['applied', 'restart-required'].includes(String(answer?.application))) {
-          throw new Error(answer?.error?.diagnostic ?? answer?.error?.code ?? `install ${answer?.application ?? 'failed'}`)
+          throw new Error(
+            answer?.error?.diagnostic ?? answer?.error?.code ?? `install ${answer?.application ?? 'failed'}`,
+          )
         }
         Object.assign(status, { phase: 'installed', installed: cleanVersion(answer?.version) ?? chosen.version })
       })
-      .catch((error) => {
+      .catch(error => {
         rt.warn('moon-bot: update to %s failed: %s', chosen.spec, error instanceof Error ? error.message : error)
-        Object.assign(status, { phase: 'failed', error: String(error instanceof Error ? error.message : error).slice(0, 600) })
+        Object.assign(status, {
+          phase: 'failed',
+          error: String(error instanceof Error ? error.message : error).slice(0, 600),
+        })
       })
     return view()
   }
 
   if (enabled) {
     ctx.effect(() => {
-      const timer = setTimeout(() => { void check() }, STARTUP_DELAY_MS)
+      const timer = setTimeout(() => {
+        void check()
+      }, STARTUP_DELAY_MS)
       // A pending first check never keeps the process alive.
       timer.unref()
       return () => clearTimeout(timer)

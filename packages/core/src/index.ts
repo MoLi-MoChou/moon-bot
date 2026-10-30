@@ -44,13 +44,56 @@ import * as workspaceFiles from './host/workspace-files.ts'
 export { COLORS } from './host/constants.ts'
 
 export const name = 'moon-bot'
-export const inject = ['llm', 'tools', 'systemPrompt', 'sessionController', 'sessions', 'sessionTitle', 'workspaceRegistry', 'connection']
+export const inject = [
+  'llm',
+  'tools',
+  'systemPrompt',
+  'sessionController',
+  'sessions',
+  'sessionTitle',
+  'workspaceRegistry',
+  'connection',
+]
 
 // Each module's install(rt) registers its listeners, tools, and effects, and puts on `rt`
 // the functions other modules call; they call them through `rt` at run time, never during
 // install. Listeners run and tools are listed in registration order, so this order holds:
 // usage meters model requests after every listener that rewrites them.
-const MODULES = [diagnostics, store, models, providers, permissions, turns, handoffs, tasksPanel, delivery, roster, folders, agents, prompt, timeContext, tools, chatIndex, groups, approvals, resume, memory, parts, images, secrets, connectors, capabilities, schedules, browser, usage, update, thinking, feed, workspaceFiles, channel]
+const MODULES = [
+  diagnostics,
+  store,
+  models,
+  providers,
+  permissions,
+  turns,
+  handoffs,
+  tasksPanel,
+  delivery,
+  roster,
+  folders,
+  agents,
+  prompt,
+  timeContext,
+  tools,
+  chatIndex,
+  groups,
+  approvals,
+  resume,
+  memory,
+  parts,
+  images,
+  secrets,
+  connectors,
+  capabilities,
+  schedules,
+  browser,
+  usage,
+  update,
+  thinking,
+  feed,
+  workspaceFiles,
+  channel,
+]
 
 export function apply(ctx: HostContext, config: Record<string, unknown> = {}): void {
   createRuntime(ctx, config)

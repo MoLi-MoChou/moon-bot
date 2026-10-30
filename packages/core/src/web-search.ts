@@ -17,7 +17,14 @@ export const name = 'web-search-auto'
 export const inject = ['web']
 
 export { decodeEntities, textOf } from './web-search/source.ts'
-export { findSources, readDeclared, readGemini, readMessages, readResponses, showsSearch } from './web-search/readers.ts'
+export {
+  findSources,
+  readDeclared,
+  readGemini,
+  readMessages,
+  readResponses,
+  showsSearch,
+} from './web-search/readers.ts'
 export { AUTH_STYLES, planNative, PROTOCOL_SEARCHES, SEARCH_APIS } from './web-search/native.ts'
 export { decodeBingUrl, ENGINES, parseBing, parseDuckDuckGo } from './web-search/engines.ts'
 export { DEFAULTS, resolveConfig } from './web-search/config.ts'
@@ -26,7 +33,17 @@ export { apply, routeOf } from './web-search/host.ts'
 
 export type { Source } from './web-search/source.ts'
 export type { ReadOutcome } from './web-search/readers.ts'
-export type { AuthStyle, BodyReader, Candidate, PreparedRequest, ProtocolId, ProtocolSearch, Route, SearchApi, SearchCall } from './web-search/native.ts'
+export type {
+  AuthStyle,
+  BodyReader,
+  Candidate,
+  PreparedRequest,
+  ProtocolId,
+  ProtocolSearch,
+  Route,
+  SearchApi,
+  SearchCall,
+} from './web-search/native.ts'
 export type { Engine, EngineId, PageOutcome } from './web-search/engines.ts'
 export type { ResolvedConfig } from './web-search/config.ts'
 export type { AutoSearchProvider, ProviderDeps, SearchRequest, SearchResult, WebPage } from './web-search/provider.ts'

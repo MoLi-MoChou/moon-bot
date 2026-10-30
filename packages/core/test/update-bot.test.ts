@@ -12,13 +12,36 @@ const TEAM = {
   revision: 1,
   whaleStored: true,
   bots: {
-    m1: { id: 'm1', sessionId: 'm1', name: 'Chief', role: 'Chief of Staff', model: 'deepseek/v4', instructions: '', createdAt: 1 },
-    b2: { id: 'b2', sessionId: 'b2', name: 'Writer', role: '写作', model: 'deepseek/v4', instructions: '', createdAt: 2 },
+    m1: {
+      id: 'm1',
+      sessionId: 'm1',
+      name: 'Chief',
+      role: 'Chief of Staff',
+      model: 'deepseek/v4',
+      instructions: '',
+      createdAt: 1,
+    },
+    b2: {
+      id: 'b2',
+      sessionId: 'b2',
+      name: 'Writer',
+      role: '写作',
+      model: 'deepseek/v4',
+      instructions: '',
+      createdAt: 2,
+    },
     b3: { id: 'b3', sessionId: 'b3', name: 'Coder', role: '代码', instructions: '', createdAt: 3 },
   },
   rooms: {
     r1: {
-      id: 'r1', name: 'Launch', named: true, members: ['b2', 'b3'], admin: 'b3', mode: 'everyone', notice: '', sessions: { b3: 'g3' },
+      id: 'r1',
+      name: 'Launch',
+      named: true,
+      members: ['b2', 'b3'],
+      admin: 'b3',
+      mode: 'everyone',
+      notice: '',
+      sessions: { b3: 'g3' },
       seq: 0,
       log: [],
     },
@@ -56,7 +79,7 @@ function start() {
   return { ctx, tool, state, stop }
 }
 
-test('a Bot changes itself by leaving out bot, or by naming itself', async (t) => {
+test('a Bot changes itself by leaving out bot, or by naming itself', async t => {
   const { tool, state, stop } = start()
   t.after(stop)
   assert.equal(await tool('update_bot', { name: 'King', instructions: 'Lead the team' }, 'b2'), 'Updated King.')
@@ -68,17 +91,20 @@ test('a Bot changes itself by leaving out bot, or by naming itself', async (t) =
   assert.equal(state().bots.b2.role, '掌门')
 })
 
-test('a Bot cannot change another Bot; a Main Bot can', async (t) => {
+test('a Bot cannot change another Bot; a Main Bot can', async t => {
   const { tool, state, stop } = start()
   t.after(stop)
-  assert.match(await tool('update_bot', { bot: 'Chief', role: 'boss' }, 'b2'), /^Only a Main Bot can change another Bot/)
+  assert.match(
+    await tool('update_bot', { bot: 'Chief', role: 'boss' }, 'b2'),
+    /^Only a Main Bot can change another Bot/,
+  )
   assert.equal(state().bots.m1.role, 'Chief of Staff')
   assert.equal(await tool('update_bot', { bot: 'Writer', role: '主笔' }, 'm1'), 'Updated Writer.')
   assert.equal(state().bots.b2.role, '主笔')
   assert.match(await tool('update_bot', { bot: 'Nobody' }, 'm1'), /^No Bot named Nobody/)
 })
 
-test('a group Session changes its own Bot; a Session outside the team changes nothing', async (t) => {
+test('a group Session changes its own Bot; a Session outside the team changes nothing', async t => {
   const { tool, state, stop } = start()
   t.after(stop)
   assert.equal(await tool('update_bot', { instructions: 'Ship the fix' }, 'g3'), 'Updated Coder.')
@@ -86,7 +112,7 @@ test('a group Session changes its own Bot; a Session outside the team changes no
   assert.equal(await tool('update_bot', { name: 'King' }, 'stranger'), 'Only Bots on the team can use update_bot.')
 })
 
-test('every Bot sees the update_bot rule in its identity section', async (t) => {
+test('every Bot sees the update_bot rule in its identity section', async t => {
   const { ctx, tool, stop } = start()
   t.after(stop)
   // The first load indexes the Sessions; without it selfOf finds no Bot.

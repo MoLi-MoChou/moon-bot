@@ -14,7 +14,7 @@ export async function bare(): Promise<void> {
 }
 
 export async function parenthesized(): Promise<void> {
-  (work())
+  work()
 }
 
 export async function asserted(): Promise<void> {
@@ -22,7 +22,7 @@ export async function asserted(): Promise<void> {
 }
 
 export async function angleAsserted(): Promise<void> {
-  <Promise<number>>work()
+  ;<Promise<number>>work()
 }
 
 export async function nonNull(): Promise<void> {
@@ -54,7 +54,7 @@ export async function bareNew(): Promise<void> {
 }
 
 export async function comma(): Promise<void> {
-  (work(), other())
+  work(), other()
 }
 
 export async function bareIdentifier(): Promise<void> {

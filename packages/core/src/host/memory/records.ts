@@ -83,28 +83,45 @@ export function splitMeta(body: string): { text: string; meta: MemoryMeta } {
   return { text: body.slice(0, found.index).trim(), meta }
 }
 
-const metaValue = (value: unknown): string => String(value ?? '').replace(/[;[\]\n]/g, ' ').replace(/\s+/g, ' ').trim()
+const metaValue = (value: unknown): string =>
+  String(value ?? '')
+    .replace(/[;[\]\n]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
 export function formatEntry(text: string, meta: MemoryMetaInput = {}): string {
-  const pairs = Object.entries(meta).filter(([, value]) => metaValue(value) !== '').map(([key, value]) => `${key}: ${metaValue(value)}`)
+  const pairs = Object.entries(meta)
+    .filter(([, value]) => metaValue(value) !== '')
+    .map(([key, value]) => `${key}: ${metaValue(value)}`)
   return `- ${text}${pairs.length > 0 ? ` [${pairs.join('; ')}]` : ''}`
 }
 
 // One line, without a bullet or metadata of its own: the tool adds those.
 export function cleanEntry(raw: unknown): string {
-  const line = String(raw ?? '').replace(/\s+/g, ' ').trim().replace(/^(?:[-*•]\s+)+/, '')
+  const line = String(raw ?? '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/^(?:[-*•]\s+)+/, '')
   return splitMeta(line).text
 }
 
 // A flat file name: case folds on some file systems, so names are lower case.
 export function cleanTopic(raw: unknown): string | undefined {
-  const name = String(raw ?? '').trim().replace(/^\[\[|\]\]$/g, '').replace(/\.md$/i, '').trim().toLowerCase().replace(/\s+/g, '-')
+  const name = String(raw ?? '')
+    .trim()
+    .replace(/^\[\[|\]\]$/g, '')
+    .replace(/\.md$/i, '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
   return /^[\p{L}\p{N}][\p{L}\p{N}_-]{0,47}$/u.test(name) && name !== 'memory' ? name : undefined
 }
 
 // Bullets outside `## Index` are entries; the Index holds [[links]]. Other lines
 // (titles, notes the user wrote by hand) are kept as they are.
 export function parseMemory(content: unknown): ParsedMemory {
-  const lines = String(content ?? '').replace(/\r\n?/g, '\n').split('\n')
+  const lines = String(content ?? '')
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
   while (lines.length > 0 && (lines.at(-1) ?? '').trim() === '') lines.pop()
   const entries: MemoryEntry[] = []
   const links: string[] = []
@@ -117,7 +134,8 @@ export function parseMemory(content: unknown): ParsedMemory {
     const bullet = /^\s*[-*]\s+(.*)$/.exec(line)
     if (bullet === null || bullet[1] === undefined) return
     if (inIndex) {
-      for (const match of bullet[1].matchAll(/\[\[([^\]]+)\]\]/g)) if (match[1] !== undefined) links.push(match[1].trim())
+      for (const match of bullet[1].matchAll(/\[\[([^\]]+)\]\]/g))
+        if (match[1] !== undefined) links.push(match[1].trim())
       return
     }
     const { text, meta } = splitMeta(bullet[1])
@@ -165,7 +183,11 @@ export function removeLink(lines: readonly string[], topic: string): string[] {
   })
 }
 
-export const squash = (text: unknown): string => String(text ?? '').replace(/\s+/g, ' ').trim().toLowerCase()
+export const squash = (text: unknown): string =>
+  String(text ?? '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase()
 
 // The entry a request means: the one with that exact text, else every entry that
 // contains it.
@@ -201,13 +223,16 @@ export function looksLikeKey(text: string): boolean {
 // "password … is x": a password word (or PIN, passcode, 验证码…), a few words naming whose or where ("for
 // root", "of the staging box", "的"), then the verb that gives its value.
 // "Password manager", "password policy", and words such as 因为 or 作为 give none.
-const PASSWORD_GIVEN = /(?:密码(?!管理|策略|规则)|口令|验证码|校验码|\bpassw(?:or)?d\b(?!\s*(?:managers?|polic(?:y|ies)|rules?|resets?|strength|less)\b)|\bpwd\b|\bpin(?: code)?\b|\bpass(?:code|phrase)\b|\b(?:otp|cvv|cvc)\b|\b(?:security|verification) code\b)[^\n.。;；,，]{0,40}?(?:是|(?<![因作认成以行])为|还是|改成|改为|换成|设为|设成|用(?![户于来途])(?!\s*\S+\s*(?:管理|保存|存|记))|叫|:|：|=|\b(?:is|are|was|remains|stays|becomes)\b|\b(?:set|changed) to\b)\s*\S/i
+const PASSWORD_GIVEN =
+  /(?:密码(?!管理|策略|规则)|口令|验证码|校验码|\bpassw(?:or)?d\b(?!\s*(?:managers?|polic(?:y|ies)|rules?|resets?|strength|less)\b)|\bpwd\b|\bpin(?: code)?\b|\bpass(?:code|phrase)\b|\b(?:otp|cvv|cvc)\b|\b(?:security|verification) code\b)[^\n.。;；,，]{0,40}?(?:是|(?<![因作认成以行])为|还是|改成|改为|换成|设为|设成|用(?![户于来途])(?!\s*\S+\s*(?:管理|保存|存|记))|叫|:|：|=|\b(?:is|are|was|remains|stays|becomes)\b|\b(?:set|changed) to\b)\s*\S/i
 // The value first, perhaps several words: "uses correct horse battery staple as the
 // root password", "我用 hunter2 当密码".
-const PASSWORD_AFTER = /(?:\b(?:use[sd]?|using|set|sets|chose|chosen|picked|picks)\s+(?:[^\s,.;]+\s+){1,8}?(?:as|for)\s+(?:[\w'-]+\s+){0,3}?(?:passw(?:or)?d\b(?!\s*(?:managers?|polic(?:y|ies)|rules?|resets?|strength|fields?|prompts?|screens?|box(?:es)?)\b)|pwd\b|pin\b(?!\s*(?:pads?|entry|fields?|prompts?|screens?)\b)|pass(?:code|phrase)\b|otp\b)|用(?![户于来途])[^\n,，。;；]{1,40}?(?:当作?|作为?|做)\s*\S{0,6}?(?:密码(?!管理)|口令|验证码))/i
+const PASSWORD_AFTER =
+  /(?:\b(?:use[sd]?|using|set|sets|chose|chosen|picked|picks)\s+(?:[^\s,.;]+\s+){1,8}?(?:as|for)\s+(?:[\w'-]+\s+){0,3}?(?:passw(?:or)?d\b(?!\s*(?:managers?|polic(?:y|ies)|rules?|resets?|strength|fields?|prompts?|screens?|box(?:es)?)\b)|pwd\b|pin\b(?!\s*(?:pads?|entry|fields?|prompts?|screens?)\b)|pass(?:code|phrase)\b|otp\b)|用(?![户于来途])[^\n,，。;；]{1,40}?(?:当作?|作为?|做)\s*\S{0,6}?(?:密码(?!管理)|口令|验证码))/i
 // An ID number under its label: "SSN 123-45-6789", "passport number is A12345678",
 // "护照号 E12345678". Dates are no ID.
-const ID_GIVEN = /(?:\bssn\b|\bsocial security\b|\bpassport\b|\btax (?:id|number)\b|\bdriver'?s licen[cs]e\b|\bnational (?:id|insurance)\b|\bid (?:card|number)\b|护照|身份证|社保|税号|驾驶证|驾照)[^\n.。;；,，]{0,30}?(?<![A-Za-z0-9-])(?!\d{4}-\d{1,2}-\d{1,2}(?!\d))[a-z]{0,2}\d[\d -]{4,}\d/i
+const ID_GIVEN =
+  /(?:\bssn\b|\bsocial security\b|\bpassport\b|\btax (?:id|number)\b|\bdriver'?s licen[cs]e\b|\bnational (?:id|insurance)\b|\bid (?:card|number)\b|护照|身份证|社保|税号|驾驶证|驾照)[^\n.。;；,，]{0,30}?(?<![A-Za-z0-9-])(?!\d{4}-\d{1,2}-\d{1,2}(?!\d))[a-z]{0,2}\d[\d -]{4,}\d/i
 
 // A key, a password given as one ("the root password is …"), a short ID number under
 // its label, or an ID or card number: 15 digits or more in a row, outside a link. Spaces between digits and hyphens
@@ -216,7 +241,12 @@ const ID_GIVEN = /(?:\bssn\b|\bsocial security\b|\bpassport\b|\btax (?:id|number
 export function looksSecret(text: string): boolean {
   if (looksLikeKey(text)) return true
   if (PASSWORD_GIVEN.test(text) || PASSWORD_AFTER.test(text) || ID_GIVEN.test(text)) return true
-  return /\d{15,}/.test(text.replace(/\bhttps?:\/\/\S+/g, ' ').replace(/(?<=\d) (?=\d)/g, '').replace(/(?<=\d{3})-(?=\d{3})/g, ''))
+  return /\d{15,}/.test(
+    text
+      .replace(/\bhttps?:\/\/\S+/g, ' ')
+      .replace(/(?<=\d) (?=\d)/g, '')
+      .replace(/(?<=\d{3})-(?=\d{3})/g, ''),
+  )
 }
 
 // ---------------------------------------------------------------------------

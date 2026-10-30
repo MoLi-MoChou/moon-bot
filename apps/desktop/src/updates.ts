@@ -17,17 +17,20 @@ export const UPDATE_TEXT: Readonly<Record<'en' | 'zh', UpdateText>> = {
   en: {
     ready: version => `Moon Bot ${version} is ready to install.`,
     readyDetail: 'Restart now to update, or it is installed the next time you quit.',
-    restart: 'Restart now', later: 'Later',
+    restart: 'Restart now',
+    later: 'Later',
     onFailure: version => `Moon Bot ${version} is installed when its download is done, and then Moon Bot opens again.`,
     available: version => `Moon Bot ${version} is available.`,
-    availableDetail: 'This version cannot update itself. Download the new version from its release page, then replace Moon Bot in Applications.',
+    availableDetail:
+      'This version cannot update itself. Download the new version from its release page, then replace Moon Bot in Applications.',
     download: 'Download',
     onFailurePage: version => `Moon Bot ${version} is available. After this box, its download page opens.`,
   },
   zh: {
     ready: version => `Moon Bot ${version} 已经下载好。`,
     readyDetail: '现在重启就能更新；不重启的话，下次退出时安装。',
-    restart: '立即重启', later: '稍后',
+    restart: '立即重启',
+    later: '稍后',
     onFailure: version => `Moon Bot ${version} 下载完会自动安装，然后重新打开。`,
     available: version => `Moon Bot ${version} 已经发布。`,
     availableDetail: '这个版本不能自己更新。请到发布页下载新版，再用它替换「应用程序」里的 Moon Bot。',
@@ -99,12 +102,18 @@ function isHttpsPage(page: unknown): page is string {
 }
 
 const record = (value: unknown): Record<string, unknown> | undefined =>
-  typeof value === 'object' && value !== null ? value as Record<string, unknown> : undefined
+  typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : undefined
 
 /** What the macOS release watch found: the version and its page. */
-export interface ReleaseFound { readonly version: string; readonly page: string }
+export interface ReleaseFound {
+  readonly version: string
+  readonly page: string
+}
 /** What the in-app updater found: the version and a promise that its download finished. */
-export interface DownloadFound { readonly version: string; readonly downloaded: Promise<boolean> }
+export interface DownloadFound {
+  readonly version: string
+  readonly downloaded: Promise<boolean>
+}
 export type UpdateFound = ReleaseFound | DownloadFound
 
 export interface WatchLog {
@@ -127,7 +136,15 @@ export interface ReleaseWatch {
   latest(): Promise<ReleaseFound | null>
 }
 
-export function watchReleases({ current, arch, fetch = globalThis.fetch, ask, open, feed = RELEASES_URL, log = console }: ReleaseWatchOptions): ReleaseWatch {
+export function watchReleases({
+  current,
+  arch,
+  fetch = globalThis.fetch,
+  ask,
+  open,
+  feed = RELEASES_URL,
+  log = console,
+}: ReleaseWatchOptions): ReleaseWatch {
   let asked: string | undefined
   let latest: Promise<ReleaseFound | null> = Promise.resolve(null)
   const check = () => {
@@ -150,13 +167,14 @@ export function watchReleases({ current, arch, fetch = globalThis.fetch, ask, op
         let found: ReleaseFound | undefined
         for (const entry of body) {
           const release = record(entry)
-          if (release === undefined || release.draft === true
-            || (release.prerelease === true && !allowPrerelease)) continue
+          if (release === undefined || release.draft === true || (release.prerelease === true && !allowPrerelease))
+            continue
           const version = typeof release.tag_name === 'string' ? release.tag_name.replace(/^v/u, '') : ''
           if (!isNewer(version, current)) continue
           const assets = release.assets
           const nameOf = (asset: unknown): unknown => record(asset)?.name
-          if (!Array.isArray(assets) || !assets.some(asset => nameOf(asset) === `Moon-Bot-${version}-mac-${arch}.zip`)) continue
+          if (!Array.isArray(assets) || !assets.some(asset => nameOf(asset) === `Moon-Bot-${version}-mac-${arch}.zip`))
+            continue
           if (!isHttpsPage(release.html_url)) {
             log.error('Moon Bot: update check failed: release page URL is not HTTPS')
             continue
@@ -168,9 +186,14 @@ export function watchReleases({ current, arch, fetch = globalThis.fetch, ask, op
         if (ask !== undefined && asked !== found.version) {
           asked = found.version
           const picked = found
-          void Promise.resolve().then(() => ask(picked.version))
+          void Promise.resolve()
+            .then(() => ask(picked.version))
             .then(yes => (yes ? open(picked.page) : undefined))
-            .catch((error: unknown) => { log.error(`Moon Bot: update ${picked.version} not opened: ${error instanceof Error ? error.message : String(error)}`) })
+            .catch((error: unknown) => {
+              log.error(
+                `Moon Bot: update ${picked.version} not opened: ${error instanceof Error ? error.message : String(error)}`,
+              )
+            })
         }
         return found
       } catch (error) {
@@ -181,7 +204,12 @@ export function watchReleases({ current, arch, fetch = globalThis.fetch, ask, op
   }
   check()
   const timer = setInterval(check, CHECK_EVERY_MS)
-  return { stop: () => { clearInterval(timer) }, latest: () => latest }
+  return {
+    stop: () => {
+      clearInterval(timer)
+    },
+    latest: () => latest,
+  }
 }
 
 /** What the About page follows live: check, progress, ready, failure. */
@@ -216,7 +244,14 @@ export interface UpdateWatch {
   install?(): Promise<void>
 }
 
-export function watchUpdates({ updater, beforeInstall, ask, feed, log = console, onState }: UpdateWatchOptions): UpdateWatch {
+export function watchUpdates({
+  updater,
+  beforeInstall,
+  ask,
+  feed,
+  log = console,
+  onState,
+}: UpdateWatchOptions): UpdateWatch {
   updater.autoDownload = true
   updater.autoInstallOnAppQuit = true
   // Differential download: electron-updater fetches only the blocks of the new installer
@@ -226,23 +261,37 @@ export function watchUpdates({ updater, beforeInstall, ask, feed, log = console,
   if (feed) updater.setFeedURL({ provider: 'generic', url: feed, useMultipleRangeRequest: false })
   // Moon Bot patch: the About page follows this state live (check, progress, ready).
   let state: UpdateState = { phase: 'idle', current: updater.currentVersion?.version }
-  const set = (patch: Partial<UpdateState>): void => { state = { ...state, ...patch, at: Date.now() }; onState?.(state) }
+  const set = (patch: Partial<UpdateState>): void => {
+    state = { ...state, ...patch, at: Date.now() }
+    onState?.(state)
+  }
   const install = async (): Promise<void> => {
     await beforeInstall()
     updater.quitAndInstall(true, true)
   }
   let asked: string | undefined
-  updater.on('checking-for-update', () => { if (state.phase !== 'downloading' && state.phase !== 'downloaded') set({ phase: 'checking', error: undefined }) })
+  updater.on('checking-for-update', () => {
+    if (state.phase !== 'downloading' && state.phase !== 'downloaded') set({ phase: 'checking', error: undefined })
+  })
   updater.on('update-available', ({ version }) => set({ phase: 'downloading', version, percent: 0 }))
-  updater.on('update-not-available', () => { if (state.phase !== 'downloaded') set({ phase: 'latest', checkedAt: Date.now() }) })
-  updater.on('download-progress', ({ percent, transferred, total, bytesPerSecond }) => set({ phase: 'downloading', percent, transferred, total, bytesPerSecond }))
+  updater.on('update-not-available', () => {
+    if (state.phase !== 'downloaded') set({ phase: 'latest', checkedAt: Date.now() })
+  })
+  updater.on('download-progress', ({ percent, transferred, total, bytesPerSecond }) =>
+    set({ phase: 'downloading', percent, transferred, total, bytesPerSecond }),
+  )
   updater.on('update-downloaded', ({ version }) => {
     set({ phase: 'downloaded', version, percent: 100 })
     log.info(`Moon Bot: update ${version} downloaded`)
     if (ask === undefined || asked === version) return
     asked = version
-    void ask(version).then(now => (now ? install() : undefined))
-      .catch((error: unknown) => { log.error(`Moon Bot: update ${version} not installed: ${error instanceof Error ? error.message : String(error)}`) })
+    void ask(version)
+      .then(now => (now ? install() : undefined))
+      .catch((error: unknown) => {
+        log.error(
+          `Moon Bot: update ${version} not installed: ${error instanceof Error ? error.message : String(error)}`,
+        )
+      })
   })
   updater.on('error', (error: Error) => {
     const message = error instanceof Error ? error.message : String(error)
@@ -253,12 +302,30 @@ export function watchUpdates({ updater, beforeInstall, ask, feed, log = console,
   // A failed check or download also comes as an 'error' event.
   const check = (): Promise<UpdateFound | null> => {
     if (state.phase === 'downloading' || state.phase === 'downloaded') return latest
-    latest = updater.checkForUpdates().then(result => (result?.isUpdateAvailable && result.downloadPromise
-      ? { version: result.updateInfo.version, downloaded: result.downloadPromise.then(() => true, () => false) }
-      : null), () => null)
+    latest = updater.checkForUpdates().then(
+      result =>
+        result?.isUpdateAvailable && result.downloadPromise
+          ? {
+              version: result.updateInfo.version,
+              downloaded: result.downloadPromise.then(
+                () => true,
+                () => false,
+              ),
+            }
+          : null,
+      () => null,
+    )
     return latest
   }
   check()
   const timer = setInterval(check, CHECK_EVERY_MS)
-  return { stop: () => { clearInterval(timer) }, latest: () => latest, install, check, state: () => state }
+  return {
+    stop: () => {
+      clearInterval(timer)
+    },
+    latest: () => latest,
+    install,
+    check,
+    state: () => state,
+  }
 }

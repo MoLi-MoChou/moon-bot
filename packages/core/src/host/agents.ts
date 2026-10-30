@@ -75,7 +75,8 @@ export function install(rt: HostRuntime): void {
   }
   // Fires when a root Session resolves its agent, including sessions saved earlier.
   ctx.on<{ readonly agent: Agent }>('agent/created', ({ agent }) => {
-    void rt.load()
+    void rt
+      .load()
       .then(() => restrictTeamTools(agent))
       .catch(error => rt.warn('moon-bot: tool restrict on agent/created failed: %s', error))
   })
@@ -95,9 +96,10 @@ export function install(rt: HostRuntime): void {
     const agent = record(agentId)
     // A known workspace id wins (the Agent's latest Session may live outside the
     // team workspace after a workspace switch); anything else gets the team's own.
-    const target = typeof workspaceId === 'string' && ctx.workspaceRegistry.get(workspaceId)
-      ? workspaceId
-      : await rt.ensureWorkspace()
+    const target =
+      typeof workspaceId === 'string' && ctx.workspaceRegistry.get(workspaceId)
+        ? workspaceId
+        : await rt.ensureWorkspace()
     const { sessionId } = await ctx.sessionController.create({ workspaceId: target })
     agent.sessions.push(sessionId)
     await rt.save()
@@ -114,8 +116,11 @@ export function install(rt: HostRuntime): void {
     const agent = record(agentId)
     if (agent.sessions.includes(sessionId)) return sessionId
     await rt.resolveAgent(sessionId)
-    const owned = rt.selfOf(sessionId) !== undefined || rt.botOf(sessionId) !== undefined
-      || rt.roomOf(sessionId) !== undefined || agentOf(sessionId) !== undefined
+    const owned =
+      rt.selfOf(sessionId) !== undefined ||
+      rt.botOf(sessionId) !== undefined ||
+      rt.roomOf(sessionId) !== undefined ||
+      agentOf(sessionId) !== undefined
     if (owned) throw new Error('Session already belongs to the team')
     agent.sessions.push(sessionId)
     await rt.save()
@@ -189,5 +194,13 @@ export function install(rt: HostRuntime): void {
     await rt.save()
   }
 
-  Object.assign(rt, { agentOf, addAgent, createAgentSession, adoptAgentSession, archiveAgentSession, renameAgentSession, removeAgent })
+  Object.assign(rt, {
+    agentOf,
+    addAgent,
+    createAgentSession,
+    adoptAgentSession,
+    archiveAgentSession,
+    renameAgentSession,
+    removeAgent,
+  })
 }

@@ -9,8 +9,12 @@ import { join, normalize } from 'node:path'
 const port = Number(process.argv[2] ?? 8833)
 const root = join(import.meta.dirname, '..', 'test', 'fixtures', 'read-page')
 
-const bigTable = (rows) => {
-  const body = Array.from({ length: rows }, (_, index) => `<tr><td>${index + 1}</td><td>Item ${index + 1}</td><td>${(index * 37) % 1000}</td><td><a href="/item/${index + 1}">open</a></td></tr>`).join('')
+const bigTable = rows => {
+  const body = Array.from(
+    { length: rows },
+    (_, index) =>
+      `<tr><td>${index + 1}</td><td>Item ${index + 1}</td><td>${(index * 37) % 1000}</td><td><a href="/item/${index + 1}">open</a></td></tr>`,
+  ).join('')
   return `<!doctype html><meta charset="utf-8"><title>Big table (${rows} rows)</title><h1>Big table</h1><table><thead><tr><th>#</th><th>Name</th><th>Score</th><th>Link</th></tr></thead><tbody>${body}</tbody></table>`
 }
 
@@ -32,4 +36,6 @@ const server = createServer(async (request, response) => {
     response.end('not found')
   }
 })
-server.listen(port, '127.0.0.1', () => console.log(`reader sample pages on http://127.0.0.1:${port}/ (cross-origin frame from localhost:${port})`))
+server.listen(port, '127.0.0.1', () =>
+  console.log(`reader sample pages on http://127.0.0.1:${port}/ (cross-origin frame from localhost:${port})`),
+)

@@ -7,7 +7,11 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
-  SAME_SUBJECT, fingerprintOf, repeatsEarlier, similarityOf, topicKeysOf,
+  SAME_SUBJECT,
+  fingerprintOf,
+  repeatsEarlier,
+  similarityOf,
+  topicKeysOf,
 } from '../src/host/proactive/similarity.ts'
 
 test('topic keys drop stop words and punctuation, in both languages', () => {
@@ -72,11 +76,17 @@ test('a one-word subject counts as the same subject said again', () => {
 
 test('repeatsEarlier reports the fingerprint it matched, for the decision log', () => {
   const earlier = [
-    { fingerprint: fingerprintOf('The deploy moved to Thursday'), topicKeys: topicKeysOf('The deploy moved to Thursday') },
+    {
+      fingerprint: fingerprintOf('The deploy moved to Thursday'),
+      topicKeys: topicKeysOf('The deploy moved to Thursday'),
+    },
     { fingerprint: fingerprintOf('The report is empty'), topicKeys: topicKeysOf('The report is empty') },
   ]
   const exact = repeatsEarlier(
-    { fingerprint: fingerprintOf('The deploy moved to Thursday'), topicKeys: topicKeysOf('The deploy moved to Thursday') },
+    {
+      fingerprint: fingerprintOf('The deploy moved to Thursday'),
+      topicKeys: topicKeysOf('The deploy moved to Thursday'),
+    },
     earlier,
   )
   assert.equal(exact.repeats, true)
@@ -89,7 +99,10 @@ test('repeatsEarlier reports the fingerprint it matched, for the decision log', 
   assert.equal(reworded.repeats, true)
   // A different subject passes.
   const fresh = repeatsEarlier(
-    { fingerprint: fingerprintOf('The invoice for October is unpaid'), topicKeys: topicKeysOf('The invoice for October is unpaid') },
+    {
+      fingerprint: fingerprintOf('The invoice for October is unpaid'),
+      topicKeys: topicKeysOf('The invoice for October is unpaid'),
+    },
     earlier,
   )
   assert.equal(fresh.repeats, false)

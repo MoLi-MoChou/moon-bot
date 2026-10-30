@@ -5,8 +5,15 @@ const ROUTE = 'api/bot'
 // Refusals carry a message meant for the user, who sees it where they acted.
 const REFUSALS = new Set<string>(['bot/refused', 'bot/invalid', 'bot/read-only', 'bot/not-found', 'bot/browser-off'])
 
-interface RpcErrorBody { code?: string; message?: string }
-interface RpcAnswer<T> { ok?: boolean; value?: T; error?: RpcErrorBody }
+interface RpcErrorBody {
+  code?: string
+  message?: string
+}
+interface RpcAnswer<T> {
+  ok?: boolean
+  value?: T
+  error?: RpcErrorBody
+}
 
 export async function call<T = unknown>(endpoint: string, payload?: unknown, signal?: AbortSignal): Promise<T> {
   let response: Response
@@ -22,16 +29,21 @@ export async function call<T = unknown>(endpoint: string, payload?: unknown, sig
   } catch (error) {
     const failure = error as { name?: string; message?: string }
     if (failure.name === 'AbortError') throw error
-    noteClientError(endpoint, Object.assign(new Error(`network error: ${failure.message ?? String(error)}`), { code: 'NETWORK' }))
+    noteClientError(
+      endpoint,
+      Object.assign(new Error(`network error: ${failure.message ?? String(error)}`), { code: 'NETWORK' }),
+    )
     // The browser's own text ("Failed to fetch", "Load failed") does not say what failed.
     throw markNoted(Object.assign(new Error(errorCopy('NETWORK')), { code: 'NETWORK', cause: error }))
   }
   if (!response.ok) {
-    const error = Object.assign(new Error(errorCopy(`HTTP_${response.status}`, `HTTP ${response.status}`)), { code: `HTTP_${response.status}` })
+    const error = Object.assign(new Error(errorCopy(`HTTP_${response.status}`, `HTTP ${response.status}`)), {
+      code: `HTTP_${response.status}`,
+    })
     noteClientError(endpoint, error)
     throw error
   }
-  const result = await response.json() as RpcAnswer<T>
+  const result = (await response.json()) as RpcAnswer<T>
   if (result.ok !== true) {
     const code = result.error?.code ?? 'bot/error'
     const message = errorCopy(code, result.error?.message ?? 'Request failed')

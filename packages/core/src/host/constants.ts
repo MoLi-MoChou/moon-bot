@@ -2,11 +2,33 @@
 // the limits on messages, group chats, and chat reads.
 
 // Classic avatar inks, offered as Bot colors.
-export const COLORS: readonly string[] = ['lilac', 'deepseek', 'blue', 'violet', 'orange', 'green', 'magenta', 'cyan', 'red', 'yellow', 'brown', 'gray', 'black', 'aurora']
+export const COLORS: readonly string[] = [
+  'lilac',
+  'deepseek',
+  'blue',
+  'violet',
+  'orange',
+  'green',
+  'magenta',
+  'cyan',
+  'red',
+  'yellow',
+  'brown',
+  'gray',
+  'black',
+  'aurora',
+]
 // Deeper inks, also offered as accent swatches; each is a valid Bot color too.
 export const EXTRA_COLORS: readonly string[] = ['charcoal', 'graphite', 'rose', 'sky', 'tangerine', 'cobalt']
 // Renamed color ids, so a Bot saved with an old one keeps its color (LEGACY: old id → new id).
-export const LEGACY_COLORS: Readonly<Record<string, string>> = { kimi: 'charcoal', zai: 'graphite', minimax: 'rose', stepfun: 'sky', mimo: 'tangerine', qwen: 'cobalt' }
+export const LEGACY_COLORS: Readonly<Record<string, string>> = {
+  kimi: 'charcoal',
+  zai: 'graphite',
+  minimax: 'rose',
+  stepfun: 'sky',
+  mimo: 'tangerine',
+  qwen: 'cobalt',
+}
 // Renamed theme ids, so a saved choice keeps its look (LEGACY: old id → new id).
 export const LEGACY_THEMES: Readonly<Record<string, string>> = { mono: 'grok', paper: 'claude', moonlight: 'deepseek' }
 
@@ -68,13 +90,37 @@ export const AGENT_SESSION_TITLE_MAX = 80
 // Every tool this plugin registers for Bots. `read_browser` only exists in the
 // Desktop profile, so a restriction filters this list down to registered names.
 export const TEAM_TOOLS: readonly string[] = [
-  'list_bots', 'message_bot', 'stop_bot', 'create_bot', 'update_bot', 'list_models', 'list_engines',
-  'create_group', 'update_group', 'delete_group', 'post_to_group', 'ask_user', 'show_view',
-  'request_secret', 'list_secrets', 'group_relay', 'read_own_chat',
-  'read_group_chat', 'remember', 'forget', 'recall', 'read_browser',
-  'list_capabilities', 'save_capability', 'delete_capability',
-  'attach_capability', 'detach_capability', 'web_search',
-  'create_schedule', 'list_schedules', 'delete_schedule',
+  'list_bots',
+  'message_bot',
+  'stop_bot',
+  'create_bot',
+  'update_bot',
+  'list_models',
+  'list_engines',
+  'create_group',
+  'update_group',
+  'delete_group',
+  'post_to_group',
+  'ask_user',
+  'show_view',
+  'request_secret',
+  'list_secrets',
+  'group_relay',
+  'read_own_chat',
+  'read_group_chat',
+  'remember',
+  'forget',
+  'recall',
+  'read_browser',
+  'list_capabilities',
+  'save_capability',
+  'delete_capability',
+  'attach_capability',
+  'detach_capability',
+  'web_search',
+  'create_schedule',
+  'list_schedules',
+  'delete_schedule',
 ]
 // Answers a group gives to what members post after the round moved on (their finished
 // work, mostly), before the user speaks there again.

@@ -21,7 +21,15 @@ interface AttachResult {
 // Delivery: how one Bot, the user, or DS Bot itself puts a message into a Bot Session.
 import { randomUUID } from 'node:crypto'
 import { createUserMessage } from './llm-bits.ts'
-import { HISTORY_TIMEOUT_MS, LONG_HEAD, MESSAGE_INLINE_MAX, READ_LINE_MAX, SOURCE_KIND, TEXT_KEPT, TEXT_SHOW_MAX } from './constants.ts'
+import {
+  HISTORY_TIMEOUT_MS,
+  LONG_HEAD,
+  MESSAGE_INLINE_MAX,
+  READ_LINE_MAX,
+  SOURCE_KIND,
+  TEXT_KEPT,
+  TEXT_SHOW_MAX,
+} from './constants.ts'
 import { headOf, textOf } from './text.ts'
 
 export function install(rt: HostRuntime): void {
@@ -29,20 +37,35 @@ export function install(rt: HostRuntime): void {
 
   const resolveAgent = async (sessionId: string) => {
     const resolved = await ctx.sessionController.resolveAgent(sessionId)
-    if ('error' in resolved) throw Object.assign(new Error(resolved.error?.message ?? 'Session unavailable'), { code: resolved.error?.code })
+    if ('error' in resolved)
+      throw Object.assign(new Error(resolved.error?.message ?? 'Session unavailable'), { code: resolved.error?.code })
     rt.hideBotUnusedTools(resolved.agent)
     return resolved.agent
   }
 
-  const headerFor = (role: string, fromName: string, roomName: string | undefined, audience: string | undefined, note = 'new message', deferred = false, { resumed = false, retried = false, asker }: HeaderOptions = {}): string => {
+  const headerFor = (
+    role: string,
+    fromName: string,
+    roomName: string | undefined,
+    audience: string | undefined,
+    note = 'new message',
+    deferred = false,
+    { resumed = false, retried = false, asker }: HeaderOptions = {},
+  ): string => {
     // What came back for work another Bot gave this one says where its answer goes.
-    const goesOn = asker === undefined ? '' : ` · for the work ${asker} asked you for; your answer goes to ${asker} once everything you handed on is back`
-    if (deferred && role === 'reply') return `[Reply from ${fromName} · you read it during your last task; go on with the work it is for now${goesOn}]`
-    if (deferred && role === 'report') return `[Group chat "${roomName}" · replies to your post · you read them during your last task; go on with the work they are for now${goesOn}]`
+    const goesOn =
+      asker === undefined
+        ? ''
+        : ` · for the work ${asker} asked you for; your answer goes to ${asker} once everything you handed on is back`
+    if (deferred && role === 'reply')
+      return `[Reply from ${fromName} · you read it during your last task; go on with the work it is for now${goesOn}]`
+    if (deferred && role === 'report')
+      return `[Group chat "${roomName}" · replies to your post · you read them during your last task; go on with the work they are for now${goesOn}]`
     if (deferred) return `[Message from ${fromName} · you read it during your last task; answer it now]`
     if (retried && role !== 'room') return '[Your last reply wrote a tool call as text, so nothing ran]'
     if (resumed && role === 'resume') return '[Moon Bot restarted while you were working]'
-    if (resumed && role !== 'room') return `[Message from ${fromName} · Moon Bot restarted while you were working on it]`
+    if (resumed && role !== 'room')
+      return `[Message from ${fromName} · Moon Bot restarted while you were working on it]`
     if (role === 'reply') return `[Reply from ${fromName}${goesOn}]`
     if (role === 'stopped') return `[Stopped by ${fromName}]`
     if (role === 'room') return `[Group chat "${roomName}" · ${note}]`
@@ -69,10 +92,27 @@ export function install(rt: HostRuntime): void {
   // the work (handoffs.ts) a result that came back goes on with. `merged`: a request
   // that takes in an earlier one its recipient had not read, under that one's exchange.
   async function deliver({
-    fromId, toId, sessionId, text, role, replyTo, roomId, audience, note,
-    exchangeId = randomUUID(), steer = false, deferred = false, resumed = false,
-    retried = false, resent = false, merged = false, askedBy, fromRoomId,
-    files = [], length, work,
+    fromId,
+    toId,
+    sessionId,
+    text,
+    role,
+    replyTo,
+    roomId,
+    audience,
+    note,
+    exchangeId = randomUUID(),
+    steer = false,
+    deferred = false,
+    resumed = false,
+    retried = false,
+    resent = false,
+    merged = false,
+    askedBy,
+    fromRoomId,
+    files = [],
+    length,
+    work,
   }: DeliveryInput): Promise<string> {
     const from = rt.botOf(fromId)
     const to = rt.botOf(toId)
@@ -103,8 +143,23 @@ export function install(rt: HostRuntime): void {
       // The whole text is in its file, or in the Session it goes to; exchangeText reads
       // it back there.
       const kept = headOf(text, TEXT_KEPT)
-      const whole = length !== undefined ? { length, files } : kept.length < text.length ? { length: text.length, sessionId: targetSessionId } : {}
-      const entry: ExchangeEntry = { id: exchangeId, from: fromId, to: toId, text: kept, ...whole, role, time: Date.now(), ...(replyTo ? { replyTo } : {}), ...(audience === 'user' ? { audience } : {}) }
+      const whole =
+        length !== undefined
+          ? { length, files }
+          : kept.length < text.length
+            ? { length: text.length, sessionId: targetSessionId }
+            : {}
+      const entry: ExchangeEntry = {
+        id: exchangeId,
+        from: fromId,
+        to: toId,
+        text: kept,
+        ...whole,
+        role,
+        time: Date.now(),
+        ...(replyTo ? { replyTo } : {}),
+        ...(audience === 'user' ? { audience } : {}),
+      }
       const earlier = merged ? state.exchanges.findIndex(other => other.id === exchangeId) : -1
       if (earlier === -1) state.exchanges.push(entry)
       else state.exchanges[earlier] = entry
@@ -116,7 +171,10 @@ export function install(rt: HostRuntime): void {
     // queues for the next turn (see turns.js for how each is routed).
     const message = createUserMessage({
       content: [
-        { type: 'text', text: `${headerFor(role, fromName, room?.name, audience, note, deferred, { resumed, retried, asker })}\n${text}` },
+        {
+          type: 'text',
+          text: `${headerFor(role, fromName, room?.name, audience, note, deferred, { resumed, retried, asker })}\n${text}`,
+        },
         ...files.map(attachment => ({ type: 'file', attachment })),
       ],
       source,
@@ -135,7 +193,10 @@ export function install(rt: HostRuntime): void {
     const firstFile = entry.files?.[0]
     if (firstFile !== undefined) return (await fileText(firstFile)) ?? { text: entry.text, whole: false }
     try {
-      for await (const event of rt.eventsBackwards(entry.sessionId ?? rt.chatOf(entry.to), AbortSignal.timeout(HISTORY_TIMEOUT_MS))) {
+      for await (const event of rt.eventsBackwards(
+        entry.sessionId ?? rt.chatOf(entry.to),
+        AbortSignal.timeout(HISTORY_TIMEOUT_MS),
+      )) {
         if (event.type !== 'user/message' || event.data?.source?.exchangeId !== entry.id) continue
         const delivered = textOf(event.data.content)
         const text = delivered.slice(delivered.indexOf('\n') + 1)
@@ -153,7 +214,9 @@ export function install(rt: HostRuntime): void {
   async function attachLong(text: string, name: string): Promise<AttachResult | undefined> {
     if (text.length <= MESSAGE_INLINE_MAX) return { text, files: [] }
     try {
-      const file = await ctx.get<AttachmentsService>('attachments')?.saveFile({ data: new TextEncoder().encode(text), name })
+      const file = await ctx
+        .get<AttachmentsService>('attachments')
+        ?.saveFile({ data: new TextEncoder().encode(text), name })
       if (file === undefined) return undefined
       // The file stays verbatim, so a line past what the read tool shows needs another way.
       const wide = text.split('\n').some(line => line.length > READ_LINE_MAX)

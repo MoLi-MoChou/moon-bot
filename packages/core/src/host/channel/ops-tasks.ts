@@ -26,7 +26,16 @@ interface TaskEntry {
 }
 
 interface TasksReader {
-  tasksView?(): Promise<{ readonly running: readonly TaskEntry[], readonly completed: readonly TaskEntry[], readonly waiting: readonly { readonly botId: string, readonly botName: string, readonly for: readonly string[], readonly hold?: TaskEntry['hold'] }[] }>
+  tasksView?(): Promise<{
+    readonly running: readonly TaskEntry[]
+    readonly completed: readonly TaskEntry[]
+    readonly waiting: readonly {
+      readonly botId: string
+      readonly botName: string
+      readonly for: readonly string[]
+      readonly hold?: TaskEntry['hold']
+    }[]
+  }>
   stopTask?(sessionId: string): Promise<boolean>
   removeQueued?(sessionId: string, id: string): Promise<boolean>
   continueParked?(sessionId: string): Promise<boolean>
@@ -46,23 +55,23 @@ export function taskHandlers(rt: ChannelRuntime): ChannelHandlers {
         waiting: view?.waiting ?? [],
       })
     },
-    'task-stop': async (body) => {
+    'task-stop': async body => {
       const sessionId = String(body.sessionId ?? '')
       if (sessionId === '') return fail('No turn named', 'bot/invalid')
-      const stopped = await reader.stopTask?.(sessionId) ?? false
+      const stopped = (await reader.stopTask?.(sessionId)) ?? false
       return ok({ stopped })
     },
-    'queue-remove': async (body) => {
+    'queue-remove': async body => {
       const sessionId = String(body.sessionId ?? '')
       const id = String(body.id ?? '')
       if (sessionId === '' || id === '') return fail('No queued message named', 'bot/invalid')
-      const removed = await reader.removeQueued?.(sessionId, id) ?? false
+      const removed = (await reader.removeQueued?.(sessionId, id)) ?? false
       return ok({ removed })
     },
-    'turn-continue': async (body) => {
+    'turn-continue': async body => {
       const sessionId = String(body.sessionId ?? '')
       if (sessionId === '') return fail('No turn named', 'bot/invalid')
-      const continued = await reader.continueParked?.(sessionId) ?? false
+      const continued = (await reader.continueParked?.(sessionId)) ?? false
       return ok({ continued })
     },
   }

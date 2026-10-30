@@ -6,19 +6,34 @@ import { build } from 'esbuild'
 
 const bundle = await build({
   entryPoints: [fileURLToPath(new URL('../src/client/cells.ts', import.meta.url))],
-  bundle: true, format: 'cjs', platform: 'node', write: false,
+  bundle: true,
+  format: 'cjs',
+  platform: 'node',
+  write: false,
   external: ['react', 'react-dom'],
 })
 const effects = []
-const module = { exports: {} as { AssistantCell: (props: Record<string, unknown>) => unknown, TurnTailCell: (props: Record<string, unknown>) => unknown } }
+const module = {
+  exports: {} as {
+    AssistantCell: (props: Record<string, unknown>) => unknown
+    TurnTailCell: (props: Record<string, unknown>) => unknown
+  },
+}
 runInNewContext(bundle.outputFiles[0].text, {
-  module, exports: module.exports,
-  require: (name) => {
+  module,
+  exports: module.exports,
+  require: name => {
     const platform = {
       react: {
         createElement: (type, props, ...children) => ({ type, props: props ?? {}, children: children.flat(Infinity) }),
-        useState: initial => [initial, () => {}], useEffect: (run) => { effects.push(run) }, useRef: current => ({ current }),
-        useLayoutEffect: () => {}, useMemo: make => make(), Fragment: 'fragment',
+        useState: initial => [initial, () => {}],
+        useEffect: run => {
+          effects.push(run)
+        },
+        useRef: current => ({ current }),
+        useLayoutEffect: () => {},
+        useMemo: make => make(),
+        Fragment: 'fragment',
       },
       'react-dom': { createPortal: node => node },
     }
@@ -43,18 +58,34 @@ const find = (node, match) => {
 
 const roster = { bots: [], byId: { b: { id: 'b', name: 'Writer' } }, roomsById: {}, exchangeTurns: {} }
 const finished = { turn: 3, status: 'closed', end: { time: 2_000 } }
-function cellProps({ closingSeq = 10, turn = finished }: { closingSeq?: number, turn?: { turn: number, status: string, end?: { time: number } } } = {}) {
+function cellProps({
+  closingSeq = 10,
+  turn = finished,
+}: {
+  closingSeq?: number
+  turn?: { turn: number; status: string; end?: { time: number } }
+} = {}) {
   const asked = []
   const links = { resolve: () => undefined }
   const props = {
     node: {
       key: 'n10',
       location: { kind: 'step', turn },
-      data: { turn: 3, step: 1, seq: 10, status: 'done', finalNode: { seq: 10 }, blocks: [{ kind: 'text', text: 'The brief is in `/work/brief.md`.' }] },
+      data: {
+        turn: 3,
+        step: 1,
+        seq: 10,
+        status: 'done',
+        finalNode: { seq: 10 },
+        blocks: [{ kind: 'text', text: 'The brief is in `/work/brief.md`.' }],
+      },
     },
     sessionId: 'b',
     openFile: () => {},
-    fileMentions: (owner) => { asked.push(owner); return links },
+    fileMentions: owner => {
+      asked.push(owner)
+      return links
+    },
     useTurnData: key => (key === 'turn-tail' ? { closing: { finalNode: { seq: closingSeq } } } : undefined),
     useRoster: select => select(roster),
     useUi: () => null,
@@ -64,7 +95,11 @@ function cellProps({ closingSeq = 10, turn = finished }: { closingSeq?: number, 
   }
   return { props, asked, links }
 }
-const markdownOf = props => find(expand(AssistantCell(props), ['Bubbles', 'Bubble']), node => typeof node.type === 'function' && node.type.name === 'MarkdownText')
+const markdownOf = props =>
+  find(
+    expand(AssistantCell(props), ['Bubbles', 'Bubble']),
+    node => typeof node.type === 'function' && node.type.name === 'MarkdownText',
+  )
 
 test('a reply that closes its turn links the files the turn changed or delivered', () => {
   const { props, asked, links } = cellProps()

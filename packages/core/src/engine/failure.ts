@@ -19,13 +19,17 @@ const KEY_SHAPES: readonly (readonly [RegExp, string])[] = [
 ]
 
 /** `text` with anything shaped like a key masked. */
-const maskSecrets = (text: string): string => KEY_SHAPES.reduce((out, [shape, replace]) => out.replace(shape, replace), text)
+const maskSecrets = (text: string): string =>
+  KEY_SHAPES.reduce((out, [shape, replace]) => out.replace(shape, replace), text)
 
 // A failure's words on the wire decide its code. A provider that answers 401 in a body,
 // a URL that refuses the connection and a 429 all say it differently, so each shape is
 // matched here once, for the chat, the logs and the diagnostics alike.
 const CODES: readonly (readonly [RegExp, string])[] = [
-  [/\b40[13]\b|unauthori[sz]ed|authentication|invalid[ _-]?(?:api[ _-]?key|x-api-key|token|credential)|incorrect api key|permission denied|forbidden/i, 'AUTH'],
+  [
+    /\b40[13]\b|unauthori[sz]ed|authentication|invalid[ _-]?(?:api[ _-]?key|x-api-key|token|credential)|incorrect api key|permission denied|forbidden/i,
+    'AUTH',
+  ],
   [/\b429\b|rate.?limit|too many requests/i, 'RATE_LIMIT'],
   [/insufficient[ _-]?quota|quota exceeded|\b402\b|billing|credit balance|payment required|out of credits/i, 'QUOTA'],
   [/overloaded|at capacity|too busy/i, 'OVERLOADED'],
@@ -33,7 +37,10 @@ const CODES: readonly (readonly [RegExp, string])[] = [
   [/context (?:length|window)|too long|maximum.{0,24}tokens|prompt is too long|overflow/i, 'CONTEXT_WINDOW_EXCEEDED'],
   [/\b50[0234]\b|internal server error|bad gateway|service unavailable/i, 'SERVER'],
   [/\b400\b|invalid_request|bad request|unsupported/i, 'INVALID_REQUEST'],
-  [/connection error|fetch failed|econnrefused|econnreset|enotfound|eai_again|etimedout|socket hang up|network|unreachable|offline|closed/i, 'TRANSPORT'],
+  [
+    /connection error|fetch failed|econnrefused|econnreset|enotfound|eai_again|etimedout|socket hang up|network|unreachable|offline|closed/i,
+    'TRANSPORT',
+  ],
 ]
 
 // A person has to change something. The rest can be tried again; nothing here retries on its own.
@@ -56,7 +63,10 @@ export function failureCodeOf(message: string | undefined): string | undefined {
  * text may hold part of the key, and the chat says "it refused the key" anyway.
  */
 export function callFailureOf(error: unknown): CallFailure {
-  const view = error !== null && typeof error === 'object' ? error as { code?: unknown; message?: unknown; status?: unknown } : {}
+  const view =
+    error !== null && typeof error === 'object'
+      ? (error as { code?: unknown; message?: unknown; status?: unknown })
+      : {}
   const raw = typeof error === 'string' ? error : typeof view.message === 'string' ? view.message : ''
   const named = typeof view.code === 'string' && view.code !== '' ? view.code : undefined
   const code = named ?? failureCodeOf(raw) ?? 'UNKNOWN'

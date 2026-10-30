@@ -7,7 +7,8 @@ import { spring, SPRING_POP, SPRING_SHAPE, SPRING_STRETCH, SPRING_TAP } from '..
 // A sidebar skin may seat the host's footer outlets in a footer of its own; matching the
 // outlets keeps that footer on one row whatever the skin names its boxes. The shell's
 // own footer is left to the _footArea rules, which lay it out differently.
-const SKIN_FOOT = ':is(div,footer):not([class*="_footArea"]):has(> div > [data-slot="sidebar.footer.action"] > .bt-connect-wrap)'
+const SKIN_FOOT =
+  ':is(div,footer):not([class*="_footArea"]):has(> div > [data-slot="sidebar.footer.action"] > .bt-connect-wrap)'
 
 // The sidebar column, its lists and rows, and the floating header pill.
 export const SHELL_FRAME_CSS = `

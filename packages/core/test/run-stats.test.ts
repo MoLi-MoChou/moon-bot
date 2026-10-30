@@ -31,6 +31,12 @@ test('a cache hit short of whole never reads 100%', () => {
 
 test('nothing to count leaves the line empty', () => {
   assert.deepEqual(runStatsOf(null), [])
-  assert.deepEqual(runStatsOf({ sessionStats: { turns: 0, decodeMs: 0, decodeTokens: 0 }, tokenUsage: { uncachedInputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 } }), [])
+  assert.deepEqual(
+    runStatsOf({
+      sessionStats: { turns: 0, decodeMs: 0, decodeTokens: 0 },
+      tokenUsage: { uncachedInputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 },
+    }),
+    [],
+  )
   assert.deepEqual(texts({ contextPressure: { contextWindow: 100 } }), [])
 })

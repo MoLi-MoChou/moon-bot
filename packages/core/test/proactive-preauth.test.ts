@@ -4,7 +4,9 @@ import { test } from 'node:test'
 import { PREAUTH_MAX_LEVEL, auditOf, coverableByRule, mayAct, type PreAuthRule } from '../src/host/proactive/preauth.ts'
 
 const rule = (over: Partial<PreAuthRule> = {}): PreAuthRule => ({
-  id: 'r1', subscriptionId: 's1', purpose: 'hand off stalled work',
+  id: 'r1',
+  subscriptionId: 's1',
+  purpose: 'hand off stalled work',
   when: { kind: 'no-progress', minutes: 10 },
   scope: { tools: ['message_bot', 'create_bot'], dailyCap: 3 },
   prohibitions: [],
@@ -33,7 +35,7 @@ test('a prohibition wins over scope', () => {
   if (verdict.kind === 'propose') assert.match(verdict.reason, /do-not list/)
 })
 
-test('the day\'s cap is a wait, not a proposal: it may act tomorrow', () => {
+test("the day's cap is a wait, not a proposal: it may act tomorrow", () => {
   const verdict = mayAct(rule(), attempt({ actedToday: 3 }))
   assert.equal(verdict.kind, 'wait')
 })

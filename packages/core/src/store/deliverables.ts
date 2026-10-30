@@ -23,14 +23,22 @@ export const LibraryRow = z.object({
 })
 export type LibraryRow = z.infer<typeof LibraryRow>
 
-const rowOf = (row: Record<string, unknown>): DeliverableRow => DeliverableRow.parse({
-  id: Number(row.id), sessionId: row.session_id, turn: row.turn === null ? null : Number(row.turn),
-  name: row.name, path: row.path, size: Number(row.size), createdAt: Number(row.created_at),
-})
+const rowOf = (row: Record<string, unknown>): DeliverableRow =>
+  DeliverableRow.parse({
+    id: Number(row.id),
+    sessionId: row.session_id,
+    turn: row.turn === null ? null : Number(row.turn),
+    name: row.name,
+    path: row.path,
+    size: Number(row.size),
+    createdAt: Number(row.created_at),
+  })
 
-const libraryRowOf = (row: Record<string, unknown>): LibraryRow => LibraryRow.parse({
-  ...rowOf(row), ownerId: row.owner_id === null || row.owner_id === undefined ? null : String(row.owner_id),
-})
+const libraryRowOf = (row: Record<string, unknown>): LibraryRow =>
+  LibraryRow.parse({
+    ...rowOf(row),
+    ownerId: row.owner_id === null || row.owner_id === undefined ? null : String(row.owner_id),
+  })
 
 export class Deliverables {
   private readonly db: SqliteDatabase
@@ -39,26 +47,39 @@ export class Deliverables {
     this.db = db
   }
 
-  add(sessionId: string, turn: number | null, files: readonly { readonly name: string, readonly path: string, readonly size: number }[]): void {
+  add(
+    sessionId: string,
+    turn: number | null,
+    files: readonly { readonly name: string; readonly path: string; readonly size: number }[],
+  ): void {
     if (files.length === 0) return
     const at = Date.now()
-    const insert = this.db.prepare('INSERT INTO deliverables (session_id, turn, name, path, size, created_at) VALUES (?, ?, ?, ?, ?, ?)')
+    const insert = this.db.prepare(
+      'INSERT INTO deliverables (session_id, turn, name, path, size, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+    )
     this.db.transaction(() => {
       for (const file of files) insert.run(sessionId, turn, file.name, file.path, file.size, at)
     })()
   }
 
   forTurn(sessionId: string, turn: number): readonly DeliverableRow[] {
-    const rows = this.db.prepare('SELECT * FROM deliverables WHERE session_id = ? AND turn = ? ORDER BY path ASC').all(sessionId, turn) as Record<string, unknown>[]
+    const rows = this.db
+      .prepare('SELECT * FROM deliverables WHERE session_id = ? AND turn = ? ORDER BY path ASC')
+      .all(sessionId, turn) as Record<string, unknown>[]
     return rows.map(rowOf)
   }
 
   /** The library's whole shelf, newest first; `since` filters by the turn that made them. */
-  list(options: { readonly since?: number, readonly limit?: number } = {}): readonly LibraryRow[] {
+  list(options: { readonly since?: number; readonly limit?: number } = {}): readonly LibraryRow[] {
     const limit = Math.min(Math.max(options.limit ?? 200, 1), 500)
-    const rows = (options.since === undefined
-      ? this.db.prepare(`SELECT d.*, s.owner_id FROM deliverables d LEFT JOIN sessions s ON s.id = d.session_id ORDER BY d.created_at DESC, d.id DESC LIMIT ?`)
-      : this.db.prepare(`SELECT d.*, s.owner_id FROM deliverables d LEFT JOIN sessions s ON s.id = d.session_id WHERE d.created_at >= ? ORDER BY d.created_at DESC, d.id DESC LIMIT ?`)
+    const rows = (
+      options.since === undefined
+        ? this.db.prepare(
+            `SELECT d.*, s.owner_id FROM deliverables d LEFT JOIN sessions s ON s.id = d.session_id ORDER BY d.created_at DESC, d.id DESC LIMIT ?`,
+          )
+        : this.db.prepare(
+            `SELECT d.*, s.owner_id FROM deliverables d LEFT JOIN sessions s ON s.id = d.session_id WHERE d.created_at >= ? ORDER BY d.created_at DESC, d.id DESC LIMIT ?`,
+          )
     ).all(...(options.since === undefined ? [] : [options.since]), limit) as Record<string, unknown>[]
     return rows.map(libraryRowOf)
   }

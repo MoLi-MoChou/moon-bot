@@ -26,7 +26,12 @@ test('tsconfig keeps the migration gates on, and lets the existing JS stay as it
   assert.equal(tsconfig.compilerOptions.allowJs, true)
   assert.equal(tsconfig.compilerOptions.checkJs, false)
   assert.equal(tsconfig.compilerOptions.noEmit, true)
-  for (const gate of ['noUncheckedIndexedAccess', 'exactOptionalPropertyTypes', 'noImplicitOverride', 'verbatimModuleSyntax']) {
+  for (const gate of [
+    'noUncheckedIndexedAccess',
+    'exactOptionalPropertyTypes',
+    'noImplicitOverride',
+    'verbatimModuleSyntax',
+  ]) {
     assert.equal(tsconfig.compilerOptions[gate], true, gate)
   }
   assert.deepEqual(tsconfig.include, ['src/**/*.ts', 'src/**/*.tsx'])
@@ -54,13 +59,23 @@ test('the client build accepts a TSX/TS entry and still writes the same client.j
 
 test('the shared contract layer exists and names the endpoints both ends share', async () => {
   const rpc = read('../contracts/src/rpc.ts')
-  for (const endpoint of ['state: {', 'chat: {', 'send: {', "'workspace-download': {"]) assert.ok(rpc.includes(endpoint), endpoint)
+  for (const endpoint of ['state: {', 'chat: {', 'send: {', "'workspace-download': {"])
+    assert.ok(rpc.includes(endpoint), endpoint)
   // The envelope's error code is a closed union, not a free string.
   assert.match(rpc, /export type RpcErrorCode =/)
-  for (const code of ["'bot/refused'", "'bot/stale'", "'bot/read-only'", "'bot/internal'", "'NETWORK'"]) assert.ok(rpc.includes(code), code)
+  for (const code of ["'bot/refused'", "'bot/stale'", "'bot/read-only'", "'bot/internal'", "'NETWORK'"])
+    assert.ok(rpc.includes(code), code)
   assert.match(rpc, /HTTP_\$\{number\}/)
   const schema = read('../contracts/src/schema.ts')
-  for (const name of ['BotSchema', 'RoomSchema', 'ExchangeTurnSchema', 'MemoryEntrySchema', 'ScheduleTaskSchema', 'BotSkillSchema', 'BotWorkspaceSchema']) {
+  for (const name of [
+    'BotSchema',
+    'RoomSchema',
+    'ExchangeTurnSchema',
+    'MemoryEntrySchema',
+    'ScheduleTaskSchema',
+    'BotSkillSchema',
+    'BotWorkspaceSchema',
+  ]) {
     assert.match(schema, new RegExp(`export const ${name}`))
   }
   const views = read('../contracts/src/views.ts')

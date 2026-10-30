@@ -21,7 +21,17 @@ export const PREVIEW_SCRIPT = `(() => {
   return text.replace(/\\s+/g, ' ').trim().slice(0, 200)
 })()`
 
-export const EMPTY: BrowserPage = { url: '', title: '', favicon: null, loading: false, canGoBack: false, canGoForward: false, error: null, live: false, excerpt: '' }
+export const EMPTY: BrowserPage = {
+  url: '',
+  title: '',
+  favicon: null,
+  loading: false,
+  canGoBack: false,
+  canGoForward: false,
+  error: null,
+  live: false,
+  excerpt: '',
+}
 // Local and LAN pages open; cloud metadata services do not, since on a cloud machine they
 // hand out account credentials. The Desktop shell already refuses its own host port.
 export const METADATA_HOST = /^(169\.254\.\d+\.\d+|\[fd00:ec2::254\]|metadata\.google\.internal)$/i
@@ -35,10 +45,14 @@ export const blockedAddress = (url: string): boolean => URL.canParse(url) && MET
 export function browserAddress(input: unknown): string | null {
   const text = String(input ?? '').trim()
   if (text === '') return null
-  if (/^[a-z][a-z\d+.-]*:\/\//i.test(text)) return /^https?:\/\//i.test(text) && URL.canParse(text) ? new URL(text).href : null
+  if (/^[a-z][a-z\d+.-]*:\/\//i.test(text))
+    return /^https?:\/\//i.test(text) && URL.canParse(text) ? new URL(text).href : null
   if (/^(about|javascript|data|file|blob|chrome|devtools|view-source):/i.test(text)) return null
   const host = text.split(/[/?#]/)[0] ?? ''
-  const local = /^(localhost|127(\.\d+){3}|10(\.\d+){3}|192\.168(\.\d+){2}|172\.(1[6-9]|2\d|3[01])(\.\d+){2}|\[[\da-f:]+\])(:\d+)?$/i.test(host)
+  const local =
+    /^(localhost|127(\.\d+){3}|10(\.\d+){3}|192\.168(\.\d+){2}|172\.(1[6-9]|2\d|3[01])(\.\d+){2}|\[[\da-f:]+\])(:\d+)?$/i.test(
+      host,
+    )
   const looksLikeHost = !/\s/.test(text) && (local || /^[^\s.]+(\.[^\s.]+)+(:\d+)?$/.test(host))
   if (looksLikeHost && URL.canParse(`http://${text}`)) return new URL(`${local ? 'http' : 'https'}://${text}`).href
   return `${SEARCH_URL}${encodeURIComponent(text)}`

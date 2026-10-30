@@ -17,10 +17,13 @@ function start({ home = mkdtempSync(join(tmpdir(), 'ds-bot-rounds-')) } = {}) {
   const workspaces = new Map()
   const sent = []
   const inboxes = new Map()
-  const inboxOf = (sessionId) => {
+  const inboxOf = sessionId => {
     if (!inboxes.has(sessionId)) {
-      const inbox: { nextTurn: { id: string }[], nextStep: { id: string }[], remove?: (id: string) => boolean } = { nextTurn: [], nextStep: [] }
-      inbox.remove = (id) => {
+      const inbox: { nextTurn: { id: string }[]; nextStep: { id: string }[]; remove?: (id: string) => boolean } = {
+        nextTurn: [],
+        nextStep: [],
+      }
+      inbox.remove = id => {
         for (const list of ['nextTurn', 'nextStep']) {
           const at = inbox[list].findIndex(message => message.id === id)
           if (at !== -1) {
@@ -44,7 +47,7 @@ function start({ home = mkdtempSync(join(tmpdir(), 'ds-bot-rounds-')) } = {}) {
     workspaceRegistry: {
       get: id => workspaces.get(id),
       resolveByPath: async () => undefined,
-      create: async (path) => {
+      create: async path => {
         const workspace = { id: `w${workspaces.size + 1}`, path }
         workspaces.set(workspace.id, workspace)
         return workspace
@@ -53,11 +56,18 @@ function start({ home = mkdtempSync(join(tmpdir(), 'ds-bot-rounds-')) } = {}) {
     },
     sessionController: {
       create: async () => ({ sessionId: `s${++sessions}` }),
-      resolveAgent: async sessionId => ({ agent: { session: { id: sessionId }, followup: message => sent.push({ sessionId, message }) } }),
+      resolveAgent: async sessionId => ({
+        agent: { session: { id: sessionId }, followup: message => sent.push({ sessionId, message }) },
+      }),
       selectModel: async () => {},
-      prompt: async (request) => {
+      prompt: async request => {
         const inbox = inboxOf(request.sessionId)
-        inbox[request.mode === 'steer' ? 'nextStep' : 'nextTurn'].push({ id: randomUUID(), role: 'user', source: { kind: 'user', rpcId: request.requestId }, content: request.content })
+        inbox[request.mode === 'steer' ? 'nextStep' : 'nextTurn'].push({
+          id: randomUUID(),
+          role: 'user',
+          source: { kind: 'user', rpcId: request.requestId },
+          content: request.content,
+        })
         return { accepted: true }
       },
       page: async () => ({ events: [] }),
@@ -67,33 +77,44 @@ function start({ home = mkdtempSync(join(tmpdir(), 'ds-bot-rounds-')) } = {}) {
   })
   let route
   const register = ctx.connection.fetch.register
-  ctx.connection.fetch.register = (options) => {
+  ctx.connection.fetch.register = options => {
     route = options
     return register(options)
   }
   const rt = createRuntime(ctx, { home })
   const call = async (endpoint, payload) => {
-    const response = await route.fetch(new Request('http://localhost/api/bot', { method: 'POST', body: JSON.stringify({ endpoint, payload }) }))
+    const response = await route.fetch(
+      new Request('http://localhost/api/bot', { method: 'POST', body: JSON.stringify({ endpoint, payload }) }),
+    )
     return response.json()
   }
   // Session events arrive one at a time in DSH; awaiting each listener keeps that order.
   const emit = async (sessionId, event) => {
     for (const listener of ctx.listeners.get('session/event') ?? []) await listener({ id: sessionId }, event)
   }
-  const userMessage = text => ({ type: 'user/message', data: { source: { kind: 'user' }, content: [{ type: 'text', text }] } })
-  // What the shell's composer does: prompt the group's Session directly.
-  const compose = (sessionId, content, mode = 'queue') => ctx.sessionController.prompt({
-    requestId: randomUUID(),
-    sessionId,
-    mode,
-    content: typeof content === 'string' ? [{ type: 'text', text: content }] : content,
+  const userMessage = text => ({
+    type: 'user/message',
+    data: { source: { kind: 'user' }, content: [{ type: 'text', text }] },
   })
-  const relay = (roomId, callId, signal = new AbortController().signal) => ctx.registeredTools.get('group_relay')
-    .execute({}, { agent: { id: roomId, inbox: inboxOf(roomId) }, callId, signal })
+  // What the shell's composer does: prompt the group's Session directly.
+  const compose = (sessionId, content, mode = 'queue') =>
+    ctx.sessionController.prompt({
+      requestId: randomUUID(),
+      sessionId,
+      mode,
+      content: typeof content === 'string' ? [{ type: 'text', text: content }] : content,
+    })
+  const relay = (roomId, callId, signal = new AbortController().signal) =>
+    ctx.registeredTools
+      .get('group_relay')
+      .execute({}, { agent: { id: roomId, inbox: inboxOf(roomId) }, callId, signal })
   // The Bot's answer to its group turn: a delivery source plus the reply text.
   const answer = async (sessionId, exchangeId, text, turn) => {
     await emit(sessionId, { type: 'turn/start', data: { turn } })
-    await emit(sessionId, { type: 'user/message', data: { source: { kind: 'bot', role: 'room', exchangeId }, content: [{ type: 'text', text: 'your turn' }] } })
+    await emit(sessionId, {
+      type: 'user/message',
+      data: { source: { kind: 'bot', role: 'room', exchangeId }, content: [{ type: 'text', text: 'your turn' }] },
+    })
     await emit(sessionId, { type: 'assistant/message', data: { message: { content: [{ type: 'text', text }] } } })
     await emit(sessionId, { type: 'turn/end', data: { reason: { kind: 'stop' } } })
   }
@@ -105,7 +126,7 @@ function start({ home = mkdtempSync(join(tmpdir(), 'ds-bot-rounds-')) } = {}) {
 }
 
 const settle = () => new Promise(resolve => setTimeout(resolve, 20))
-const waitFor = async (check) => {
+const waitFor = async check => {
   for (let at = 0; at < 100; at += 1) {
     const value = check()
     if (value !== undefined) return value
@@ -113,9 +134,10 @@ const waitFor = async (check) => {
   }
   return undefined
 }
-const turnFor = (sent, ...earlier) => waitFor(() => sent.find(entry => !earlier.includes(entry) && entry.message.source.role === 'room'))
+const turnFor = (sent, ...earlier) =>
+  waitFor(() => sent.find(entry => !earlier.includes(entry) && entry.message.source.role === 'room'))
 
-test('a new group Session waits for capabilities before its first member prompt', async (t) => {
+test('a new group Session waits for capabilities before its first member prompt', async t => {
   const { call, emit, userMessage, relay, answer, stop, sent, rt } = start()
   t.after(() => stop())
   const room = await team(call, sent)
@@ -123,8 +145,12 @@ test('a new group Session waits for capabilities before its first member prompt'
 
   let release
   let markStarted
-  const gate = new Promise(resolve => { release = resolve })
-  const started = new Promise(resolve => { markStarted = resolve })
+  const gate = new Promise(resolve => {
+    release = resolve
+  })
+  const started = new Promise(resolve => {
+    markStarted = resolve
+  })
   rt.ensureCapabilities = async sessionId => {
     markStarted(sessionId)
     await gate
@@ -152,7 +178,7 @@ async function team(call, sent) {
   return room
 }
 
-test('a message the composer queues mid-round joins the round and leaves the Session\'s queue', async (t) => {
+test("a message the composer queues mid-round joins the round and leaves the Session's queue", async t => {
   const { call, emit, userMessage, compose, relay, inboxOf, answer, stop, sent } = start()
   t.after(() => stop())
   const room = await team(call, sent)
@@ -175,12 +201,15 @@ test('a message the composer queues mid-round joins the round and leaves the Ses
 
   await answer(second.sessionId, second.message.source.exchangeId, 'Ping back!', 2)
   const result = JSON.parse(await running)
-  assert.deepEqual(result.replies.map(reply => reply.name ?? 'User'), ['Chief', 'User', 'Writer'])
+  assert.deepEqual(
+    result.replies.map(reply => reply.name ?? 'User'),
+    ['Chief', 'User', 'Writer'],
+  )
   // Taken out of the queue, the message opens no second round after this one.
   assert.deepEqual(inboxOf(room.id).nextTurn, [])
 })
 
-test('a plain message steered mid-round is answered by everyone, admin first, inside the round', async (t) => {
+test('a plain message steered mid-round is answered by everyone, admin first, inside the round', async t => {
   const { call, emit, userMessage, compose, relay, inboxOf, answer, stop, sent } = start()
   t.after(() => stop())
   const room = await team(call, sent)
@@ -200,11 +229,14 @@ test('a plain message steered mid-round is answered by everyone, admin first, in
   assert.match(third.message.content[0].text, /steer this way/)
   await answer(third.sessionId, third.message.source.exchangeId, 'two', 3)
   const result = JSON.parse(await running)
-  assert.deepEqual(result.replies.map(reply => reply.name ?? 'User'), ['Chief', 'User', 'Chief', 'Writer'])
+  assert.deepEqual(
+    result.replies.map(reply => reply.name ?? 'User'),
+    ['Chief', 'User', 'Chief', 'Writer'],
+  )
   assert.deepEqual(inboxOf(room.id).nextStep, [])
 })
 
-test('a message sent during the last speaker\'s turn is still answered in the round', async (t) => {
+test("a message sent during the last speaker's turn is still answered in the round", async t => {
   const { call, emit, userMessage, relay, answer, stop, sent } = start()
   t.after(() => stop())
   const room = await team(call, sent)
@@ -227,10 +259,13 @@ test('a message sent during the last speaker\'s turn is still answered in the ro
   assert.ok(fourth, 'and so does the Writer')
   await answer(fourth.sessionId, fourth.message.source.exchangeId, 'Me too', 4)
   const result = JSON.parse(await running)
-  assert.deepEqual(result.replies.map(reply => reply.name ?? 'User'), ['Chief', 'Writer', 'User', 'Chief', 'Writer'])
+  assert.deepEqual(
+    result.replies.map(reply => reply.name ?? 'User'),
+    ['Chief', 'Writer', 'User', 'Chief', 'Writer'],
+  )
 })
 
-test('in admin mode a plain mid-round message goes to the admin', async (t) => {
+test('in admin mode a plain mid-round message goes to the admin', async t => {
   const { call, emit, userMessage, compose, relay, answer, stop, sent } = start()
   t.after(() => stop())
   const room = await team(call, sent)
@@ -250,10 +285,13 @@ test('in admin mode a plain mid-round message goes to the admin', async (t) => {
   assert.match(third.message.content[0].text, /what do you think\?/)
   await answer(third.sessionId, third.message.source.exchangeId, 'Admin here', 3)
   const result = JSON.parse(await running)
-  assert.deepEqual(result.replies.map(reply => reply.name ?? 'User'), ['Chief', 'Writer', 'User', 'Chief'])
+  assert.deepEqual(
+    result.replies.map(reply => reply.name ?? 'User'),
+    ['Chief', 'Writer', 'User', 'Chief'],
+  )
 })
 
-test('a message with an image or a chat reference waits for its own round, and so does what follows it', async (t) => {
+test('a message with an image or a chat reference waits for its own round, and so does what follows it', async t => {
   const { call, emit, userMessage, compose, relay, inboxOf, answer, stop, sent } = start()
   t.after(() => stop())
   const room = await team(call, sent)
@@ -261,7 +299,10 @@ test('a message with an image or a chat reference waits for its own round, and s
   await emit(room.id, userMessage('Start'))
   const running = relay(room.id, 'relay')
   const first = await turnFor(sent)
-  await compose(room.id, [{ type: 'text', text: 'see this' }, { type: 'image', data: 'AAAA', mediaType: 'image/png' }])
+  await compose(room.id, [
+    { type: 'text', text: 'see this' },
+    { type: 'image', data: 'AAAA', mediaType: 'image/png' },
+  ])
   await compose(room.id, 'after the image')
   await compose(room.id, 'about @[Notes](dsh-session:abc123)', 'steer')
   await answer(first.sessionId, first.message.source.exchangeId, 'one', 1)
@@ -269,27 +310,36 @@ test('a message with an image or a chat reference waits for its own round, and s
   assert.doesNotMatch(second.message.content[0].text, /see this|after the image|about @/)
   await answer(second.sessionId, second.message.source.exchangeId, 'two', 2)
   const result = JSON.parse(await running)
-  assert.deepEqual(result.replies.map(reply => reply.name ?? 'User'), ['Chief', 'Writer'])
+  assert.deepEqual(
+    result.replies.map(reply => reply.name ?? 'User'),
+    ['Chief', 'Writer'],
+  )
   assert.equal(inboxOf(room.id).nextTurn.length, 2)
   assert.equal(inboxOf(room.id).nextStep.length, 1)
 })
 
-test('the greeting round leaves a waiting message for its own round', async (t) => {
+test('the greeting round leaves a waiting message for its own round', async t => {
   const { call, emit, compose, relay, inboxOf, answer, stop, sent } = start()
   t.after(() => stop())
   const room = await team(call, sent)
 
-  await emit(room.id, { type: 'user/message', data: { source: { kind: 'bot', role: 'kickoff' }, content: [{ type: 'text', text: '[Group chat created]' }] } })
+  await emit(room.id, {
+    type: 'user/message',
+    data: { source: { kind: 'bot', role: 'kickoff' }, content: [{ type: 'text', text: '[Group chat created]' }] },
+  })
   const running = relay(room.id, 'relay')
   const first = await turnFor(sent)
   await compose(room.id, 'hello there')
   await answer(first.sessionId, first.message.source.exchangeId, 'Welcome!', 1)
   const result = JSON.parse(await running)
-  assert.deepEqual(result.replies.map(reply => reply.name ?? 'User'), ['Chief'])
+  assert.deepEqual(
+    result.replies.map(reply => reply.name ?? 'User'),
+    ['Chief'],
+  )
   assert.equal(inboxOf(room.id).nextTurn.length, 1)
 })
 
-test('a stopped round leaves a waiting message for the next round', async (t) => {
+test('a stopped round leaves a waiting message for the next round', async t => {
   const { call, emit, userMessage, compose, relay, inboxOf, stop, sent } = start()
   t.after(() => stop())
   const room = await team(call, sent)
@@ -301,11 +351,14 @@ test('a stopped round leaves a waiting message for the next round', async (t) =>
   await compose(room.id, 'still there?')
   controller.abort()
   const result = JSON.parse(await running)
-  assert.equal(result.replies.some(reply => reply.kind === 'user'), false)
+  assert.equal(
+    result.replies.some(reply => reply.kind === 'user'),
+    false,
+  )
   assert.equal(inboxOf(room.id).nextTurn.length, 1)
 })
 
-test('a message sent between rounds still opens a full round', async (t) => {
+test('a message sent between rounds still opens a full round', async t => {
   const { call, emit, userMessage, relay, answer, stop, sent } = start()
   t.after(() => stop())
   const room = await team(call, sent)
@@ -319,13 +372,16 @@ test('a message sent between rounds still opens a full round', async (t) => {
   assert.ok(second)
   await answer(second.sessionId, second.message.source.exchangeId, 'Hello!', 2)
   const result = JSON.parse(await running)
-  assert.deepEqual(result.replies.map(reply => reply.name ?? 'User'), ['Chief', 'Writer'])
+  assert.deepEqual(
+    result.replies.map(reply => reply.name ?? 'User'),
+    ['Chief', 'Writer'],
+  )
 })
 
 // 公开#163: a member's group Session whose stored log is corrupt could not be resumed;
 // the round counted the member as passed, showed nothing, and tried the same Session
 // again every round.
-test('a member whose group Session cannot be opened shows a failure, and its next turn there starts a new Session', async (t) => {
+test('a member whose group Session cannot be opened shows a failure, and its next turn there starts a new Session', async t => {
   const { call, emit, userMessage, relay, answer, stop, sent, ctx, rt } = start()
   t.after(() => stop())
   const room = await team(call, sent)
@@ -342,9 +398,15 @@ test('a member whose group Session cannot be opened shows a failure, and its nex
   assert.equal(first.sessionId, broken)
 
   const resolve = ctx.sessionController.resolveAgent
-  ctx.sessionController.resolveAgent = async sessionId => (sessionId === broken
-    ? { error: { code: 'gateway/internal', message: `resume failed for session "${sessionId}": SessionQueryError: stored session "${sessionId}" is corrupt: released v2 row has seq gap (expected 20, got 16)` } }
-    : resolve(sessionId))
+  ctx.sessionController.resolveAgent = async sessionId =>
+    sessionId === broken
+      ? {
+          error: {
+            code: 'gateway/internal',
+            message: `resume failed for session "${sessionId}": SessionQueryError: stored session "${sessionId}" is corrupt: released v2 row has seq gap (expected 20, got 16)`,
+          },
+        }
+      : resolve(sessionId)
   t.mock.method(rt as unknown as { warn: () => void }, 'warn', () => {})
   sent.length = 0
   await emit(room.id, userMessage('Again'))
@@ -354,7 +416,10 @@ test('a member whose group Session cannot be opened shows a failure, and its nex
   await answer(writerTurn.sessionId, writerTurn.message.source.exchangeId, 'Still here.', 3)
   const result = JSON.parse(await running)
   const failed = result.replies.filter(reply => reply.kind === 'failed')
-  assert.deepEqual(failed.map(reply => [reply.name, reply.code]), [['Chief', 'SESSION_RESET']])
+  assert.deepEqual(
+    failed.map(reply => [reply.name, reply.code]),
+    [['Chief', 'SESSION_RESET']],
+  )
   assert.equal(result.passed.includes('Chief'), false)
   assert.equal(rt.roomOf(room.id).sessions[chief], undefined)
 
@@ -367,10 +432,13 @@ test('a member whose group Session cannot be opened shows a failure, and its nex
   await answer(fresh.sessionId, fresh.message.source.exchangeId, 'Back.', 1)
   const again = await turnFor(sent, fresh)
   await answer(again.sessionId, again.message.source.exchangeId, 'Here.', 4)
-  assert.deepEqual(JSON.parse(await running).replies.map(reply => reply.name ?? 'User'), ['Chief', 'Writer'])
+  assert.deepEqual(
+    JSON.parse(await running).replies.map(reply => reply.name ?? 'User'),
+    ['Chief', 'Writer'],
+  )
 })
 
-test('a delivery that fails for another reason shows a failure and keeps the Session', async (t) => {
+test('a delivery that fails for another reason shows a failure and keeps the Session', async t => {
   const { call, emit, userMessage, relay, answer, stop, sent, ctx, rt } = start()
   t.after(() => stop())
   const room = await team(call, sent)
@@ -384,9 +452,10 @@ test('a delivery that fails for another reason shows a failure and keeps the Ses
   await running
 
   const resolve = ctx.sessionController.resolveAgent
-  ctx.sessionController.resolveAgent = async sessionId => (sessionId === first.sessionId
-    ? { error: { code: 'session/writer-held', message: 'another process holds this Session' } }
-    : resolve(sessionId))
+  ctx.sessionController.resolveAgent = async sessionId =>
+    sessionId === first.sessionId
+      ? { error: { code: 'session/writer-held', message: 'another process holds this Session' } }
+      : resolve(sessionId)
   t.mock.method(rt as unknown as { warn: () => void }, 'warn', () => {})
   sent.length = 0
   await emit(room.id, userMessage('Again'))
@@ -394,14 +463,17 @@ test('a delivery that fails for another reason shows a failure and keeps the Ses
   const writerTurn = await turnFor(sent)
   await answer(writerTurn.sessionId, writerTurn.message.source.exchangeId, 'Still here.', 3)
   const result = JSON.parse(await running)
-  assert.deepEqual(result.replies.filter(reply => reply.kind === 'failed').map(reply => [reply.name, reply.code]), [['Chief', 'SESSION']])
+  assert.deepEqual(
+    result.replies.filter(reply => reply.kind === 'failed').map(reply => [reply.name, reply.code]),
+    [['Chief', 'SESSION']],
+  )
   assert.equal(rt.roomOf(room.id).sessions[chief], first.sessionId)
 })
 
 // #217: DSH opens a relative file link from the folder of the Session that shows it. A
 // member wrote the link in its own group Session, which works in the group's folder; the
 // group's Session and other Bots work elsewhere, so the link reaches them in full.
-test('a relative file link a member writes reaches the group, and another Bot, as a full path', async (t) => {
+test('a relative file link a member writes reaches the group, and another Bot, as a full path', async t => {
   const { call, emit, userMessage, relay, answer, stop, sent, ctx, rt } = start()
   t.after(() => stop())
   const folder = realpathSync.native(mkdtempSync(join(tmpdir(), 'ds-bot-links-')))
@@ -425,17 +497,32 @@ test('a relative file link a member writes reaches the group, and another Bot, a
   const chief = rt.state.mainBotIds[0]
   const writer = rt.state.rooms[room.id].members.find(id => id !== chief)
   sent.length = 0
-  await ctx.registeredTools.get('message_bot').execute({ to: rt.botOf(writer).name, message: 'Read [notes](notes.md#L3)', when: 'queue' }, {
-    agent: { id: first.sessionId, session: { id: first.sessionId, header: { cwd: folder } }, inbox: { nextStep: [], nextTurn: [] } }, callId: 'c1',
-  })
-  const delivered = await waitFor(() => sent.find(entry => entry.sessionId === room.id && entry.message.source?.role === 'post'))
-  assert.ok(delivered.message.content.map(block => block.text).join('\n').includes(`[notes](${full('notes.md')}#L3)`))
+  await ctx.registeredTools.get('message_bot').execute(
+    { to: rt.botOf(writer).name, message: 'Read [notes](notes.md#L3)', when: 'queue' },
+    {
+      agent: {
+        id: first.sessionId,
+        session: { id: first.sessionId, header: { cwd: folder } },
+        inbox: { nextStep: [], nextTurn: [] },
+      },
+      callId: 'c1',
+    },
+  )
+  const delivered = await waitFor(() =>
+    sent.find(entry => entry.sessionId === room.id && entry.message.source?.role === 'post'),
+  )
+  assert.ok(
+    delivered.message.content
+      .map(block => block.text)
+      .join('\n')
+      .includes(`[notes](${full('notes.md')}#L3)`),
+  )
 })
 
 // #209: DSH can fail a member's turn before its first step (DSH 0.2.1 does so for a folder
 // that is gone), so the turn never takes the round's call. The round counts the failure at
 // once instead of waiting minutes for a reply that cannot come.
-test('a member turn that fails before it takes the call fails that member in the round at once', async (t) => {
+test('a member turn that fails before it takes the call fails that member in the round at once', async t => {
   const { call, emit, userMessage, relay, answer, stop, sent } = start()
   t.after(() => stop())
   const room = await team(call, sent)
@@ -443,33 +530,53 @@ test('a member turn that fails before it takes the call fails that member in the
   const running = relay(room.id, 'relay')
   const first = await turnFor(sent)
   await emit(first.sessionId, { type: 'turn/start', data: { turn: 1 } })
-  await emit(first.sessionId, { type: 'turn/end', data: { reason: { kind: 'error', error: { message: 'working-directory: directory does not exist: "/gone"', code: 'UNKNOWN' } } } })
+  await emit(first.sessionId, {
+    type: 'turn/end',
+    data: {
+      reason: {
+        kind: 'error',
+        error: { message: 'working-directory: directory does not exist: "/gone"', code: 'UNKNOWN' },
+      },
+    },
+  })
   const second = await turnFor(sent, first)
   assert.ok(second, 'the next member speaks without waiting for the reply timeout')
   await answer(second.sessionId, second.message.source.exchangeId, 'Writer here.', 1)
   const result = JSON.parse(await running)
-  assert.deepEqual(result.replies.map(reply => [reply.kind ?? 'reply', reply.name]), [['failed', 'Chief'], ['reply', 'Writer']])
+  assert.deepEqual(
+    result.replies.map(reply => [reply.kind ?? 'reply', reply.name]),
+    [
+      ['failed', 'Chief'],
+      ['reply', 'Writer'],
+    ],
+  )
 })
 
 // A member deleted while its group Session is made sits the round out; the Session it was
 // getting belongs to no one, so it is archived instead of left over.
-test('a member deleted while its group Session is made is left out, and the Session is not kept', async (t) => {
+test('a member deleted while its group Session is made is left out, and the Session is not kept', async t => {
   const { call, emit, userMessage, relay, answer, stop, sent, ctx, rt } = start()
   t.after(() => stop())
   const room = await team(call, sent)
   const writer = rt.state.rooms[room.id].members.find(id => !rt.isMain(id))
   const archived = []
-  ctx.workspaceRegistry.archiveSession = async (sessionId) => { archived.push(sessionId) }
+  ctx.workspaceRegistry.archiveSession = async sessionId => {
+    archived.push(sessionId)
+  }
   await emit(room.id, userMessage('Start'))
   const running = relay(room.id, 'relay')
   const first = await turnFor(sent)
 
   let release
-  const gate = new Promise(resolve => { release = resolve })
+  const gate = new Promise(resolve => {
+    release = resolve
+  })
   let made
-  const making = new Promise(resolve => { made = resolve })
+  const making = new Promise(resolve => {
+    made = resolve
+  })
   const create = ctx.sessionController.create
-  ctx.sessionController.create = async (options) => {
+  ctx.sessionController.create = async options => {
     const result = await create(options)
     made(result.sessionId)
     await gate
@@ -481,14 +588,17 @@ test('a member deleted while its group Session is made is left out, and the Sess
   release()
 
   const result = JSON.parse(await running)
-  assert.deepEqual(result.replies.map(reply => [reply.kind ?? 'reply', reply.name]), [['reply', 'Chief']])
+  assert.deepEqual(
+    result.replies.map(reply => [reply.kind ?? 'reply', reply.name]),
+    [['reply', 'Chief']],
+  )
   assert.ok(archived.includes(sessionId))
   assert.equal(rt.state.rooms[room.id].sessions?.[writer], undefined)
 })
 
 // #206: state.json is written whole on every save, so a long group line keeps its start
 // there and its whole text in a file of its own. Members still read it whole.
-test('a long group line keeps its start in state.json, and members and read_group_chat read it whole', async (t) => {
+test('a long group line keeps its start in state.json, and members and read_group_chat read it whole', async t => {
   const { call, emit, userMessage, relay, answer, stop, sent, ctx, home, rt } = start()
   t.after(() => rmSync(home, { recursive: true, force: true, maxRetries: 5 }))
   const room = await team(call, sent)
@@ -503,13 +613,18 @@ test('a long group line keeps its start in state.json, and members and read_grou
   assert.equal(JSON.parse(await running).replies[0].text, long)
 
   await rt.save()
-  const saved = JSON.parse(readFileSync(join(home, 'state.json'), 'utf8')).rooms[room.id].log.find(line => line.length !== undefined)
+  const saved = JSON.parse(readFileSync(join(home, 'state.json'), 'utf8')).rooms[room.id].log.find(
+    line => line.length !== undefined,
+  )
   assert.equal(saved.text.length, 2000)
   assert.equal(saved.length, long.length)
   assert.equal(readFileSync(join(home, 'group-lines', room.id, `${saved.seq}.txt`), 'utf8'), long)
   const read = ctx.registeredTools.get('read_group_chat')
   const exec = { agent: { id: first.sessionId } }
-  assert.match(await read.execute({ group: 'R1' }, exec), new RegExp(`cut; ${long.length} characters in all; read_group_chat with seq ${saved.seq} reads it whole`))
+  assert.match(
+    await read.execute({ group: 'R1' }, exec),
+    new RegExp(`cut; ${long.length} characters in all; read_group_chat with seq ${saved.seq} reads it whole`),
+  )
   assert.ok((await read.execute({ group: 'R1', seq: saved.seq }, exec)).endsWith(long))
   await stop({ keep: true })
 
@@ -517,7 +632,11 @@ test('a long group line keeps its start in state.json, and members and read_grou
   const file = join(home, 'state.json')
   const onDisk = JSON.parse(readFileSync(file, 'utf8'))
   const kept = onDisk.rooms[room.id]
-  const fillers = Array.from({ length: 60 - kept.log.length }, (_, at) => ({ who: 'User', text: `line ${at}`, seq: kept.seq + at + 1 }))
+  const fillers = Array.from({ length: 60 - kept.log.length }, (_, at) => ({
+    who: 'User',
+    text: `line ${at}`,
+    seq: kept.seq + at + 1,
+  }))
   kept.log = [...kept.log, ...fillers]
   kept.seq += fillers.length
   writeFileSync(file, JSON.stringify(onDisk))
@@ -544,7 +663,7 @@ test('a long group line keeps its start in state.json, and members and read_grou
   assert.equal(existsSync(join(home, 'group-lines', room.id)), false)
 })
 
-test('a group line longer than a member reads is cut in its prompt, with its length, and its file keeps only that', async (t) => {
+test('a group line longer than a member reads is cut in its prompt, with its length, and its file keeps only that', async t => {
   const { call, emit, userMessage, relay, answer, stop, sent, home, rt } = start()
   t.after(() => stop())
   const room = await team(call, sent)
@@ -564,17 +683,29 @@ test('a group line longer than a member reads is cut in its prompt, with its len
 
 // 公开#176: a PDF the user sent in a group reached neither the log nor any member, so
 // every Bot said it could not read it; in a Bot's own chat the same file worked.
-test('a file the user sends in a group reaches each member the line is shown to, once', async (t) => {
+test('a file the user sends in a group reaches each member the line is shown to, once', async t => {
   const { call, emit, relay, answer, stop, sent, rt } = start()
   t.after(() => stop())
   const room = await team(call, sent)
   const pdf = { attachmentId: 'sha256:39cb3dab00', name: 'report-XYZ176.pdf', bytes: 607 }
-  await emit(room.id, { type: 'user/message', data: { source: { kind: 'user' }, content: [{ type: 'text', text: 'Read this PDF' }, { type: 'file', attachment: pdf }] } })
+  await emit(room.id, {
+    type: 'user/message',
+    data: {
+      source: { kind: 'user' },
+      content: [
+        { type: 'text', text: 'Read this PDF' },
+        { type: 'file', attachment: pdf },
+      ],
+    },
+  })
   let running = relay(room.id, 'r1')
   const first = await turnFor(sent)
   const files = message => message.content.filter(block => block.type === 'file').map(block => block.attachment)
   assert.deepEqual(files(first.message), [pdf])
-  assert.match(first.message.content[0].text, /User: Read this PDF\n\[File "report-XYZ176\.pdf" \(607 bytes\) attached\]/)
+  assert.match(
+    first.message.content[0].text,
+    /User: Read this PDF\n\[File "report-XYZ176\.pdf" \(607 bytes\) attached\]/,
+  )
   await answer(first.sessionId, first.message.source.exchangeId, 'Reading it.', 1)
   const second = await turnFor(sent, first)
   assert.deepEqual(files(second.message), [pdf])
@@ -583,7 +714,10 @@ test('a file the user sends in a group reaches each member the line is shown to,
   assert.deepEqual(rt.roomOf(room.id).log.find(line => line.who === 'User').files, [pdf])
 
   sent.length = 0
-  await emit(room.id, { type: 'user/message', data: { source: { kind: 'user' }, content: [{ type: 'text', text: 'Thanks' }] } })
+  await emit(room.id, {
+    type: 'user/message',
+    data: { source: { kind: 'user' }, content: [{ type: 'text', text: 'Thanks' }] },
+  })
   running = relay(room.id, 'r2')
   const next = await turnFor(sent)
   assert.deepEqual(files(next.message), [])
@@ -595,7 +729,7 @@ test('a file the user sends in a group reaches each member the line is shown to,
 
 // #206: a Bot's post past 20,000 characters goes as a file; the line keeps the file and
 // each member it is shown to gets it with its prompt.
-test('a long post goes to the group as a file, and reaches the member with its prompt', async (t) => {
+test('a long post goes to the group as a file, and reaches the member with its prompt', async t => {
   const { call, emit, relay, answer, stop, sent, ctx, rt } = start()
   t.after(() => stop())
   const store = fakeAttachments()
@@ -603,7 +737,9 @@ test('a long post goes to the group as a file, and reaches the member with its p
   const room = await team(call, sent)
   const chief = rt.state.mainBotIds[0]
   const long = `${Array.from({ length: 400 }, (_, at) => `第 ${at + 1} 行：${'报告内容。'.repeat(10)}`).join('\n')}\n结尾`
-  const posted = await ctx.registeredTools.get('post_to_group').execute({ group: 'R1', message: long }, { agent: { id: rt.chatOf(chief) } })
+  const posted = await ctx.registeredTools
+    .get('post_to_group')
+    .execute({ group: 'R1', message: long }, { agent: { id: rt.chatOf(chief) } })
   assert.match(posted, /^Posted in "R1"/)
   const post = sent.find(entry => entry.sessionId === room.id && entry.message.source.role === 'post')
   const file = post.message.content.find(block => block.type === 'file')?.attachment
@@ -615,7 +751,10 @@ test('a long post goes to the group as a file, and reaches the member with its p
   await emit(room.id, { type: 'user/message', data: { source: post.message.source, content: post.message.content } })
   const running = relay(room.id, 'relay')
   const turn = await turnFor(sent)
-  assert.deepEqual(turn.message.content.filter(block => block.type === 'file').map(block => block.attachment), [file])
+  assert.deepEqual(
+    turn.message.content.filter(block => block.type === 'file').map(block => block.attachment),
+    [file],
+  )
   const prompt = turn.message.content[0].text
   assert.ok(prompt.includes(`Chief: [A long message: ${long.length} characters.`))
   assert.ok(prompt.includes(`[File "Post from Chief.txt" (${file.bytes} bytes) attached]`))

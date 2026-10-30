@@ -122,7 +122,9 @@ From the repository root (and `packages/core/` where noted):
 ```sh
 pnpm run build                         # rebuild workspace artifacts
 pnpm test                              # unit tests across workspaces that define them
-pnpm run check:static                  # all-workspace typecheck + lint
+pnpm run check:static                  # all-workspace typecheck + lint + format:check
+pnpm run format                        # Biome format only (see docs/format.md; does not replace oxlint/gates)
+pnpm run format:check                  # Biome format gate (also in check:static)
 cd packages/core && node scripts/build-client.ts --check   # client.js matches src/client
 ```
 

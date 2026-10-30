@@ -6,8 +6,12 @@ import { INKS } from '../inks.ts'
 export const BASE_TOKENS_CSS = `
 body{--bt-ink:#141414;--bt-danger:#e02135;--bt-warn:#d4a72c;--bt-ink-2:rgba(20,20,20,.72);--bt-ink-3:rgba(20,20,20,.62);--bt-bubble:#eeeeee;--bt-sidebar:#f7f7f7;--bt-main:#fcfcfc;--bt-line:rgba(20,20,20,.08);--bt-line-2:rgba(20,20,20,.15);--bt-line-weak:rgba(20,20,20,.1);--bt-hover:rgba(119,119,119,.09);--bt-active:rgba(119,119,119,.17);--bt-card:#ffffff;--bt-accent:#3d5af1;--bt-green:#00c972;--bt-star:#ff9800;--bt-user:#070707;--bt-user-ink:#fcfcfc;--bt-tag-bg:rgba(20,20,20,.06);--bt-tag-ink:rgba(20,20,20,.68)}
 body[data-bt-dark]{--bt-ink:#f2f2f2;--bt-ink-2:rgba(242,242,242,.74);--bt-ink-3:rgba(242,242,242,.62);--bt-bubble:#262626;--bt-sidebar:#1b1b1b;--bt-main:#141414;--bt-line:rgba(255,255,255,.08);--bt-line-2:rgba(255,255,255,.15);--bt-line-weak:rgba(255,255,255,.1);--bt-hover:rgba(160,160,160,.12);--bt-active:rgba(160,160,160,.2);--bt-card:#1f1f1f;--bt-user:#f2f2f2;--bt-user-ink:#141414;--bt-tag-bg:rgba(255,255,255,.09);--bt-tag-ink:rgba(242,242,242,.72)}
-${Object.entries(INKS).map(([name, [light]]) => `body{--bt-ink-${name}:${light}}`).join('')}
-${Object.entries(INKS).map(([name, [, dark]]) => `body[data-bt-dark]{--bt-ink-${name}:${dark}}`).join('')}`
+${Object.entries(INKS)
+  .map(([name, [light]]) => `body{--bt-ink-${name}:${light}}`)
+  .join('')}
+${Object.entries(INKS)
+  .map(([name, [, dark]]) => `body[data-bt-dark]{--bt-ink-${name}:${dark}}`)
+  .join('')}`
 
 // -------------------------------------------------------------------------
 
@@ -52,7 +56,11 @@ function sheetClassNames(sheet: CSSStyleSheet): string[] {
       if (isGroupingRule(rule)) visit(rule.cssRules)
     }
   }
-  try { visit(sheet.cssRules) } catch { /* cross-origin sheet */ }
+  try {
+    visit(sheet.cssRules)
+  } catch {
+    /* cross-origin sheet */
+  }
   return names
 }
 
@@ -87,7 +95,10 @@ export function installCompiledStyles(text: string, tag: string): () => void {
       const owner = sheet.ownerNode as (Node & { dataset?: DOMStringMap }) | null
       if (owner?.dataset?.moonBot !== undefined) continue
       let list = cache.get(sheet)
-      if (!list) { list = sheetClassNames(sheet); cache.set(sheet, list) }
+      if (!list) {
+        list = sheetClassNames(sheet)
+        cache.set(sheet, list)
+      }
       for (const name of list) names.add(name)
     }
     const next = compileFragmentSelectors(text, names)
@@ -96,8 +107,13 @@ export function installCompiledStyles(text: string, tag: string): () => void {
   render()
   // Lazily loaded shell features append their own sheets later.
   let timer: ReturnType<typeof setTimeout> | undefined
-  const schedule = (): void => { clearTimeout(timer); timer = setTimeout(render, 120) }
-  const onLoad = (event: Event): void => { if (event.target instanceof HTMLLinkElement) schedule() }
+  const schedule = (): void => {
+    clearTimeout(timer)
+    timer = setTimeout(render, 120)
+  }
+  const onLoad = (event: Event): void => {
+    if (event.target instanceof HTMLLinkElement) schedule()
+  }
   // Our own sheets name no shell classes, so adding one (the panel's first open adds the
   // chat column's rule) recompiles nothing. Our own node coming out is a removal to undo,
   // which render sees without a recompile.

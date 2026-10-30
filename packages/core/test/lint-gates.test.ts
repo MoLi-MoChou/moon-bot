@@ -134,18 +134,15 @@ test('the any fixture is caught by the configured oxlint rule', t => {
   // The real config ignores test fixtures so `npm run lint` stays green. Drop only that
   // ignore list for this direct probe; everything else, including the rule itself, is real.
   // The config keeps `//` notes (JSONC), so strip whole-line comments before parsing.
-  const config = JSON.parse(
-    readFileSync(join(PLUGIN, '.oxlintrc.json'), 'utf8').replace(/^\s*\/\/.*$/gm, ''),
-  )
+  const config = JSON.parse(readFileSync(join(PLUGIN, '.oxlintrc.json'), 'utf8').replace(/^\s*\/\/.*$/gm, ''))
   const directory = mkdtempSync(join(tmpdir(), 'moon-bot-gates-'))
   try {
     const configPath = join(directory, 'oxlint.json')
     writeFileSync(configPath, JSON.stringify({ ...config, ignorePatterns: [] }))
-    const result = spawnSync(
-      process.execPath,
-      [OXLINT, '-c', configPath, join(FIXTURES, 'any', 'src', 'any.ts')],
-      { cwd: PLUGIN, encoding: 'utf8' },
-    )
+    const result = spawnSync(process.execPath, [OXLINT, '-c', configPath, join(FIXTURES, 'any', 'src', 'any.ts')], {
+      cwd: PLUGIN,
+      encoding: 'utf8',
+    })
     assert.notEqual(result.status, 0, output(result))
     assert.match(output(result), /no-explicit-any/)
   } finally {

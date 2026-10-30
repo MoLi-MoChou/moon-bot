@@ -19,9 +19,5 @@
   "globals": {
     "__MOON_BOT_VERSION__": "readonly"
   },
-  "ignorePatterns": [
-    "src/client/vendor/**",
-    "client.js",
-    "test/fixtures/gates/**"
-  ]
+  "ignorePatterns": ["src/client/vendor/**", "client.js", "test/fixtures/gates/**"]
 }

@@ -13,7 +13,15 @@ const TEAM = {
   mainBotIds: ['m1'],
   revision: 3,
   bots: {
-    m1: { id: 'm1', sessionId: 'm1c', segments: [{ sessionId: 'm1', endedAt: 50 }], name: 'Chief', role: 'Chief of Staff', instructions: '', createdAt: 1 },
+    m1: {
+      id: 'm1',
+      sessionId: 'm1c',
+      segments: [{ sessionId: 'm1', endedAt: 50 }],
+      name: 'Chief',
+      role: 'Chief of Staff',
+      instructions: '',
+      createdAt: 1,
+    },
     b2: { id: 'b2', sessionId: 'b2', name: 'Writer', role: 'Writer', instructions: '', createdAt: 2 },
   },
   rooms: {},
@@ -23,8 +31,16 @@ const TEAM = {
   questions: {},
 }
 
-const userMessage = (text, time) => ({ type: 'user/message', time, data: { source: { kind: 'user' }, content: [{ type: 'text', text }] } })
-const botMessage = (text, time, turn = 1) => ({ type: 'assistant/message', time, data: { turn, message: { content: [{ type: 'text', text }] } } })
+const userMessage = (text, time) => ({
+  type: 'user/message',
+  time,
+  data: { source: { kind: 'user' }, content: [{ type: 'text', text }] },
+})
+const botMessage = (text, time, turn = 1) => ({
+  type: 'assistant/message',
+  time,
+  data: { turn, message: { content: [{ type: 'text', text }] } },
+})
 
 function start({ pages = {}, services = {}, sessionFor } = {}) {
   const home = mkdtempSync(join(tmpdir(), 'ds-bot-feed-'))
@@ -33,17 +49,20 @@ function start({ pages = {}, services = {}, sessionFor } = {}) {
   ctx.sessionController = {
     resolveAgent: async sessionId => ({ agent: { session: sessionFor?.(sessionId) ?? { id: sessionId, seq: 100 } } }),
     // Two pages per Session, newest first, keyed by the cursor that asks for them.
-    page: async ({ address, beforeSeq }) => pages[`${address.sessionId}:${beforeSeq ?? 'end'}`] ?? { records: [], hasMore: false },
+    page: async ({ address, beforeSeq }) =>
+      pages[`${address.sessionId}:${beforeSeq ?? 'end'}`] ?? { records: [], hasMore: false },
   }
   const routes = {}
   const register = ctx.connection.fetch.register
-  ctx.connection.fetch.register = (options) => {
+  ctx.connection.fetch.register = options => {
     routes[options.path] = options
     return register(options)
   }
   apply(ctx, { home })
   const call = async (endpoint, payload?) => {
-    const response = await routes['/api/bot'].fetch(new Request('http://localhost/api/bot', { method: 'POST', body: JSON.stringify({ endpoint, payload }) }))
+    const response = await routes['/api/bot'].fetch(
+      new Request('http://localhost/api/bot', { method: 'POST', body: JSON.stringify({ endpoint, payload }) }),
+    )
     return response.json()
   }
   const stop = async () => {
@@ -65,7 +84,11 @@ function reader(response) {
         const block = buffer.slice(0, end)
         buffer = buffer.slice(end + 2)
         if (block.startsWith(':')) continue
-        const field = name => block.split('\n').find(line => line.startsWith(`${name}: `))?.slice(name.length + 2)
+        const field = name =>
+          block
+            .split('\n')
+            .find(line => line.startsWith(`${name}: `))
+            ?.slice(name.length + 2)
         return { event: field('event'), data: JSON.parse(field('data')) }
       }
       const { value, done } = await source.read()
@@ -75,12 +98,14 @@ function reader(response) {
   }
 }
 
-test('the live feed tells a window about saves, new chat entries and the reply being written', async (t) => {
+test('the live feed tells a window about saves, new chat entries and the reply being written', async t => {
   const { ctx, call, stop, routes } = start()
   t.after(stop)
   await call('state')
   const abort = new AbortController()
-  const response = await routes['/api/bot/feed'].fetch(new Request('http://localhost/api/bot/feed', { signal: abort.signal }))
+  const response = await routes['/api/bot/feed'].fetch(
+    new Request('http://localhost/api/bot/feed', { signal: abort.signal }),
+  )
   assert.equal(response.headers.get('content-type'), 'text/event-stream; charset=utf-8')
   const next = reader(response)
   assert.equal((await next()).event, 'hello')
@@ -93,7 +118,10 @@ test('the live feed tells a window about saves, new chat entries and the reply b
   // The feed's own listener is the last on session/event; the others need a live dsh.
   const onEvent = ctx.listeners.get('session/event').at(-1)
   onEvent({ id: 'm1c' }, userMessage('hello', 60))
-  assert.deepEqual(await next(), { event: 'message', data: { botId: 'm1', sessionId: 'm1c', item: { kind: 'user', text: 'hello', time: 60 } } })
+  assert.deepEqual(await next(), {
+    event: 'message',
+    data: { botId: 'm1', sessionId: 'm1c', item: { kind: 'user', text: 'hello', time: 60 } },
+  })
   // A group Session or an earlier part is not a Bot's own chat now.
   onEvent({ id: 'm1' }, userMessage('old', 1))
   onEvent({ id: 'm1c' }, botMessage('hidden', 61, 7))
@@ -141,7 +169,7 @@ test('the live feed tells a window about saves, new chat entries and the reply b
   assert.equal(await next(), undefined)
 })
 
-test('a window that stops reading the feed is dropped', { timeout: 10_000 }, async (t) => {
+test('a window that stops reading the feed is dropped', { timeout: 10_000 }, async t => {
   const { ctx, call, stop, routes } = start()
   t.after(stop)
   await call('state')
@@ -151,15 +179,18 @@ test('a window that stops reading the feed is dropped', { timeout: 10_000 }, asy
   // What was queued before the drop still arrives, then the stream ends.
   const next = reader(response)
   let count = 0
-  while (await next() !== undefined) count += 1
+  while ((await next()) !== undefined) count += 1
   assert.equal(count > 1 && count < 1000, true)
 })
 
-test('the chat endpoint pages a Bot\'s own chat from the newest part back', async (t) => {
+test("the chat endpoint pages a Bot's own chat from the newest part back", async t => {
   const record = (event, seq) => ({ event: { ...event, seq } })
   const { call, stop } = start({
     pages: {
-      'm1c:end': { records: [record(userMessage('second', 70), 41), record(botMessage('reply', 71), 42)], hasMore: true },
+      'm1c:end': {
+        records: [record(userMessage('second', 70), 41), record(botMessage('reply', 71), 42)],
+        hasMore: true,
+      },
       'm1c:41': { records: [record(userMessage('first', 60), 40)], hasMore: false },
       'm1:end': { records: [record(userMessage('long ago', 5), 3)], hasMore: false },
     },
@@ -169,20 +200,30 @@ test('the chat endpoint pages a Bot\'s own chat from the newest part back', asyn
   const first = (await call('chat', { botId: 'm1' })).value
   assert.deepEqual(first, {
     sessionId: 'm1c',
-    items: [{ kind: 'user', text: 'second', time: 70 }, { kind: 'bot', text: 'reply', time: 71 }],
+    items: [
+      { kind: 'user', text: 'second', time: 70 },
+      { kind: 'bot', text: 'reply', time: 71 },
+    ],
     cursor: { part: 1, beforeSeq: 41 },
   })
   // The current part's first message has the line that marks where the part began.
   const second = (await call('chat', { botId: 'm1', cursor: first.cursor })).value
-  assert.deepEqual(second.items, [{ kind: 'divider', time: 50 }, { kind: 'user', text: 'first', time: 60 }])
+  assert.deepEqual(second.items, [
+    { kind: 'divider', time: 50 },
+    { kind: 'user', text: 'first', time: 60 },
+  ])
   assert.deepEqual(second.cursor, { part: 0 })
   const third = (await call('chat', { botId: 'm1', cursor: second.cursor })).value
   assert.deepEqual([third.items, third.cursor], [[{ kind: 'user', text: 'long ago', time: 5 }], null])
   assert.equal((await call('chat', { botId: 'nobody' })).error.code, 'bot/not-found')
 })
 
-test('the run-stats endpoint reads DSH\'s figures for the current part of a Bot\'s chat', async (t) => {
-  const views = { sessionStats: { turns: 3 }, tokenUsage: { cacheReadTokens: 9 }, contextPressure: { contextWindow: 100 } }
+test("the run-stats endpoint reads DSH's figures for the current part of a Bot's chat", async t => {
+  const views = {
+    sessionStats: { turns: 3 },
+    tokenUsage: { cacheReadTokens: 9 },
+    contextPressure: { contextWindow: 100 },
+  }
   const read = []
   const sessionProjections = {
     snapshot: (session, keys) => {
@@ -198,14 +239,14 @@ test('the run-stats endpoint reads DSH\'s figures for the current part of a Bot\
   assert.equal((await call('run-stats', { botId: 'nobody' })).error.code, 'bot/not-found')
 })
 
-test('without session projections a part that cannot be measured still shows nothing', async (t) => {
+test('without session projections a part that cannot be measured still shows nothing', async t => {
   const { call, stop } = start()
   t.after(stop)
   await call('state')
   assert.deepEqual(await call('run-stats', { botId: 'm1' }), { ok: true, value: null })
 })
 
-test('without session projections run-stats estimates the current part', async (t) => {
+test('without session projections run-stats estimates the current part', async t => {
   const text = 'hello'
   const { call, stop } = start({
     sessionFor: sessionId => ({

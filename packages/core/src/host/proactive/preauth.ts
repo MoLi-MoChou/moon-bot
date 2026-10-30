@@ -23,7 +23,9 @@ export interface PreAuthRule {
   /** In the user's words, for the surface: what this rule is for. */
   readonly purpose: string
   /** The condition, as the trigger understands it. */
-  readonly when: { readonly kind: 'no-progress', readonly minutes: number } | { readonly kind: 'schedule', readonly at: string }
+  readonly when:
+    | { readonly kind: 'no-progress'; readonly minutes: number }
+    | { readonly kind: 'schedule'; readonly at: string }
   readonly scope: PreAuthScope
   /** Tools it may never call, even if they would otherwise be in scope. */
   readonly prohibitions: readonly string[]
@@ -71,11 +73,15 @@ export function mayAct(rule: PreAuthRule, attempt: PreAuthAttempt): PreAuthVerdi
   if (!rule.enabled) return { kind: 'propose', reason: 'this rule is turned off' }
   // Checked before the rule's own scope: a rule that names an irreversible tool is wrong,
   // and the answer is to ask, not to obey.
-  if (!coverableByRule(attempt.tool)) return { kind: 'propose', reason: `${attempt.tool} always asks, so no rule can cover it` }
+  if (!coverableByRule(attempt.tool))
+    return { kind: 'propose', reason: `${attempt.tool} always asks, so no rule can cover it` }
   // A prohibition wins over scope: a tool can be in scope by category and still be banned.
-  if (rule.prohibitions.includes(attempt.tool)) return { kind: 'propose', reason: `${attempt.tool} is on this rule's do-not list` }
-  if (!rule.scope.tools.includes(attempt.tool)) return { kind: 'propose', reason: `${attempt.tool} is outside what this rule allows` }
-  if (attempt.actedToday >= rule.scope.dailyCap) return { kind: 'wait', reason: 'this rule has acted as often as it may today' }
+  if (rule.prohibitions.includes(attempt.tool))
+    return { kind: 'propose', reason: `${attempt.tool} is on this rule's do-not list` }
+  if (!rule.scope.tools.includes(attempt.tool))
+    return { kind: 'propose', reason: `${attempt.tool} is outside what this rule allows` }
+  if (attempt.actedToday >= rule.scope.dailyCap)
+    return { kind: 'wait', reason: 'this rule has acted as often as it may today' }
   if (attempt.withinQuietHours && !rule.respectQuietHours) {
     // The user chose to allow it; that was their decision to make, and the rule records it.
     return { kind: 'act' }
@@ -93,7 +99,12 @@ export interface PreAuthAudit {
   readonly reason?: string | undefined
 }
 
-export const auditOf = (rule: PreAuthRule, attempt: PreAuthAttempt, verdict: PreAuthVerdict, at: number): PreAuthAudit => ({
+export const auditOf = (
+  rule: PreAuthRule,
+  attempt: PreAuthAttempt,
+  verdict: PreAuthVerdict,
+  at: number,
+): PreAuthAudit => ({
   ruleId: rule.id,
   tool: attempt.tool,
   at,

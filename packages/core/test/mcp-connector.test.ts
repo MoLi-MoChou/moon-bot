@@ -12,14 +12,18 @@ import { ruleOf } from '../src/engine/policy.ts'
 
 const ECHO = fileURLToPath(new URL('../dev/mcp-echo-server.mjs', import.meta.url))
 
-test('a mounted server\'s tools join the registry and answer through the SDK', async (t) => {
+test("a mounted server's tools join the registry and answer through the SDK", async t => {
   const connector = new McpConnector({ id: 'echo', command: process.execPath, args: [ECHO] })
   t.after(() => void connector.entries)
 
   const registry = new ToolRegistry()
-  t.after(() => { void registry })
+  t.after(() => {
+    void registry
+  })
   const unmount = await connector.mount(registry)
-  t.after(() => { unmount() })
+  t.after(() => {
+    unmount()
+  })
 
   assert.deepEqual(registry.names(), ['mcp__echo__echo'])
   // The policy classifies the namespaced name as L3 — budget-gated, not free.
@@ -36,24 +40,28 @@ test('a mounted server\'s tools join the registry and answer through the SDK', a
 test('results are bounded, errors keep their flag, and a dropped connection retries once', async () => {
   // A scripted surface: a huge result, an erroring tool, then a dead-then-alive one.
   let flakyCalls = 0
-  const connector = new McpConnector({ id: 'stub', command: 'x' }, {
-    list: async () => ({ tools: [{ name: 'huge' }, { name: 'broken' }, { name: 'flaky' }] }),
-    callTool: async input => {
-      const name = (input as { name: string }).name
-      if (name === 'huge') return { content: [{ type: 'text', text: 'x'.repeat(40_000) }] }
-      if (name === 'broken') return { content: [{ type: 'text', text: 'the server refused' }], isError: true }
-      flakyCalls += 1
-      if (flakyCalls === 1) throw new Error('connection dropped')
-      return { content: [{ type: 'text', text: 'recovered' }] }
+  const connector = new McpConnector(
+    { id: 'stub', command: 'x' },
+    {
+      list: async () => ({ tools: [{ name: 'huge' }, { name: 'broken' }, { name: 'flaky' }] }),
+      callTool: async input => {
+        const name = (input as { name: string }).name
+        if (name === 'huge') return { content: [{ type: 'text', text: 'x'.repeat(40_000) }] }
+        if (name === 'broken') return { content: [{ type: 'text', text: 'the server refused' }], isError: true }
+        flakyCalls += 1
+        if (flakyCalls === 1) throw new Error('connection dropped')
+        return { content: [{ type: 'text', text: 'recovered' }] }
+      },
+      close: async () => {},
     },
-    close: async () => {},
-  })
+  )
   const entries = await connector.entries()
   const byName = new Map(entries.map(entry => [entry.name.split('__').at(-1) as string, entry]))
 
   // A tool's outcome as the assertions read it: content blocks or an error flag.
-  type Outcome = { content?: { type: string, text?: string }[], isError?: boolean } | undefined
-  const run = (name: string) => byName.get(name)?.execute({}, { sessionId: 's', callId: 'c' }) as unknown as Promise<Outcome>
+  type Outcome = { content?: { type: string; text?: string }[]; isError?: boolean } | undefined
+  const run = (name: string) =>
+    byName.get(name)?.execute({}, { sessionId: 's', callId: 'c' }) as unknown as Promise<Outcome>
 
   const huge = await run('huge')
   const hugeText = huge?.content?.[0]?.type === 'text' ? huge.content[0].text : ''

@@ -19,41 +19,64 @@ const { outputFiles } = await build({
     `,
     resolveDir: PLUGIN,
   },
-  bundle: true, format: 'cjs', platform: 'browser', write: false, logLevel: 'silent',
+  bundle: true,
+  format: 'cjs',
+  platform: 'browser',
+  write: false,
+  logLevel: 'silent',
   external: ['react', 'react-dom'],
 })
 
 const react = {
   createElement: (type, props, ...children) => ({ type, props: { ...props, children: children.flat() } }),
   Fragment: Symbol('Fragment'),
-  useEffect() {}, useLayoutEffect() {}, useCallback: fn => fn,
+  useEffect() {},
+  useLayoutEffect() {},
+  useCallback: fn => fn,
   useState: initial => [typeof initial === 'function' ? initial() : initial, () => {}],
-  useMemo: make => make(), useRef: current => ({ current }), useId: () => 'id',
+  useMemo: make => make(),
+  useRef: current => ({ current }),
+  useId: () => 'id',
 }
 
 // The bundled module's exports, as this test drives them: view components and helpers.
 interface BundleExports {
   EmptyState: (props: Record<string, unknown>) => unknown
-  welcomeCopy: (roster: unknown, id: string) => { title: string, hint: string } | null
+  welcomeCopy: (roster: unknown, id: string) => { title: string; hint: string } | null
   TeamSidebar: (props: Record<string, unknown>) => unknown
   CommandPalette: (props: Record<string, unknown>) => unknown
-  installFilesPanel: (deps: { call: (endpoint: string, payload?: unknown) => Promise<unknown>, onPickFolder: () => void }) => () => void
+  installFilesPanel: (deps: {
+    call: (endpoint: string, payload?: unknown) => Promise<unknown>
+    onPickFolder: () => void
+  }) => () => void
 }
-function runBundle(domWindow: { innerWidth: number, document?: unknown, MutationObserver?: unknown, [key: string]: unknown } = { innerWidth: 1280 }) {
+function runBundle(
+  domWindow: { innerWidth: number; document?: unknown; MutationObserver?: unknown; [key: string]: unknown } = {
+    innerWidth: 1280,
+  },
+) {
   const module = { exports: {} as BundleExports }
   runInNewContext(outputFiles[0].text, {
-    module, exports: module.exports,
+    module,
+    exports: module.exports,
     require: name => (name === 'react' ? react : {}),
-    window: domWindow, document: domWindow.document,
+    window: domWindow,
+    document: domWindow.document,
     MutationObserver: domWindow.MutationObserver,
-    requestAnimationFrame: fn => { fn(); return 1 },
+    requestAnimationFrame: fn => {
+      fn()
+      return 1
+    },
     cancelAnimationFrame() {},
   })
   return module.exports
 }
 
 function flatten(node, out = []) {
-  if (Array.isArray(node)) { node.forEach(child => flatten(child, out)); return out }
+  if (Array.isArray(node)) {
+    node.forEach(child => flatten(child, out))
+    return out
+  }
   if (!node || typeof node !== 'object') return out
   if (typeof node.type === 'function' && !['BotRow', 'RoomRow', 'AgentRow'].includes(node.type.name)) {
     return flatten(node.type(node.props ?? {}), out)
@@ -74,13 +97,19 @@ function textOf(node) {
 test('EmptyState renders an action button only when given a real handler', () => {
   const { EmptyState } = runBundle()
   const bare = flatten(EmptyState({ title: 'Nothing here', hint: 'Add one to start.' }))
-  assert.equal(bare.some(node => node.type === 'button'), false)
+  assert.equal(
+    bare.some(node => node.type === 'button'),
+    false,
+  )
 
   const clicks = []
-  const withAction = flatten(EmptyState({
-    title: 'No Bots', hint: 'Create one.',
-    action: { label: 'Create Bot', onClick: () => clicks.push('created') },
-  }))
+  const withAction = flatten(
+    EmptyState({
+      title: 'No Bots',
+      hint: 'Create one.',
+      action: { label: 'Create Bot', onClick: () => clicks.push('created') },
+    }),
+  )
   const button = withAction.find(node => node.type === 'button' && node.props.className === 'bt-es-action')
   assert.ok(button)
   assert.equal(textOf(button), 'Create Bot')
@@ -95,7 +124,8 @@ test('welcomeCopy guides a fresh Main Bot, peer Bot or group, and skips continue
   const continued = { id: 'old', sessionId: 'old-2', name: 'Coder', parts: ['old'] }
   const room = { id: 'room', name: 'Design', parts: [] }
   const roster = {
-    mainBotId: 'main', mainBotIds: ['main'],
+    mainBotId: 'main',
+    mainBotIds: ['main'],
     byId: { main, writer, 'old-2': continued },
     roomsById: { room },
   }
@@ -110,12 +140,27 @@ test('an open sidebar with only the Main Bot invites the user to create a Bot', 
   const { TeamSidebar } = runBundle()
   const opened = []
   const main = { id: 'main', name: 'Moon', createdAt: 1 }
-  const roster = { mainBotId: 'main', mainBotIds: ['main'], bots: [main], rooms: [], agents: [], byId: { main }, roomsById: {}, ready: true, exchangeTurns: {} }
+  const roster = {
+    mainBotId: 'main',
+    mainBotIds: ['main'],
+    bots: [main],
+    rooms: [],
+    agents: [],
+    byId: { main },
+    roomsById: {},
+    ready: true,
+    exchangeTurns: {},
+  }
   const props = wide => ({
     wide,
-    useRoster: pick => pick(roster), useUi: pick => pick({ unread: {}, visits: {} }), useRegistry: pick => pick({}),
-    useSessions: pick => pick({ ids: [], byId: {} }), useSessionStatus: pick => pick(new Map()),
-    useSessionRetainInfo: pick => pick(new Map()), useActivity: pick => pick({}), useWork: pick => pick({ bots: {}, rooms: {} }),
+    useRoster: pick => pick(roster),
+    useUi: pick => pick({ unread: {}, visits: {} }),
+    useRegistry: pick => pick({}),
+    useSessions: pick => pick({ ids: [], byId: {} }),
+    useSessionStatus: pick => pick(new Map()),
+    useSessionRetainInfo: pick => pick(new Map()),
+    useActivity: pick => pick({}),
+    useWork: pick => pick({ bots: {}, rooms: {} }),
     useUpdate: () => ({}),
     actions: { openNewChat: mode => opened.push(mode), openSession() {}, toggleSidebar() {}, landOn() {} },
   })
@@ -126,17 +171,33 @@ test('an open sidebar with only the Main Bot invites the user to create a Bot', 
   assert.deepEqual(opened, ['create'])
 
   const railNodes = flatten(TeamSidebar(props(false)))
-  assert.equal(railNodes.some(node => node.props?.className === 'bt-es'), false)
+  assert.equal(
+    railNodes.some(node => node.props?.className === 'bt-es'),
+    false,
+  )
 })
 
 test('the command palette shows a clear-search empty state when nothing matches', () => {
   const { CommandPalette } = runBundle()
-  const roster = { mainBotId: 'main', mainBotIds: ['main'], bots: [], rooms: [], agents: [], byId: {}, roomsById: {}, exchangeTurns: {} }
-  const nodes = flatten(CommandPalette({
-    start: 'zzzz-no-hit', token: 1, roster,
-    actions: { closePalette() {}, reportError() {} },
-    useSessions: pick => pick({ projectionsBySession: {}, byId: {} }),
-  }))
+  const roster = {
+    mainBotId: 'main',
+    mainBotIds: ['main'],
+    bots: [],
+    rooms: [],
+    agents: [],
+    byId: {},
+    roomsById: {},
+    exchangeTurns: {},
+  }
+  const nodes = flatten(
+    CommandPalette({
+      start: 'zzzz-no-hit',
+      token: 1,
+      roster,
+      actions: { closePalette() {}, reportError() {} },
+      useSessions: pick => pick({ projectionsBySession: {}, byId: {} }),
+    }),
+  )
   const empty = nodes.find(node => node.props?.className === 'bt-es')
   assert.ok(empty)
   assert.match(textOf(empty), /zzzz-no-hit/)
@@ -155,8 +216,15 @@ test('the files panel fills empty folders and missing workspaces with guided emp
   const { installFilesPanel } = runBundle(window)
   let reloaded = 0
   let picked = 0
-  window.document.querySelector('[data-files-reload]').addEventListener('click', () => { reloaded += 1 })
-  const stop = installFilesPanel({ call: async () => ({}), onPickFolder: () => { picked += 1 } })
+  window.document.querySelector('[data-files-reload]').addEventListener('click', () => {
+    reloaded += 1
+  })
+  const stop = installFilesPanel({
+    call: async () => ({}),
+    onPickFolder: () => {
+      picked += 1
+    },
+  })
   try {
     const emptyFolder = window.document.querySelector('[data-files-row="empty"] > .bt-es')
     assert.ok(emptyFolder)

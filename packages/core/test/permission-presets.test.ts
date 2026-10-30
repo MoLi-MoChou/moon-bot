@@ -3,7 +3,14 @@
 // daily budgets still apply on top, and an unknown preset is the default, not a pass.
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { DEFAULT_PRESET, PRESETS, ceilingOf, gateOfPreset, hasPreset, presetValues } from '../src/engine/permission-presets.ts'
+import {
+  DEFAULT_PRESET,
+  PRESETS,
+  ceilingOf,
+  gateOfPreset,
+  hasPreset,
+  presetValues,
+} from '../src/engine/permission-presets.ts'
 import { PermissionPresets } from '../src/service/permission-presets.ts'
 
 test('the catalog offers three presets and defaults to the middle one', () => {
@@ -53,5 +60,16 @@ test('a Session keeps the preset the host set on it, and another Session is unaf
 test('an unknown preset is refused with the ones there are', () => {
   const presets = new PermissionPresets()
   assert.throws(() => presets.set({ id: 'chat:b1' }, 'god-mode'), /is not a permission preset/)
-  assert.match(String((() => { try { presets.set({ id: 'x' }, 'god-mode') } catch (error) { return (error as Error).message } })()), /read-only, workspace-write, danger-full-access/)
+  assert.match(
+    String(
+      (() => {
+        try {
+          presets.set({ id: 'x' }, 'god-mode')
+        } catch (error) {
+          return (error as Error).message
+        }
+      })(),
+    ),
+    /read-only, workspace-write, danger-full-access/,
+  )
 })

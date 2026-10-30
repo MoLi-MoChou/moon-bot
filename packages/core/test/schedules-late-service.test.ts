@@ -14,10 +14,18 @@ function fakeScheduler() {
   const created = []
   return {
     created,
-    async create(sessionId, input) { created.push({ sessionId, ...input }) },
-    async list() { return [] },
-    async catalog() { return [] },
-    async delete() { return true },
+    async create(sessionId, input) {
+      created.push({ sessionId, ...input })
+    },
+    async list() {
+      return []
+    },
+    async catalog() {
+      return []
+    },
+    async delete() {
+      return true
+    },
   }
 }
 
@@ -27,7 +35,9 @@ function start({ withServiceAtInstall = false } = {}) {
   if (withServiceAtInstall) services.schedule = scheduler
   const ctx = fakeContext({ services })
   const tools = new Map()
-  ctx.registerTool = tool => { tools.set(tool.name, tool) }
+  ctx.registerTool = tool => {
+    tools.set(tool.name, tool)
+  }
   const bot = { id: 'b1', name: 'Writer', sessionId: 'b1' }
   const rt = {
     ctx,
@@ -44,7 +54,9 @@ function start({ withServiceAtInstall = false } = {}) {
     readOnly: () => undefined,
     warn: () => undefined,
     on: () => undefined,
-    registerTool: tool => { tools.set(tool.name, tool) },
+    registerTool: tool => {
+      tools.set(tool.name, tool)
+    },
   }
   install(rt as never)
   return { ctx, rt, scheduler, tools, services }
@@ -98,6 +110,6 @@ test('the schedules view reports available once the late service arrives', async
   const { rt, scheduler, services } = start()
   assert.deepEqual(await rt.scheduleEndpoint('schedules', {}), { available: false, tasks: [] })
   services.schedule = scheduler
-  const after = await rt.scheduleEndpoint('schedules', {}) as { readonly available: boolean }
+  const after = (await rt.scheduleEndpoint('schedules', {})) as { readonly available: boolean }
   assert.equal(after.available, true, 'a scheduler provided after install must be seen')
 })

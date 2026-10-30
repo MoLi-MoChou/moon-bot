@@ -66,10 +66,22 @@ test('the store pages a turn and shelves the library, newest first', () => {
   const store = openStore(home)
   try {
     store.sessions.upsertSession({ id: 'b1', kind: 'bot', ownerId: 'bot-1' })
-    store.deliverables.add('b1', 3, [{ name: 'a.md', path: 'a.md', size: 10 }, { name: 'b.png', path: 'img/b.png', size: 20 }])
+    store.deliverables.add('b1', 3, [
+      { name: 'a.md', path: 'a.md', size: 10 },
+      { name: 'b.png', path: 'img/b.png', size: 20 },
+    ])
     store.deliverables.add('b1', 4, [{ name: 'c.csv', path: 'c.csv', size: 5 }])
-    assert.deepEqual(store.deliverables.forTurn('b1', 3).map(row => [row.name, row.path]), [['a.md', 'a.md'], ['b.png', 'img/b.png']])
-    assert.deepEqual(store.deliverables.forTurn('b1', 4).map(row => row.name), ['c.csv'])
+    assert.deepEqual(
+      store.deliverables.forTurn('b1', 3).map(row => [row.name, row.path]),
+      [
+        ['a.md', 'a.md'],
+        ['b.png', 'img/b.png'],
+      ],
+    )
+    assert.deepEqual(
+      store.deliverables.forTurn('b1', 4).map(row => row.name),
+      ['c.csv'],
+    )
     const shelf = store.deliverables.list({ limit: 2 })
     assert.equal(shelf.length, 2)
     assert.equal(shelf[0]?.ownerId, 'bot-1')

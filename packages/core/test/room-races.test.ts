@@ -46,7 +46,9 @@ async function start(team = TEAM) {
       get: id => (id === 'w1' ? { id: 'w1', path: home } : undefined),
       resolveByPath: async () => undefined,
       create: async path => ({ id: 'w1', path }),
-      archiveSession: async (sessionId) => { archived.push(sessionId) },
+      archiveSession: async sessionId => {
+        archived.push(sessionId)
+      },
     },
     sessionController: {
       create: async () => {
@@ -64,8 +66,15 @@ async function start(team = TEAM) {
   await rt.load()
   const held = () => {
     let release
-    hold = { promise: new Promise(resolve => { release = resolve }) }
-    return () => { hold = undefined; release() }
+    hold = {
+      promise: new Promise(resolve => {
+        release = resolve
+      }),
+    }
+    return () => {
+      hold = undefined
+      release()
+    }
   }
   const saved = () => JSON.parse(readFileSync(join(home, 'state.json'), 'utf8'))
   const stop = async () => {
@@ -75,7 +84,7 @@ async function start(team = TEAM) {
   return { rt, ctx, home, folder, archived, held, saved, stop }
 }
 
-test('a Bot deleted while its group is made stays out of it, and so does the admin role it was given', async (t) => {
+test('a Bot deleted while its group is made stays out of it, and so does the admin role it was given', async t => {
   const { rt, held, stop } = await start()
   t.after(stop)
   const release = held()
@@ -88,7 +97,7 @@ test('a Bot deleted while its group is made stays out of it, and so does the adm
   assert.equal(room.admin, 'a')
 })
 
-test('a group left with one Bot by a deletion while it is made is not made', async (t) => {
+test('a group left with one Bot by a deletion while it is made is not made', async t => {
   const { rt, held, archived, stop } = await start()
   t.after(stop)
   const release = held()
@@ -101,7 +110,7 @@ test('a group left with one Bot by a deletion while it is made is not made', asy
   assert.ok(archived.includes('s1'))
 })
 
-test('a change that waits for its folder keeps the member another change added meanwhile', async (t) => {
+test('a change that waits for its folder keeps the member another change added meanwhile', async t => {
   const { rt, folder, saved, stop } = await start()
   t.after(stop)
   const moving = rt.updateRoom('r1', { add: ['c'], workDir: folder })
@@ -112,7 +121,7 @@ test('a change that waits for its folder keeps the member another change added m
   assert.deepEqual(saved().rooms.r1.members, ['a', 'b', 'd', 'c'])
 })
 
-test('a Bot deleted while a change waits for its folder is not added back', async (t) => {
+test('a Bot deleted while a change waits for its folder is not added back', async t => {
   const { rt, folder, saved, stop } = await start()
   t.after(stop)
   const moving = rt.updateRoom('r1', { add: ['c'], workDir: folder })
@@ -122,7 +131,7 @@ test('a Bot deleted while a change waits for its folder is not added back', asyn
   assert.deepEqual(saved().rooms.r1.members, ['a', 'b'])
 })
 
-test('a group deleted while a change waits for its folder stays deleted', async (t) => {
+test('a group deleted while a change waits for its folder stays deleted', async t => {
   const { rt, folder, saved, stop } = await start()
   t.after(stop)
   const refused = assert.rejects(rt.updateRoom('r1', { workDir: folder }), /Unknown group chat/)
@@ -131,7 +140,7 @@ test('a group deleted while a change waits for its folder stays deleted', async 
   assert.deepEqual(saved().rooms, {})
 })
 
-test('a group left with one Bot can still change its settings, but not lose another member', async (t) => {
+test('a group left with one Bot can still change its settings, but not lose another member', async t => {
   const { rt, stop } = await start()
   t.after(stop)
   await rt.deleteBot('b')
@@ -141,7 +150,7 @@ test('a group left with one Bot can still change its settings, but not lose anot
   await assert.rejects(rt.updateRoom('r1', { remove: ['c'] }), /A group chat needs at least two Bots/)
 })
 
-test('a team saved with a deleted Bot in a group, even as its admin, loads without it', async (t) => {
+test('a team saved with a deleted Bot in a group, even as its admin, loads without it', async t => {
   const team = { ...TEAM, rooms: { r1: { ...TEAM.rooms.r1, members: ['a', 'b', 'gone'], admin: 'gone' } } }
   const { rt, saved, stop } = await start(team)
   t.after(stop)

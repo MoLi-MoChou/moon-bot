@@ -24,12 +24,19 @@ export interface Deliver {
  * something the user typed.
  */
 export function proactiveCaller(text: string, evidence: readonly string[]): string {
-  const lines = ['[PROACTIVE] The user asked you to keep an eye on something, and this is worth telling them now.', '', text]
+  const lines = [
+    '[PROACTIVE] The user asked you to keep an eye on something, and this is worth telling them now.',
+    '',
+    text,
+  ]
   if (evidence.length > 0) {
     lines.push('', 'What this rests on:')
     for (const line of evidence) lines.push(`- ${line}`)
   }
-  lines.push('', 'Say it in one or two short sentences, as yourself. Do not add a greeting, do not repeat the evidence as a list, and do not ask a question the user has to answer.')
+  lines.push(
+    '',
+    'Say it in one or two short sentences, as yourself. Do not add a greeting, do not repeat the evidence as a list, and do not ask a question the user has to answer.',
+  )
   return lines.join('\n')
 }
 
@@ -39,7 +46,11 @@ export function proactiveCaller(text: string, evidence: readonly string[]): stri
  * why. The de-duplication window reads exactly this.
  */
 export interface Decide {
-  readonly record: (candidateId: string, decision: 'delivered' | 'quiet' | 'dropped' | 'delayed', reason?: string | null) => void
+  readonly record: (
+    candidateId: string,
+    decision: 'delivered' | 'quiet' | 'dropped' | 'delayed',
+    reason?: string | null,
+  ) => void
 }
 
 /** Whether a proactive message may be sent to a Session right now. */

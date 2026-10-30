@@ -52,8 +52,11 @@ const triggerOf = (info: TurnInfo): ResumeTrigger => ({
 const readNotes = (file: string): ResumeNotes => {
   try {
     const parsed = JSON.parse(readFileSync(file, 'utf8'))
-    const source = parsed as { readonly turns?: unknown; readonly queued?: unknown; readonly settling?: unknown; readonly parked?: unknown } | undefined
-    const object = (value: unknown): Record<string, never> | Record<string, unknown> => (value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {})
+    const source = parsed as
+      | { readonly turns?: unknown; readonly queued?: unknown; readonly settling?: unknown; readonly parked?: unknown }
+      | undefined
+    const object = (value: unknown): Record<string, never> | Record<string, unknown> =>
+      value !== null && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {}
     return {
       turns: object(source?.turns) as Record<string, TurnNote>,
       queued: object(source?.queued) as Record<string, QueuedNote[]>,
@@ -78,9 +81,12 @@ export function install(rt: HostRuntime): void {
   const writable = rt.readOnly() === undefined
   // Old turns leave `turns` immediately so a crash cannot auto-run them. Reconcile
   // still sees them in `settling`.
-  let settling: Record<string, TurnNote> = writable ? { ...interrupted.settling, ...interrupted.turns } : { ...interrupted.settling }
+  let settling: Record<string, TurnNote> = writable
+    ? { ...interrupted.settling, ...interrupted.turns }
+    : { ...interrupted.settling }
   let parked: Record<string, TurnNote> = { ...interrupted.parked }
-  let heldQueued: Record<string, QueuedNote[]> | undefined = Object.keys(interrupted.queued).length > 0 ? interrupted.queued : undefined
+  let heldQueued: Record<string, QueuedNote[]> | undefined =
+    Object.keys(interrupted.queued).length > 0 ? interrupted.queued : undefined
   let writing: Promise<unknown> = Promise.resolve()
   let stopped = false
   let latest: string | undefined
@@ -101,13 +107,15 @@ export function install(rt: HostRuntime): void {
     due = true
     // Written in place: a rename over the file fails on Windows while anything reads
     // it, and a torn write only loses what one restart would pick up.
-    writing = writing.then(async () => {
-      due = false
-      const snapshot = latest
-      if (snapshot === undefined) return
-      await mkdir(home, { recursive: true })
-      await writeFile(file, snapshot, 'utf8')
-    }).catch(error => rt.warn('moon-bot: noting running turns failed: %s', error))
+    writing = writing
+      .then(async () => {
+        due = false
+        const snapshot = latest
+        if (snapshot === undefined) return
+        await mkdir(home, { recursive: true })
+        await writeFile(file, snapshot, 'utf8')
+      })
+      .catch(error => rt.warn('moon-bot: noting running turns failed: %s', error))
   }
   if (writable && Object.keys(interrupted.turns).length > 0) persist()
   const update = (id: string, change: (record: TurnNote | undefined) => TurnNote | undefined): void => {
@@ -136,7 +144,10 @@ export function install(rt: HostRuntime): void {
     const noted: DeliveryInput = { ...args, exchangeId: args.exchangeId ?? randomUUID() }
     const sessionId = noted.sessionId ?? rt.chatOf(noted.toId)
     // Noted before it is sent: a turn may take it up before the send returns.
-    queued = { ...queued, [sessionId]: [...(queued[sessionId] ?? []), { at: Date.now(), args: noted }].slice(-QUEUED_MAX) }
+    queued = {
+      ...queued,
+      [sessionId]: [...(queued[sessionId] ?? []), { at: Date.now(), args: noted }].slice(-QUEUED_MAX),
+    }
     persist()
     try {
       return await deliver(noted)
@@ -162,13 +173,19 @@ export function install(rt: HostRuntime): void {
   // The first turn event of each Session since this start, until the noted turns are
   // picked up. A turn that ends, or still runs, before one starts here outlived the
   // last run: only DS Bot restarted (the plugin reloaded) and the host went on.
-  let firstTurn: Map<string, string> | undefined = Object.keys(settling).length > 0 ? new Map<string, string>() : undefined
+  let firstTurn: Map<string, string> | undefined =
+    Object.keys(settling).length > 0 ? new Map<string, string>() : undefined
   ctx.on<{ readonly id?: string }, SessionEvent>('session/event', (session, event) => {
     const id = session?.id
     if (id === undefined) return
-    if ((event.type === 'turn/start' || event.type === 'turn/end') && firstTurn?.has(id) === false) firstTurn.set(id, event.type)
+    if ((event.type === 'turn/start' || event.type === 'turn/end') && firstTurn?.has(id) === false)
+      firstTurn.set(id, event.type)
     const dataSource = event.data?.source
-    if (event.type === 'user/message' && dataSource?.kind === SOURCE_KIND && typeof dataSource.exchangeId === 'string') {
+    if (
+      event.type === 'user/message' &&
+      dataSource?.kind === SOURCE_KIND &&
+      typeof dataSource.exchangeId === 'string'
+    ) {
       taken?.add(dataSource.exchangeId)
       forgetQueued(dataSource.exchangeId)
     }
@@ -184,13 +201,18 @@ export function install(rt: HostRuntime): void {
         if (dataSource?.kind !== SOURCE_KIND) break
         // turns.js, installed earlier, has already claimed the turn's trigger.
         const info = rt.live.get(id)?.info
-        update(id, record => (record === undefined || record.trigger !== undefined || info === undefined ? record
-          : { ...record, trigger: triggerOf(info), ...(info.resumed ? { resumed: true } : {}) }))
+        update(id, record =>
+          record === undefined || record.trigger !== undefined || info === undefined
+            ? record
+            : { ...record, trigger: triggerOf(info), ...(info.resumed ? { resumed: true } : {}) },
+        )
         break
       }
       case 'turn/end': {
         // the host stops every turn as it shuts down; that one is picked up at the next start.
-        const reason = event.data?.reason as { readonly kind?: string; readonly reason?: { readonly kind?: string } } | undefined
+        const reason = event.data?.reason as
+          | { readonly kind?: string; readonly reason?: { readonly kind?: string } }
+          | undefined
         if (reason?.kind === 'aborted' && reason.reason?.kind === 'disposed') break
         update(id, () => undefined)
         break
@@ -199,8 +221,16 @@ export function install(rt: HostRuntime): void {
   })
 
   // An approval the restart drops is named when the turn is picked up.
-  rt.noteApproval = (sessionId: string | undefined, approval): void => { if (sessionId === undefined) return; update(sessionId, record => (record === undefined ? record
-    : approval === undefined ? (({ approval: _, ...rest }) => rest)(record) : { ...record, approval })) }
+  rt.noteApproval = (sessionId: string | undefined, approval): void => {
+    if (sessionId === undefined) return
+    update(sessionId, record =>
+      record === undefined
+        ? record
+        : approval === undefined
+          ? (({ approval: _, ...rest }) => rest)(record)
+          : { ...record, approval },
+    )
+  }
 
   // A hard stop keeps the inbox, which the Session runs once it wakes; only what was
   // cancelled is sent again.
@@ -210,15 +240,22 @@ export function install(rt: HostRuntime): void {
       if (rt.isBotSession(sessionId)) return sessionId
       return args.roomId === undefined ? rt.chatOf(args.toId) : rt.roomOf(args.roomId)?.sessions?.[args.toId]
     }
-    const fresh = list.filter(item => Date.now() - item.at < QUEUED_KEPT_MS && rt.botOf(item.args?.toId) !== undefined
-      && current(item.args) !== undefined && (item.args.exchangeId === undefined || taken?.has(item.args.exchangeId) !== true))
+    const fresh = list.filter(
+      item =>
+        Date.now() - item.at < QUEUED_KEPT_MS &&
+        rt.botOf(item.args?.toId) !== undefined &&
+        current(item.args) !== undefined &&
+        (item.args.exchangeId === undefined || taken?.has(item.args.exchangeId) !== true),
+    )
     if (fresh.length === 0) return
     const firstFresh = fresh[0]
     if (firstFresh === undefined) return
     const target = current(firstFresh.args)
     if (target === undefined) return
     const agent = await rt.resolveAgent(target)
-    const waiting = new Set([...(agent.inbox?.nextStep ?? []), ...(agent.inbox?.nextTurn ?? [])].map(message => message.source?.exchangeId))
+    const waiting = new Set(
+      [...(agent.inbox?.nextStep ?? []), ...(agent.inbox?.nextTurn ?? [])].map(message => message.source?.exchangeId),
+    )
     for (const { args } of fresh) {
       const exchangeId = args.exchangeId
       if (exchangeId === undefined || waiting.has(exchangeId) || taken?.has(exchangeId) === true) continue
@@ -239,26 +276,33 @@ export function install(rt: HostRuntime): void {
     for (const [sessionId, record] of Object.entries(noted)) {
       const raw = firstTurn?.get(sessionId)
       const fact = raw === 'turn/end' || raw === 'turn/start' ? raw : undefined
-      const running = fact === undefined && (await rt.resolveAgent(sessionId).catch(() => undefined))?.status === 'running'
+      const running =
+        fact === undefined && (await rt.resolveAgent(sessionId).catch(() => undefined))?.status === 'running'
       const decision = recoveryOf(fact, running, record.resumed === true)
       if (decision === 'keep') update(sessionId, () => record)
       else if (decision === 'park') {
         parked = { ...parked, [sessionId]: record }
         persist()
         await tellCut(rt, record).catch(error => rt.warn('moon-bot: noting a cut-off turn failed: %s', error))
-      } else if (decision === 'stop') await tellCut(rt, record).catch(error => rt.warn('moon-bot: noting a cut-off turn failed: %s', error))
+      } else if (decision === 'stop')
+        await tellCut(rt, record).catch(error => rt.warn('moon-bot: noting a cut-off turn failed: %s', error))
     }
     firstTurn = undefined
     for (const [sessionId, list] of Object.entries(dropped)) {
       if (!Array.isArray(list)) continue
-      await resendQueued(sessionId, list).catch(error => rt.warn('moon-bot: sending again what %s was sent failed: %s', sessionId, error))
+      await resendQueued(sessionId, list).catch(error =>
+        rt.warn('moon-bot: sending again what %s was sent failed: %s', sessionId, error),
+      )
     }
     taken = undefined
   }
 
-  const parkedTurns = (): readonly { readonly sessionId: string; readonly botId: string; readonly roomId?: string }[] => Object.entries(parked).flatMap(([sessionId, record]) => (
-    record.resumed === true || record.botId === undefined || record.botId === '' ? [] : [{ sessionId, botId: record.botId, ...(record.roomId === undefined ? {} : { roomId: record.roomId }) }]
-  ))
+  const parkedTurns = (): readonly { readonly sessionId: string; readonly botId: string; readonly roomId?: string }[] =>
+    Object.entries(parked).flatMap(([sessionId, record]) =>
+      record.resumed === true || record.botId === undefined || record.botId === ''
+        ? []
+        : [{ sessionId, botId: record.botId, ...(record.roomId === undefined ? {} : { roomId: record.roomId }) }],
+    )
 
   async function continueParked(sessionId: string): Promise<boolean> {
     if (rt.readOnly() !== undefined) return false
@@ -279,8 +323,16 @@ export function install(rt: HostRuntime): void {
   Object.assign(rt, { parkedTurns, continueParked })
 
   ctx.effect(() => {
-    const pending = Object.keys(settling).length > 0 || Object.keys(interrupted.queued).length > 0 || Object.keys(interrupted.turns).length > 0
-    const timer = pending ? setTimeout(() => void resumeAll().catch(error => rt.warn('moon-bot: picking up interrupted work failed: %s', error)), RESUME_DELAY_MS) : undefined
+    const pending =
+      Object.keys(settling).length > 0 ||
+      Object.keys(interrupted.queued).length > 0 ||
+      Object.keys(interrupted.turns).length > 0
+    const timer = pending
+      ? setTimeout(
+          () => void resumeAll().catch(error => rt.warn('moon-bot: picking up interrupted work failed: %s', error)),
+          RESUME_DELAY_MS,
+        )
+      : undefined
     timer?.unref?.()
     // What the turns stopped by this shutdown left stays as last noted.
     return () => {

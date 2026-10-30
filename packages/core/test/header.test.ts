@@ -7,16 +7,36 @@ import { headerNavigation, installHeaderNavigation } from '../src/client/header-
 
 const bundle = await build({
   entryPoints: [fileURLToPath(new URL('../src/client/header.tsx', import.meta.url))],
-  bundle: true, format: 'cjs', platform: 'node', write: false,
+  bundle: true,
+  format: 'cjs',
+  platform: 'node',
+  write: false,
   external: ['react', 'react-dom'],
 })
-interface PillNode { props: Record<string, unknown> & { onClick?: () => void }, children: PillNode[] }
+interface PillNode {
+  props: Record<string, unknown> & { onClick?: () => void }
+  children: PillNode[]
+}
 const module = { exports: {} as { HeaderPill: (props: Record<string, unknown>) => PillNode } }
 runInNewContext(bundle.outputFiles[0].text, {
-  module, exports: module.exports, URL, URLSearchParams, setTimeout, clearTimeout,
-  require: (name) => {
+  module,
+  exports: module.exports,
+  URL,
+  URLSearchParams,
+  setTimeout,
+  clearTimeout,
+  require: name => {
     const platform = {
-      react: { createElement: (type, props, ...children) => ({ type, props: props ?? {}, children: children.flat(Infinity) }), useState: initial => [initial, () => {}], useEffect: () => {}, useRef: current => ({ current }), useLayoutEffect: () => {}, useMemo: make => make(), useCallback: fn => fn, Fragment: 'fragment' },
+      react: {
+        createElement: (type, props, ...children) => ({ type, props: props ?? {}, children: children.flat(Infinity) }),
+        useState: initial => [initial, () => {}],
+        useEffect: () => {},
+        useRef: current => ({ current }),
+        useLayoutEffect: () => {},
+        useMemo: make => make(),
+        useCallback: fn => fn,
+        Fragment: 'fragment',
+      },
       'react-dom': { createPortal: node => node },
     }
     if (!(name in platform)) throw new Error(`no platform module ${name}`)
@@ -25,23 +45,30 @@ runInNewContext(bundle.outputFiles[0].text, {
 })
 const { HeaderPill } = module.exports
 
-const roster = { byId: { a: { id: 'a', name: 'Chief', sessionId: 'a' } }, roomsById: {}, bots: [], exchangeTurns: {}, questions: {} }
+const roster = {
+  byId: { a: { id: 'a', name: 'Chief', sessionId: 'a' } },
+  roomsById: {},
+  bots: [],
+  exchangeTurns: {},
+  questions: {},
+}
 const hook = value => select => select(value)
-const header = (actions, navigation = {}) => HeaderPill({
-  sessionId: 'a',
-  useRoster: hook(roster),
-  useSessions: hook({ byId: {} }),
-  useSessionStatus: hook(new Map()),
-  useSession: hook({}),
-  useActivity: hook({}),
-  useMemoryNews: hook({}),
-  useTurnClock: hook({}),
-  useUi: hook({}),
-  useLive: hook({}),
-  actions,
-  ...navigation,
-})
-const sideButton = (node) => {
+const header = (actions, navigation = {}) =>
+  HeaderPill({
+    sessionId: 'a',
+    useRoster: hook(roster),
+    useSessions: hook({ byId: {} }),
+    useSessionStatus: hook(new Map()),
+    useSession: hook({}),
+    useActivity: hook({}),
+    useMemoryNews: hook({}),
+    useTurnClock: hook({}),
+    useUi: hook({}),
+    useLive: hook({}),
+    actions,
+    ...navigation,
+  })
+const sideButton = node => {
   if (node === null || typeof node !== 'object') return null
   if (node.props?.['data-bt-right-sidebar'] !== undefined) return node
   for (const child of node.children ?? []) {
@@ -55,14 +82,21 @@ const sideButton = (node) => {
 // where DSH puts the button that opens its right sidebar; only the shortcut was left.
 test('the Bot header has the right sidebar toggle that DSH keeps in the header it replaces', () => {
   let toggled = 0
-  const button = sideButton(header({ hasRightSidebar: () => true, toggleRightSidebar: () => { toggled += 1 } }))
+  const button = sideButton(
+    header({
+      hasRightSidebar: () => true,
+      toggleRightSidebar: () => {
+        toggled += 1
+      },
+    }),
+  )
   assert.ok(button)
   assert.equal(button.props['aria-label'], 'Show or hide the right sidebar')
   button.props.onClick()
   assert.equal(toggled, 1)
 })
 
-test('without DSH\'s right sidebar the Bot header shows no toggle', () => {
+test("without DSH's right sidebar the Bot header shows no toggle", () => {
   assert.equal(sideButton(header({ hasRightSidebar: () => false, toggleRightSidebar: () => {} })), null)
 })
 
@@ -71,10 +105,17 @@ test('a Bot in another Conversation View can return to chat without changing its
   const views = [{ id: 'chat' }, { id: 'study-workspace' }]
   let details = 0
   const navigation = {
-    useStore: hook(state), useConversationViews: hook(views),
-    selectView: view => { state.view = view },
+    useStore: hook(state),
+    useConversationViews: hook(views),
+    selectView: view => {
+      state.view = view
+    },
   }
-  const actions = { toggleDetails: () => { details += 1 } }
+  const actions = {
+    toggleDetails: () => {
+      details += 1
+    },
+  }
   const pill = header(actions, navigation).children[0]
   assert.equal(pill.props['aria-label'], 'Back to chat')
   assert.equal(pill.props['aria-expanded'], undefined)
@@ -92,25 +133,40 @@ test('a Bot in another Conversation View can return to chat without changing its
 test('a missing View or navigation face keeps the ordinary Bot header', () => {
   const views = [{ id: 'chat' }, { id: 'trajectory' }]
   for (const view of [null, 'chat', 'uninstalled-plugin']) {
-    const pill = header({}, { useStore: hook({ view }), useConversationViews: hook(views), selectView() {} }).children[0]
+    const pill = header({}, { useStore: hook({ view }), useConversationViews: hook(views), selectView() {} })
+      .children[0]
     assert.equal(pill.props['aria-label'], 'View conversation details')
   }
   assert.equal(header({}).children[0].props['aria-label'], 'View conversation details')
 })
 
-test('the replacement header shares DSH\'s store and navigation injection without declaring its children again', () => {
+test("the replacement header shares DSH's store and navigation injection without declaring its children again", () => {
   const store = {}
   const views = { getSnapshot: () => [{ id: 'chat' }] }
   const roster = {}
   const picked = []
   const bound = { setView: view => picked.push(view) }
-  const source = { options: {},
+  const source = {
+    options: {},
     store,
     children: { 'conversation.session.header.actions': { kind: 'list', scope: 'session' } },
-    inject: (sessionId, actions) => ({ hooks: { conversationViews: views }, selectView: view => { assert.equal(sessionId, 'a'); actions.setView(view) } }),
+    inject: (sessionId, actions) => ({
+      hooks: { conversationViews: views },
+      selectView: view => {
+        assert.equal(sessionId, 'a')
+        actions.setView(view)
+      },
+    }),
   }
   const own = { actions: { openMemory() {} }, hooks: { roster } }
-  const options = headerNavigation([{ options: {} }, source], () => own) as { store: unknown, children?: unknown, inject: (sessionId: string, actions?: unknown) => { hooks: Record<string, unknown>, selectView: (view: string) => void, actions: unknown } }
+  const options = headerNavigation([{ options: {} }, source], () => own) as {
+    store: unknown
+    children?: unknown
+    inject: (
+      sessionId: string,
+      actions?: unknown,
+    ) => { hooks: Record<string, unknown>; selectView: (view: string) => void; actions: unknown }
+  }
   assert.equal(options.store, store)
   assert.equal(options.children, undefined)
   const injected = options.inject('a', bound)
@@ -119,7 +175,7 @@ test('the replacement header shares DSH\'s store and navigation injection withou
   assert.equal(injected.actions, own.actions)
   injected.selectView('chat')
   assert.deepEqual(picked, ['chat'])
-  const absent = headerNavigation([], () => own) as { store: unknown, inject: (sessionId: string) => unknown }
+  const absent = headerNavigation([], () => own) as { store: unknown; inject: (sessionId: string) => unknown }
   assert.equal(absent.store, undefined)
   assert.deepEqual(absent.inject('a'), own)
 })
@@ -130,17 +186,30 @@ test('the Bot header follows a later host header registration and releases its s
   let registrations = 0
   const slots = {
     entries: () => entries,
-    subscribe: (_name, listener) => { listeners.add(listener); return () => listeners.delete(listener) },
+    subscribe: (_name, listener) => {
+      listeners.add(listener)
+      return () => listeners.delete(listener)
+    },
     register: ({ priority, store, inject }, component) => {
       registrations += 1
       const entry = { options: { priority }, store, inject, component }
       entries.push(entry)
-      return () => { const at = entries.indexOf(entry); if (at !== -1) entries.splice(at, 1) }
+      return () => {
+        const at = entries.indexOf(entry)
+        if (at !== -1) entries.splice(at, 1)
+      }
     },
   }
-  const changed = () => { for (const listener of listeners) listener() }
+  const changed = () => {
+    for (const listener of listeners) listener()
+  }
   const own = { hooks: {}, actions: {} }
-  const stop = installHeaderNavigation(slots as unknown as Parameters<typeof installHeaderNavigation>[0], () => own, HeaderPill, -100)
+  const stop = installHeaderNavigation(
+    slots as unknown as Parameters<typeof installHeaderNavigation>[0],
+    () => own,
+    HeaderPill,
+    -100,
+  )
   assert.equal(entries[0].store, undefined)
   const store = {}
   const host = { options: { priority: 0 }, component() {}, store, inject: () => ({ selectView() {} }) }

@@ -6,7 +6,10 @@ import { build } from 'esbuild'
 
 const bundle = await build({
   entryPoints: [fileURLToPath(new URL('../src/client/fold.tsx', import.meta.url))],
-  bundle: true, format: 'cjs', platform: 'node', write: false,
+  bundle: true,
+  format: 'cjs',
+  platform: 'node',
+  write: false,
   external: ['react'],
 })
 // Hooks keep their state between renders, so a click and the render after it can be followed.
@@ -14,10 +17,15 @@ let slots = []
 let at = 0
 const react = {
   createElement: (type, props, ...children) => ({ type, props: props ?? {}, children: children.flat(Infinity) }),
-  useState: (initial) => {
+  useState: initial => {
     const index = at++
     if (!(index in slots)) slots[index] = initial
-    return [slots[index], (value) => { slots[index] = value }]
+    return [
+      slots[index],
+      value => {
+        slots[index] = value
+      },
+    ]
   },
   useMemo: compute => compute(),
 }
@@ -27,19 +35,37 @@ interface FoldResult {
   folded?: boolean
   control: unknown
 }
-const module = { exports: {} as { FOLD_AT: unknown, FOLD_HUGE: unknown, foldPreview: (text: string, limit?: unknown, markdown?: boolean) => string | null, stripLongNote: (text: string) => string, useFold: (text: string, options?: unknown) => FoldResult } }
+const module = {
+  exports: {} as {
+    FOLD_AT: unknown
+    FOLD_HUGE: unknown
+    foldPreview: (text: string, limit?: unknown, markdown?: boolean) => string | null
+    stripLongNote: (text: string) => string
+    useFold: (text: string, options?: unknown) => FoldResult
+  },
+}
 runInNewContext(bundle.outputFiles[0].text, {
-  module, exports: module.exports,
-  require: (name) => {
+  module,
+  exports: module.exports,
+  require: name => {
     if (name !== 'react') throw new Error(`no platform module ${name}`)
     return react
   },
 })
 const { FOLD_AT, FOLD_HUGE, foldPreview, stripLongNote, useFold } = module.exports
-const render = (text, options?) => { at = 0; return useFold(text, options) }
-const fresh = () => { slots = [] }
-const buttons = node => (node === null || typeof node !== 'object' ? [] : [...(node.type === 'button' ? [node] : []), ...node.children.flatMap(buttons)])
-const words = node => (node === null || typeof node !== 'object' ? String(node ?? '') : node.children.map(words).join(''))
+const render = (text, options?) => {
+  at = 0
+  return useFold(text, options)
+}
+const fresh = () => {
+  slots = []
+}
+const buttons = node =>
+  node === null || typeof node !== 'object'
+    ? []
+    : [...(node.type === 'button' ? [node] : []), ...node.children.flatMap(buttons)]
+const words = node =>
+  node === null || typeof node !== 'object' ? String(node ?? '') : node.children.map(words).join('')
 const lines = count => Array.from({ length: count }, (_, index) => `line ${index + 1}`).join('\n')
 
 test('a text folds past 1,500 characters or 25 lines, and shows its first ten lines', () => {
@@ -70,8 +96,10 @@ test('a Bot reply in its own chat folds only past 20,000 characters', () => {
 })
 
 test('the note for the model at the start of a long message stays out of the chat', () => {
-  const plain = '[A long message: 25007 characters. Its start is below; all of it is in the attached file. Read the file before you act on it.]\nHello'
-  const wide = '[A long message: 25017 characters. Its start is below; all of it is in the attached file. Read the file before you act on it. Some lines are longer than the 2000 characters the read tool shows of a line; read those with a shell command.]\nHello'
+  const plain =
+    '[A long message: 25007 characters. Its start is below; all of it is in the attached file. Read the file before you act on it.]\nHello'
+  const wide =
+    '[A long message: 25017 characters. Its start is below; all of it is in the attached file. Read the file before you act on it. Some lines are longer than the 2000 characters the read tool shows of a line; read those with a shell command.]\nHello'
   assert.equal(stripLongNote(plain), 'Hello')
   assert.equal(stripLongNote(wide), 'Hello')
   assert.equal(stripLongNote('[A long message is coming]\nHello'), '[A long message is coming]\nHello')
@@ -102,7 +130,13 @@ test('a message kept only in part is read whole on request, and says when it is 
   fresh()
   const start = 'x'.repeat(2000)
   let reads = 0
-  const whole = { length: 30_000, load: async () => { reads += 1; return { text: 'x'.repeat(30_000), whole: true } } }
+  const whole = {
+    length: 30_000,
+    load: async () => {
+      reads += 1
+      return { text: 'x'.repeat(30_000), whole: true }
+    },
+  }
   const folded = render(start, { whole })
   assert.equal(folded.shown, 'x'.repeat(600), 'the start shows as any preview does')
   assert.equal(words(buttons(folded.control)[0]), 'Show all · 30,000 characters')

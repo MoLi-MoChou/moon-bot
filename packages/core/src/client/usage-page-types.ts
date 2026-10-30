@@ -14,7 +14,13 @@ export type Glyph = () => ReactElement
 
 export type UsageOwner =
   | { readonly key: string; readonly kind: 'other' }
-  | { readonly key: string; readonly kind: 'room' | 'agent' | 'bot'; readonly id: string; readonly name: string; readonly deleted?: boolean | undefined }
+  | {
+      readonly key: string
+      readonly kind: 'room' | 'agent' | 'bot'
+      readonly id: string
+      readonly name: string
+      readonly deleted?: boolean | undefined
+    }
 
 export interface UsageModel {
   readonly key: string
@@ -52,4 +58,3 @@ export interface UsageActions {
   usage: () => Promise<UsagePageView>
   openSettings: (page: string, id?: string | null) => void
 }
-

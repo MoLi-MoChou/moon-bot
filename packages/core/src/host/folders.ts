@@ -1,5 +1,10 @@
 import type {
-  AgentSession, ApprovalService, DirectoryPicker, SandboxPolicy, ToolExecution, WorkingDirectoryService,
+  AgentSession,
+  ApprovalService,
+  DirectoryPicker,
+  SandboxPolicy,
+  ToolExecution,
+  WorkingDirectoryService,
 } from './host-types.js'
 import type { ToolContext } from '../engine/registry.ts'
 import type { HostRuntime } from './runtime.js'
@@ -32,22 +37,36 @@ import { unquote } from './text.ts'
 
 const PICK_TIMEOUT_MS = 10 * 60_000
 
-export const within = (inner: string, outer: string): boolean => inner === outer || inner.startsWith(outer.endsWith(sep) ? outer : outer + sep)
+export const within = (inner: string, outer: string): boolean =>
+  inner === outer || inner.startsWith(outer.endsWith(sep) ? outer : outer + sep)
 
-const expandHome = (text: string): string => (text === '~' ? homedir() : /^~[\\/]/.test(text) ? join(homedir(), text.slice(2)) : text)
+const expandHome = (text: string): string =>
+  text === '~' ? homedir() : /^~[\\/]/.test(text) ? join(homedir(), text.slice(2)) : text
 
 // Read as the host reads it, so the team's data and the guarded folder are where the host keeps
 // its own: a blank value counts as unset.
-export const otherAppHomeOf = (value: string | undefined): string => resolve(expandHome(value?.trim() ? value : join(homedir(), '.dsh')))
+export const otherAppHomeOf = (value: string | undefined): string =>
+  resolve(expandHome(value?.trim() ? value : join(homedir(), '.dsh')))
 
 export function install(rt: HostRuntime): void {
   const { ctx, state } = rt
 
   const teamFolder = (): string | undefined => ctx.workspaceRegistry.get?.(state.workspaceId)?.path
   // The desktop app names the folder the user chose for the Bots' files.
-  const defaultTeamFolder = (): string => rt.config.workspace ?? (process.env.DS_BOT_WORKSPACE?.trim() || join(rt.home, 'workspace'))
-  const workDirOf = ({ botId, roomId }: { readonly botId?: string | undefined; readonly roomId?: string | undefined } = {}): string | undefined => rt.roomOf(roomId)?.workDir ?? rt.botOf(botId)?.workDir
-  const isFolder = (path: string): Promise<boolean> => stat(path).then(info => info.isDirectory(), () => false)
+  const defaultTeamFolder = (): string =>
+    rt.config.workspace ?? (process.env.DS_BOT_WORKSPACE?.trim() || join(rt.home, 'workspace'))
+  const workDirOf = ({
+    botId,
+    roomId,
+  }: {
+    readonly botId?: string | undefined
+    readonly roomId?: string | undefined
+  } = {}): string | undefined => rt.roomOf(roomId)?.workDir ?? rt.botOf(botId)?.workDir
+  const isFolder = (path: string): Promise<boolean> =>
+    stat(path).then(
+      info => info.isDirectory(),
+      () => false,
+    )
   const real = (path: string): Promise<string> => realpath(path).catch(() => resolve(path))
   // The real path of the deepest part that exists, with the rest after it.
   const realBeyond = async (path: string): Promise<string> => {
@@ -66,17 +85,27 @@ export function install(rt: HostRuntime): void {
   }
   // Where `input` leads from `base`, as a real path, the way the host's working_directory resolves
   // a change; undefined when nothing is there.
-  const folderAt = (base: string, input: string): Promise<string | undefined> => realpath(resolve(base, input)).catch(() => undefined)
+  const folderAt = (base: string, input: string): Promise<string | undefined> =>
+    realpath(resolve(base, input)).catch(() => undefined)
   // Where a Session works: the folder the host has for it, else the one DS Bot made it for.
   const sessionFolder = (session: AgentSession | undefined): string | undefined => {
-    const reported = session?.header === undefined ? undefined : ctx.get<WorkingDirectoryService>('workingDirectory')?.get?.(session) ?? session.header.cwd
+    const reported =
+      session?.header === undefined
+        ? undefined
+        : (ctx.get<WorkingDirectoryService>('workingDirectory')?.get?.(session) ?? session.header.cwd)
     if (reported !== undefined) return reported
     const id = session?.id
-    return workDirOf({ botId: rt.selfOf?.(id), roomId: id === undefined ? undefined : rt.groupOwners.get(id)?.roomId }) ?? teamFolder()
+    return (
+      workDirOf({ botId: rt.selfOf?.(id), roomId: id === undefined ? undefined : rt.groupOwners.get(id)?.roomId }) ??
+      teamFolder()
+    )
   }
 
   // The desktop app runs its own the host and names the user's, which Bots must not write either.
-  const dataRoots = (): string[] => [rt.otherAppHome, rt.home, process.env.DS_BOT_USER_DSH_HOME?.trim()].filter((root): root is string => root !== undefined && root !== '')
+  const dataRoots = (): string[] =>
+    [rt.otherAppHome, rt.home, process.env.DS_BOT_USER_DSH_HOME?.trim()].filter(
+      (root): root is string => root !== undefined && root !== '',
+    )
 
   // A Bot that could write where the host or the team keeps its data could change its own
   // permissions or the team, so neither those folders nor one that holds them is allowed.
@@ -121,7 +150,10 @@ export function install(rt: HostRuntime): void {
     if (await guarded(path)) throw new Error(`${path} holds another runtime's data, so Bots cannot work there`)
     const team = await realTeam()
     if (team !== undefined && within(path, team)) return path === team ? undefined : path
-    if (ctx.get<SandboxPolicy>('sandboxPolicy') === undefined) throw new Error(`Working in ${path} needs a sandbox policy, so nothing changed. The user can make this change in the settings.`)
+    if (ctx.get<SandboxPolicy>('sandboxPolicy') === undefined)
+      throw new Error(
+        `Working in ${path} needs a sandbox policy, so nothing changed. The user can make this change in the settings.`,
+      )
     return path
   }
 
@@ -139,25 +171,33 @@ export function install(rt: HostRuntime): void {
     const holdsData = async (path: string): Promise<boolean> => {
       const roots = await Promise.all(dataRoots().map(real))
       if (roots.some(data => within(data, path))) return true
-      if (path === own && await realBeyond(fallback) === own) return false
+      if (path === own && (await realBeyond(fallback)) === own) return false
       return roots.some(data => within(path, data))
     }
     // A folder to be made counts where it would be made: a link above it can lead into the data.
-    if (await holdsData(await realBeyond(resolve(expanded)))) throw new Error(`${text} holds another runtime's data, so it cannot be the team workspace`)
+    if (await holdsData(await realBeyond(resolve(expanded))))
+      throw new Error(`${text} holds another runtime's data, so it cannot be the team workspace`)
     await mkdir(expanded, { recursive: true })
     const path = await realpath(expanded)
     if (!(await isFolder(path))) throw new Error(`${text} is a file, not a folder`)
-    if (await holdsData(path)) throw new Error(`${text} holds another runtime's data, so it cannot be the team workspace`)
-    if (path === await realTeam()) return path
-    const workspace = await ctx.workspaceRegistry.resolveByPath(path) ?? await ctx.workspaceRegistry.create(path, 'Moon Bot')
+    if (await holdsData(path))
+      throw new Error(`${text} holds another runtime's data, so it cannot be the team workspace`)
+    if (path === (await realTeam())) return path
+    const workspace =
+      (await ctx.workspaceRegistry.resolveByPath(path)) ?? (await ctx.workspaceRegistry.create(path, 'Moon Bot'))
     state.workspaceId = workspace.id
     await rt.save()
     return path
   }
 
   // Every Session of a Bot: its own chat and its conversation in each of its groups.
-  const sessionsOfBot = (botId: string): string[] => [rt.chatOf(botId), ...Object.values(state.rooms)
-    .filter(room => room.members?.includes(botId) ?? false).map(room => room.sessions?.[botId])].filter((id): id is string => id !== undefined)
+  const sessionsOfBot = (botId: string): string[] =>
+    [
+      rt.chatOf(botId),
+      ...Object.values(state.rooms)
+        .filter(room => room.members?.includes(botId) ?? false)
+        .map(room => room.sessions?.[botId]),
+    ].filter((id): id is string => id !== undefined)
 
   // A folder outside the team workspace widens where a Bot may write, so a Bot that
   // sets one for Bots whose writes are bounded by their folder asks the user first.
@@ -166,33 +206,54 @@ export function install(rt: HostRuntime): void {
   // calling agent at hand, or a tool context, whose live agent is resolved then; the
   // approval must be asked by that same agent, as it scopes the request. Throws when
   // it is not allowed.
-  async function approveFolder(exec: ToolExecution | ToolContext, { path, sessions = [], who, toolName }: ApproveFolderInput): Promise<void> {
+  async function approveFolder(
+    exec: ToolExecution | ToolContext,
+    { path, sessions = [], who, toolName }: ApproveFolderInput,
+  ): Promise<void> {
     const team = await realTeam()
     if (path === undefined || (team !== undefined && within(path, team))) return
     const policy = ctx.get<SandboxPolicy>('sandboxPolicy')
-    if (policy === undefined) throw new Error(`Working in ${path} needs a sandbox policy, so nothing changed. The user can make this change in the settings.`)
+    if (policy === undefined)
+      throw new Error(
+        `Working in ${path} needs a sandbox policy, so nothing changed. The user can make this change in the settings.`,
+      )
     const agents = await Promise.all(sessions.map(id => rt.resolveAgent(id)))
-    const modes = [policy.resolve(), ...agents.map(agent => policy.resolve({ session: agent.session }))].map(entry => entry.mode)
+    const modes = [policy.resolve(), ...agents.map(agent => policy.resolve({ session: agent.session }))].map(
+      entry => entry.mode,
+    )
     if (!modes.includes('workspace-write')) return
     const approval = ctx.get<ApprovalService>('approval')
-    const agent = 'agent' in exec && exec.agent !== undefined ? exec.agent
-      : 'sessionId' in exec ? await rt.resolveAgent(exec.sessionId).catch(() => undefined)
-        : undefined
-    if (approval === undefined || agent?.session === undefined) throw new Error(`Working in ${path} needs the user's approval, and there is no way to ask for it here, so nothing changed. The user can make this change in the settings.`)
+    const agent =
+      'agent' in exec && exec.agent !== undefined
+        ? exec.agent
+        : 'sessionId' in exec
+          ? await rt.resolveAgent(exec.sessionId).catch(() => undefined)
+          : undefined
+    if (approval === undefined || agent?.session === undefined)
+      throw new Error(
+        `Working in ${path} needs the user's approval, and there is no way to ask for it here, so nothing changed. The user can make this change in the settings.`,
+      )
     const name = toolName ?? ('name' in exec ? exec.name : undefined)
     const outcome = await approval.request({
       agent,
       ...(name !== undefined ? { toolName: name } : {}),
       ...(exec.callId !== undefined && exec.callId !== '' ? { callId: exec.callId } : {}),
       reason: `Let ${who.en} work in ${path}? Files there can then be changed.`,
-      displayReason: { en: `Let ${who.en} work in ${path}? Files there can then be changed.`, zh: `允许${who.zh}在 ${path} 中工作吗？之后可以修改这个文件夹里的文件。` },
+      displayReason: {
+        en: `Let ${who.en} work in ${path}? Files there can then be changed.`,
+        zh: `允许${who.zh}在 ${path} 中工作吗？之后可以修改这个文件夹里的文件。`,
+      },
       ...(exec.signal ? { signal: exec.signal } : {}),
     })
     if (outcome === 'allowed-once') return
     // An approval policy that never asks answers 'rejected' as well.
-    throw new Error(outcome === 'rejected' ? `Working in ${path} was not allowed, so nothing changed. The user can make this change in the settings.`
-      : outcome === 'cancelled' ? 'The approval was cancelled, so nothing changed.'
-        : `Working in ${path} needs the user's approval, and no one could answer, so nothing changed. The user can make this change in the settings.`)
+    throw new Error(
+      outcome === 'rejected'
+        ? `Working in ${path} was not allowed, so nothing changed. The user can make this change in the settings.`
+        : outcome === 'cancelled'
+          ? 'The approval was cancelled, so nothing changed.'
+          : `Working in ${path} needs the user's approval, and no one could answer, so nothing changed. The user can make this change in the settings.`,
+    )
   }
 
   const picker = (): ReturnType<DirectoryPicker['capability']> | undefined => {
@@ -213,15 +274,20 @@ export function install(rt: HostRuntime): void {
           if (workspace.path !== team) known.set(workspace.path, workspace.title)
         }
         for (const entry of [...Object.values(state.bots), ...Object.values(state.rooms)]) {
-          if (entry.workDir && !known.has(entry.workDir)) known.set(entry.workDir, basename(entry.workDir) || entry.workDir)
+          if (entry.workDir && !known.has(entry.workDir))
+            known.set(entry.workDir, basename(entry.workDir) || entry.workDir)
         }
-        const present = await Promise.all([...known].map(async ([path, title]) => (await isFolder(path) ? { path, title } : undefined)))
+        const present = await Promise.all(
+          [...known].map(async ([path, title]) => ((await isFolder(path)) ? { path, title } : undefined)),
+        )
         // A folder that vanished between listing and checking is left out.
         const kind = picker()?.kind
         return {
           team,
           picker: kind === 'native' || kind === 'browse' ? kind : null,
-          folders: present.filter((entry): entry is { readonly path: string; readonly title: string | undefined } => entry !== undefined),
+          folders: present.filter(
+            (entry): entry is { readonly path: string; readonly title: string | undefined } => entry !== undefined,
+          ),
         }
       }
       case 'folder-pick': {
@@ -232,13 +298,37 @@ export function install(rt: HostRuntime): void {
       case 'folder-list': {
         const browse = picker()
         if (browse?.kind !== 'browse') throw new Error('This window cannot list folders')
-        const listing = await browse.list(typeof body.path === 'string' && body.path !== '' ? body.path : undefined, signal)
-        return { path: listing.path, home: listing.home, crumbs: listing.crumbs, entries: listing.entries, truncated: listing.truncated }
+        const listing = await browse.list(
+          typeof body.path === 'string' && body.path !== '' ? body.path : undefined,
+          signal,
+        )
+        return {
+          path: listing.path,
+          home: listing.home,
+          crumbs: listing.crumbs,
+          entries: listing.entries,
+          truncated: listing.truncated,
+        }
       }
       default:
         throw new Error(`Unknown endpoint ${endpoint}`)
     }
   }
 
-  Object.assign(rt, { teamFolder, defaultTeamFolder, workDirOf, sessionFolder, isFolder, real, folderAt, cleanWorkDir, workFolder, inData, setTeamWorkspace, sessionsOfBot, approveFolder, folderEndpoint })
+  Object.assign(rt, {
+    teamFolder,
+    defaultTeamFolder,
+    workDirOf,
+    sessionFolder,
+    isFolder,
+    real,
+    folderAt,
+    cleanWorkDir,
+    workFolder,
+    inData,
+    setTeamWorkspace,
+    sessionsOfBot,
+    approveFolder,
+    folderEndpoint,
+  })
 }

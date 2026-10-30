@@ -93,7 +93,7 @@ export function install(rt: HostRuntime): void {
     for (const ref of new Set([config.ocrModel, ...declared.filter(ref => ref === fallback), ...declared])) {
       if (ref === undefined) continue
       const route = splitRef(ref)
-      if (route && served.has(ref) && await readsImages(route.provider, route.model)) return { ref, ...route }
+      if (route && served.has(ref) && (await readsImages(route.provider, route.model))) return { ref, ...route }
     }
     return undefined
   }
@@ -103,20 +103,27 @@ export function install(rt: HostRuntime): void {
     try {
       ocrCache = new Map(Object.entries(JSON.parse(await readFile(ocrPath, 'utf8')) as Record<string, ImageReading>))
     } catch (error) {
-      if ((error as { readonly code?: unknown } | undefined)?.code !== 'ENOENT') rt.warn('moon-bot: unreadable OCR cache %s: %s', ocrPath, error)
+      if ((error as { readonly code?: unknown } | undefined)?.code !== 'ENOENT')
+        rt.warn('moon-bot: unreadable OCR cache %s: %s', ocrPath, error)
       ocrCache = new Map()
     }
   }
 
   function saveOcr(): void {
-    while (ocrCache !== null && ocrCache.size > OCR_CACHE_MAX) { const first = ocrCache.keys().next().value; if (first === undefined) break; ocrCache.delete(first) }
+    while (ocrCache !== null && ocrCache.size > OCR_CACHE_MAX) {
+      const first = ocrCache.keys().next().value
+      if (first === undefined) break
+      ocrCache.delete(first)
+    }
     const snapshot = JSON.stringify(Object.fromEntries(ocrCache ?? new Map()))
-    ocrWriting = ocrWriting.then(async () => {
-      await mkdir(home, { recursive: true })
-      const temp = `${ocrPath}.${process.pid}.tmp`
-      await writeFile(temp, snapshot, 'utf8')
-      await replaceFile(temp, ocrPath)
-    }).catch(error => rt.warn('moon-bot: OCR cache write failed: %s', error))
+    ocrWriting = ocrWriting
+      .then(async () => {
+        await mkdir(home, { recursive: true })
+        const temp = `${ocrPath}.${process.pid}.tmp`
+        await writeFile(temp, snapshot, 'utf8')
+        await replaceFile(temp, ocrPath)
+      })
+      .catch(error => rt.warn('moon-bot: OCR cache write failed: %s', error))
   }
 
   // `sessionId` is the Session the reading is for; its usage counts there.
@@ -128,13 +135,30 @@ export function install(rt: HostRuntime): void {
       provider: route.provider,
       model: route.model,
       sessionId,
-      messages: rt.tagUsage([{ role: 'user', content: [{ type: 'image', attachment }, { type: 'text', text: OCR_PROMPT }] }], { sessionId, kind: 'image' }),
+      messages: rt.tagUsage(
+        [
+          {
+            role: 'user',
+            content: [
+              { type: 'image', attachment },
+              { type: 'text', text: OCR_PROMPT },
+            ],
+          },
+        ],
+        { sessionId, kind: 'image' },
+      ),
       maxTokens: 8192,
       signal: AbortSignal.timeout(OCR_TIMEOUT_MS),
-    })) assembler.push(chunk as LlmStreamChunk)
+    }))
+      assembler.push(chunk as LlmStreamChunk)
     const finish = assembler.finish
     if (finish.kind === 'error' || finish.kind === 'aborted') throw new Error(finish.failure?.message ?? finish.kind)
-    const text = assembler.blocks().filter(block => block.type === 'text').map(block => block.text).join('\n').trim()
+    const text = assembler
+      .blocks()
+      .filter(block => block.type === 'text')
+      .map(block => block.text)
+      .join('\n')
+      .trim()
     if (text === '') throw new Error('the vision model returned no text')
     const model = (await rt.catalog()).find(entry => entry.ref === route.ref)?.name ?? route.model
     return { text, model }
@@ -149,31 +173,41 @@ export function install(rt: HostRuntime): void {
     const failed = ocrFailed.get(id)
     if (failed && Date.now() - failed.at < OCR_RETRY_MS) return null
     if (!ocrPending.has(id)) {
-      ocrPending.set(id, readImage(attachment, sessionId).then((reading) => {
-        cache.set(id, reading)
-        ocrFailed.delete(id)
-        saveOcr()
-        return reading
-      }, (error) => {
-        rt.warn('moon-bot: could not read image %s: %s', id, error)
-        ocrFailed.set(id, { at: Date.now() })
-        return null
-      }).finally(() => ocrPending.delete(id)))
+      ocrPending.set(
+        id,
+        readImage(attachment, sessionId)
+          .then(
+            reading => {
+              cache.set(id, reading)
+              ocrFailed.delete(id)
+              saveOcr()
+              return reading
+            },
+            error => {
+              rt.warn('moon-bot: could not read image %s: %s', id, error)
+              ocrFailed.set(id, { at: Date.now() })
+              return null
+            },
+          )
+          .finally(() => ocrPending.delete(id)),
+      )
     }
     return ocrPending.get(id) ?? null
   }
 
-  const imageLabel = (attachment: AttachmentRef): string => (attachment.name
-    ? `"${attachment.name}"`
-    : `sha256:${String(attachment.attachmentId).slice('sha256:'.length, 'sha256:'.length + 8)}`)
+  const imageLabel = (attachment: AttachmentRef): string =>
+    attachment.name
+      ? `"${attachment.name}"`
+      : `sha256:${String(attachment.attachmentId).slice('sha256:'.length, 'sha256:'.length + 8)}`
 
   function imageAsText(attachment: AttachmentRef, reading: ImageReading | null): { type: string; text: string } {
     const label = imageLabel(attachment)
     return {
       type: 'text',
-      text: reading === null
-        ? `[Image ${label}: you cannot see images and it could not be read right now. Ask the user what it shows if it matters.]`
-        : `[Image ${label}. You cannot see images, so ${reading.model} read it for you:]\n${reading.text}\n[End of image ${label}]`,
+      text:
+        reading === null
+          ? `[Image ${label}: you cannot see images and it could not be read right now. Ask the user what it shows if it matters.]`
+          : `[Image ${label}. You cannot see images, so ${reading.model} read it for you:]\n${reading.text}\n[End of image ${label}]`,
     }
   }
 
@@ -181,33 +215,52 @@ export function install(rt: HostRuntime): void {
   // vision model or not, as its reading.
   async function imagesForGroup(attachments: readonly AttachmentRef[], sessionId: string): Promise<readonly string[]> {
     await loadOcr()
-    return Promise.all(attachments.map(async (attachment) => {
-      const reading = await imageReading(attachment, sessionId)
-      const label = imageLabel(attachment)
-      return reading === null
-        ? `[Image ${label}: it could not be read right now. Ask the user what it shows if it matters.]`
-        : `[Image ${label}, read by ${reading.model}:]\n${reading.text}\n[End of image ${label}]`
-    }))
+    return Promise.all(
+      attachments.map(async attachment => {
+        const reading = await imageReading(attachment, sessionId)
+        const label = imageLabel(attachment)
+        return reading === null
+          ? `[Image ${label}: it could not be read right now. Ask the user what it shows if it matters.]`
+          : `[Image ${label}, read by ${reading.model}:]\n${reading.text}\n[End of image ${label}]`
+      }),
+    )
   }
 
-  async function withImagesAsText(messages: readonly ChatMessage[], sessionId: string): Promise<readonly ChatMessage[]> {
+  async function withImagesAsText(
+    messages: readonly ChatMessage[],
+    sessionId: string,
+  ): Promise<readonly ChatMessage[]> {
     await loadOcr()
     const images = new Map<string, AttachmentRef>()
     for (const message of messages) {
       if (!liveImages(message)) continue
       for (const block of message.content ?? []) {
-        if (block?.type === 'image' && !block.offloaded && block.attachment !== undefined) images.set(String(block.attachment.attachmentId), block.attachment)
+        if (block?.type === 'image' && !block.offloaded && block.attachment !== undefined)
+          images.set(String(block.attachment.attachmentId), block.attachment)
       }
     }
-    const readings = new Map(await Promise.all([...images].map(async ([id, attachment]): Promise<[string, ImageReading | null]> => [id, await imageReading(attachment, sessionId)])))
-    return messages.map(message => (liveImages(message)
-      ? {
-          ...message,
-          content: (message.content ?? []).map(block => (block?.type === 'image' && !block.offloaded && block.attachment !== undefined
-            ? imageAsText(block.attachment, readings.get(String(block.attachment.attachmentId)) ?? null)
-            : block)),
-        }
-      : message))
+    const readings = new Map(
+      await Promise.all(
+        [...images].map(
+          async ([id, attachment]): Promise<[string, ImageReading | null]> => [
+            id,
+            await imageReading(attachment, sessionId),
+          ],
+        ),
+      ),
+    )
+    return messages.map(message =>
+      liveImages(message)
+        ? {
+            ...message,
+            content: (message.content ?? []).map(block =>
+              block?.type === 'image' && !block.offloaded && block.attachment !== undefined
+                ? imageAsText(block.attachment, readings.get(String(block.attachment.attachmentId)) ?? null)
+                : block,
+            ),
+          }
+        : message,
+    )
   }
 
   ctx.on<LlmStreamOptions, () => AsyncIterable<unknown>>('llm/stream', (options, next) => {
@@ -215,13 +268,16 @@ export function install(rt: HostRuntime): void {
     if (sessionId === undefined || rt.ownRequest(options) || !(options.messages ?? []).some(liveImages)) return next()
     return (async function* imagesAsTextOrPass() {
       await rt.load()
-      if (rt.roomOf(sessionId) !== undefined || await readsImages(options.provider, options.model)) {
+      if (rt.roomOf(sessionId) !== undefined || (await readsImages(options.provider, options.model))) {
         yield* next()
         return
       }
       // `next` cannot take new messages, so the rewritten request starts over; it
       // carries no image, so this listener lets it through.
-      yield* ctx.llm.stream({ ...options, messages: await withImagesAsText(options.messages as readonly ChatMessage[], sessionId) })
+      yield* ctx.llm.stream({
+        ...options,
+        messages: await withImagesAsText(options.messages as readonly ChatMessage[], sessionId),
+      })
     })()
   })
 

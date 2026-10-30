@@ -21,7 +21,8 @@ function relativeFile(destination: string): RelativeFile | undefined {
   const hash = destination.indexOf('#')
   const target = hash < 0 ? destination : destination.slice(0, hash)
   const fragment = hash < 0 ? '' : destination.slice(hash)
-  if (target === '' || target.includes('?') || (fragment !== '' && !/^#L[1-9]\d*(?:-L[1-9]\d*)?$/.test(fragment))) return undefined
+  if (target === '' || target.includes('?') || (fragment !== '' && !/^#L[1-9]\d*(?:-L[1-9]\d*)?$/.test(fragment)))
+    return undefined
   let path: string
   try {
     path = decodeURIComponent(target)
@@ -29,18 +30,29 @@ function relativeFile(destination: string): RelativeFile | undefined {
     return undefined
   }
   const control = [...path].some(char => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127)
-  if (control || /^[\\/]{2}/.test(path) || ABSOLUTE.test(path) || SCHEME.test(path) || path.startsWith('~')) return undefined
+  if (control || /^[\\/]{2}/.test(path) || ABSOLUTE.test(path) || SCHEME.test(path) || path.startsWith('~'))
+    return undefined
   return { path, fragment }
 }
 
 // the host decodes the link back to the path, so `%` and what would end the link are escaped.
-const href = (path: string): string => path.replace(/\\/g, '/').replace(/[%\s()<>]/g, char => `%${char.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0')}`)
+const href = (path: string): string =>
+  path
+    .replace(/\\/g, '/')
+    .replace(/[%\s()<>]/g, char => `%${char.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0')}`)
 
 /** Makes the relative file links in `text` absolute against `folder`, leaving code alone. */
 export function absoluteLinks(text: string, folder: string | undefined): string {
   if (typeof text !== 'string' || !folder || !text.includes('](')) return text
-  return text.split(CODE).map((part, index) => (index % 2 === 1 ? part : part.replace(LINK, (whole: string, open: string, destination: string, close: string) => {
-    const file = relativeFile(destination.startsWith('<') ? destination.slice(1, -1) : destination)
-    return file === undefined ? whole : `${open}${href(resolve(folder, file.path))}${file.fragment}${close}`
-  }))).join('')
+  return text
+    .split(CODE)
+    .map((part, index) =>
+      index % 2 === 1
+        ? part
+        : part.replace(LINK, (whole: string, open: string, destination: string, close: string) => {
+            const file = relativeFile(destination.startsWith('<') ? destination.slice(1, -1) : destination)
+            return file === undefined ? whole : `${open}${href(resolve(folder, file.path))}${file.fragment}${close}`
+          }),
+    )
+    .join('')
 }

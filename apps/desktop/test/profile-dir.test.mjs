@@ -5,19 +5,21 @@ import { join } from 'node:path'
 import { test } from 'node:test'
 import { LEGACY_PROFILE, PROFILE, profileDirOf } from '../src/profile-dir.ts'
 
-const setup = (t) => {
+const setup = t => {
   const root = mkdtempSync(join(tmpdir(), 'moon-bot-profile-'))
-  t.after(() => { rmSync(root, { recursive: true, force: true, maxRetries: 5 }) })
+  t.after(() => {
+    rmSync(root, { recursive: true, force: true, maxRetries: 5 })
+  })
   return root
 }
 
-test('a fresh install gets the current folder, and nothing is created for it', (t) => {
+test('a fresh install gets the current folder, and nothing is created for it', t => {
   const data = setup(t)
   assert.equal(profileDirOf(data), join(data, 'profiles', PROFILE))
   assert.equal(profileDirOf(data), join(data, 'profiles', PROFILE))
 })
 
-test("an install from before the rename keeps its folder, moved to the new name", (t) => {
+test('an install from before the rename keeps its folder, moved to the new name', t => {
   const data = setup(t)
   const legacy = join(data, 'profiles', LEGACY_PROFILE)
   mkdirSync(legacy, { recursive: true })
@@ -31,7 +33,7 @@ test("an install from before the rename keeps its folder, moved to the new name"
   assert.equal(profileDirOf(data), dir, 'the move happens once')
 })
 
-test('a folder already under the new name wins and the old one is left alone', (t) => {
+test('a folder already under the new name wins and the old one is left alone', t => {
   const data = setup(t)
   const next = join(data, 'profiles', PROFILE)
   const legacy = join(data, 'profiles', LEGACY_PROFILE)
@@ -45,13 +47,17 @@ test('a folder already under the new name wins and the old one is left alone', (
   assert.equal(readFileSync(join(legacy, 'settings.json'), 'utf8'), '{"old":true}')
 })
 
-test('a move that fails keeps the old folder in use instead of failing the start', (t) => {
+test('a move that fails keeps the old folder in use instead of failing the start', t => {
   const data = setup(t)
   const legacy = join(data, 'profiles', LEGACY_PROFILE)
   mkdirSync(legacy, { recursive: true })
   writeFileSync(join(legacy, 'settings.json'), '{"kept":true}')
 
-  const dir = profileDirOf(data, { rename: () => { throw Object.assign(new Error('busy'), { code: 'EBUSY' }) } })
+  const dir = profileDirOf(data, {
+    rename: () => {
+      throw Object.assign(new Error('busy'), { code: 'EBUSY' })
+    },
+  })
 
   assert.equal(dir, legacy)
   assert.equal(readFileSync(join(dir, 'settings.json'), 'utf8'), '{"kept":true}')

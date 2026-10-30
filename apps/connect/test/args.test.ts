@@ -10,7 +10,18 @@ test('parses --url and --token, spaced and inline forms agree', () => {
 })
 
 test('everything after -- is the agent command, untouched', () => {
-  const outcome = parseArgs(['--url', 'wss://h/relay', '--token', 't', '--', 'claude', '--model', 'fast', '--', 'later'])
+  const outcome = parseArgs([
+    '--url',
+    'wss://h/relay',
+    '--token',
+    't',
+    '--',
+    'claude',
+    '--model',
+    'fast',
+    '--',
+    'later',
+  ])
   assert.ok(outcome.ok && !outcome.help)
   assert.deepEqual(outcome.command, ['claude', '--model', 'fast', '--', 'later'])
 })

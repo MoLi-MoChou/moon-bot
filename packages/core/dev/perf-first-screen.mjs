@@ -38,18 +38,32 @@ if (!existsSync(CHROME) && process.env.CHROME_BIN === undefined) {
 
 const port = 9400 + Math.floor(Math.random() * 200)
 const profile = mkdtempSync(join(TOOLS, 'tmp/perf-chrome-'))
-const chrome = spawn(existsSync(WRAPPER) ? 'sh' : CHROME,
-  [...(existsSync(WRAPPER) ? [WRAPPER] : []), '--headless=new', '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage',
-    '--no-first-run', '--no-default-browser-check', `--user-data-dir=${profile}`, `--remote-debugging-port=${port}`, 'about:blank'],
-  { stdio: 'ignore' })
+const chrome = spawn(
+  existsSync(WRAPPER) ? 'sh' : CHROME,
+  [
+    ...(existsSync(WRAPPER) ? [WRAPPER] : []),
+    '--headless=new',
+    '--no-sandbox',
+    '--disable-gpu',
+    '--disable-dev-shm-usage',
+    '--no-first-run',
+    '--no-default-browser-check',
+    `--user-data-dir=${profile}`,
+    `--remote-debugging-port=${port}`,
+    'about:blank',
+  ],
+  { stdio: 'ignore' },
+)
 
 const stop = () => {
-  try { chrome.kill('SIGKILL') } catch {}
+  try {
+    chrome.kill('SIGKILL')
+  } catch {}
   rmSync(profile, { recursive: true, force: true })
 }
 process.on('exit', stop)
 
-const getJson = async (path) => {
+const getJson = async path => {
   for (let tries = 0; tries < 300; tries += 1) {
     try {
       const response = await fetch(`http://127.0.0.1:${port}${path}`)
@@ -65,9 +79,13 @@ class Cdp {
     this.socket = socket
     this.waiting = new Map()
     this.next = 0
-    socket.addEventListener('message', (event) => {
+    socket.addEventListener('message', event => {
       let message
-      try { message = JSON.parse(event.data) } catch { return }
+      try {
+        message = JSON.parse(event.data)
+      } catch {
+        return
+      }
       const pending = message.id === undefined ? undefined : this.waiting.get(message.id)
       if (pending === undefined) return
       this.waiting.delete(message.id)
@@ -82,7 +100,7 @@ class Cdp {
   }
 }
 
-const attach = async (target) => {
+const attach = async target => {
   const socket = new WebSocket(target.webSocketDebuggerUrl)
   await new Promise((resolve, reject) => {
     socket.addEventListener('open', resolve, { once: true })
@@ -104,8 +122,9 @@ async function run(browser, number) {
   await page.send('Page.navigate', { url })
   let ready
   for (let tries = 0; tries < 600; tries += 1) {
-    const probe = await page.send('Runtime.evaluate', {
-      expression: `(() => {
+    const probe = await page
+      .send('Runtime.evaluate', {
+        expression: `(() => {
         const el = document.querySelector(${JSON.stringify(COMPOSER)})
         if (!el) return { found: false }
         const disabled = el.getAttribute('aria-disabled') === 'true' || el.getAttribute('contenteditable') !== 'true'
@@ -113,8 +132,10 @@ async function run(browser, number) {
         el.focus()
         return { found: true, disabled: false, focused: document.activeElement === el }
       })()`,
-      returnByValue: true,
-    }).then(result => result.result?.value).catch(() => undefined)
+        returnByValue: true,
+      })
+      .then(result => result.result?.value)
+      .catch(() => undefined)
     if (probe?.found === true && probe.disabled === false && probe.focused === true) {
       ready = Date.now() - started
       break
@@ -123,8 +144,9 @@ async function run(browser, number) {
   }
   if (ready === undefined) throw new Error(`run ${number}: the composer did not take input within 30 s`)
 
-  const marks = await page.send('Runtime.evaluate', {
-    expression: `(() => {
+  const marks = await page
+    .send('Runtime.evaluate', {
+      expression: `(() => {
       const nav = performance.getEntriesByType('navigation')[0]
       const paint = performance.getEntriesByType('paint').find(entry => entry.name === 'first-contentful-paint')
       const script = performance.getEntriesByType('resource').filter(entry => entry.initiatorType === 'script')
@@ -136,8 +158,9 @@ async function run(browser, number) {
         scriptBytes: script.reduce((sum, entry) => sum + (entry.transferSize ?? 0), 0),
       }
     })()`,
-    returnByValue: true,
-  }).then(result => result.result?.value)
+      returnByValue: true,
+    })
+    .then(result => result.result?.value)
 
   await browser.send('Target.closeTarget', { targetId })
   await browser.send('Target.disposeBrowserContext', { browserContextId })
@@ -149,7 +172,7 @@ const browser = await attach(version)
 const results = []
 for (let number = 1; number <= runs; number += 1) results.push(await run(browser, number))
 
-const median = (values) => {
+const median = values => {
   const sorted = [...values].sort((a, b) => a - b)
   return sorted[Math.floor(sorted.length / 2)]
 }
@@ -168,8 +191,12 @@ if (asJson) {
   console.log(JSON.stringify(summary, null, 2))
 } else {
   for (const result of results) {
-    console.log(`run ${result.run}: input ready ${result.ready} ms · FCP ${Math.round(result.fcp ?? 0)} ms · DCL ${Math.round(result.domContentLoaded ?? 0)} ms · load ${Math.round(result.load ?? 0)} ms · ${result.scripts} scripts, ${Math.round(result.scriptBytes / 1024)} KB`)
+    console.log(
+      `run ${result.run}: input ready ${result.ready} ms · FCP ${Math.round(result.fcp ?? 0)} ms · DCL ${Math.round(result.domContentLoaded ?? 0)} ms · load ${Math.round(result.load ?? 0)} ms · ${result.scripts} scripts, ${Math.round(result.scriptBytes / 1024)} KB`,
+    )
   }
-  console.log(`median input ready: ${ready} ms (target ${target} ms) · client.js ${Math.round(bundle.length / 1024)} KB, ${Math.round(gzipSync(bundle).length / 1024)} KB gzip`)
+  console.log(
+    `median input ready: ${ready} ms (target ${target} ms) · client.js ${Math.round(bundle.length / 1024)} KB, ${Math.round(gzipSync(bundle).length / 1024)} KB gzip`,
+  )
 }
 process.exit(ready <= target ? 0 : 1)

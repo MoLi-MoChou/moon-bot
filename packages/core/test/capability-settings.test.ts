@@ -15,32 +15,57 @@ const bundle = await build({
     `,
     resolveDir: fileURLToPath(new URL('..', import.meta.url)),
   },
-  bundle: true, format: 'cjs', platform: 'browser', write: false, logLevel: 'silent',
+  bundle: true,
+  format: 'cjs',
+  platform: 'browser',
+  write: false,
+  logLevel: 'silent',
   external: ['react', 'react-dom'],
 })
 
 let current = { index: 0, slots: [] as { value?: unknown }[] }
 const slot = (make: () => { value?: unknown }) => {
   const index = current.index++
-  return current.slots[index] ??= make()
+  return (current.slots[index] ??= make())
 }
 const react = {
-  createElement: (type: unknown, props: Record<string, unknown> | null, ...children: unknown[]) => ({ type, props: { ...(props ?? {}), children: children.flat(Infinity) } }),
+  createElement: (type: unknown, props: Record<string, unknown> | null, ...children: unknown[]) => ({
+    type,
+    props: { ...(props ?? {}), children: children.flat(Infinity) },
+  }),
   Fragment: 'fragment',
   useState: (initial: unknown) => {
     const cell = slot(() => ({ value: typeof initial === 'function' ? (initial as () => unknown)() : initial }))
-    return [cell.value, (next: unknown) => { cell.value = typeof next === 'function' ? (next as (value: unknown) => unknown)(cell.value) : next }]
+    return [
+      cell.value,
+      (next: unknown) => {
+        cell.value = typeof next === 'function' ? (next as (value: unknown) => unknown)(cell.value) : next
+      },
+    ]
   },
   useRef: (initial: unknown) => slot(() => ({ current: initial })),
-  useEffect() {}, useLayoutEffect() {}, useCallback: (fn: unknown) => fn, useMemo: (make: () => unknown) => make(),
+  useEffect() {},
+  useLayoutEffect() {},
+  useCallback: (fn: unknown) => fn,
+  useMemo: (make: () => unknown) => make(),
 }
-const module = { exports: {} as {
-  CapabilitiesPage: (props: Record<string, unknown>) => unknown
-  BotCapabilitiesCard: (props: Record<string, unknown>) => unknown
-  CapabilityRow: (props: Record<string, unknown>) => unknown
-} }
+const module = {
+  exports: {} as {
+    CapabilitiesPage: (props: Record<string, unknown>) => unknown
+    BotCapabilitiesCard: (props: Record<string, unknown>) => unknown
+    CapabilityRow: (props: Record<string, unknown>) => unknown
+  },
+}
 runInNewContext(bundle.outputFiles[0].text, {
-  module, exports: module.exports, URL, JSON, Date, Intl, Promise, setTimeout, clearTimeout,
+  module,
+  exports: module.exports,
+  URL,
+  JSON,
+  Date,
+  Intl,
+  Promise,
+  setTimeout,
+  clearTimeout,
   require: (name: string) => {
     if (name === 'react') return react
     if (name === 'react-dom') return { createPortal: (node: unknown) => node }
@@ -48,7 +73,7 @@ runInNewContext(bundle.outputFiles[0].text, {
   },
 })
 const { CapabilitiesPage, BotCapabilitiesCard, CapabilityRow } = module.exports
-type Node = { type: unknown, props: Record<string, unknown> & { children?: unknown }, children?: unknown }
+type Node = { type: unknown; props: Record<string, unknown> & { children?: unknown }; children?: unknown }
 const childrenOf = (node: Node): unknown[] => {
   const raw = node.props?.children ?? node.children
   return Array.isArray(raw) ? raw.flat(Infinity) : raw === undefined ? [] : [raw]
@@ -71,7 +96,10 @@ function find(node: unknown, predicate: (node: Node) => boolean): Node | undefin
   return undefined
 }
 function nodes(node: unknown, predicate: (node: Node) => boolean, out: Node[] = []): Node[] {
-  if (Array.isArray(node)) { for (const child of node) nodes(child, predicate, out); return out }
+  if (Array.isArray(node)) {
+    for (const child of node) nodes(child, predicate, out)
+    return out
+  }
   if (node === null || typeof node !== 'object') return out
   const candidate = node as Node
   if (predicate(candidate)) out.push(candidate)
@@ -88,7 +116,8 @@ const materialize = (node: unknown): unknown => {
   if (Array.isArray(node)) return node.map(materialize)
   if (node === null || typeof node !== 'object') return node
   const candidate = node as Node
-  if (typeof candidate.type === 'function') return materialize((candidate.type as (props: Record<string, unknown>) => unknown)(candidate.props))
+  if (typeof candidate.type === 'function')
+    return materialize((candidate.type as (props: Record<string, unknown>) => unknown)(candidate.props))
   const props = { ...candidate.props }
   if ('children' in props) props.children = materialize(props.children)
   return { ...candidate, props }
@@ -97,30 +126,57 @@ const render = (component: (props: Record<string, unknown>) => unknown, props: R
   current = { index: 0, slots: current.slots }
   return materialize(component(props))
 }
-const reset = () => { current = { index: 0, slots: [] } }
-const rerender = (component: (props: Record<string, unknown>) => unknown, props: Record<string, unknown>) => render(component, props)
-const tick = async (times = 4) => { for (let index = 0; index < times; index += 1) await new Promise(resolve => setImmediate(resolve)) }
+const reset = () => {
+  current = { index: 0, slots: [] }
+}
+const rerender = (component: (props: Record<string, unknown>) => unknown, props: Record<string, unknown>) =>
+  render(component, props)
+const tick = async (times = 4) => {
+  for (let index = 0; index < times; index += 1) await new Promise(resolve => setImmediate(resolve))
+}
 
 const postgres = {
-  name: 'postgres', kind: 'mcp', description: 'Inspect schemas', transport: 'stdio', command: 'npx',
-  args: ['server-postgres', '$MOON_BOT_SECRET_POSTGRES_URL'], env: {}, headers: {}, approved: true, items: [],
+  name: 'postgres',
+  kind: 'mcp',
+  description: 'Inspect schemas',
+  transport: 'stdio',
+  command: 'npx',
+  args: ['server-postgres', '$MOON_BOT_SECRET_POSTGRES_URL'],
+  env: {},
+  headers: {},
+  approved: true,
+  items: [],
 }
-const guide = { name: 'guide', kind: 'skill', description: 'How we write', content: 'Do it.', approved: true, items: [] }
+const guide = {
+  name: 'guide',
+  kind: 'skill',
+  description: 'How we write',
+  content: 'Do it.',
+  approved: true,
+  items: [],
+}
 const team = { name: 'team', kind: 'pack', description: 'Team pack', items: ['postgres', 'guide'], approved: true }
 const bots = [
   { id: 'chief', name: 'Chief', capabilities: ['postgres', 'team'] },
   { id: 'writer', name: 'Writer', capabilities: [] },
 ]
 const actions = () => ({
-  saveCapability: async () => true, deleteCapability: async () => true,
-  approveCapability: async () => true, setBotCapability: async () => true,
-  retryCapability: async () => true, openSettings: () => {},
+  saveCapability: async () => true,
+  deleteCapability: async () => true,
+  approveCapability: async () => true,
+  setBotCapability: async () => true,
+  retryCapability: async () => true,
+  openSettings: () => {},
 })
 
 test('the empty library says what to do next and both actions navigate', () => {
   reset()
   const opened: string[] = []
-  const props = { roster: { capabilities: [], bots: [], secrets: [] }, actions: { ...actions(), openSettings: (page: string) => opened.push(page) }, run: async () => true }
+  const props = {
+    roster: { capabilities: [], bots: [], secrets: [] },
+    actions: { ...actions(), openSettings: (page: string) => opened.push(page) },
+    run: async () => true,
+  }
   const tree = render(CapabilitiesPage, props)
   assert.match(textOf(tree), /No capabilities yet/)
   assert.match(textOf(tree), /Install one from the connector market/)
@@ -137,23 +193,35 @@ test('the library groups by type, shows key readiness and the live state per Bot
   reset()
   let tree = render(CapabilitiesPage, {
     roster: {
-      capabilities: [postgres, guide, team], bots, secrets: [],
+      capabilities: [postgres, guide, team],
+      bots,
+      secrets: [],
       capabilityStatuses: { chief: { postgres: { state: 'ready' } }, writer: {} },
       capabilityTools: { postgres: ['mcp__postgres__query'] },
     },
-    actions: actions(), run: async () => true,
+    actions: actions(),
+    run: async () => true,
   })
   assert.match(textOf(tree), /MCP servers/)
   assert.match(textOf(tree), /Skills/)
   assert.match(textOf(tree), /Packs/)
   assert.match(textOf(tree), /Missing POSTGRES_URL/)
   assert.match(textOf(tree), /Ready for Chief/)
-  const guideSummary = nodes(tree, node => node.props.className === 'bt-cap-summary').find(node => textOf(node).includes('guide'))
+  const guideSummary = nodes(tree, node => node.props.className === 'bt-cap-summary').find(node =>
+    textOf(node).includes('guide'),
+  )
   assert.ok(guideSummary)
   ;(guideSummary?.props.onClick as () => void)()
   tree = rerender(CapabilitiesPage, {
-    roster: { capabilities: [postgres, guide, team], bots, secrets: [], capabilityStatuses: { chief: { postgres: { state: 'ready' } }, writer: {} }, capabilityTools: { postgres: ['mcp__postgres__query'] } },
-    actions: actions(), run: async () => true,
+    roster: {
+      capabilities: [postgres, guide, team],
+      bots,
+      secrets: [],
+      capabilityStatuses: { chief: { postgres: { state: 'ready' } }, writer: {} },
+      capabilityTools: { postgres: ['mcp__postgres__query'] },
+    },
+    actions: actions(),
+    run: async () => true,
   })
   assert.match(textOf(tree), /Instructions for the Bot/)
   assert.ok(find(tree, node => node.props.className === 'bt-market-search'))
@@ -161,14 +229,20 @@ test('the library groups by type, shows key readiness and the live state per Bot
 
 test('search narrows the rows and a miss clears the filters', () => {
   reset()
-  const props = { roster: { capabilities: [postgres, guide, team], bots, secrets: [] }, actions: actions(), run: async () => true }
+  const props = {
+    roster: { capabilities: [postgres, guide, team], bots, secrets: [] },
+    actions: actions(),
+    run: async () => true,
+  }
   let tree = render(CapabilitiesPage, props)
   const input = find(tree, node => node.props.className === 'bt-market-search-input')
   assert.ok(input)
   ;(input?.props.onChange as (event: unknown) => void)({ target: { value: 'schemas' } })
   tree = rerender(CapabilitiesPage, props)
   assert.match(textOf(tree), /Showing 1 of 3/)
-  ;(find(tree, node => node.props.className === 'bt-market-search-input')?.props.onChange as (event: unknown) => void)({ target: { value: 'nothing-matches' } })
+  ;(find(tree, node => node.props.className === 'bt-market-search-input')?.props.onChange as (event: unknown) => void)({
+    target: { value: 'nothing-matches' },
+  })
   tree = rerender(CapabilitiesPage, props)
   assert.match(textOf(tree), /No capabilities match/)
   const clear = nodes(tree, node => node.type === 'button').find(node => textOf(node) === 'Clear filters')
@@ -183,11 +257,19 @@ test('a row opens into description, tools and usage, and delete asks first with 
   const deleted: string[] = []
   const props = {
     roster: {
-      capabilities: [postgres], bots, secrets: [{ name: 'POSTGRES_URL' }],
+      capabilities: [postgres],
+      bots,
+      secrets: [{ name: 'POSTGRES_URL' }],
       capabilityStatuses: { chief: { postgres: { state: 'error', error: 'ECONNREFUSED' } } },
       capabilityTools: { postgres: ['mcp__postgres__query', 'mcp__postgres__list'] },
     },
-    actions: { ...actions(), deleteCapability: async (name: string) => { deleted.push(name); return true } },
+    actions: {
+      ...actions(),
+      deleteCapability: async (name: string) => {
+        deleted.push(name)
+        return true
+      },
+    },
     run: async () => true,
   }
   let tree = render(CapabilitiesPage, props)
@@ -215,9 +297,21 @@ test('approving a local command is optimistic and rolls back when the host refus
   reset()
   const local = { ...postgres, approved: false }
   let tree = render(CapabilityRow, {
-    item: local, health: { state: 'needs-approval', using: bots.slice(0, 1) }, keys: { total: 0, missing: [] }, tools: [],
-    expanded: true, confirming: false, busy: false,
-    onExpand() {}, onEdit() {}, onDelete() {}, onCancelDelete() {}, onApprove() {}, onRetry() {}, onOpenSecrets() {}, onOpenBots() {},
+    item: local,
+    health: { state: 'needs-approval', using: bots.slice(0, 1) },
+    keys: { total: 0, missing: [] },
+    tools: [],
+    expanded: true,
+    confirming: false,
+    busy: false,
+    onExpand() {},
+    onEdit() {},
+    onDelete() {},
+    onCancelDelete() {},
+    onApprove() {},
+    onRetry() {},
+    onOpenSecrets() {},
+    onOpenBots() {},
   })
   assert.match(textOf(tree), /waits for your approval/)
   assert.ok(nodes(tree, node => node.type === 'button').some(node => textOf(node) === 'Allow'))
@@ -226,15 +320,29 @@ test('approving a local command is optimistic and rolls back when the host refus
 test('a Bot switch flips at once, shows it is saving, and rolls back on failure', async () => {
   reset()
   let finish: (ok: boolean) => void = () => {}
-  const run = () => new Promise<boolean>(resolve => { finish = resolve })
-  const switched: { name: string, on: boolean }[] = []
-  const SwitchRow = (props: Record<string, unknown>) => ({ type: 'button', props: { ...props, onClick: () => props.onChange(!props.on) } })
+  const run = () =>
+    new Promise<boolean>(resolve => {
+      finish = resolve
+    })
+  const switched: { name: string; on: boolean }[] = []
+  const SwitchRow = (props: Record<string, unknown>) => ({
+    type: 'button',
+    props: { ...props, onClick: () => props.onChange(!props.on) },
+  })
   const Card = (props: Record<string, unknown>) => ({ type: 'div', props: { children: props.children } })
   const props = {
     bot: { id: 'chief', capabilities: [] as string[] },
     roster: { capabilities: [postgres], bots, capabilityStatuses: {} },
-    actions: { ...actions(), setBotCapability: async (_bot: string, name: string, on: boolean) => { switched.push({ name, on }); return true } },
-    run, Card: Card as unknown as React.ComponentType<Record<string, unknown>>, SwitchRow: SwitchRow as unknown as React.ComponentType<Record<string, unknown>>,
+    actions: {
+      ...actions(),
+      setBotCapability: async (_bot: string, name: string, on: boolean) => {
+        switched.push({ name, on })
+        return true
+      },
+    },
+    run,
+    Card: Card as unknown as React.ComponentType<Record<string, unknown>>,
+    SwitchRow: SwitchRow as unknown as React.ComponentType<Record<string, unknown>>,
   }
   let tree = render(BotCapabilitiesCard, props)
   let row = find(tree, node => node.props.label === 'postgres')
@@ -257,8 +365,14 @@ test('a Bot switch flips at once, shows it is saving, and rolls back on failure'
 test('a narrow viewport renders the same page without a crash', () => {
   reset()
   const tree = render(CapabilitiesPage, {
-    roster: { capabilities: [postgres, guide, team], bots, secrets: [], capabilityTools: { postgres: ['mcp__postgres__query'] } },
-    actions: actions(), run: async () => true,
+    roster: {
+      capabilities: [postgres, guide, team],
+      bots,
+      secrets: [],
+      capabilityTools: { postgres: ['mcp__postgres__query'] },
+    },
+    actions: actions(),
+    run: async () => true,
   })
   assert.ok(find(tree, node => node.props.className === 'bt-cap-head'))
   assert.equal(nodes(tree, node => node.props.className === 'bt-cap-row').length, 3)

@@ -35,7 +35,7 @@ Electron 应用：主进程、窗口、服务子进程、首次启动、搬移�
 
 ## 验证
 
-- `pnpm test`（`test/*.test.mjs`）、`pnpm run typecheck`（主进程 + ui 两个 tsconfig）和 `pnpm run lint`（oxlint）必须绿；根上 `pnpm run check:static` 会覆盖本包；打包后检查用 `pnpm run check-packed`，更新检查用 [`scripts/check-update.mjs`](scripts/check-update.mjs)。
+- `pnpm test`（`test/*.test.mjs`）、`pnpm run typecheck`（主进程 + ui 两个 tsconfig）和 `pnpm run lint`（oxlint）必须绿；根上 `pnpm run check:static`（含 Biome `format:check`）会覆盖本包；打包后检查用 `pnpm run check-packed`，更新检查用 [`scripts/check-update.mjs`](scripts/check-update.mjs)。
 - 界面改动用 dev 实例：`pnpm start`（一次性数据文件夹 + `../../packages/core/dev/mock-llm.ts`）或 bench，在窗口里真实点；不要拿安装包当界面验证。截图辅助用 [`scripts/shot.mjs`](scripts/shot.mjs)。
 - `test/` 覆盖数据搬移（一次性文件夹）、更新器、窗口外框参数、lockfile 依赖与版本一致性；改这些行为时在同一 PR 里补测试。
 - 动了 IPC、窗口安全选项、数据搬移或更新路径，要在同一 PR 里补测试；这些是边界，不靠肉眼。

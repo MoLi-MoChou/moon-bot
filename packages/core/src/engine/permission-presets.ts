@@ -20,9 +20,22 @@ export interface PresetOption {
 export type PresetCeiling = 0 | 1 | 2 | 3 | 4
 
 export const PRESETS: readonly PresetOption[] = [
-  { value: 'read-only', name: 'Read only', description: 'Reads its own chats, the team list and its memory. Anything that changes something asks.' },
-  { value: 'workspace-write', name: 'Workspace', description: 'Also writes in its own folders, messages other Bots and runs its tools within the daily budgets. Destructive calls ask.' },
-  { value: 'danger-full-access', name: 'Full access', description: 'Runs every tool within the policy budgets. Irreversible calls still ask once a budget is spent.' },
+  {
+    value: 'read-only',
+    name: 'Read only',
+    description: 'Reads its own chats, the team list and its memory. Anything that changes something asks.',
+  },
+  {
+    value: 'workspace-write',
+    name: 'Workspace',
+    description:
+      'Also writes in its own folders, messages other Bots and runs its tools within the daily budgets. Destructive calls ask.',
+  },
+  {
+    value: 'danger-full-access',
+    name: 'Full access',
+    description: 'Runs every tool within the policy budgets. Irreversible calls still ask once a budget is spent.',
+  },
 ]
 
 /** Without a pick, a Bot gets this: it can work, and nothing irreversible runs unasked. */
@@ -54,4 +67,4 @@ export const ceilingOf = (name: string | undefined): PresetCeiling => {
  * the user even though the daily budget would have let it run.
  */
 export const gateOfPreset = (name: string | undefined, level: number): 'within' | 'ask' =>
-  (level <= ceilingOf(name) ? 'within' : 'ask')
+  level <= ceilingOf(name) ? 'within' : 'ask'

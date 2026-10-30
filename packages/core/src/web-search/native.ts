@@ -42,7 +42,7 @@ export const AUTH_STYLES: Readonly<Record<AuthStyle, (key: string) => Record<str
 }
 // One trailing /v1 belongs to the root, as in the host's DeepSeek adapter and pi-ai's model listing.
 const messagesRoot = (base: string): string =>
-  (new URL(base).pathname.replace(/\/+$/, '').endsWith('/v1') ? trimSlash(base) : `${trimSlash(base)}/v1`)
+  new URL(base).pathname.replace(/\/+$/, '').endsWith('/v1') ? trimSlash(base) : `${trimSlash(base)}/v1`
 
 // Bounds what an endpoint that ignores the search tool can cost, while leaving a thinking model
 // room to reach the search: the host's own DeepSeek search uses the same cap.
@@ -79,7 +79,9 @@ export const PROTOCOL_SEARCHES = {
     name: 'OpenAI Responses web_search tool',
     url: base => `${trimSlash(base)}/responses`,
     auth: bearer,
-    request: ({ model, query }) => ({ body: { model, input: PROMPT(query), tools: [{ type: 'web_search' }], max_output_tokens: OUTPUT_CAP } }),
+    request: ({ model, query }) => ({
+      body: { model, input: PROMPT(query), tools: [{ type: 'web_search' }], max_output_tokens: OUTPUT_CAP },
+    }),
     read: readResponses,
   },
   gemini: {
@@ -87,7 +89,11 @@ export const PROTOCOL_SEARCHES = {
     url: (base, model) => `${trimSlash(base)}/models/${encodeURIComponent(model)}:generateContent`,
     auth: key => ({ 'x-goog-api-key': key }),
     request: ({ query }) => ({
-      body: { contents: [{ role: 'user', parts: [{ text: PROMPT(query) }] }], tools: [{ google_search: {} }], generationConfig: { maxOutputTokens: OUTPUT_CAP } },
+      body: {
+        contents: [{ role: 'user', parts: [{ text: PROMPT(query) }] }],
+        tools: [{ google_search: {} }],
+        generationConfig: { maxOutputTokens: OUTPUT_CAP },
+      },
     }),
     read: readGemini,
   },
@@ -122,16 +128,43 @@ export interface SearchApi {
  */
 export const SEARCH_APIS: readonly SearchApi[] = Object.freeze([
   // docs.ollama.com/capabilities/web-search
-  { id: 'ollama', name: 'Ollama web search API', hosts: ['ollama.com'], path: '/api/web_search', maxResults: 10, body: { query: '$query', max_results: '$maxResults' } },
+  {
+    id: 'ollama',
+    name: 'Ollama web search API',
+    hosts: ['ollama.com'],
+    path: '/api/web_search',
+    maxResults: 10,
+    body: { query: '$query', max_results: '$maxResults' },
+  },
   // platform.kimi.ai; an empty result is not billed.
-  { id: 'kimi', name: 'Kimi search API', hosts: ['api.moonshot.ai', 'api.moonshot.cn'], path: '/v1/tools/search', maxResults: 20, body: { text_query: '$query', limit: '$maxResults', timeout_seconds: 30 } },
+  {
+    id: 'kimi',
+    name: 'Kimi search API',
+    hosts: ['api.moonshot.ai', 'api.moonshot.cn'],
+    path: '/v1/tools/search',
+    maxResults: 20,
+    body: { text_query: '$query', limit: '$maxResults', timeout_seconds: 30 },
+  },
   // docs.bigmodel.cn; the API rejects queries over 70 characters.
-  { id: 'zhipu', name: 'Zhipu web search API', hosts: ['open.bigmodel.cn', 'api.z.ai'], path: '/api/paas/v4/web_search', maxResults: 50, maxQueryChars: 70, body: { search_query: '$query', search_engine: 'search_std', count: '$maxResults' } },
+  {
+    id: 'zhipu',
+    name: 'Zhipu web search API',
+    hosts: ['open.bigmodel.cn', 'api.z.ai'],
+    path: '/api/paas/v4/web_search',
+    maxResults: 50,
+    maxQueryChars: 70,
+    body: { search_query: '$query', search_engine: 'search_std', count: '$maxResults' },
+  },
   // MiMo searches only through this Chat Completions plugin tool, once the Web Search plugin is
   // enabled for the key. Each keyword is one billed search, so one keyword per query; the answer
   // text is discarded, so it stays short and without thinking.
   {
-    id: 'mimo', name: 'MiMo web_search plugin', hosts: ['xiaomimimo.com', '*.xiaomimimo.com'], path: '/v1/chat/completions', auth: ['bearer', 'api-key'], maxResults: 5,
+    id: 'mimo',
+    name: 'MiMo web_search plugin',
+    hosts: ['xiaomimimo.com', '*.xiaomimimo.com'],
+    path: '/v1/chat/completions',
+    auth: ['bearer', 'api-key'],
+    maxResults: 5,
     body: {
       model: '$model',
       messages: [{ role: 'user', content: '$query' }],
@@ -144,10 +177,15 @@ export const SEARCH_APIS: readonly SearchApi[] = Object.freeze([
 ])
 
 const hostMatches = (patterns: readonly string[], host: string): boolean =>
-  patterns.some(pattern => (pattern.startsWith('*.') ? host.endsWith(pattern.slice(1)) : host === pattern.toLowerCase()))
+  patterns.some(pattern =>
+    pattern.startsWith('*.') ? host.endsWith(pattern.slice(1)) : host === pattern.toLowerCase(),
+  )
 const fill = (template: unknown, values: Readonly<Record<string, unknown>>): unknown => {
   if (Array.isArray(template)) return template.map(item => fill(item, values))
-  if (isRecord(template)) return Object.fromEntries(Object.entries(template).map(([key, value]): [string, unknown] => [key, fill(value, values)]))
+  if (isRecord(template))
+    return Object.fromEntries(
+      Object.entries(template).map(([key, value]): [string, unknown] => [key, fill(value, values)]),
+    )
   return typeof template === 'string' && Object.hasOwn(values, template) ? values[template] : template
 }
 
@@ -190,7 +228,16 @@ function declaredCandidate(api: SearchApi, origin: string, model: string | undef
 
 function protocolCandidate(id: ProtocolId, base: string, model: string): Candidate {
   const shape = PROTOCOL_SEARCHES[id]
-  return { id, guessed: true, name: shape.name, url: shape.url(base, model), model, auth: shape.auth, request: call => shape.request({ ...call, model }), read: shape.read }
+  return {
+    id,
+    guessed: true,
+    name: shape.name,
+    url: shape.url(base, model),
+    model,
+    auth: shape.auth,
+    request: call => shape.request({ ...call, model }),
+    read: shape.read,
+  }
 }
 
 /**
@@ -198,7 +245,10 @@ function protocolCandidate(id: ProtocolId, base: string, model: string): Candida
  * (no model call), then the standard search tool of its protocol.
  * @returns `{ candidates }`, with `reason` when there is nothing to try.
  */
-export function planNative(route: Route, searchApis: readonly SearchApi[] = SEARCH_APIS): { readonly candidates: readonly Candidate[]; readonly reason?: string } {
+export function planNative(
+  route: Route,
+  searchApis: readonly SearchApi[] = SEARCH_APIS,
+): { readonly candidates: readonly Candidate[]; readonly reason?: string } {
   const base = httpUrl(route.baseURL)
   if (base === undefined) return { candidates: [], reason: `route "${route.provider}" has no known endpoint` }
   const url = new URL(base)
@@ -210,13 +260,14 @@ export function planNative(route: Route, searchApis: readonly SearchApi[] = SEAR
     const candidate = declaredCandidate(api, url.origin, model)
     if (candidate !== undefined) candidates.push(candidate)
   }
-  const shapes = route.api === undefined ? UNKNOWN_PROTOCOL : BY_PROTOCOL[route.api] ?? []
+  const shapes = route.api === undefined ? UNKNOWN_PROTOCOL : (BY_PROTOCOL[route.api] ?? [])
   if (model !== undefined) for (const id of shapes) candidates.push(protocolCandidate(id, base, model))
   if (candidates.length > 0) return { candidates }
   return {
     candidates,
-    reason: model === undefined && shapes.length > 0
-      ? `route "${route.provider}" has no current model to search with`
-      : `route "${route.provider}" speaks ${route.api}, which has no standard search tool, and ${url.host} declares no search API`,
+    reason:
+      model === undefined && shapes.length > 0
+        ? `route "${route.provider}" has no current model to search with`
+        : `route "${route.provider}" speaks ${route.api}, which has no standard search tool, and ${url.host} declares no search API`,
   }
 }

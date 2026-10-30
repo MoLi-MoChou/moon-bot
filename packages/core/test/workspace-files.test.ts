@@ -9,7 +9,7 @@ import { install, isInside, mimeOf, readForDownload, zip } from '../src/host/wor
 import { formatBytes, mediaKind, typeLabel } from '../src/client/files-panel.ts'
 import type { HostRuntime } from '../src/host/runtime.js'
 
-const folder = (t) => {
+const folder = t => {
   const dir = mkdtempSync(join(tmpdir(), 'moon-files-'))
   t.after(() => rmSync(dir, { recursive: true, force: true }))
   return dir
@@ -36,7 +36,7 @@ function unzip(buffer) {
   return out
 }
 
-test('a folder downloads as a zip with every file and empty folder in it', async (t) => {
+test('a folder downloads as a zip with every file and empty folder in it', async t => {
   const dir = folder(t)
   mkdirSync(join(dir, 'proj', 'src'), { recursive: true })
   mkdirSync(join(dir, 'proj', 'empty'))
@@ -51,22 +51,40 @@ test('a folder downloads as a zip with every file and empty folder in it', async
   assert.ok('proj/empty/' in entries)
 })
 
-test('the zip opens with the system unzip', { skip: (() => { try { execFileSync('unzip', ['-v']); return false } catch { return 'no unzip' } })() }, (t) => {
+test('the zip opens with the system unzip', {
+  skip: (() => {
+    try {
+      execFileSync('unzip', ['-v'])
+      return false
+    } catch {
+      return 'no unzip'
+    }
+  })(),
+}, t => {
   const dir = folder(t)
-  writeFileSync(join(dir, 'z.zip'), zip([{ name: 'x/one.txt', data: Buffer.from('1') }, { name: 'x/two.bin', data: Buffer.alloc(5000, 7) }]))
+  writeFileSync(
+    join(dir, 'z.zip'),
+    zip([
+      { name: 'x/one.txt', data: Buffer.from('1') },
+      { name: 'x/two.bin', data: Buffer.alloc(5000, 7) },
+    ]),
+  )
   const listing = execFileSync('unzip', ['-t', join(dir, 'z.zip')]).toString()
   assert.match(listing, /No errors detected/)
 })
 
-test('a file downloads with its name, type and bytes', async (t) => {
+test('a file downloads with its name, type and bytes', async t => {
   const dir = folder(t)
   writeFileSync(join(dir, 'tone.mp3'), Buffer.from([1, 2, 3]))
   const file = await readForDownload(join(dir, 'tone.mp3'))
-  assert.deepEqual({ name: file.name, mime: file.mime, size: file.size }, { name: 'tone.mp3', mime: 'audio/mpeg', size: 3 })
+  assert.deepEqual(
+    { name: file.name, mime: file.mime, size: file.size },
+    { name: 'tone.mp3', mime: 'audio/mpeg', size: 3 },
+  )
   assert.deepEqual([...Buffer.from(file.data, 'base64')], [1, 2, 3])
 })
 
-test('only files inside the team\'s folders are served, symlinks included', async (t) => {
+test("only files inside the team's folders are served, symlinks included", async t => {
   const dir = folder(t)
   const work = join(dir, 'work')
   const outside = join(dir, 'secret.txt')
@@ -76,13 +94,22 @@ test('only files inside the team\'s folders are served, symlinks included', asyn
   try {
     symlinkSync(outside, join(work, 'link.txt'))
   } catch (error) {
-    if (process.platform === 'win32' && error && typeof error === 'object' && 'code' in error && error.code === 'EPERM') {
+    if (
+      process.platform === 'win32' &&
+      error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      error.code === 'EPERM'
+    ) {
       t.skip('Windows symlink privilege is not enabled')
       return
     }
     throw error
   }
-  const rt = { ctx: { workspaceRegistry: { list: () => [{ path: work }] } }, state: { bots: {}, rooms: {} } } as unknown as Omit<HostRuntime, 'workspaceDownload' | 'workspaceDescribe'> & {
+  const rt = {
+    ctx: { workspaceRegistry: { list: () => [{ path: work }] } },
+    state: { bots: {}, rooms: {} },
+  } as unknown as Omit<HostRuntime, 'workspaceDownload' | 'workspaceDescribe'> & {
     workspaceDownload(path: string): Promise<{ data: string }>
     workspaceDescribe(path: string): Promise<{ size: number }>
   }

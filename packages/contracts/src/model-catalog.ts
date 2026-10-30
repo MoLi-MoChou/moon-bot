@@ -47,11 +47,14 @@ export function bareModelId(id: string): string {
 }
 
 /** Parses explicit context window mark in brackets (e.g. 'claude-opus-5[1m]' -> window: 1000000). */
-export function parseWindowMark(id: string): { base: string, window?: number } {
+export function parseWindowMark(id: string): { base: string; window?: number } {
   if (!id.endsWith(']')) return { base: id }
   const idx = id.lastIndexOf('[')
   if (idx <= 0) return { base: id }
-  const mark = id.slice(idx + 1, -1).trim().toLowerCase()
+  const mark = id
+    .slice(idx + 1, -1)
+    .trim()
+    .toLowerCase()
   const match = /^(\d+(?:\.\d+)?)\s*([km])?$/i.exec(mark)
   if (!match) return { base: id }
   const num = parseFloat(match[1] ?? '0')

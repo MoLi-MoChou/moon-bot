@@ -29,13 +29,15 @@ function open(saved) {
   })
   let route
   const register = ctx.connection.fetch.register
-  ctx.connection.fetch.register = (options) => {
+  ctx.connection.fetch.register = options => {
     route = options
     return register(options)
   }
   apply(ctx, { home })
   const call = async (endpoint, payload) => {
-    const response = await route.fetch(new Request('http://localhost/api/bot', { method: 'POST', body: JSON.stringify({ endpoint, payload }) }))
+    const response = await route.fetch(
+      new Request('http://localhost/api/bot', { method: 'POST', body: JSON.stringify({ endpoint, payload }) }),
+    )
     return response.json()
   }
   const stop = async () => {
@@ -45,9 +47,19 @@ function open(saved) {
   return { call, stop, home }
 }
 
-const savedTeam = prefs => ({ version: 1, mainBotIds: [], bots: {}, rooms: {}, exchanges: [], exchangeTurns: {}, questions: {}, prefs, revision: 3 })
+const savedTeam = prefs => ({
+  version: 1,
+  mainBotIds: [],
+  bots: {},
+  rooms: {},
+  exchanges: [],
+  exchangeTurns: {},
+  questions: {},
+  prefs,
+  revision: 3,
+})
 
-test('a team saved with the legacy mono theme opens with the grok theme', async (t) => {
+test('a team saved with the legacy mono theme opens with the grok theme', async t => {
   const { call, stop, home } = open(savedTeam({ theme: 'mono', accent: '#123456' }))
   t.after(stop)
   const team = (await call('state', {})).value
@@ -55,7 +67,7 @@ test('a team saved with the legacy mono theme opens with the grok theme', async 
   assert.equal(JSON.parse(readFileSync(join(home, 'state.json'), 'utf8')).prefs.theme, 'grok')
 })
 
-test('a team saved with a current theme keeps it', async (t) => {
+test('a team saved with a current theme keeps it', async t => {
   const { call, stop } = open(savedTeam({ theme: 'claude' }))
   t.after(stop)
   assert.equal((await call('state', {})).value.prefs.theme, 'claude')
@@ -65,12 +77,30 @@ const teamWithColors = () => ({
   ...savedTeam({}),
   mainBotIds: ['m1'],
   bots: {
-    m1: { id: 'm1', sessionId: 'm1', name: 'Chief', role: 'Chief of Staff', lab: 'deepseek', instructions: '', createdAt: 1, color: 'kimi' },
-    b2: { id: 'b2', sessionId: 'b2', name: 'Writer', role: 'Writer', lab: 'deepseek', instructions: '', createdAt: 2, color: 'violet' },
+    m1: {
+      id: 'm1',
+      sessionId: 'm1',
+      name: 'Chief',
+      role: 'Chief of Staff',
+      lab: 'deepseek',
+      instructions: '',
+      createdAt: 1,
+      color: 'kimi',
+    },
+    b2: {
+      id: 'b2',
+      sessionId: 'b2',
+      name: 'Writer',
+      role: 'Writer',
+      lab: 'deepseek',
+      instructions: '',
+      createdAt: 2,
+      color: 'violet',
+    },
   },
 })
 
-test('Bots saved with legacy color ids open with the renamed colors', async (t) => {
+test('Bots saved with legacy color ids open with the renamed colors', async t => {
   const { call, stop, home } = open(teamWithColors())
   t.after(stop)
   const colors = Object.fromEntries((await call('state', {})).value.bots.map(bot => [bot.id, bot.color]))
@@ -78,7 +108,7 @@ test('Bots saved with legacy color ids open with the renamed colors', async (t) 
   assert.equal(JSON.parse(readFileSync(join(home, 'state.json'), 'utf8')).bots.m1.color, 'charcoal')
 })
 
-test('a legacy color id in a color change becomes the renamed color', async (t) => {
+test('a legacy color id in a color change becomes the renamed color', async t => {
   const { call, stop } = open(teamWithColors())
   t.after(stop)
   assert.equal((await call('update-bot', { id: 'b2', color: 'qwen' })).ok, true)

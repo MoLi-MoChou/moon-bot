@@ -34,7 +34,14 @@ export interface ReferenceSpan {
 // The name a group log line goes by. A Bot named before such names were refused still
 // never reads as the user.
 export const speakerOf = (line: LogLineLike): string | null | undefined =>
-  line.botId !== undefined && USER_NAMES.includes(String(line.who ?? '').trim().toLowerCase()) ? `Bot "${line.who}"` : line.who
+  line.botId !== undefined &&
+  USER_NAMES.includes(
+    String(line.who ?? '')
+      .trim()
+      .toLowerCase(),
+  )
+    ? `Bot "${line.who}"`
+    : line.who
 
 // A letter, digit, "_" or "-" after a name means a longer word ("@Mi" in "@MiniMax"),
 // and "/", "\" or a "." that goes on into a word mean a path: the host writes a file
@@ -46,10 +53,13 @@ const ADDRESS_BEFORE = /[a-z0-9_./]/i
 const LITERAL = /```[\s\S]*?(?:```|$)|`[^`\n]*`|\[[^\]\n]*\]\([^)\s]*(?:\s+(?:"[^"\n]*"|'[^'\n]*'))?\)/g
 
 const fitsAt = (text: string, at: number, word: string): boolean =>
-  text.slice(at, at + word.length).toLowerCase() === word.toLowerCase()
-  && !NAME_GOES_ON.test(text.slice(at + word.length))
-const overlaps = (spans: readonly { readonly start: number; readonly end: number }[], start: number, end: number): boolean =>
-  spans.some(span => start < span.end && span.start < end)
+  text.slice(at, at + word.length).toLowerCase() === word.toLowerCase() &&
+  !NAME_GOES_ON.test(text.slice(at + word.length))
+const overlaps = (
+  spans: readonly { readonly start: number; readonly end: number }[],
+  start: number,
+  end: number,
+): boolean => spans.some(span => start < span.end && span.start < end)
 
 // What a Bot may be named: something "@" can call without a second reading.
 export function nameProblem(name: string): string | undefined {
@@ -57,7 +67,8 @@ export function nameProblem(name: string): string | undefined {
   if (text === '') return 'A Bot needs a name'
   if (/[@`\r\n]/.test(text)) return 'A Bot name cannot contain @, ` or a line break'
   if (ALL_WORDS.includes(text.toLowerCase())) return `"${text}" calls everyone in a group, so it cannot be a Bot name`
-  if (USER_NAMES.includes(text.toLowerCase())) return `"${text}" stands for the user in a chat, so it cannot be a Bot name`
+  if (USER_NAMES.includes(text.toLowerCase()))
+    return `"${text}" stands for the user in a chat, so it cannot be a Bot name`
   return undefined
 }
 
@@ -70,7 +81,12 @@ export function referenceSpans(text: string, labels: readonly string[] = []): Re
     const mention = `@${label}`
     for (let at = text.indexOf(mention); at !== -1; at = text.indexOf(mention, at + 1)) {
       const end = at + mention.length
-      if ((at > 0 && ADDRESS_BEFORE.test(text[at - 1] ?? '')) || NAME_GOES_ON.test(text.slice(end)) || overlaps(spans, at, end)) continue
+      if (
+        (at > 0 && ADDRESS_BEFORE.test(text[at - 1] ?? '')) ||
+        NAME_GOES_ON.test(text.slice(end)) ||
+        overlaps(spans, at, end)
+      )
+        continue
       spans.push({ start: at, end, label })
       break
     }
@@ -87,7 +103,10 @@ export function mentionSpans(
 ): MentionSpan[] {
   const value = String(text ?? '')
   const skip: { readonly start: number; readonly end: number }[] = [
-    ...[...value.matchAll(LITERAL)].map(match => ({ start: match.index ?? 0, end: (match.index ?? 0) + (match[0] ?? '').length })),
+    ...[...value.matchAll(LITERAL)].map(match => ({
+      start: match.index ?? 0,
+      end: (match.index ?? 0) + (match[0] ?? '').length,
+    })),
     ...referenceSpans(value, references),
   ]
   const byLength = bots.filter(bot => bot?.name).sort((a, b) => b.name.length - a.name.length)

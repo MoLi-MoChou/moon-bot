@@ -12,7 +12,11 @@ import { runOnce, type RunDeps, type RunRequest } from './pipeline.ts'
 export interface SendDeps {
   /** Hands the message to the Bot's chat with the proactive source. */
   readonly send: (sessionId: string, text: string, source: ProactiveSource) => boolean
-  readonly record: (candidateId: string, decision: 'delivered' | 'quiet' | 'dropped' | 'delayed', reason?: string | null) => void
+  readonly record: (
+    candidateId: string,
+    decision: 'delivered' | 'quiet' | 'dropped' | 'delayed',
+    reason?: string | null,
+  ) => void
   /** Whether this Session can be spoken to right now. */
   readonly live: (sessionId: string) => boolean
 }
@@ -68,9 +72,18 @@ export async function deliverOnce(request: RunRequest, deps: RunDeps, send: Send
 }
 
 /** The delivery side, built from the host: live check and the followup hand-off. */
-export function senderFor(rt: HostRuntime, deliver: {
-  readonly hand: (sessionId: string, message: { readonly content: readonly { readonly type: 'text', readonly text: string }[], readonly source: ProactiveSource }) => boolean
-}): SendDeps['send'] {
+export function senderFor(
+  rt: HostRuntime,
+  deliver: {
+    readonly hand: (
+      sessionId: string,
+      message: {
+        readonly content: readonly { readonly type: 'text'; readonly text: string }[]
+        readonly source: ProactiveSource
+      },
+    ) => boolean
+  },
+): SendDeps['send'] {
   return (sessionId, text, source) => {
     if (!canDeliver(rt, sessionId)) return false
     return deliver.hand(sessionId, { content: [{ type: 'text', text }], source })

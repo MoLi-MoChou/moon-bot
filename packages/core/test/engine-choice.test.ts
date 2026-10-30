@@ -7,14 +7,34 @@ import { engineChoices, engineList, engineOf } from '../src/host/tools/engine-ch
 
 const catalogOf = (agents: readonly Record<string, unknown>[]) => ({ list: () => agents }) as never
 
-const ACP = { id: 'claude', label: 'Claude Code', command: 'claude', args: ['--acp'], key: 'claude', kind: 'acp', path: '/usr/local/bin/claude', version: '1.2' }
-const MISSING = { id: 'ghost', label: 'Ghost', command: 'ghost', args: [], key: 'ghost', kind: 'acp', reason: 'not on PATH' }
+const ACP = {
+  id: 'claude',
+  label: 'Claude Code',
+  command: 'claude',
+  args: ['--acp'],
+  key: 'claude',
+  kind: 'acp',
+  path: '/usr/local/bin/claude',
+  version: '1.2',
+}
+const MISSING = {
+  id: 'ghost',
+  label: 'Ghost',
+  command: 'ghost',
+  args: [],
+  key: 'ghost',
+  kind: 'acp',
+  reason: 'not on PATH',
+}
 
 test('the built-in engine always comes first and is always usable', () => {
   const choices = engineChoices(catalogOf([ACP]))
   assert.equal(choices[0]?.id, 'builtin')
   assert.equal(choices[0]?.selectable, true)
-  assert.deepEqual(choices.slice(1).map(choice => choice.id), ['claude'])
+  assert.deepEqual(
+    choices.slice(1).map(choice => choice.id),
+    ['claude'],
+  )
 })
 
 test('an engine discovery could not resolve is listed but not offered', () => {
@@ -37,7 +57,12 @@ test('a catalog engine becomes the engine the runner launches', () => {
   const catalog = catalogOf([ACP])
   const lookup = engineOf('claude', engineChoices(catalog), catalog)
   assert.equal(lookup.ok, true)
-  assert.deepEqual(lookup.ok ? lookup.engine : undefined, { kind: 'acp', command: 'claude', args: ['--acp'], key: 'claude' })
+  assert.deepEqual(lookup.ok ? lookup.engine : undefined, {
+    kind: 'acp',
+    command: 'claude',
+    args: ['--acp'],
+    key: 'claude',
+  })
   assert.equal(lookup.ok ? lookup.runtimeId : undefined, 'claude')
 })
 

@@ -15,7 +15,7 @@ test('the Bot is told it set this itself', () => {
   assert.match(text, /You set this earlier/)
 })
 
-test('it is told to say it in passing, in the user\'s language', () => {
+test("it is told to say it in passing, in the user's language", () => {
   const text = reminderText(task)
   assert.match(text, /one or two short sentences/)
   assert.match(text, /in their language/)
@@ -36,6 +36,6 @@ test('an empty note falls back to the title rather than saying nothing', () => {
   assert.match(text, /what you noted: Stand up/)
 })
 
-test('the title is still carried, for the Bot\'s own context', () => {
+test("the title is still carried, for the Bot's own context", () => {
   assert.match(reminderText(task), /更新线上环境/)
 })

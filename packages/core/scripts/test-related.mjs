@@ -17,11 +17,12 @@ const list = process.argv.includes('--list')
 const filesArg = process.argv.indexOf('--files')
 
 /** Every source file the import graph covers: the host, the engine and the tests. */
-const walk = (directory) => readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-  const full = join(directory, entry.name)
-  if (entry.isDirectory()) return /node_modules|dist|\.git/.test(full) ? [] : walk(full)
-  return /\.(ts|tsx)$/.test(entry.name) && !entry.name.endsWith('.d.ts') ? [full] : []
-})
+const walk = directory =>
+  readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
+    const full = join(directory, entry.name)
+    if (entry.isDirectory()) return /node_modules|dist|\.git/.test(full) ? [] : walk(full)
+    return /\.(ts|tsx)$/.test(entry.name) && !entry.name.endsWith('.d.ts') ? [full] : []
+  })
 
 /** The files git says changed: staged, unstaged and untracked. */
 function changedFromGit() {
@@ -43,7 +44,15 @@ const sources = [...walk(join(CORE, 'src')), ...walk(join(CORE, 'test'))]
 function resolveImport(from, specifier) {
   if (!specifier.startsWith('.')) return undefined
   const base = resolve(dirname(from), specifier)
-  for (const candidate of [base, `${base}.ts`, `${base}.tsx`, join(base, 'index.ts'), join(base, 'index.tsx'), base.replace(/\.js$/, '.ts'), base.replace(/\.js$/, '.tsx')]) {
+  for (const candidate of [
+    base,
+    `${base}.ts`,
+    `${base}.tsx`,
+    join(base, 'index.ts'),
+    join(base, 'index.tsx'),
+    base.replace(/\.js$/, '.ts'),
+    base.replace(/\.js$/, '.tsx'),
+  ]) {
     if (existsSync(candidate) && /\.(ts|tsx)$/.test(candidate)) return candidate
   }
   return undefined
@@ -62,7 +71,7 @@ for (const file of sources) {
   }
 }
 
-const isTest = (file) => file.startsWith(join(CORE, 'test')) && file.endsWith('.test.ts')
+const isTest = file => file.startsWith(join(CORE, 'test')) && file.endsWith('.test.ts')
 
 /** The tests that reach `start`, directly or through helpers and barrels. */
 function relatedTests(start) {
@@ -88,13 +97,19 @@ function byName(file) {
   const stem = /([^/\\]+)\.tsx?$/.exec(file)?.[1] ?? ''
   const tokens = stem.split(/[-_.]/).filter(token => token.length >= 4 && !GENERIC.has(token))
   if (tokens.length === 0) return []
-  return sources.filter(candidate => isTest(candidate)
-    && tokens.some(token => /([^/\\]+)\.test\.ts$/.exec(candidate)?.[1]?.includes(token) === true))
+  return sources.filter(
+    candidate =>
+      isTest(candidate) && tokens.some(token => /([^/\\]+)\.test\.ts$/.exec(candidate)?.[1]?.includes(token) === true),
+  )
 }
 
-const explicit = filesArg === -1
-  ? undefined
-  : (process.argv[filesArg + 1] ?? '').split(',').map(item => item.trim()).filter(item => item !== '')
+const explicit =
+  filesArg === -1
+    ? undefined
+    : (process.argv[filesArg + 1] ?? '')
+        .split(',')
+        .map(item => item.trim())
+        .filter(item => item !== '')
 
 let changed = explicit?.map(item => resolve(CORE, item))
 let error
@@ -103,7 +118,8 @@ if (changed === undefined) {
   changed = git.files
   error = git.error
 }
-changed = (changed ?? []).map(file => (file.endsWith('.tsx') ? file : file.replace(/\.(js|mjs)$/, '.ts')))
+changed = (changed ?? [])
+  .map(file => (file.endsWith('.tsx') ? file : file.replace(/\.(js|mjs)$/, '.ts')))
   .filter(file => existsSync(file))
 
 const tests = new Set()
@@ -115,7 +131,7 @@ for (const file of changed) {
 }
 const picked = [...tests].sort()
 
-const shown = (file) => relative(CORE, file).split('\\').join('/')
+const shown = file => relative(CORE, file).split('\\').join('/')
 if (changed.length === 0) {
   console.log(`test:related: no changed files${error === undefined ? '' : ` (${error})`}; run the full suite: npm test`)
   process.exit(0)
@@ -126,8 +142,13 @@ if (picked.length === 0) {
 }
 console.log(`test:related: ${changed.length} changed file(s) -> ${picked.length} test file(s):`)
 for (const file of picked) console.log(`  ${shown(file)}`)
-console.log('test:related: a shortcut only. A change is done when pnpm test, pnpm run typecheck and pnpm run lint pass.')
+console.log(
+  'test:related: a shortcut only. A change is done when pnpm test, pnpm run typecheck and pnpm run lint pass.',
+)
 if (list) process.exit(0)
 
-const run = spawnSync(process.execPath, ['--import', './test/harness-resolve.mjs', '--test', ...picked.map(shown)], { cwd: CORE, stdio: 'inherit' })
+const run = spawnSync(process.execPath, ['--import', './test/harness-resolve.mjs', '--test', ...picked.map(shown)], {
+  cwd: CORE,
+  stdio: 'inherit',
+})
 process.exit(run.status ?? 1)

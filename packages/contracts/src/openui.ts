@@ -32,7 +32,8 @@ interface Element {
   readonly children?: unknown
 }
 
-const isRecord = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value)
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === 'object' && !Array.isArray(value)
 const text = (value: unknown): string => (value === undefined || value === null ? '' : String(value))
 const textProp = (props: Record<string, unknown>, ...keys: readonly string[]): string => {
   for (const key of keys) {
@@ -65,7 +66,8 @@ export function lowerOpenUi(spec: OpenUiSpec): OpenUiResult {
   const elements = spec.elements
   const ids = Object.keys(elements)
   if (ids.length === 0) return { error: 'An OpenUI spec needs at least one element.' }
-  if (ids.length > MAX_ELEMENTS) return { error: `An OpenUI spec holds ${String(ids.length)} elements; the limit is ${MAX_ELEMENTS}.` }
+  if (ids.length > MAX_ELEMENTS)
+    return { error: `An OpenUI spec holds ${String(ids.length)} elements; the limit is ${MAX_ELEMENTS}.` }
   const root = typeof spec.root === 'string' && spec.root !== '' ? spec.root : (ids[0] as string)
   const seen = new Set<string>()
   const lowered = lower(root, elements, 1, seen)
@@ -73,17 +75,23 @@ export function lowerOpenUi(spec: OpenUiSpec): OpenUiResult {
   return { view: lowered.view }
 }
 
-function lower(id: string, elements: Record<string, unknown>, depth: number, seen: Set<string>): { view: WidgetView } | { error: string } {
+function lower(
+  id: string,
+  elements: Record<string, unknown>,
+  depth: number,
+  seen: Set<string>,
+): { view: WidgetView } | { error: string } {
   if (depth > MAX_DEPTH) return { error: `The spec nests deeper than ${MAX_DEPTH} levels.` }
   if (seen.has(id)) return { error: `The element "${id}" refers to itself.` }
   const element = elements[id]
   if (!isRecord(element)) return { error: `No element "${id}" in the spec.` }
   seen.add(id)
   const node = element as Element
-  const type = textProp(node.props as Record<string, unknown> ?? {}, 'type') || text(node.type)
+  const type = textProp((node.props as Record<string, unknown>) ?? {}, 'type') || text(node.type)
   const props = isRecord(node.props) ? node.props : {}
   const children = listOf(node.children).flatMap(child => {
-    const childId = typeof child === 'string' ? child : (isRecord(child) && typeof child.id === 'string' ? child.id : undefined)
+    const childId =
+      typeof child === 'string' ? child : isRecord(child) && typeof child.id === 'string' ? child.id : undefined
     if (childId === undefined) return []
     const lowered = lower(childId, elements, depth + 1, seen)
     return 'view' in lowered ? [lowered.view] : []
@@ -128,19 +136,32 @@ function lower(id: string, elements: Record<string, unknown>, depth: number, see
       const kept = columns.slice(0, 8)
       const rows = listOf(props.rows ?? props.data).flatMap(row => {
         if (!isRecord(row)) return []
-        return [kept.map(column => {
-          const cell = (row as Record<string, unknown>)[column.key]
-          return typeof cell === 'number' ? cell : text(cell)
-        })]
+        return [
+          kept.map(column => {
+            const cell = (row as Record<string, unknown>)[column.key]
+            return typeof cell === 'number' ? cell : text(cell)
+          }),
+        ]
       })
       if (kept.length === 0 || rows.length === 0) return { view: asText() }
       return { view: { type: 'table', columns: kept, rows: rows.slice(0, 50) } }
     }
     case 'Progress':
     case 'ProgressBar': {
-      const percent = typeof props.percent === 'number' ? props.percent : typeof props.value === 'number' ? props.value : Number(textProp(props, 'percent', 'value'))
+      const percent =
+        typeof props.percent === 'number'
+          ? props.percent
+          : typeof props.value === 'number'
+            ? props.value
+            : Number(textProp(props, 'percent', 'value'))
       if (!Number.isFinite(percent)) return { view: asText() }
-      return { view: { type: 'progress', percent, ...(textProp(props, 'label') !== '' ? { label: textProp(props, 'label') } : {}) } }
+      return {
+        view: {
+          type: 'progress',
+          percent,
+          ...(textProp(props, 'label') !== '' ? { label: textProp(props, 'label') } : {}),
+        },
+      }
     }
     case 'Actions':
     case 'Buttons':
@@ -150,21 +171,43 @@ function lower(id: string, elements: Record<string, unknown>, depth: number, see
       const options = listOf(props.options ?? props.actions ?? props.items).flatMap(option => {
         if (!isRecord(option)) return []
         const label = textProp(option, 'label', 'title', 'text')
-        return label === '' ? [] : [{ label, ...(textProp(option, 'description') !== '' ? { description: textProp(option, 'description') } : {}) }]
+        return label === ''
+          ? []
+          : [
+              {
+                label,
+                ...(textProp(option, 'description') !== '' ? { description: textProp(option, 'description') } : {}),
+              },
+            ]
       })
       if (options.length === 0) return { view: asText() }
       const id = textProp(props, 'id', 'name') || 'openui-actions'
-      return { view: { type: 'options', id, options: options.slice(0, 8), ...(props.multi === true ? { multi: true } : {}) } }
+      return {
+        view: { type: 'options', id, options: options.slice(0, 8), ...(props.multi === true ? { multi: true } : {}) },
+      }
     }
     case 'Form': {
       const fields = listOf(props.fields).flatMap(field => {
         if (!isRecord(field)) return []
         const fieldId = textProp(field, 'id', 'name')
         if (fieldId === '') return []
-        return [{ id: fieldId, label: textProp(field, 'label', 'title') || fieldId, ...(textProp(field, 'placeholder') !== '' ? { placeholder: textProp(field, 'placeholder') } : {}) }]
+        return [
+          {
+            id: fieldId,
+            label: textProp(field, 'label', 'title') || fieldId,
+            ...(textProp(field, 'placeholder') !== '' ? { placeholder: textProp(field, 'placeholder') } : {}),
+          },
+        ]
       })
       if (fields.length === 0) return { view: asText() }
-      return { view: { type: 'form', id: textProp(props, 'id', 'name') || 'openui-form', fields: fields.slice(0, 6), ...(textProp(props, 'submitLabel') !== '' ? { submitLabel: textProp(props, 'submitLabel') } : {}) } }
+      return {
+        view: {
+          type: 'form',
+          id: textProp(props, 'id', 'name') || 'openui-form',
+          fields: fields.slice(0, 6),
+          ...(textProp(props, 'submitLabel') !== '' ? { submitLabel: textProp(props, 'submitLabel') } : {}),
+        },
+      }
     }
     case 'Confirm': {
       return {

@@ -1,4 +1,4 @@
-import type { ConnectorCatalogEntry } from '../connector-catalog.ts';
+import type { ConnectorCatalogEntry } from '../connector-catalog.ts'
 
 export const INTEL_CONNECTORS: readonly ConnectorCatalogEntry[] = [
   {
@@ -70,7 +70,13 @@ export const INTEL_CONNECTORS: readonly ConnectorCatalogEntry[] = [
     command: 'npx',
     args: ['-y', 'wolfram-mcp'],
     env: { WOLFRAM_APP_ID: '$MOON_BOT_SECRET_WOLFRAM_APP_ID' },
-    secrets: [{ name: 'WOLFRAM_APP_ID', label: 'Wolfram Alpha App ID', url: 'https://developer.wolframalpha.com/portal/myapps' }],
+    secrets: [
+      {
+        name: 'WOLFRAM_APP_ID',
+        label: 'Wolfram Alpha App ID',
+        url: 'https://developer.wolframalpha.com/portal/myapps',
+      },
+    ],
     website: 'https://www.wolframalpha.com',
   },
   {
@@ -82,7 +88,9 @@ export const INTEL_CONNECTORS: readonly ConnectorCatalogEntry[] = [
     command: 'npx',
     args: ['-y', 'weather-mcp'],
     env: { OPENWEATHER_API_KEY: '$MOON_BOT_SECRET_OPENWEATHER_API_KEY' },
-    secrets: [{ name: 'OPENWEATHER_API_KEY', label: 'OpenWeatherMap API Key', url: 'https://home.openweathermap.org/api_keys' }],
+    secrets: [
+      { name: 'OPENWEATHER_API_KEY', label: 'OpenWeatherMap API Key', url: 'https://home.openweathermap.org/api_keys' },
+    ],
     website: 'https://openweathermap.org',
   },
-];
+]

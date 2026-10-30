@@ -5,7 +5,7 @@ import { PlusIcon, PeopleIcon, ArrowUpIcon } from './icons.tsx';
 import { AdminStar, BotMark } from './mark.tsx';
 import { SearchIcon } from './icons.tsx';
 import { useEscape, usePaneLeft } from './overlay-hooks.ts';
-import { EmptyState } from './empty-state.tsx';
+import { EmptyState } from './kit/index.ts';
 import { CreateBot } from './create-bot.tsx';
 import { QUICK_EDGES, useFlip, useGlide, useMorph } from './motion.tsx';
 import { t } from './i18n.ts';

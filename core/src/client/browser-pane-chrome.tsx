@@ -2,7 +2,7 @@
 import { createElement as h, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { BotMark } from './mark.tsx';
 import { reducedMotion } from './motion.tsx';
-import { EmptyState } from './empty-state.tsx';
+import { EmptyState } from './kit/index.ts';
 import { t } from './i18n.ts';
 import type { BrowserViewProps, FaviconProps, PanelPage, PanelStripProps, PanelView, } from './browser-pane-types.ts';
 import { DETAILS_MAX, DETAILS_WIDTH, EMPTY_PAGE, MIN_CHAT, MIN_WIDTH, SPRING_LEAD, SPRING_TRAIL, WIDTH_KEY, } from './browser-pane-const.ts';

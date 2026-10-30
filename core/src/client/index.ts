@@ -20,7 +20,7 @@ import { CONVERSATION_CSS, SHELL_CSS, installCompiledStyles } from './design/ind
 import { MOBILE_CSS } from './design/mobile.ts'
 import { DELIVER_CSS } from './deliver-cards-css.ts'
 import { quietly } from './diagnostics.ts'
-import { EMPTY_STATE_CSS } from './empty-state.tsx'
+import { EMPTY_STATE_CSS, SETTINGS_CHROME_CSS } from './kit/index.ts'
 import { ErrorToast, FEEDBACK_CSS } from './feedback.tsx'
 import { installFilesPanel, FILES_PANEL_CSS } from './files-panel.ts'
 import { HeaderPill } from './header.tsx'
@@ -173,7 +173,7 @@ export function apply(ctx: ClientContext): void {
     () => installCompiledStyles(SHELL_CSS, 'shell'),
     () => installCompiledStyles(SIDEBAR_CSS, 'sidebar'),
     () => installCompiledStyles(SECRET_CSS, 'secrets'),
-    () => installCompiledStyles(MODEL_CSS + FOLDER_CSS + ENGINE_CSS + BOT_SETTINGS_CSS + GROUP_SETTINGS_CSS + MARKET_CSS + CAPABILITY_CSS + RELAY_PAGE_CSS + TASKS_CSS, 'models'),
+    () => installCompiledStyles(MODEL_CSS + FOLDER_CSS + ENGINE_CSS + SETTINGS_CHROME_CSS + BOT_SETTINGS_CSS + GROUP_SETTINGS_CSS + MARKET_CSS + CAPABILITY_CSS + RELAY_PAGE_CSS + TASKS_CSS, 'models'),
     () => installCompiledStyles(USAGE_CSS, 'usage'),
     () => installCompiledStyles(SCHEDULE_CSS, 'schedules'),
     () => installCompiledStyles(FEEDBACK_CSS, 'feedback'),

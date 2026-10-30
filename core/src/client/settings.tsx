@@ -6,7 +6,7 @@ import { isMainOf } from './sources.ts';
 import { allThemes, resolveThemeId } from './themes.ts';
 import type { ThemeDefinition, ThemeMode } from './themes.ts';
 import { CloseIcon, ChevronLeftIcon, ChevronRightIcon, ClockIcon, ConnectorIcon, InfoIcon, LibraryIcon, PeopleIcon, RelayIcon, PlugIcon, PlusIcon, SlidersIcon, TasksIcon, SETTINGS_ICONS } from './icons.tsx';
-import { EmptyState } from './empty-state.tsx';
+import { EmptyState } from './kit/index.ts';
 import { AdminStar, BotAvatar, RoomAvatar } from './mark.tsx';
 import { useEscape } from './overlay-hooks.ts';
 import { BotSettingsForm } from './bot-settings.tsx';

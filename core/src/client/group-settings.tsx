@@ -2,7 +2,7 @@ import { createElement as h, useEffect, useState } from 'react';
 import { isMainOf } from './sources.ts';
 import { PlusIcon, ChevronRightIcon } from './icons.tsx';
 import { AdminStar, BotAvatar, BotMark, RoomAvatar } from './mark.tsx';
-import { Card, Row, InlineText, SwitchRow } from './bot-settings.tsx';
+import { Card, Row, InlineText, SwitchRow } from './kit/index.ts';
 import { Segmented } from './motion.tsx';
 import { FolderMenu } from './folder-menu.tsx';
 import { PermissionPicker } from './permission-picker.tsx';

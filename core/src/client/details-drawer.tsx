@@ -7,7 +7,7 @@ import { botState, BotMark, BotAvatar } from './mark.tsx';
 import { GlobeIcon, Favicon } from './browser-pane.tsx';
 import type { BrowserPagesHook, BrowserTabsHook, ForwardedHook, PanelPage, PanelPages, PanelTabs, PanelView } from './browser-pane.tsx';
 import { useEscape } from './overlay-hooks.ts';
-import { EmptyState } from './empty-state.tsx';
+import { EmptyState } from './kit/index.ts';
 import { BotSettingsForm } from './bot-settings.tsx';
 import { GroupSettingsForm, ROOM_MODES, roomSubtitle, shownMode } from './group-settings.tsx';
 import { ModelMenu, modelOf } from './model-menu.tsx';

@@ -1,6 +1,6 @@
 import { Fragment, createElement as h, useEffect, useRef, useState } from 'react';
 import type { TaskHold } from '../shared/rpc.ts';
-import { EmptyState } from './empty-state.tsx';
+import { EmptyState } from './kit/index.ts';
 import { t } from './i18n.ts';
 import { TasksIcon } from './icons.tsx';
 import { SPRING_SHAPE } from './motion.tsx';

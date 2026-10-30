@@ -1,7 +1,7 @@
 import { createElement as h, useState } from 'react';
 import { t } from './i18n.ts';
 import { ChevronRightIcon } from './icons.tsx';
-import { Card } from './bot-settings.tsx';
+import { Card } from './kit/index.ts';
 
 // Resetting a Bot (docs/plans/2026-10-29-reset-bot.md): four independent parts, and the
 // consequences listed before anything happens. Defaults to memory only, because that is

@@ -5,7 +5,7 @@ import { ABOUT_CSS } from '../../../core/src/client/about.tsx'
 import { BOT_SETTINGS_CSS } from '../../../core/src/client/bot-settings.tsx'
 import { BROWSER_CSS } from '../../../core/src/client/browser-pane-css.ts'
 import { WELCOME_CSS } from '../../../core/src/client/chat-welcome.tsx'
-import { EMPTY_STATE_CSS } from '../../../core/src/client/empty-state.tsx'
+import { EMPTY_STATE_CSS, SETTINGS_CHROME_CSS } from '../../../core/src/client/kit/index.ts'
 import { ENGINE_CSS } from '../../../core/src/client/engine-menu.tsx'
 import { FEEDBACK_CSS } from '../../../core/src/client/feedback.tsx'
 import { FILES_PANEL_CSS } from '../../../core/src/client/files-panel.ts'
@@ -46,7 +46,7 @@ export const SHEET_GROUPS: readonly SheetGroup[] = [
   { tag: 'conversation', css: CONVERSATION_CSS, parts: ['CONVERSATION_CSS'] },
   { tag: 'secrets', css: SECRET_CSS, parts: ['SECRET_CSS'] },
   { tag: 'providers', css: PROVIDERS_CSS, parts: ['PROVIDERS_CSS'] },
-  { tag: 'models', css: MODEL_CSS + FOLDER_CSS + ENGINE_CSS + BOT_SETTINGS_CSS + GROUP_SETTINGS_CSS + MARKET_CSS + CAPABILITY_CSS + RELAY_PAGE_CSS + TASKS_CSS, parts: ['MODEL_CSS', 'FOLDER_CSS', 'ENGINE_CSS', 'BOT_SETTINGS_CSS', 'GROUP_SETTINGS_CSS', 'MARKET_CSS', 'CAPABILITY_CSS', 'RELAY_PAGE_CSS', 'TASKS_CSS'] },
+  { tag: 'models', css: MODEL_CSS + FOLDER_CSS + ENGINE_CSS + SETTINGS_CHROME_CSS + BOT_SETTINGS_CSS + GROUP_SETTINGS_CSS + MARKET_CSS + CAPABILITY_CSS + RELAY_PAGE_CSS + TASKS_CSS, parts: ['MODEL_CSS', 'FOLDER_CSS', 'ENGINE_CSS', 'SETTINGS_CHROME_CSS', 'BOT_SETTINGS_CSS', 'GROUP_SETTINGS_CSS', 'MARKET_CSS', 'CAPABILITY_CSS', 'RELAY_PAGE_CSS', 'TASKS_CSS'] },
   { tag: 'usage', css: USAGE_CSS, parts: ['USAGE_CSS'] },
   { tag: 'schedules', css: SCHEDULE_CSS, parts: ['SCHEDULE_CSS'] },
   { tag: 'feedback', css: FEEDBACK_CSS, parts: ['FEEDBACK_CSS'] },

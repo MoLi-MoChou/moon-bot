@@ -4,32 +4,7 @@ import { createElement as h, useState } from 'react';
 import { t } from './i18n.ts';
 import { draftErrors, payloadOf, transportOf, type CapabilityDraft, type DraftErrors } from './capability-draft.ts';
 import type { Capability, CapabilityActions } from './capability-types.ts';
-
-function Field({ label, value, onChange, onBlur, multiline = false, disabled = false, placeholder, error, hint }: {
-    label: string;
-    value: string;
-    onChange: (value: string) => void;
-    onBlur?: (() => void) | undefined;
-    multiline?: boolean;
-    disabled?: boolean;
-    placeholder?: string;
-    error?: string | undefined;
-    hint?: string | undefined;
-}) {
-    const field = multiline
-        ? <textarea className={error ? 'bt-input bt-input-error' : 'bt-input'} value={value} disabled={disabled} placeholder={placeholder} spellCheck={false} aria-invalid={error !== undefined} onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => onChange(event.target.value)} onBlur={onBlur} />
-        : <input className={error ? 'bt-input bt-input-error' : 'bt-input'} value={value} disabled={disabled} placeholder={placeholder} spellCheck={false} aria-invalid={error !== undefined} onChange={(event: React.ChangeEvent<HTMLInputElement>) => onChange(event.target.value)} onBlur={onBlur} />;
-    return <label className='bt-set-row bt-bs-row bt-bs-stack'><span className='bt-set-copy'><span className='bt-bs-label'>{label}</span>{hint ? <span className='bt-set-hint'>{hint}</span> : null}</span>{field}{error ? <span className='bt-field-error' role='alert'>{error}</span> : null}</label>;
-}
-
-function Select({ label, value, options, onChange }: {
-    label: string;
-    value: string;
-    options: readonly (readonly [string, string])[];
-    onChange: (value: string) => void;
-}) {
-    return <label className='bt-set-row bt-bs-row bt-bs-stack'><span className='bt-set-copy'><span className='bt-bs-label'>{label}</span></span><select className='bt-input' value={value} onChange={(event: React.ChangeEvent<HTMLSelectElement>) => onChange(event.target.value)}>{options.map(([key, text]) => <option key={key} value={key}>{text}</option>)}</select></label>;
-}
+import { Field, Select } from './kit/index.ts';
 
 export function CapabilityForm({ draft, setDraft, items, actions, onClose }: {
     draft: CapabilityDraft;

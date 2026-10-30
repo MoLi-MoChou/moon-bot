@@ -28,6 +28,6 @@ Fixes #
 ## Checklist / 检查
 
 - [ ] One issue, one subject. / 只做一件事。
-- [ ] Generated files are not committed (`client.js`, `dist/`, `app/ui/dist/`); only sources are. / 没有提交生成物（`client.js`、`dist/`、`app/ui/dist/`），只提交源码。
+- [ ] Generated files are not committed (`client.js`, `dist/`, `apps/desktop/ui/dist/`); only sources are. / 没有提交生成物（`client.js`、`dist/`、`apps/desktop/ui/dist/`），只提交源码。
 - [ ] No keys, tokens or personal data, also in screenshots. / 没有密钥、token 或个人信息，截图里也没有。
 - [ ] No AI tool as author or `Co-authored-by`. / 没有把 AI 工具写成作者或 `Co-authored-by`。

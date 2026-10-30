@@ -26,7 +26,7 @@ jobs:
     defaults:
       run:
         shell: bash
-        working-directory: app
+        working-directory: apps/desktop
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -36,7 +36,7 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-      - name: Check the tag matches app/package.json
+      - name: Check the tag matches apps/desktop/package.json
         if: startsWith(github.ref, 'refs/tags/v')
         run: test "v$(node -p "require('./package.json').version")" = "$GITHUB_REF_NAME"
       # One root pnpm lockfile for the workspace: install at the root, run in the package.
@@ -64,10 +64,10 @@ jobs:
         with:
           name: Moon-Bot-win-x64
           path: |
-            app/dist-pack/Moon-Bot-*-win-x64-setup.exe
-            app/dist-pack/Moon-Bot-*-win-x64-setup.exe.blockmap
-            app/dist-pack/Moon-Bot-*-win-x64-portable.exe
-            app/dist-pack/latest.yml
+            apps/desktop/dist-pack/Moon-Bot-*-win-x64-setup.exe
+            apps/desktop/dist-pack/Moon-Bot-*-win-x64-setup.exe.blockmap
+            apps/desktop/dist-pack/Moon-Bot-*-win-x64-portable.exe
+            apps/desktop/dist-pack/latest.yml
           if-no-files-found: error
           compression-level: 0
           retention-days: 14
@@ -78,7 +78,7 @@ jobs:
     timeout-minutes: 30
     defaults:
       run:
-        working-directory: app
+        working-directory: apps/desktop
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -104,8 +104,8 @@ jobs:
         with:
           name: Moon-Bot-linux-x64
           path: |
-            app/dist-pack/Moon-Bot-*-linux-x86_64.AppImage
-            app/dist-pack/latest-linux.yml
+            apps/desktop/dist-pack/Moon-Bot-*-linux-x86_64.AppImage
+            apps/desktop/dist-pack/latest-linux.yml
           if-no-files-found: error
           compression-level: 0
           retention-days: 14

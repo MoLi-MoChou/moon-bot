@@ -1,11 +1,11 @@
 node_modules/
 *.tgz
-# The desktop app's window build and bundled main (npm run build in app/), its packages
-# (npm run pack, npm run dist) and the next version that checks its update (see app/README.md).
-/app/ui/dist/
-/app/dist-main/
-/app/dist-pack/
-/app/dist-next/
+# The desktop app's window build and bundled main (pnpm --filter moon-bot run build), its packages
+# (pack/dist) and the next version that checks its update (see apps/desktop/README.md).
+/apps/desktop/ui/dist/
+/apps/desktop/dist-main/
+/apps/desktop/dist-pack/
+/apps/desktop/dist-next/
 
 # A DeepSeek Harness checkout for the tests and the test bench.
 /deepseek-harness/
@@ -26,18 +26,18 @@ node_modules/
 /.env
 /docker-compose.override.yml
 
-# core's generated artifacts (built by the root postinstall and `npm run build`; never
+# core's generated artifacts (built by the root postinstall and `pnpm run build`; never
 # committed — see scripts/postinstall.mjs).
-/core/client.js
-/core/index.js
-/core/web-search.js
-/core/dist/
+/packages/core/client.js
+/packages/core/index.js
+/packages/core/web-search.js
+/packages/core/dist/
 
 # The mock bench (dev/bench.sh) keeps its team beside the checkout.
 /.moon-bot-test-*/
 
-# The published connect CLI is bundled by `npm run build` (connect/scripts/build.mjs).
-/connect/dist/
+# The published connect CLI is bundled by `pnpm run build` (apps/connect/scripts/build.mjs).
+/apps/connect/dist/
 
 # npm lock (repo uses pnpm-lock.yaml only after W1)
 package-lock.json

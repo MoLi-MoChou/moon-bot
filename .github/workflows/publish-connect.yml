@@ -2,7 +2,7 @@ name: Publish connect
 
 # The moon-bot-connect CLI on npm (docs/RELEASING.md). It is a separate package with its
 # own version and its own tag: `connect-vX.Y.Z`. The job refuses a tag that does not match
-# connect/package.json, verifies the exact tarball it is about to upload, and publishes
+# apps/connect/package.json, verifies the exact tarball it is about to upload, and publishes
 # with provenance so the registry can show where the artifact was built.
 #
 # Needs one repository secret: NPM_TOKEN, a granular token with read-and-write access to
@@ -35,12 +35,12 @@ jobs:
           node-version: 24
           registry-url: https://registry.npmjs.org
           cache: pnpm
-      - name: Check the tag matches connect/package.json
+      - name: Check the tag matches apps/connect/package.json
         if: startsWith(github.ref, 'refs/tags/connect-v')
         run: |
-          expected="connect-v$(node -p "require('./connect/package.json').version")"
+          expected="connect-v$(node -p "require('./apps/connect/package.json').version")"
           if [ "$expected" != "$GITHUB_REF_NAME" ]; then
-            echo "::error::the tag $GITHUB_REF_NAME does not match $expected (bump connect/package.json first)"
+            echo "::error::the tag $GITHUB_REF_NAME does not match $expected (bump apps/connect/package.json first)"
             exit 1
           fi
       - name: Install
@@ -55,7 +55,7 @@ jobs:
           # registry answers a first publish asynchronously: metadata first, the tarball a
           # few minutes later). Re-running a tag, or publishing by hand before tagging,
           # must stay a green no-op instead of a red job.
-          version=$(node -p "require('./connect/package.json').version")
+          version=$(node -p "require('./apps/connect/package.json').version")
           if npm view "moon-bot-connect@$version" version >/dev/null 2>&1; then
             echo "::notice::moon-bot-connect@$version is already published; nothing to upload"
             exit 0

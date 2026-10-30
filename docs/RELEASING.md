@@ -6,8 +6,8 @@ tag on `main`, never a branch.
 
 ## Versions and the tag
 
-`app/package.json` holds the version the desktop apps install as; `core/package.json` follows
-it. The desktop workflow refuses a `v*` tag that does not match `app/package.json`, so bump
+`apps/desktop/package.json` holds the version the desktop apps install as; `packages/core/package.json` follows
+it. The desktop workflow refuses a `v*` tag that does not match `apps/desktop/package.json`, so bump
 both first:
 
 ```sh
@@ -56,7 +56,7 @@ the product does not publish it and the reverse.
 1. `node scripts/version.mjs connect X.Y.Z` (prints the tag it implies), commit.
 2. `git tag connect-vX.Y.Z && git push origin main connect-vX.Y.Z`.
 3. `.github/workflows/publish-connect.yml` checks the tag against
-   `connect/package.json`, runs `pnpm --filter moon-bot-connect run verify:package` (packs the
+   `apps/connect/package.json`, runs `pnpm --filter moon-bot-connect run verify:package` (packs the
    tarball, installs it into a throwaway prefix and runs the installed bin) and only then
    runs `npm publish --access public --provenance`.
 

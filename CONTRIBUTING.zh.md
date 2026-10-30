@@ -65,12 +65,12 @@
 
 ### 合并冲突
 
-- **`core/client.js`**：它是生成物、从不提交，只有在两边都误提交时才会冲突。先解决 `core/src/client/`，把生成文件从合并里去掉（`git checkout --ours core/client.js` 后 `pnpm run build`）。
+- **`packages/core/client.js`**：它是生成物、从不提交，只有在两边都误提交时才会冲突。先解决 `packages/core/src/client/`，把生成文件从合并里去掉（`git checkout --ours packages/core/client.js` 后 `pnpm run build`）。
 - **`CHANGELOG.md`**：Pull Request 不改它，所以不应该冲突。如果冲突了，两边都保留。
 
 ### 发版（维护者）
 
-1. 向 `dev` 提一个 Pull Request：修改 `core/package.json` 里的版本号，根据已合并 Pull Request 的 Changelog 句子写 `CHANGELOG.md` 的这一版。
+1. 向 `dev` 提一个 Pull Request：修改 `packages/core/package.json` 里的版本号，根据已合并 Pull Request 的 Changelog 句子写 `CHANGELOG.md` 的这一版。
 2. 提一个从 `dev` 到 `main` 的 Pull Request，标题为 `release: vX.Y.Z`。在描述里列出这一版所有的 `Fixes #<号>`，合并时这些 Issue 会一起关闭。
 3. 用 `node scripts/version.mjs X.Y.Z` 定版本，把 `main` 推到该提交并打 tag：`git tag vX.Y.Z && git push origin main vX.Y.Z`。完整流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 4. tag 驱动两件产物：Desktop 工作流构建 Windows 安装版/便携版与 Linux AppImage、跑打包后应用检查并发布**预发布**（含更新元数据）；Web image 工作流先跑浏览器端到端，绿了才把镜像推到 GHCR（`:vX.Y.Z`、`:main`、`:latest` 和短 sha tag）。
@@ -113,17 +113,17 @@ git -C deepseek-harness checkout dsh-v0.2.1-rc.2
 
 | 路径 | 内容 |
 |---|---|
-| `core/index.js`、`core/src/host/` | 服务端：Bot 名册与存储、工具、回合与投递、群聊、对话分段与搜索索引、图片、Bot 浏览器桥接、`api/bot` 通道 |
-| `core/src/client/` | 浏览器端：侧栏、聊天、面板与对话框、主题、角色、Bot 浏览器面板 |
-| `core/client.js` | 由 `scripts/build-client.ts` 在安装与构建时生成。从不提交，`.gitignore` 里有它 |
+| `packages/core/index.js`、`packages/core/src/host/` | 服务端：Bot 名册与存储、工具、回合与投递、群聊、对话分段与搜索索引、图片、Bot 浏览器桥接、`api/bot` 通道 |
+| `packages/core/src/client/` | 浏览器端：侧栏、聊天、面板与对话框、主题、角色、Bot 浏览器面板 |
+| `packages/core/client.js` | 由 `scripts/build-client.ts` 在安装与构建时生成。从不提交，`.gitignore` 里有它 |
 | `core/web-search.js` | `auto` 网页搜索提供方。不依赖 Bot 团队代码 |
 | `core/cordis.patch.yml` | 插件带的 profile patch |
-| `core/test/` | 单元测试和测试数据 |
-| `core/dev/` | 单元测试用的 DSH 包（`harness/`）、模拟模型、测试台、冒烟测试、角色生成器、Linux 上的 Desktop 脚本，以及两个用真实模型的工具：上下文管家评测和日志转发 |
+| `packages/core/test/` | 单元测试和测试数据 |
+| `packages/core/dev/` | 单元测试用的 DSH 包（`harness/`）、模拟模型、测试台、冒烟测试、角色生成器、Linux 上的 Desktop 脚本，以及两个用真实模型的工具：上下文管家评测和日志转发 |
 
 ## 测试改动
 
-在 `core/` 里运行：
+在 `packages/core/` 里运行：
 
 ```sh
 pnpm run build                         # src/client → client.js

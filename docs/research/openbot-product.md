@@ -119,7 +119,7 @@ OpenBot 的源码在 `/tmp/openbot`，许可证是 PolyForm Noncommercial 1.0.0�
 | 端 | 桌面（Electron）、网页（`/app`，同一套视图 + 注入的 web runtime）、原生手机（Expo RN，自有界面但共享 brand token 与 contracts） | 服务托管的网页 + 桌面窗口，**同一棵客户端树**（`core/src/client`）；手机计划是响应式网页（[根 AGENTS](../../AGENTS.md#手机端)） | 我们少一整套原生壳，也少一整套同步成本。判断不变 |
 | 共享 UI | `packages/ui` 一个包，桌面/网页/Storybook 共用，feature 组件按子路径导出；不得依赖 app context、桌面存储、`window.openbot`（`packages/ui/AGENTS.md`、`docs/architecture/structure.md`） | 一个目录 `core/src/client`，两种宿主（`app/ui` 窗口 + 服务网页）；桌面独有能力只能经 `client-ctx.d.ts` 的注入面出现 | 思路一样。它显式列了「共享组件禁止的依赖」，我们靠注入面 + 边界检查，等价 |
 | 兼容 | 可选 host capability：`channel-chats-v1`、`agent-tasks-v1`、`browser-profiles-v1`、`queue-edit-v1`…；host 不广告就在界面上隐藏对应控件（`packages/contracts/src/team-protocol/*`） | 没有能力协商：靠「注入了什么 action」和 `LEAN` 两个开关（`core/src/shared/lean.ts`、`core/src/client/details-drawer.tsx` 里 `roster.browser === true && actions.openBrowser`） | 单机单版本时够用；一旦有「手机浏览器打开同一个服务」和「老版本窗口连新服务」，**能力清单**比 feature-detect 更可靠 |
-| 桌面独有 | 明确列了哪些留在桌面：供应商与权限、应用更新（`docs/web-client.md`） | 明确列了哪些留在桌面壳：窗口控制、自动更新、搬移数据、内置浏览器（[app/AGENTS](../../app/AGENTS.md)、`details-drawer.tsx` 的降级文案） | 打平，我们甚至写得更早。缺的是把这串清单**写进代码**（见 3.11） |
+| 桌面独有 | 明确列了哪些留在桌面：供应商与权限、应用更新（`docs/web-client.md`） | 明确列了哪些留在桌面壳：窗口控制、自动更新、搬移数据、内置浏览器（[app/AGENTS](../../apps/desktop/AGENTS.md)、`details-drawer.tsx` 的降级文案） | 打平，我们甚至写得更早。缺的是把这串清单**写进代码**（见 3.11） |
 | 手机上的任务与队列 | 手机有原生队列路由、编辑面板、频道、通知、Dynamic Island（`docs/architecture/channels-and-messaging.md`） | 无手机专属交互；窄屏适配集中在 `tasks-page.tsx` 的媒体查询与 `core/src/client/design/mobile.ts`，设置页本身没有媒体查询（`core/src/client/settings.tsx`） | 我们先做「窄屏能用」，不做「手机专属交互」。顺序不变，但设置页在窄屏要先量一遍（动作 2 的验收里有一条窄屏检查） |
 | 手机接入 | 设置页有「连接手机」（二维码 + 一次性连接票据），网页用 cookie、桌面用会话（`SettingsMobileConnectTab.tsx`、`docs/web-client.md`） | 服务有密码页与 HTTPS 要求（`deploy/`、`core/src/service/server.ts`），但界面里没有「怎么把手机接上」的一步 | 缺一块**上手界面**：用户不知道手机该打开哪个地址 |
 | 通知 | 桌面/网页/手机三处分别有规则，含「隐藏的 tab 不响」等细节（`docs/web-client.md`、`agent-notifications`） | 只有审批会在后台发系统通知，且只在平台已授权时发、从不主动请求权限（`core/src/client/approval-notices.ts`） | 我们缺「回合完成」这类通知，也缺权限请求策略；窄屏上还要确认不重复响（`notifications` 在手机浏览器里权限模型不同） |
@@ -142,7 +142,7 @@ OpenBot 的源码在 `/tmp/openbot`，许可证是 PolyForm Noncommercial 1.0.0�
 - 落点：`core/src/host/tasks-panel.ts`、`core/src/client/tasks-page.tsx`（筛选 chips + 搜索框，注意 350 行上限，拆一个 `tasks-filter.tsx`）、`core/src/shared/rpc.ts`（给 `tasks` 加 `filter`/`since`）。
 - 工作量：M。
 - 依赖顺序：先 3.1（字段稳定后再加筛选维度）。
-- 风险：中低。**不要**因此引入任务对象或新表（会与 [tasks-panel](../plans/2026-10-28-tasks-panel.md) 的取舍冲突）；如果确实要落库，迁移只能追加（[host/AGENTS](../../core/src/host/AGENTS.md)）。
+- 风险：中低。**不要**因此引入任务对象或新表（会与 [tasks-panel](../plans/2026-10-28-tasks-panel.md) 的取舍冲突）；如果确实要落库，迁移只能追加（[host/AGENTS](../../packages/core/src/host/AGENTS.md)）。
 
 **3.3 排队消息面板 v1：看得见、撤得掉**
 - 想法：把每个会话的排队消息列出来（预览、时间、位置），每条可撤销；编辑与重排放到 v2。

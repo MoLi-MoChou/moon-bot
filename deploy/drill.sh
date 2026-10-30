@@ -82,7 +82,7 @@ test "$(cat "$DATA/marker.txt")" = before-drill
 # The bad image changes user_version and then stays alive without serving /healthz.
 cat > "$ROOT/Dockerfile.bad" <<EOF
 FROM $GOOD_IMAGE
-ENV NODE_PATH=/opt/moon-bot/core/node_modules
+ENV NODE_PATH=/opt/moon-bot/packages/core/node_modules
 CMD ["node", "-e", "const Database=require('better-sqlite3');const db=new Database('/data/store.sqlite3');db.pragma('user_version = 999');db.close();setTimeout(() => {}, 3600000)"]
 EOF
 docker build -q -t "$BAD_IMAGE" -f "$ROOT/Dockerfile.bad" "$ROOT" >/dev/null

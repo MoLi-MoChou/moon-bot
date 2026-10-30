@@ -40,12 +40,12 @@ jobs:
         run: pnpm run build
       - name: Start the mock bench
         run: |
-          MOON_BOT_PASSWORD=bench core/dev/bench.sh e2e 3100 8790 reset
-          MOON_BOT_PASSWORD=bench core/dev/bench.sh e2e 3100 8790 start
+          MOON_BOT_PASSWORD=bench packages/core/dev/bench.sh e2e 3100 8790 reset
+          MOON_BOT_PASSWORD=bench packages/core/dev/bench.sh e2e 3100 8790 start
       - name: Drive the browser
         run: |
           set +e
-          MOON_BOT_PASSWORD=bench node core/dev/e2e-web.mjs http://127.0.0.1:3100 --mock-url http://127.0.0.1:8790/v1 --out "$RUNNER_TEMP/e2e-shots" 2>&1 | tee "$RUNNER_TEMP/e2e.log"
+          MOON_BOT_PASSWORD=bench node packages/core/dev/e2e-web.mjs http://127.0.0.1:3100 --mock-url http://127.0.0.1:8790/v1 --out "$RUNNER_TEMP/e2e-shots" 2>&1 | tee "$RUNNER_TEMP/e2e.log"
           code=${PIPESTATUS[0]}
           if [ "$code" != "0" ]; then
             # The step log needs a login to read; annotations are public, so the reason
@@ -68,7 +68,7 @@ jobs:
           if-no-files-found: ignore
       - name: Stop the bench
         if: always()
-        run: MOON_BOT_PASSWORD=bench core/dev/bench.sh e2e 3100 8790 stop || true
+        run: MOON_BOT_PASSWORD=bench packages/core/dev/bench.sh e2e 3100 8790 stop || true
 
   image:
     name: Publish the image

@@ -1,6 +1,6 @@
 # Moon Bot web: run and deploy
 
-Local, from `app/`:
+Local, from `apps/desktop/`:
 
     npm ci && MOON_BOT_PASSWORD=choose-one npm run web      # http://127.0.0.1:8290
 

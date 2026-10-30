@@ -8,8 +8,10 @@ import { MENTION_ORIGIN } from '../text.ts'
 // Assistant bubbles, group rows and the question card.
 export const CONVERSATION_CARDS_CSS = `
 
-.bt-astack{display:flex;flex-direction:column;align-items:flex-start;gap:4px;margin:0}
-.bt-bubble{max-width:min(80%,560px,calc(100% - 82px));background:var(--bt-bubble);color:var(--bt-ink);border-radius:18px;padding:7px 12px;font-size:var(--bt-content-font-size,14px);line-height:calc(var(--bt-content-font-size,14px) + 8px);box-sizing:border-box;overflow-wrap:anywhere}
+/* A definite inline size is what makes the bubble's 100% mean anything: without it the
+   percentage resolves against a shrunken flex item and the bubble collapses to its text. */
+.bt-astack{display:flex;flex-direction:column;align-items:flex-start;gap:4px;margin:0;width:100%;min-width:0}
+.bt-bubble{max-width:100%;background:var(--bt-bubble);color:var(--bt-ink);border-radius:18px;padding:7px 12px;font-size:var(--bt-content-font-size,14px);line-height:calc(var(--bt-content-font-size,14px) + 8px);box-sizing:border-box;overflow-wrap:anywhere}
 .bt-msg:not(:first-child)>.bt-msg-line>.bt-bubble{border-start-start-radius:6px}
 .bt-msg:not(:last-child)>.bt-msg-line>.bt-bubble{border-end-start-radius:6px}
 .bt-bubble [class*="_markdown"]>*+*{margin-top:10px}
@@ -105,13 +107,15 @@ button.bt-q-opt:active{background:var(--bt-active)}
 
 // The message row, its hover toolbar, reactions, and the user avatar seat.
 export const MESSAGE_ACTIONS_CSS = `
-.bt-msg{display:flex;flex-direction:column;align-items:flex-start;max-width:min(80%,560px,calc(100% - 82px))}
+/* One ceiling against a definite container, not three percentages against a shrinking one.
+   560px stays the comfortable reading width; 100% keeps it inside a narrow window. */
+.bt-msg{display:flex;flex-direction:column;align-items:flex-start;max-width:min(560px,100%);min-width:0}
 /* The bubble's row: reactions hang below it, so the hover toolbar (and a group
    sender's avatar) line up with the bubble alone. */
 .bt-msg-line{position:relative;display:flex;align-items:flex-end;gap:8px;max-width:100%}
 .bt-msg-line>.bt-bubble{max-width:none;min-width:0}
-/* The same bubble width as beside an avatar column: 80% of (100% - 30px), plus the 30px. */
-.bt-astack[data-lead]>.bt-msg{max-width:min(calc(80% + 6px),590px,calc(100% - 52px))}
+/* Beside an avatar the bubble gives up the same 52px, so the two shapes read as one column. */
+.bt-astack[data-lead]>.bt-msg{max-width:min(560px,calc(100% - 52px))}
 .bt-tools{position:absolute;top:50%;left:100%;margin-left:6px;transform:translateY(-50%);display:flex;gap:2px;opacity:0;visibility:hidden;transition:opacity .12s ease,visibility .12s}
 .bt-tools::after{content:"";position:absolute;top:-8px;bottom:-8px;right:100%;width:128px;z-index:-1}
 .bt-msg:hover>.bt-msg-line>.bt-tools,.bt-msg:focus-within>.bt-msg-line>.bt-tools,.bt-tools[data-open]{opacity:1;visibility:visible}

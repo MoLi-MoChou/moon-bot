@@ -56,9 +56,18 @@ Types / responsibility splits (ignores removed):
 - host: `turns/delivery.ts` → `delivery-types`; `tasks-panel.ts` → `tasks-panel-types`
 - engine: `acp/runtime.ts` → `runtime-types`
 
+### Cleared in batch 5 (stacked on batch 4)
+
+Responsibility / helpers splits (ignores removed):
+
+- contracts: `views/validate.ts` → `validate-check`
+- client: `files-panel.ts` → `files-panel-helpers`; `voice.tsx` → `voice-helpers`
+- host: `usage/view.ts` → `view-helpers`
+- web-search: `provider.ts` → `provider-helpers`
+
 ### Follow-up (still ignored until split)
 
-Remaining `packages/**/src` ignores (~34): denser modules — `memory-panel`, `widget-cell`, `usage-charts`, `sidebar-rows`, host `memory`/`parts`/`groups`/`roster`, `client-boot`/`index`, `service/engine`, `validate`, etc. Split by responsibility, remove each ignore, keep ≤350 after format.
+Remaining `packages/**/src` ignores (~29): denser modules — `memory-panel`, `widget-cell`, `usage-charts`, `sidebar-rows`, host `memory`/`parts`/`groups`/`roster`, `client-boot`/`index`, `service/engine`, etc. Split by responsibility, remove each ignore, keep ≤350 after format.
 
 ## Scripts
 

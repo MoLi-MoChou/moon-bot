@@ -1,49 +1,10 @@
-import type { DatabaseSync, StatementSync } from 'node:sqlite'
+import type { DatabaseSync } from 'node:sqlite'
 import type { SessionEvent } from './host-types.js'
 import type { HostRuntime } from './runtime.js'
 
 /** One line of a Bot's own chat, as the index stores it. */
-interface LineRow {
-  readonly text: string
-  readonly session: string
-  readonly seq: number
-  readonly time: number
-  readonly who: string
-}
-
-interface MarkRow {
-  readonly through: number
-  readonly keep: number
-  readonly sealed: number
-  readonly turn: number
-}
-
-interface ChatIndex {
-  readonly db: DatabaseSync
-  readonly mark: StatementSync
-  readonly setMark: StatementSync
-  readonly insert: StatementSync
-  readonly before: StatementSync
-  readonly from: StatementSync
-}
 
 /** One part of a Bot's own chat. */
-interface ChatPart {
-  readonly sessionId: string
-  readonly number: number
-  readonly startedAt: number
-  readonly endedAt?: number | undefined
-}
-
-interface HiddenTurn {
-  readonly session: string | undefined
-  readonly from: number
-}
-
-interface TermQuery {
-  readonly sql: string
-  readonly args: readonly (string | number)[]
-}
 
 // Reading a Bot's own chat: Session history pages, the SQLite FTS5 index, and the
 // search, latest, and around reads behind read_own_chat.
@@ -58,6 +19,7 @@ import { mkdir, unlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import { ANCHOR_LINE_MAX, HISTORY_PAGE, HISTORY_PAGES_MAX, HISTORY_TIMEOUT_MS, OWN_CHAT_BRIEF, OWN_CHAT_LINE_MAX, OWN_CHAT_READ, OWN_CHAT_SEARCH } from './constants.ts'
 import { excerpt } from './text.ts'
+import type { LineRow, MarkRow, ChatIndex, ChatPart, HiddenTurn, TermQuery } from './chat-index-types.ts'
 
 const INDEX_VERSION = 3
 const AROUND_LINES = 6
@@ -102,12 +64,15 @@ export function install(rt: HostRuntime): void {
     const throughSeq = Number(agent.session.seq) - 1
     let beforeSeq
     for (let pages = 0; throughSeq >= 0 && pages < maxPages; pages += 1) {
-      const page = await ctx.sessionController.page({
-        address: { kind: 'session', sessionId },
-        throughSeq,
-        ...(beforeSeq === undefined ? {} : { beforeSeq }),
-        maxMessages: HISTORY_PAGE,
-      }, signal)
+      const page = await ctx.sessionController.page(
+        {
+          address: { kind: 'session', sessionId },
+          throughSeq,
+          ...(beforeSeq === undefined ? {} : { beforeSeq }),
+          maxMessages: HISTORY_PAGE,
+        },
+        signal,
+      )
       const events = page.records.map(record => record.event)
       for (let index = events.length - 1; index >= 0; index -= 1) {
         const item = events[index]
@@ -120,10 +85,10 @@ export function install(rt: HostRuntime): void {
 
   function openIndex(): Promise<ChatIndex | null> {
     if (chatIndex !== null) return Promise.resolve(chatIndex)
-    const opening = indexOpening ??= (async () => {
+    const opening = (indexOpening ??= (async () => {
       let DatabaseSync: typeof import('node:sqlite').DatabaseSync
       try {
-        ({ DatabaseSync } = await import('node:sqlite'))
+        ;({ DatabaseSync } = await import('node:sqlite'))
         await mkdir(home, { recursive: true })
       } catch (error) {
         rt.warn('moon-bot: no chat index, read_own_chat scans the logs: %s', error)
@@ -139,7 +104,7 @@ export function install(rt: HostRuntime): void {
         }
       }
       return null
-    })().then((index) => {
+    })().then(index => {
       // The plugin may have been disposed while the file opened.
       if (indexOpening !== opening) {
         index?.db.close()
@@ -147,7 +112,7 @@ export function install(rt: HostRuntime): void {
       }
       chatIndex = index
       return chatIndex
-    })
+    }))
     return opening
   }
 
@@ -176,11 +141,14 @@ export function install(rt: HostRuntime): void {
       throw error
     }
   }
-  ctx.effect(() => () => {
-    chatIndex?.db.close()
-    chatIndex = null
-    indexOpening = undefined
-  }, 'moon-bot: chat index')
+  ctx.effect(
+    () => () => {
+      chatIndex?.db.close()
+      chatIndex = null
+      indexOpening = undefined
+    },
+    'moon-bot: chat index',
+  )
 
   // Adds what a part said since its mark. Reads of one part wait for each other, so no
   // line is added twice.
@@ -249,7 +217,7 @@ export function install(rt: HostRuntime): void {
     const parts: readonly ChatPart[] = rt.partsOf(botId)
     // A part that cannot be read now is searched as far as it was indexed.
     for (const part of parts) await catchUp(index, part).catch((error: unknown) => rt.warn('moon-bot: indexing %s failed: %s', part.sessionId, error))
-    const markForAsking = askingId === undefined ? undefined : index.mark.get(askingId) as MarkRow | undefined
+    const markForAsking = askingId === undefined ? undefined : (index.mark.get(askingId) as MarkRow | undefined)
     const turn = askingId !== undefined && askingId === parts.at(-1)?.sessionId ? markForAsking?.turn : undefined
     return { index, parts, hidden: turn === undefined || turn < 0 ? undefined : { session: askingId, from: turn } }
   }
@@ -265,7 +233,7 @@ export function install(rt: HostRuntime): void {
       const { sql, args } = termQuery(wanted, sessions, max, hidden)
       return index.db.prepare(sql).all(...args) as unknown as LineRow[]
     }
-    const byTime = (a: LineRow, b: LineRow): number => (a.time - b.time) || (sessions.indexOf(a.session) - sessions.indexOf(b.session)) || (a.seq - b.seq)
+    const byTime = (a: LineRow, b: LineRow): number => a.time - b.time || sessions.indexOf(a.session) - sessions.indexOf(b.session) || a.seq - b.seq
     let rows = run(terms, limit)
     let every = true
     if (rows.length === 0 && terms.length > 1) {
@@ -279,7 +247,10 @@ export function install(rt: HostRuntime): void {
           found.set(key, hit)
         }
       }
-      rows = [...found.values()].sort((a, b) => (b.count - a.count) || (b.row.time - a.row.time)).slice(0, limit).map(hit => hit.row)
+      rows = [...found.values()]
+        .sort((a, b) => b.count - a.count || b.row.time - a.row.time)
+        .slice(0, limit)
+        .map(hit => hit.row)
     }
     return { lines: rows.sort(byTime).map(row => rowLine(parts, row, terms)), every }
   }
@@ -334,12 +305,12 @@ export function install(rt: HostRuntime): void {
 
   async function ownChatBrief(member: { readonly id: string; readonly name: string }): Promise<string> {
     let lines: readonly string[] = []
-    try { lines = await latestOwnChat(member.id, { limit: OWN_CHAT_BRIEF }) } catch (error) { rt.warn('moon-bot: brief for %s failed: %s', member.name, error) }
-    return [
-      'Your own chat with the user so far (latest messages, oldest first; private, so share only what the group needs):',
-      lines.length > 0 ? lines.join('\n') : 'Nothing yet.',
-      'This brief does not change. Call read_own_chat when you need something newer or older from your own chat.',
-    ].join('\n')
+    try {
+      lines = await latestOwnChat(member.id, { limit: OWN_CHAT_BRIEF })
+    } catch (error) {
+      rt.warn('moon-bot: brief for %s failed: %s', member.name, error)
+    }
+    return ['Your own chat with the user so far (latest messages, oldest first; private, so share only what the group needs):', lines.length > 0 ? lines.join('\n') : 'Nothing yet.', 'This brief does not change. Call read_own_chat when you need something newer or older from your own chat.'].join('\n')
   }
 
   Object.assign(rt, { eventsBackwards, searchOwnChat, latestOwnChat, aroundOwnChat, partIndex, ownChatBrief })

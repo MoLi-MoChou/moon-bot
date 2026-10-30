@@ -87,9 +87,15 @@ Helpers (+ `lineWidth` 320 for `memory.ts`):
 - client: `memory-panel.tsx` → `memory-panel-helpers`
 - host: `memory.ts` → `memory-helpers` (w320)
 
+### Cleared in batch 9 (stacked on batch 8)
+
+Types + `lineWidth` 320:
+
+- host: `chat-index.ts` → `chat-index-types`; `memory/storage.ts` → `storage-types`
+
 ### Follow-up (still ignored until split)
 
-Remaining `packages/**/src` ignores (~15): denser modules — `widget-cell`, `usage-charts`, `sidebar-rows`, `model-menu`, `read-page`, `tasks-page`, host `parts`/`news`/`storage`/`chat-index`, `client-boot`/`index`/`bot-browsers`, `service/engine`, etc. Split by responsibility, remove each ignore, keep ≤350 after format.
+Remaining `packages/**/src` ignores (~13): denser modules — `widget-cell`, `usage-charts`, `sidebar-rows`, `model-menu`, `read-page`, `tasks-page`, `browser-pane-chrome`, host `parts`/`news`, `client-boot`/`index`/`bot-browsers`, `service/engine`, etc. Split by responsibility, remove each ignore, keep ≤350 after format.
 
 ## Scripts
 

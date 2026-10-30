@@ -38,9 +38,7 @@
       "!packages/core/src/client/tasks-page.tsx",
       "!packages/core/src/client/usage-charts.tsx",
       "!packages/core/src/client/widget-cell.tsx",
-      "!packages/core/src/host/chat-index.ts",
       "!packages/core/src/host/memory/news.ts",
-      "!packages/core/src/host/memory/storage.ts",
       "!packages/core/src/host/parts.ts",
       "!packages/core/src/service/engine.ts"
     ]
@@ -272,6 +270,18 @@
     },
     {
       "includes": ["packages/core/src/host/memory.ts"],
+      "formatter": {
+        "lineWidth": 320
+      }
+    },
+    {
+      "includes": ["packages/core/src/host/chat-index.ts"],
+      "formatter": {
+        "lineWidth": 320
+      }
+    },
+    {
+      "includes": ["packages/core/src/host/memory/storage.ts"],
       "formatter": {
         "lineWidth": 320
       }

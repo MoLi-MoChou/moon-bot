@@ -1,9 +1,12 @@
 name: Test
 
+# Dedup: expensive jobs (Windows pack) run once on the PR. Merging into main/dev
+# used to re-fire this whole workflow for the same commit. Image publish stays in
+# web-image.yml on push to main / v* tags only (never on PR — not a duplicate).
+# workflow_dispatch keeps a manual re-run of Windows pack without opening a PR.
 on:
-  push:
-    branches: [main, dev]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -109,6 +112,7 @@ jobs:
       - run: pnpm test
 
   app-package:
+    # PR (+ workflow_dispatch) only when re-enabled — see workflow `on:` for the merge-push skip.
     # 临时跳过 Windows 打包：先做网页版，客户端不急 / temporarily skip Windows pack; web-first
     if: false
     name: Desktop app package (Windows)

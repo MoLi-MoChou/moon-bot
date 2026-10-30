@@ -10,47 +10,15 @@ import { headOf, splitRef } from '../text.ts'
 import type { AttachmentRef } from '../host-types.js'
 import type { StoredBot, TurnInfo } from '../runtime.ts'
 import type { GroupRuntime } from './types.ts'
-import {
-  ROOM_CALLS, ROOM_REPLY, adminNote, fileLine, isPass, mentionsIn, referenceNote,
-  roomKickoff, slotLabel, stripOwnName, transcript,
-} from './notice.ts'
-import type {
-  GroupRoom, GroupRound, MemberSession, ReadyRoom, RoomLine, RoomPostOptions,
-} from './types.ts'
+import { ROOM_CALLS, ROOM_REPLY, adminNote, fileLine, isPass, mentionsIn, referenceNote, roomKickoff, slotLabel, stripOwnName, transcript } from './notice.ts'
+import type { GroupRoom, GroupRound, MemberSession, ReadyRoom, RoomLine, RoomPostOptions } from './types.ts'
+import type { RoomLineInput, RoomLogApi, HeldLines } from './log-types.ts'
+export type { RoomLineInput, RoomLogApi } from './log-types.ts'
 
 export const ROOM_LOG_MAX = 60
 const ROOM_FIRST_LOOK = 12
 const ROOM_DELTA_MAX = 24
 const ROOM_EARLIER_MAX = 8
-
-/** A line about to be appended; `seq` and the kept length are the log's to set. */
-export interface RoomLineInput {
-  readonly who?: string | undefined
-  readonly botId?: string | undefined
-  readonly text?: string | undefined
-  readonly kind?: string | undefined
-  readonly files?: readonly AttachmentRef[] | undefined
-}
-
-/** The room-log helpers other group modules call. */
-export interface RoomLogApi {
-  readonly appendRoom: (room: ReadyRoom, line: RoomLineInput) => void
-  readonly dropGroupLines: (roomId: string) => void
-  readonly groupSessionFor: (room: ReadyRoom, member: StoredBot) => Promise<MemberSession | undefined>
-  readonly loadGroupLines: (room: ReadyRoom) => Promise<unknown>
-  readonly memberText: (room: GroupRoom) => (line: RoomLine) => string
-  readonly postInRound: (room: ReadyRoom, round: GroupRound, member: StoredBot, text: string, duration?: number) => void
-  readonly postToRoom: (room: GroupRoom, sender: StoredBot, text: string, options?: RoomPostOptions, files?: readonly AttachmentRef[]) => Promise<void>
-  readonly roomPrompt: (room: ReadyRoom, member: StoredBot, round: GroupRound) => { readonly text: string; readonly files: AttachmentRef[] }
-  readonly unseenLines: (room: ReadyRoom, memberId: string) => RoomLine[]
-}
-
-interface HeldLines {
-  last: number
-  lines: string[]
-  timer?: ReturnType<typeof setTimeout> | undefined
-  info?: TurnInfo | undefined
-}
 
 // Logs written before rooms were versioned get sequence numbers in place.
 export function ensureRoomLog(room: GroupRoom): asserts room is ReadyRoom {
@@ -109,18 +77,30 @@ export function installRoomLog(rt: GroupRuntime): RoomLogApi {
   }
 
   // After a restart the whole lines are read back before a member reads them.
-  const loadGroupLines = (room: ReadyRoom): Promise<unknown> => Promise.all(room.log
-    .filter(line => line.length !== undefined && !wholeLines.has(lineKey(room.id, line.seq)))
-    .map(line => readFile(lineFile(room.id, line.seq), 'utf8').then((text) => { wholeLines.set(lineKey(room.id, line.seq), text) }, () => {})))
+  const loadGroupLines = (room: ReadyRoom): Promise<unknown> =>
+    Promise.all(
+      room.log
+        .filter(line => line.length !== undefined && !wholeLines.has(lineKey(room.id, line.seq)))
+        .map(line =>
+          readFile(lineFile(room.id, line.seq), 'utf8').then(
+            text => {
+              wholeLines.set(lineKey(room.id, line.seq), text)
+            },
+            () => {},
+          ),
+        ),
+    )
 
   // What a member reads of a line: all of it, up to GROUP_LINE_READ.
-  const memberText = (room: GroupRoom) => (line: RoomLine): string => {
-    const read = line.length === undefined ? line.text : wholeLines.get(lineKey(room.id, line.seq))
-    if (read === undefined) return `${line.text}… (cut; ${line.length} characters in all, the rest was not kept)`
-    const length = line.length ?? read.length
-    const shown = headOf(read, GROUP_LINE_READ)
-    return length > shown.length ? `${shown}… (cut; ${length} characters in all)` : shown
-  }
+  const memberText =
+    (room: GroupRoom) =>
+    (line: RoomLine): string => {
+      const read = line.length === undefined ? line.text : wholeLines.get(lineKey(room.id, line.seq))
+      if (read === undefined) return `${line.text}… (cut; ${line.length} characters in all, the rest was not kept)`
+      const length = line.length ?? read.length
+      const shown = headOf(read, GROUP_LINE_READ)
+      return length > shown.length ? `${shown}… (cut; ${length} characters in all)` : shown
+    }
 
   const appendRoom = (room: ReadyRoom, line: RoomLineInput): void => {
     room.seq += 1
@@ -146,8 +126,7 @@ export function installRoomLog(rt: GroupRuntime): RoomLogApi {
     // Undefined means the member is gone from the group.
     const gone = rt.roomOf(room.id) !== room || !room.members.includes(member.id) || rt.botOf(member.id) === undefined
     if (gone || room.sessions?.[member.id] !== undefined) {
-      void ctx.workspaceRegistry.archiveSession(id, { stopActivity: true })
-        .catch(error => rt.warn('moon-bot: unused group Session of %s in %s not archived: %s', member.name, room.name, error))
+      void ctx.workspaceRegistry.archiveSession(id, { stopActivity: true }).catch(error => rt.warn('moon-bot: unused group Session of %s in %s not archived: %s', member.name, room.name, error))
       return gone ? undefined : groupSessionFor(room, member)
     }
     room.sessions[member.id] = id
@@ -155,31 +134,33 @@ export function installRoomLog(rt: GroupRuntime): RoomLogApi {
     delete room.seen[member.id]
     const ref = await rt.desiredModel(member)
     if (ref !== undefined) {
-      await rt.selectSessionModel(id, splitRef(ref))
-        .catch(error => rt.warn('moon-bot: model for %s in %s not applied: %s', member.name, room.name, error))
+      await rt.selectSessionModel(id, splitRef(ref)).catch(error => rt.warn('moon-bot: model for %s in %s not applied: %s', member.name, room.name, error))
     }
-    await rt.applyPermission(member, id, room)
-      .catch(error => rt.warn('moon-bot: permission for %s in %s not applied: %s', member.name, room.name, error))
+    await rt.applyPermission(member, id, room).catch(error => rt.warn('moon-bot: permission for %s in %s not applied: %s', member.name, room.name, error))
     await rt.save()
     await rt.ensureCapabilities(id)
     return { id, brief: await rt.ownChatBrief(member) }
   }
 
   // Members whose turn in this group is running, and since when.
-  const workingIn = (room: ReadyRoom): { readonly bot: StoredBot; readonly since: number }[] => room.members.flatMap((id) => {
-    const sessionId = room.sessions?.[id]
-    if (sessionId === undefined) return []
-    const entry = rt.live.get(sessionId)
-    const bot = rt.botOf(id)
-    return entry?.turn !== undefined && bot !== undefined ? [{ bot, since: entry.since ?? Date.now() }] : []
-  })
+  const workingIn = (room: ReadyRoom): { readonly bot: StoredBot; readonly since: number }[] =>
+    room.members.flatMap(id => {
+      const sessionId = room.sessions?.[id]
+      if (sessionId === undefined) return []
+      const entry = rt.live.get(sessionId)
+      const bot = rt.botOf(id)
+      return entry?.turn !== undefined && bot !== undefined ? [{ bot, since: entry.since ?? Date.now() }] : []
+    })
   const minutesSince = (at: number): number => Math.max(1, Math.round((Date.now() - at) / 60000))
 
   // Lines from before the round's opening message are kept apart from this round, so
   // an earlier round (an old count-off, say) never reads as part of the current one.
   // `files` are the files of the lines shown, which go to the member with the prompt.
   function roomPrompt(room: ReadyRoom, member: StoredBot, round: GroupRound): { readonly text: string; readonly files: AttachmentRef[] } {
-    const peers = room.members.filter(id => id !== member.id).map(rt.botOf).filter((bot): bot is StoredBot => bot !== undefined)
+    const peers = room.members
+      .filter(id => id !== member.id)
+      .map(rt.botOf)
+      .filter((bot): bot is StoredBot => bot !== undefined)
       .map(bot => `${bot.name}${rt.isAdminOf(room, bot.id) ? ' (admin)' : ''}`)
     const leads = rt.isAdminOf(room, member.id)
     const lines = unseenLines(room, member.id)
@@ -198,15 +179,15 @@ export function installRoomLog(rt: GroupRuntime): RoomLogApi {
       notice,
       leads ? adminNote(room) : '',
       earlier.length ? `Earlier in the group, before this round (context only):\n${transcript(earlier, memberText(room))}` : '',
-      current.length
-        ? `This round so far${spokeThisRound ? ', since your last message' : ', starting with the new message'} (oldest first):\n${transcript(current, memberText(room))}`
-        : 'Nothing new in this round since your last message.',
+      current.length ? `This round so far${spokeThisRound ? ', since your last message' : ', starting with the new message'} (oldest first):\n${transcript(current, memberText(room))}` : 'Nothing new in this round since your last message.',
       round.shown?.includes(member.id) ? '' : referenceNote(round.references),
       working.length > 0 ? `Still at work on what they were asked; each posts here when done: ${working.map(item => `${item.bot.name} (${minutesSince(item.since)} min)`).join(', ')}.` : '',
       `Speaking order for this round: ${round.slots.map(slotLabel).join(' → ')}.`,
       `You are number ${index + 1} of ${round.slots.length}. ${before === 0 ? 'Nobody spoke before you' : `${before} went before you`}${after === 0 ? ', and you are the last.' : `; ${after} after you will see your message.`}`,
       ROOM_REPLY,
-    ].filter(Boolean).join('\n\n')
+    ]
+      .filter(Boolean)
+      .join('\n\n')
     return { text, files: [...earlier, ...current].flatMap(line => line.files ?? []) }
   }
 
@@ -247,10 +228,12 @@ export function installRoomLog(rt: GroupRuntime): RoomLogApi {
       await rt.save()
     }
     const agent = await rt.resolveAgent(room.id)
-    agent.followup(createUserMessage({
-      content: [{ type: 'text', text: `[Group post from ${sender.name}]\n${text}` }, ...files.map(attachment => ({ type: 'file', attachment }))],
-      source: { kind: SOURCE_KIND, form: 'relay', role: 'post', exchangeId: randomUUID(), senderName: sender.name, senderSessionId: sender.id, roomId: room.id, ...extra, ...(logged !== undefined ? { logged } : {}) },
-    }))
+    agent.followup(
+      createUserMessage({
+        content: [{ type: 'text', text: `[Group post from ${sender.name}]\n${text}` }, ...files.map(attachment => ({ type: 'file', attachment }))],
+        source: { kind: SOURCE_KIND, form: 'relay', role: 'post', exchangeId: randomUUID(), senderName: sender.name, senderSessionId: sender.id, roomId: room.id, ...extra, ...(logged !== undefined ? { logged } : {}) },
+      }),
+    )
     await ctx.sessions.flush(agent.session)
   }
 
@@ -273,8 +256,7 @@ export function installRoomLog(rt: GroupRuntime): RoomLogApi {
     const quiet = (room.lateRounds ?? 0) >= ROOM_LATE_ROUNDS
     if (!quiet) room.lateRounds = (room.lateRounds ?? 0) + 1
     await rt.save()
-    await postToRoom(room, member, done ? '' : text, { late: true, ...(done ? { done: true } : {}), ...(info.askedBy ? { askedBy: info.askedBy } : {}), ...(quiet ? { quiet: true } : {}) })
-      .catch(error => rt.warn('moon-bot: late group reply from %s failed: %s', member.name, error))
+    await postToRoom(room, member, done ? '' : text, { late: true, ...(done ? { done: true } : {}), ...(info.askedBy ? { askedBy: info.askedBy } : {}), ...(quiet ? { quiet: true } : {}) }).catch(error => rt.warn('moon-bot: late group reply from %s failed: %s', member.name, error))
   }
   rt.lateRoomReply = lateRoomReply
 
@@ -285,7 +267,10 @@ export function installRoomLog(rt: GroupRuntime): RoomLogApi {
     return room !== undefined && member !== undefined && room.members.includes(member.id) ? { room, member } : undefined
   }
   const callsIn = (room: GroupRoom, member: StoredBot, text: string): boolean =>
-    mentionsIn(text, room.members.map(rt.botOf).filter((bot): bot is StoredBot => bot !== undefined)).found.some(bot => bot.id !== member.id)
+    mentionsIn(
+      text,
+      room.members.map(rt.botOf).filter((bot): bot is StoredBot => bot !== undefined),
+    ).found.some(bot => bot.id !== member.id)
 
   // What a member says while it works, into the group. While the member holds its place
   // in a round, it joins that round. Later, it joins whatever round runs in the group, or
@@ -312,7 +297,12 @@ export function installRoomLog(rt: GroupRuntime): RoomLogApi {
   // for and a line that calls a member go at once; lines still held when the turn ends
   // open its result. Per group Session.
   const held = new Map<string, HeldLines>()
-  ctx.effect(() => () => { for (const entry of held.values()) clearTimeout(entry.timer) }, 'moon-bot: group step lines')
+  ctx.effect(
+    () => () => {
+      for (const entry of held.values()) clearTimeout(entry.timer)
+    },
+    'moon-bot: group step lines',
+  )
   const flushSteps = (sessionId: string): Promise<void> | undefined => {
     const entry = held.get(sessionId)
     if (entry === undefined) return undefined

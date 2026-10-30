@@ -34,19 +34,15 @@
       "!packages/core/src/client/index.ts",
       "!packages/core/src/client/memory-panel.tsx",
       "!packages/core/src/client/model-menu.tsx",
-      "!packages/core/src/client/questions.tsx",
       "!packages/core/src/client/read-page.ts",
       "!packages/core/src/client/sidebar-rows.tsx",
       "!packages/core/src/client/tasks-page.tsx",
       "!packages/core/src/client/usage-charts.tsx",
       "!packages/core/src/client/widget-cell.tsx",
       "!packages/core/src/host/chat-index.ts",
-      "!packages/core/src/host/groups/log.ts",
       "!packages/core/src/host/memory.ts",
       "!packages/core/src/host/memory/news.ts",
       "!packages/core/src/host/memory/storage.ts",
-      "!packages/core/src/host/parts-switch-move.ts",
-      "!packages/core/src/host/parts-switch.ts",
       "!packages/core/src/host/parts.ts",
       "!packages/core/src/service/engine.ts"
     ]
@@ -248,6 +244,30 @@
     },
     {
       "includes": ["packages/core/src/client/new-chat.tsx"],
+      "formatter": {
+        "lineWidth": 320
+      }
+    },
+    {
+      "includes": ["packages/core/src/client/questions.tsx"],
+      "formatter": {
+        "lineWidth": 320
+      }
+    },
+    {
+      "includes": ["packages/core/src/host/groups/log.ts"],
+      "formatter": {
+        "lineWidth": 320
+      }
+    },
+    {
+      "includes": ["packages/core/src/host/parts-switch-move.ts"],
+      "formatter": {
+        "lineWidth": 320
+      }
+    },
+    {
+      "includes": ["packages/core/src/host/parts-switch.ts"],
       "formatter": {
         "lineWidth": 320
       }

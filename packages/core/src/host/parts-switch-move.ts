@@ -2,104 +2,38 @@
 // on, the working folder it starts in, and the input the old part hands over. The switch
 // lifecycle and its state tables stay in `parts-switch.ts`, which owns this factory.
 import { createUserMessage } from './llm-bits.ts'
-import type { LlmMessageSource, LlmTextBlock } from './host-types.js'
+import type { LlmMessageSource } from './host-types.js'
 import { REPLY_KIND, SOURCE_KIND } from './constants.ts'
 import { estimateTokens, splitRef } from './text.ts'
-import type { HostContext } from './host-types.js'
-import type { TurnInfo } from './runtime.js'
+
+import type { SwitchOwner, SwitchMessage, InboxTarget, SwitchSession, SwitchAgent, SwitchSegment, SwitchBot, SwitchJob, HandoffLines, WrittenNote, FreshRoute, PartMoveOptions, PartMove } from './parts-switch-move-types.ts'
+export type {
+  SwitchOwner,
+  SwitchMessage,
+  InboxTarget,
+  SwitchInbox,
+  SwitchEvent,
+  SwitchSession,
+  SwitchAgent,
+  SwitchFallback,
+  SwitchSegment,
+  SwitchPart,
+  SwitchBot,
+  SwitchRoom,
+  SwitchJob,
+  SwitchTables,
+  SwitchState,
+  Lines,
+  HandoffLines,
+  WrittenNote,
+  HandoffPackageOptions,
+  SwitchLiveEntry,
+  PartMoveRuntime,
+  PartMoveOptions,
+  PartMove,
+} from './parts-switch-move-types.ts'
 
 export const FOLDER_RETRY_MS = 300_000
-
-/** A Bot's own chat, or its Session in one group. */
-export interface SwitchOwner { readonly botId: string; readonly roomId?: string | undefined }
-/** One message the switch hands on, as the host's inbox keeps it. */
-export interface SwitchMessage { readonly id: string; readonly content?: readonly LlmTextBlock[] | undefined; readonly source?: LlmMessageSource | undefined }
-export type InboxTarget = 'next-step' | 'next-turn'
-export interface SwitchInbox {
-  readonly nextStep: readonly SwitchMessage[]; readonly nextTurn: readonly SwitchMessage[]
-  remove(id: string): boolean; prepend(target: InboxTarget, message: SwitchMessage): void
-}
-export interface SwitchEvent {
-  readonly type?: string
-  readonly data?: { readonly reason?: { readonly kind?: string; readonly error?: { readonly code?: string | undefined } | undefined } | undefined } | undefined
-}
-export interface SwitchSession {
-  readonly id: string; readonly seq: number; readonly header?: { readonly cwd?: string | undefined } | undefined
-  deriveMessages(): readonly { readonly role?: unknown }[]
-  eventAt?(seq: number): SwitchEvent | undefined
-  requestHeader(): { readonly config?: { readonly provider?: string; readonly model?: string; readonly reasoningEffort?: string | undefined } | undefined } | undefined
-}
-export interface SwitchAgent {
-  readonly id: string; readonly session: SwitchSession; readonly inbox: SwitchInbox; readonly status?: string | undefined
-  followup(message: unknown): void; inject(message: unknown): void
-  send(message: SwitchMessage, target: InboxTarget, wake: boolean): void
-  whenIdle(): Promise<void>; runMaintenance<T>(work: (signal: AbortSignal) => Promise<T>): Promise<T>
-}
-export type SwitchFallback = 'whole' | 'failure' | 'overflow' | 'failed'
-/** The record one part leaves for the part that follows it. */
-export interface SwitchSegment { readonly sessionId: string; readonly endedAt?: number | undefined; readonly tokens?: number | undefined; readonly note?: string | undefined; readonly noteFrom?: number | undefined; readonly fallback?: SwitchFallback | undefined }
-export interface SwitchPart extends SwitchSegment { readonly number: number; readonly startedAt: number }
-/** A Bot as the switch changes it: its parts gain a segment, its chat a new Session. */
-export interface SwitchBot { readonly id: string; name: string; sessionId?: string | undefined; segments?: SwitchSegment[] | undefined }
-/** A group as the switch changes it. */
-export interface SwitchRoom { readonly id: string; name: string; members: string[]; sessions: Record<string, string>; segments?: Record<string, SwitchSegment[]> | undefined }
-/** A job in a Bot's move to a fresh part. */
-export interface SwitchJob extends SwitchOwner {
-  readonly carry: SwitchMessage[]; readonly info?: TurnInfo | undefined; readonly joined?: readonly unknown[] | undefined
-  readonly resume: boolean; readonly overflow: boolean; readonly failed?: string | undefined
-  readonly bare: boolean; readonly folder: boolean; readonly hard: boolean; readonly since: number
-  started?: boolean; moved?: boolean; kept?: boolean; noteFailed?: boolean
-}
-/** The tables the switch lifecycle keeps; the move reads and writes the ones it needs. */
-export interface SwitchTables {
-  readonly switches: Map<string, SwitchJob>; readonly folderRetry: Map<string, number>; readonly rescued: Map<string, 'carried' | 'bare'>
-  readonly freshParts: Map<string, number>; readonly partBase: Map<string, number | undefined>
-  readonly noteFailures: Map<string, { readonly count: number; readonly until: number }>; readonly checking: Set<string>
-}
-export interface SwitchState { switching: Record<string, SwitchOwner>; questions: Record<string, unknown>; views?: Record<string, unknown> | undefined }
-export interface Lines { readonly window: number; readonly usable: number; readonly hard: number; readonly check: number }
-/** What a fresh part carries of the part that ends. */
-export interface HandoffLines { readonly recent: string[]; readonly earlier: string[]; readonly unlisted: number; readonly complete: boolean; readonly whole?: boolean | undefined }
-export interface WrittenNote { readonly note: string; readonly attempts: number }
-export interface HandoffPackageOptions {
-  readonly room: SwitchRoom | undefined; readonly segment: SwitchSegment; readonly lines: HandoffLines; readonly number: number
-  readonly resume: boolean; readonly overflow: boolean | undefined; readonly failed: string | undefined
-  readonly bare: boolean | undefined; readonly folder: string | undefined
-}
-export interface SwitchLiveEntry { info?: TurnInfo | undefined; joined?: readonly { readonly info: TurnInfo }[] | undefined; switched?: boolean }
-interface FreshRoute { readonly ref: string; readonly effort: string | undefined }
-
-/** The runtime surface this module calls: routing, folders, and Session creation. */
-export interface PartMoveRuntime {
-  botOf(botId: string | undefined): SwitchBot | undefined; roomOf(roomId: string | undefined): SwitchRoom | undefined
-  chatOf(botId: string): string; resolveAgent(sessionId: string): Promise<SwitchAgent>; ensureCapabilities(sessionId: string): Promise<unknown>
-  isFolder(path: string): Promise<boolean>; teamFolder(): string | undefined; ensureWorkspace(): Promise<string>
-  workDirOf(owner: SwitchOwner | undefined): string | undefined
-  createSession(title: string, options?: { readonly dir?: string | undefined }): Promise<string>
-  desiredModel(bot: SwitchBot): Promise<string | undefined>; desiredEffort(bot: SwitchBot, ref: string | undefined): Promise<string | undefined>
-  selectSessionModel(sessionId: string, selection: { readonly provider?: string | undefined; readonly model?: string | undefined; readonly reasoningEffort?: string | undefined }): Promise<unknown>
-  applyPermission(bot: SwitchBot, sessionId: string, room: SwitchRoom | undefined): Promise<void>
-  moveSchedules(from: string, to: string): unknown
-  load(): Promise<unknown>; save(): Promise<unknown>; readOnly(): string | undefined; isBotSession(sessionId: string): boolean
-  warn(template: string, ...args: readonly unknown[]): void
-}
-export interface PartMoveOptions {
-  readonly ctx: HostContext; readonly rt: PartMoveRuntime; readonly state: SwitchState; readonly tables: SwitchTables
-  placeOf(sessionId: string): SwitchOwner | undefined; tokensOf(session: SwitchSession): number | undefined
-  contextLines(session: SwitchSession): Promise<Lines | undefined>
-  writeNote(agent: SwitchAgent, signal: AbortSignal, options?: { readonly folder?: boolean | undefined }): Promise<WrittenNote>
-  handoffLines(sessionId: string, options: { readonly budget: number; readonly group: boolean; readonly number: number }): Promise<HandoffLines>
-  handoffPackage(options: HandoffPackageOptions): string
-  handoffSource(job: SwitchJob, resume: boolean): LlmMessageSource
-  partsOf(botId: string, roomId?: string): readonly SwitchPart[]
-  readonly recentTokens: number; readonly noteTimeoutMs: number; readonly noteCooldownMs: readonly number[]
-}
-export interface PartMove {
-  forward(owner: SwitchOwner, messages: readonly SwitchMessage[]): Promise<void>; restore(agent: SwitchAgent, messages: readonly SwitchMessage[]): void
-  wake(agent: SwitchAgent): void; heldBack(): Promise<void>
-  folderMove(agent: SwitchAgent, options?: { readonly midTurn?: boolean | undefined }): Promise<string | undefined>
-  moveOn(agent: SwitchAgent, job: SwitchJob, signal: AbortSignal): Promise<void>
-}
 
 export function createPartMove({ ctx, rt, state, tables, placeOf, tokensOf, contextLines, writeNote, handoffLines, handoffPackage, handoffSource, partsOf, recentTokens, noteTimeoutMs, noteCooldownMs }: PartMoveOptions): PartMove {
   const currentOf = (owner: SwitchOwner): string | undefined => (owner.roomId === undefined ? rt.chatOf(owner.botId) : rt.roomOf(owner.roomId)?.sessions[owner.botId])
@@ -168,10 +102,13 @@ export function createPartMove({ ctx, rt, state, tables, placeOf, tokensOf, cont
         if (currentOf(owner) !== sessionId) {
           await forward(owner, held)
           for (const message of held) agent.inbox.remove(message.id)
-          await ctx.workspaceRegistry.archiveSession(sessionId)
-            .catch(error => rt.warn('moon-bot: earlier part %s not archived: %s', sessionId, error))
+          await ctx.workspaceRegistry.archiveSession(sessionId).catch(error => rt.warn('moon-bot: earlier part %s not archived: %s', sessionId, error))
         } else {
-          try { wake(agent) } catch (error) { rt.warn('moon-bot: part %s could not be woken for its kept input: %s', sessionId, error) }
+          try {
+            wake(agent)
+          } catch (error) {
+            rt.warn('moon-bot: part %s could not be woken for its kept input: %s', sessionId, error)
+          }
         }
         delete state.switching[sessionId]
         await rt.save()
@@ -193,8 +130,7 @@ export function createPartMove({ ctx, rt, state, tables, placeOf, tokensOf, cont
   const selectRoute = (bot: SwitchBot, sessionId: string, { ref, effort }: FreshRoute): Promise<unknown> => {
     const split = splitRef(ref)
     const route = split === undefined ? {} : split
-    return rt.selectSessionModel(sessionId, { ...route, ...(effort === undefined ? {} : { reasoningEffort: effort }) })
-      .catch(error => rt.warn('moon-bot: model for the fresh part of %s not applied: %s', bot.name, error))
+    return rt.selectSessionModel(sessionId, { ...route, ...(effort === undefined ? {} : { reasoningEffort: effort }) }).catch(error => rt.warn('moon-bot: model for the fresh part of %s not applied: %s', bot.name, error))
   }
 
   // The folder a part should move to, when it is not the one the part was made in. A
@@ -206,7 +142,7 @@ export function createPartMove({ ctx, rt, state, tables, placeOf, tokensOf, cont
     const cwd = agent.session.header?.cwd
     if (place === undefined || cwd === undefined || (midTurn && place.roomId !== undefined) || Date.now() < (tables.folderRetry.get(agent.id) ?? 0)) return undefined
     const wanted = rt.workDirOf(place)
-    const usable = wanted !== undefined && await rt.isFolder(wanted)
+    const usable = wanted !== undefined && (await rt.isFolder(wanted))
     // A team copied from another DSH_HOME has no team workspace here until one is made, and its
     // Sessions still work in the old one.
     if (!usable && rt.teamFolder() === undefined) await rt.ensureWorkspace()
@@ -251,24 +187,22 @@ export function createPartMove({ ctx, rt, state, tables, placeOf, tokensOf, cont
     }
     if (failure !== undefined) rt.warn('moon-bot: handoff note for %s failed past the hard line; moving on with the earlier note: %s', bot.name, failure)
     const previous = parts.at(-2)
-    const noted: Pick<SwitchSegment, 'note' | 'noteFrom' | 'fallback'> = written !== undefined ? { note: written.note }
-      : { fallback: whole ? 'whole' : job.failed !== undefined ? 'failure' : job.overflow ? 'overflow' : 'failed', ...(previous?.note ? { note: previous.note, noteFrom: previous.noteFrom ?? previous.number } : {}) }
+    const noted: Pick<SwitchSegment, 'note' | 'noteFrom' | 'fallback'> =
+      written !== undefined ? { note: written.note } : { fallback: whole ? 'whole' : job.failed !== undefined ? 'failure' : job.overflow ? 'overflow' : 'failed', ...(previous?.note ? { note: previous.note, noteFrom: previous.noteFrom ?? previous.number } : {}) }
     carried ??= await readLines()
     if (signal.aborted) throw signal.reason
     const dir = rt.workDirOf(job)
-    const intended = dir !== undefined && await rt.isFolder(dir) ? dir : rt.teamFolder()
+    const intended = dir !== undefined && (await rt.isFolder(dir)) ? dir : rt.teamFolder()
     const freshId = await rt.createSession(room ? `${bot.name} · ${room.name}` : bot.name, { dir })
     const picked = await freshRoute(bot, session)
     if (picked !== undefined) await selectRoute(bot, freshId, picked)
-    await rt.applyPermission(bot, freshId, room)
-      .catch(error => rt.warn('moon-bot: permission for the fresh part of %s not applied: %s', bot.name, error))
+    await rt.applyPermission(bot, freshId, room).catch(error => rt.warn('moon-bot: permission for the fresh part of %s not applied: %s', bot.name, error))
     // The fresh part took several awaits: a Bot or group deleted meanwhile, a member that
     // left, or a part that is no longer the current one gets no fresh part.
     const current = room !== undefined ? room.sessions?.[bot.id] : rt.chatOf(bot.id)
     const gone = rt.botOf(bot.id) === undefined || (room !== undefined && (rt.roomOf(room.id) !== room || !room.members.includes(bot.id)))
     if (gone || current !== agent.id) {
-      await ctx.workspaceRegistry.archiveSession(freshId, { stopActivity: true })
-        .catch(error => rt.warn('moon-bot: unused fresh part of %s not archived: %s', bot.name, error))
+      await ctx.workspaceRegistry.archiveSession(freshId, { stopActivity: true }).catch(error => rt.warn('moon-bot: unused fresh part of %s not archived: %s', bot.name, error))
       return
     }
     const segment: SwitchSegment = { sessionId: agent.id, endedAt: Date.now(), ...(tokens !== undefined ? { tokens } : {}), ...noted }
@@ -324,21 +258,35 @@ export function createPartMove({ ctx, rt, state, tables, placeOf, tokensOf, cont
       await forward(job, [...carry, ...held])
     } catch (error) {
       job.kept = true
-      try { restore(agent, [...carry, ...job.carry.splice(0)]) } catch {}
+      try {
+        restore(agent, [...carry, ...job.carry.splice(0)])
+      } catch {}
       throw error
     }
     for (const message of held) agent.inbox.remove(message.id)
     // Input the old part claimed while the rest moved goes on after it.
     for (let late = job.carry.splice(0); late.length > 0; late = job.carry.splice(0)) {
-      await forward(job, late).catch((error) => {
+      await forward(job, late).catch(error => {
         job.kept = true
-        try { restore(agent, late) } catch {}
+        try {
+          restore(agent, late)
+        } catch {}
         throw error
       })
     }
-    ctx.logger.info('moon-bot: %s%s moved on to part %d at %d tokens (check line %d, hard line %d); %s; %d latest and %d earlier messages carried%s', bot.name, room ? ` in ${room.name}` : '', number + 1, tokens ?? -1, lines?.check ?? -1, lines?.hard ?? -1,
+    ctx.logger.info(
+      'moon-bot: %s%s moved on to part %d at %d tokens (check line %d, hard line %d); %s; %d latest and %d earlier messages carried%s',
+      bot.name,
+      room ? ` in ${room.name}` : '',
+      number + 1,
+      tokens ?? -1,
+      lines?.check ?? -1,
+      lines?.hard ?? -1,
       written !== undefined ? `note written in ${written.attempts} attempt(s)` : `note put together by Moon Bot (${noted.fallback}${noted.note ? `, carries part ${noted.noteFrom}'s` : ', nothing to carry'})`,
-      carried.recent.length, carried.earlier.length, folder === undefined ? '' : `; now works in ${folder}`)
+      carried.recent.length,
+      carried.earlier.length,
+      folder === undefined ? '' : `; now works in ${folder}`,
+    )
   }
 
   return { forward, restore, wake, heldBack, folderMove, moveOn }

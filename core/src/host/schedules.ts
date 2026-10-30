@@ -113,7 +113,10 @@ function requestOf(record: ScheduleRecord): ScheduleRequest | null {
 
 // The settings form's timing as a create request selector.
 function selectorOf(when: SelectorInput | undefined): ScheduleSelector {
-  const zone = typeof when?.timeZone === 'string' && when.timeZone !== '' ? when.timeZone : 'UTC'
+  // A reminder set for "8am" means 8am where the user is. Falling back to UTC here made
+  // every unspecific reminder fire eight hours late on a host that does not run in UTC, so
+  // the host's own zone is what an omitted zone means.
+  const zone = typeof when?.timeZone === 'string' && when.timeZone !== '' ? when.timeZone : undefined
   switch (when?.kind) {
     case 'at': {
       const at = new Date(String(when.at ?? ''))

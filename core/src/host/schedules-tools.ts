@@ -45,7 +45,7 @@ export function installScheduleTools(rt: HostRuntime): void {
       when: { type: 'string', required: true, description: 'When it fires, as one of: "at", "daily", "weekly", "every", "cron"' },
       at: { type: 'string', description: 'For when=at: an ISO date-time with a zone, such as 2026-10-30T09:00:00+08:00. Must be in the future' },
       time: { type: 'string', description: 'For daily or weekly: the local time as HH:MM, 24-hour' },
-      time_zone: { type: 'string', description: 'For daily, weekly or cron: an IANA zone such as Asia/Shanghai. Defaults to UTC' },
+      time_zone: { type: 'string', description: 'For daily, weekly or cron: an IANA zone such as Asia/Shanghai. Leave it out and the host uses its own local zone, which is the zone the current time in your instructions is given in' },
       weekdays: { type: 'string', description: 'For weekly: ISO weekdays 1 (Monday) to 7 (Sunday), comma separated, such as 1,3,5' },
       minutes: { type: 'string', description: 'For every: repeat interval in minutes, 1 to 10080' },
       expression: { type: 'string', description: 'For when=cron: a five-field cron expression, such as "0 9 * * 1-5"' },

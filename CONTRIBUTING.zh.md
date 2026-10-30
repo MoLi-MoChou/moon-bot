@@ -116,16 +116,16 @@ pnpm install
 
 ## 测试改动
 
-在 `packages/core/` 里运行：
+在仓库根运行（以及注明的 `packages/core/`）：
 
 ```sh
-pnpm run build                         # src/client → client.js
-pnpm test                              # 单元测试；client.js 过期时也会失败
-node scripts/build-client.ts --check   # client.js 与 src/client 一致
-pnpm run lint                          # oxlint
+pnpm run build                         # 重建 workspace 产物
+pnpm test                              # 有 test 脚本的 workspace 单元测试
+pnpm run check:static                  # 全仓 typecheck + lint
+cd packages/core && node scripts/build-client.ts --check   # client.js 与 src/client 一致
 ```
 
-CI 在每个 Pull Request 上，在 Linux 和 Windows 上跑同样的三项检查。它还会扫描入库的文件，查找密钥、token、个人路径和邮箱，以及只应留在本地的材料。想自己扫描，在仓库根目录运行：
+CI 在每个 Pull Request 上跑 `pnpm test`、`pnpm run check:static` 和 `pnpm run eval`（矩阵 job 含 Linux / Windows）。它还会扫描入库的文件，查找密钥、token、个人路径和邮箱，以及只应留在本地的材料。想自己扫描，在仓库根目录运行：
 
 ```sh
 mkdir -p /tmp/ds-bot-tree && git archive HEAD | tar -x -C /tmp/ds-bot-tree && node scripts/scan.mjs /tmp/ds-bot-tree

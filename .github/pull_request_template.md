@@ -21,7 +21,7 @@ Fixes #
 
 - [ ] `pnpm test` (root; covers workspaces with tests)
 - [ ] `node scripts/build-client.ts --check`
-- [ ] `pnpm run lint`
+- [ ] `pnpm run check:static` (root typecheck + lint for all workspaces)
 - [ ] Smoke test, for changes to `index.js` or `src/host/` / 改了 `index.js` 或 `src/host/` 时跑冒烟测试
 - [ ] Screenshot attached, for interface changes / 界面改动已附截图
 

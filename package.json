@@ -10,10 +10,11 @@
   "scripts": {
     "build": "pnpm -r --if-present run build",
     "eval": "pnpm --filter moon-bot-core run eval",
-    "lint": "pnpm --filter moon-bot-core run lint",
+    "lint": "pnpm -r --if-present run lint",
     "test": "pnpm -r --if-present run test",
     "typecheck": "pnpm -r --if-present run typecheck",
-    "postinstall": "node scripts/postinstall.mjs"
+    "postinstall": "node scripts/postinstall.mjs",
+    "check:static": "pnpm run typecheck && pnpm run lint"
   },
   "devDependencies": {
     "playwright": "^1.64.1",

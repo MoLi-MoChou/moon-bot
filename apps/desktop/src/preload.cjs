@@ -52,7 +52,7 @@ function frameless(height, mica) {
 // conversation) and on the sidebar-colored band without it. Theme variables can resolve apart
 // from what is painted, so the color comes from the element itself: the first one up from it
 // that is not transparent.
-function captionColors(mica) {
+function captionColors(_mica) {
   const canvas = document.createElement('canvas')
   canvas.width = canvas.height = 1
   const context = canvas.getContext('2d', { willReadFrequently: true })

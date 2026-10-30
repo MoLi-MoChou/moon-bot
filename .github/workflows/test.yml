@@ -39,8 +39,10 @@ jobs:
       - run: pnpm install --frozen-lockfile
         working-directory: .
       - run: pnpm test
-      - run: pnpm run typecheck
-      - run: pnpm run lint
+      # Static checks at the repo root cover every workspace (core, contracts, ui,
+      # desktop, connect): typecheck + lint via `pnpm run check:static`.
+      - run: pnpm run check:static
+        working-directory: .
       - run: pnpm run eval
 
   package:

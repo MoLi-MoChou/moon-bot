@@ -1,21 +1,15 @@
-import { createElement as h, useState, useMemo } from 'react';
-import { spring, SPRING_TAP } from './motion.tsx';
-import { MaskedInput } from './secret-card.tsx';
-import { CheckIcon, SearchIcon, CloseIcon, PlusIcon } from './icons.tsx';
-import { CONNECTOR_LOGOS, DefaultConnectorLogo } from './connector-logos.tsx';
-import { t } from './i18n.ts';
-import {
-  CONNECTOR_CATALOG,
-  CONNECTOR_CATEGORIES,
-  capabilityOf,
-  type ConnectorCatalogEntry,
-  type ConnectorCategory,
-} from 'moon-bot-contracts';
+import { createElement as h, useState, useMemo } from 'react'
+import { spring, SPRING_TAP } from './motion.tsx'
+import { MaskedInput } from './secret-card.tsx'
+import { CheckIcon, SearchIcon, CloseIcon, PlusIcon } from './icons.tsx'
+import { CONNECTOR_LOGOS, DefaultConnectorLogo } from './connector-logos.tsx'
+import { t } from './i18n.ts'
+import { CONNECTOR_CATALOG, CONNECTOR_CATEGORIES, capabilityOf, type ConnectorCatalogEntry, type ConnectorCategory } from 'moon-bot-contracts'
 
 export interface MarketActions {
-  secretSet: (payload: { name: string; value: string; purpose: string }) => Promise<unknown>;
-  saveCapability: (item: Record<string, unknown>) => Promise<unknown>;
-  openSettings?: (page: string) => void;
+  secretSet: (payload: { name: string; value: string; purpose: string }) => Promise<unknown>
+  saveCapability: (item: Record<string, unknown>) => Promise<unknown>
+  openSettings?: (page: string) => void
 }
 
 const CATEGORY_LABELS: Record<string, () => string> = {
@@ -26,16 +20,18 @@ const CATEGORY_LABELS: Record<string, () => string> = {
   cloud: () => t('Cloud & DevOps'),
   social: () => t('Social & Media'),
   intel: () => t('AI & Reasoning'),
-};
+}
 
 function CatalogCard({ entry, isInstalled, onInstall }: { entry: ConnectorCatalogEntry; isInstalled: boolean; onInstall: () => void }) {
-  const Logo = CONNECTOR_LOGOS[entry.id] ?? DefaultConnectorLogo;
+  const Logo = CONNECTOR_LOGOS[entry.id] ?? DefaultConnectorLogo
 
   return (
     <button type='button' className='bt-market-card' onClick={onInstall}>
       <div className='bt-market-card-top'>
         <div className='bt-market-card-ident'>
-          <span className='bt-market-icon'><Logo size={22} /></span>
+          <span className='bt-market-icon'>
+            <Logo size={22} />
+          </span>
           <div className='bt-market-header'>
             <span className='bt-market-name'>{entry.name}</span>
             <span className='bt-market-kind'>{entry.transport === 'stdio' ? t('Local') : t('Cloud')}</span>
@@ -54,7 +50,7 @@ function CatalogCard({ entry, isInstalled, onInstall }: { entry: ConnectorCatalo
         <span className='bt-market-action'>{isInstalled ? t('Configured') : t('Install')}</span>
       </div>
     </button>
-  );
+  )
 }
 
 function InstallForm({
@@ -63,33 +59,35 @@ function InstallForm({
   market,
   onClose,
 }: {
-  entry: ConnectorCatalogEntry;
-  isInstalled: boolean;
-  market: MarketActions;
-  onClose: () => void;
+  entry: ConnectorCatalogEntry
+  isInstalled: boolean
+  market: MarketActions
+  onClose: () => void
 }) {
-  const Logo = CONNECTOR_LOGOS[entry.id] ?? DefaultConnectorLogo;
-  const required = (entry.secrets ?? []).filter(secret => secret.optional !== true);
-  const [values, setValues] = useState<Record<string, string>>({});
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const Logo = CONNECTOR_LOGOS[entry.id] ?? DefaultConnectorLogo
+  const required = (entry.secrets ?? []).filter(secret => secret.optional !== true)
+  const [values, setValues] = useState<Record<string, string>>({})
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const install = (): void => {
-    if (busy || required.some(secret => (values[secret.name] ?? '').trim() === '')) return;
-    setBusy(true);
-    setError(null);
-    const secrets = (entry.secrets ?? []).filter(secret => (values[secret.name] ?? '').trim() !== '');
+    if (busy || required.some(secret => (values[secret.name] ?? '').trim() === '')) return
+    setBusy(true)
+    setError(null)
+    const secrets = (entry.secrets ?? []).filter(secret => (values[secret.name] ?? '').trim() !== '')
     void Promise.all(secrets.map(secret => market.secretSet({ name: secret.name, value: values[secret.name] ?? '', purpose: `${entry.name} connector` })))
       .then(() => market.saveCapability(capabilityOf(entry)))
       .then(onClose, failure => setError(failure?.message ?? String(failure)))
-      .finally(() => setBusy(false));
-  };
+      .finally(() => setBusy(false))
+  }
 
   return (
     <div className='bt-market-form'>
       <div className='bt-market-form-head'>
         <div className='bt-market-form-title-row'>
-          <span className='bt-market-icon bt-market-form-icon'><Logo size={28} /></span>
+          <span className='bt-market-icon bt-market-form-icon'>
+            <Logo size={28} />
+          </span>
           <div className='bt-market-form-info'>
             <div className='bt-market-form-name-row'>
               <span className='bt-market-name'>{entry.name}</span>
@@ -98,15 +96,33 @@ function InstallForm({
             <span className='bt-market-desc'>{t(entry.description)}</span>
           </div>
         </div>
-        {entry.website ? <div className='bt-market-form-links'><a className='bt-connector-link' href={entry.website} target='_blank' rel='noopener noreferrer'>{t('Official website')} ↗</a></div> : null}
-        {isInstalled ? <div className='bt-market-notice'>{t('This connector is already installed as a capability. Installing again will update its configuration.')}</div> : null}
+        {entry.website ? (
+          <div className='bt-market-form-links'>
+            <a className='bt-connector-link' href={entry.website} target='_blank' rel='noopener noreferrer'>
+              {t('Official website')} ↗
+            </a>
+          </div>
+        ) : null}
+        {isInstalled ? (
+          <div className='bt-market-notice'>{t('This connector is already installed as a capability. Installing again will update its configuration.')}</div>
+        ) : null}
       </div>
 
       {(entry.secrets ?? []).length > 0 ? (
         (entry.secrets ?? []).map(secret => (
           <label key={secret.name} className='bt-q-field bt-secret-field'>
-            <MaskedInput value={values[secret.name] ?? ''} onChange={next => setValues(last => ({ ...last, [secret.name]: next }))} onEnter={install} label={t(secret.label) + (secret.optional === true ? t(' (optional)') : '')} autoFocus={secret === required[0]} />
-            {secret.url !== undefined ? <a className='bt-connector-link' href={secret.url} target='_blank' rel='noopener noreferrer'>{t('Get it here')} ↗</a> : null}
+            <MaskedInput
+              value={values[secret.name] ?? ''}
+              onChange={next => setValues(last => ({ ...last, [secret.name]: next }))}
+              onEnter={install}
+              label={t(secret.label) + (secret.optional === true ? t(' (optional)') : '')}
+              autoFocus={secret === required[0]}
+            />
+            {secret.url !== undefined ? (
+              <a className='bt-connector-link' href={secret.url} target='_blank' rel='noopener noreferrer'>
+                {t('Get it here')} ↗
+              </a>
+            ) : null}
           </label>
         ))
       ) : (
@@ -116,35 +132,53 @@ function InstallForm({
       )}
 
       <div className='bt-connector-form-row'>
-        <button type='button' className='bt-soft bt-soft-sm' disabled={busy} onClick={onClose}>{t('Cancel')}</button>
-        <button type='button' className='bt-soft bt-soft-sm' disabled={busy || required.some(secret => (values[secret.name] ?? '').trim() === '')} onClick={install}>
+        <button type='button' className='bt-soft bt-soft-sm' disabled={busy} onClick={onClose}>
+          {t('Cancel')}
+        </button>
+        <button
+          type='button'
+          className='bt-soft bt-soft-sm'
+          disabled={busy || required.some(secret => (values[secret.name] ?? '').trim() === '')}
+          onClick={install}>
           {busy ? t('Installing…') : isInstalled ? t('Save changes') : t('Install')}
         </button>
       </div>
 
-      {error ? <div className='bt-connector-error' role='alert'>{error}</div> : null}
+      {error ? (
+        <div className='bt-connector-error' role='alert'>
+          {error}
+        </div>
+      ) : null}
     </div>
-  );
+  )
 }
 
-export function ConnectorCatalog({ market, capabilities, onCustom }: { market: MarketActions; capabilities?: readonly { name: string }[] | undefined; onCustom?: (() => void) | undefined }) {
-  const [installing, setInstalling] = useState<ConnectorCatalogEntry | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<ConnectorCategory | 'all'>('all');
-  const [search, setSearch] = useState('');
+export function ConnectorCatalog({
+  market,
+  capabilities,
+  onCustom,
+}: {
+  market: MarketActions
+  capabilities?: readonly { name: string }[] | undefined
+  onCustom?: (() => void) | undefined
+}) {
+  const [installing, setInstalling] = useState<ConnectorCatalogEntry | null>(null)
+  const [selectedCategory, setSelectedCategory] = useState<ConnectorCategory | 'all'>('all')
+  const [search, setSearch] = useState('')
 
-  const installedSet = useMemo(() => new Set((capabilities ?? []).map(c => c.name)), [capabilities]);
+  const installedSet = useMemo(() => new Set((capabilities ?? []).map(c => c.name)), [capabilities])
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = search.trim().toLowerCase()
     return CONNECTOR_CATALOG.filter(entry => {
-      if (selectedCategory !== 'all' && entry.category !== selectedCategory) return false;
-      if (!q) return true;
-      const localizedName = entry.name.toLowerCase();
-      const localizedDesc = t(entry.description).toLowerCase();
-      const rawDesc = entry.description.toLowerCase();
-      return entry.id.includes(q) || localizedName.includes(q) || localizedDesc.includes(q) || rawDesc.includes(q);
-    });
-  }, [selectedCategory, search]);
+      if (selectedCategory !== 'all' && entry.category !== selectedCategory) return false
+      if (!q) return true
+      const localizedName = entry.name.toLowerCase()
+      const localizedDesc = t(entry.description).toLowerCase()
+      const rawDesc = entry.description.toLowerCase()
+      return entry.id.includes(q) || localizedName.includes(q) || localizedDesc.includes(q) || rawDesc.includes(q)
+    })
+  }, [selectedCategory, search])
 
   return (
     <div className='bt-market'>
@@ -161,26 +195,49 @@ export function ConnectorCatalog({ market, capabilities, onCustom }: { market: M
             <PlusIcon />
             <span>{t('Custom MCP')}</span>
           </button>
-          {market.openSettings === undefined ? null : <button type='button' className='bt-soft bt-soft-sm' onClick={() => market.openSettings?.('capabilities')}>{t('Installed capabilities')}</button>}
+          {market.openSettings === undefined ? null : (
+            <button type='button' className='bt-soft bt-soft-sm' onClick={() => market.openSettings?.('capabilities')}>
+              {t('Installed capabilities')}
+            </button>
+          )}
           <div className='bt-market-search'>
-            <span className='bt-market-search-icon'><SearchIcon /></span>
-            <input type='text' className='bt-market-search-input' placeholder={t('Search connectors…')} value={search} onChange={e => setSearch(e.target.value)} />
-            {search ? <button type='button' className='bt-market-search-clear' onClick={() => setSearch('')} aria-label={t('Clear search')}><CloseIcon /></button> : null}
+            <span className='bt-market-search-icon'>
+              <SearchIcon />
+            </span>
+            <input
+              type='text'
+              className='bt-market-search-input'
+              placeholder={t('Search connectors…')}
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+            {search ? (
+              <button type='button' className='bt-market-search-clear' onClick={() => setSearch('')} aria-label={t('Clear search')}>
+                <CloseIcon />
+              </button>
+            ) : null}
           </div>
         </div>
       </div>
 
       <div className='bt-market-tabs'>
-        <button type='button' className={`bt-market-tab ${selectedCategory === 'all' ? 'bt-market-tab-active' : ''}`} onClick={() => setSelectedCategory('all')}>
+        <button
+          type='button'
+          className={`bt-market-tab ${selectedCategory === 'all' ? 'bt-market-tab-active' : ''}`}
+          onClick={() => setSelectedCategory('all')}>
           {t('All')} ({CONNECTOR_CATALOG.length})
         </button>
         {CONNECTOR_CATEGORIES.map(cat => {
-          const count = CONNECTOR_CATALOG.filter(e => e.category === cat.id).length;
+          const count = CONNECTOR_CATALOG.filter(e => e.category === cat.id).length
           return (
-            <button key={cat.id} type='button' className={`bt-market-tab ${selectedCategory === cat.id ? 'bt-market-tab-active' : ''}`} onClick={() => setSelectedCategory(cat.id)}>
+            <button
+              key={cat.id}
+              type='button'
+              className={`bt-market-tab ${selectedCategory === cat.id ? 'bt-market-tab-active' : ''}`}
+              onClick={() => setSelectedCategory(cat.id)}>
               {CATEGORY_LABELS[cat.id]?.() ?? cat.label} ({count})
             </button>
-          );
+          )
         })}
       </div>
 
@@ -189,15 +246,25 @@ export function ConnectorCatalog({ market, capabilities, onCustom }: { market: M
       ) : filtered.length === 0 ? (
         <div className='bt-market-empty'>
           <span className='bt-set-hint'>{t('No connectors match “{query}”', { query: search })}</span>
-          <button type='button' className='bt-soft bt-soft-sm' onClick={() => { setSearch(''); setSelectedCategory('all'); }}>{t('Clear search')}</button>
+          <button
+            type='button'
+            className='bt-soft bt-soft-sm'
+            onClick={() => {
+              setSearch('')
+              setSelectedCategory('all')
+            }}>
+            {t('Clear search')}
+          </button>
         </div>
       ) : (
         <div className='bt-market-grid'>
-          {filtered.map(entry => <CatalogCard key={entry.id} entry={entry} isInstalled={installedSet.has(entry.id)} onInstall={() => setInstalling(entry)} />)}
+          {filtered.map(entry => (
+            <CatalogCard key={entry.id} entry={entry} isInstalled={installedSet.has(entry.id)} onInstall={() => setInstalling(entry)} />
+          ))}
         </div>
       )}
     </div>
-  );
+  )
 }
 
 export const MARKET_CSS = `
@@ -246,4 +313,4 @@ export const MARKET_CSS = `
 .bt-market-form-links{display:flex;gap:10px}
 .bt-market-notice{font-size:12px;line-height:16px;padding:6px 10px;border-radius:8px;background:color-mix(in srgb,var(--bt-accent) 10%,transparent);color:var(--bt-accent)}
 @media (prefers-reduced-motion:reduce){.bt-market-card{transition:none}}
-`;
+`

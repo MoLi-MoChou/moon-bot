@@ -5,15 +5,7 @@
 //
 // Phase 1 declares the map against the current endpoints; Phase 4 makes the host
 // handlers conform to it.
-import type {
-  BotView,
-  ExchangeTurn,
-  MemoryEntry,
-  MemoryLimits,
-  ProducedFile,
-  RoomView,
-  SchedulesView,
-} from './schema.js'
+import type { BotView, ExchangeTurn, MemoryEntry, MemoryLimits, ProducedFile, RoomView, SchedulesView } from './schema.js'
 import type { WidgetView } from './views.ts'
 
 /** The error codes the host raises, plus the two the client makes up itself. */
@@ -31,9 +23,7 @@ export type RpcErrorCode =
   | `HTTP_${number}`
 
 /** The envelope every endpoint answers with. */
-export type RpcResultBody<T> =
-  | { readonly ok: true; readonly value: T }
-  | { readonly ok: false; readonly error: RpcError }
+export type RpcResultBody<T> = { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: RpcError }
 
 export interface RpcError {
   readonly code: RpcErrorCode
@@ -156,7 +146,10 @@ export interface BotChannelRpcMap {
 
   // Engines (plan §四): which runtime runs each Bot's turns — the built-in one, or an
   // ACP agent registered as a Bot. The list reads; `engine-set` moves one Bot.
-  engines: { request: Record<string, never>; response: { readonly engines: readonly { readonly id: string; readonly label: string; readonly kind: string }[]; readonly of: Readonly<Record<string, string>> } }
+  engines: {
+    request: Record<string, never>
+    response: { readonly engines: readonly { readonly id: string; readonly label: string; readonly kind: string }[]; readonly of: Readonly<Record<string, string>> }
+  }
   'engine-set': { request: { botId: string; engine: string }; response: { readonly of: Readonly<Record<string, string>> } }
 
   // Remote agents (2026-10-27 remote-agents): invites for the relay, and who is online.
@@ -168,7 +161,14 @@ export interface BotChannelRpcMap {
   // The task panel (2026-10-28 tasks-panel): who is working now, what finished lately,
   // and the stop that ends one turn without messaging its Bot. A running row also says
   // how many messages wait behind its turn (`queued`, from the Session's own inbox).
-  tasks: { request: Record<string, never>; response: { readonly running: readonly (Record<string, unknown> & { readonly hold?: TaskHold })[]; readonly completed: readonly Record<string, unknown>[]; readonly waiting: readonly (Record<string, unknown> & { readonly hold?: TaskHold })[] } }
+  tasks: {
+    request: Record<string, never>
+    response: {
+      readonly running: readonly (Record<string, unknown> & { readonly hold?: TaskHold })[]
+      readonly completed: readonly Record<string, unknown>[]
+      readonly waiting: readonly (Record<string, unknown> & { readonly hold?: TaskHold })[]
+    }
+  }
   'task-stop': { request: { sessionId: string }; response: { readonly stopped: boolean } }
   // One queued message that has not started its turn (2026-10-29 session-queue).
   'queue-remove': { request: { sessionId: string; id: string }; response: { readonly removed: boolean } }
@@ -183,10 +183,32 @@ export interface BotChannelRpcMap {
   'file-text': { request: { file: Record<string, unknown> }; response: { readonly text: string; readonly whole: boolean } }
   // The files a turn left behind (2026-10-28 files-and-library): cards in the chat,
   // and the library page across sessions. Paths are workspace-relative.
-  'turn-files': { request: { sessionId: string; turn: number }; response: { readonly files: readonly { readonly name: string; readonly path: string; readonly size: number; readonly createdAt: number }[] } }
-  'library': { request: { since?: number; limit?: number }; response: { readonly items: readonly { readonly sessionId: string; readonly turn: number | null; readonly ownerId: string | null; readonly name: string; readonly path: string; readonly size: number; readonly createdAt: number }[] } }
-  'workspace-download': { request: { path: string; sessionId?: string }; response: { readonly name: string; readonly mime: string; readonly size: number; readonly data: string; readonly folder?: boolean } }
-  'workspace-describe': { request: { path: string; sessionId?: string }; response: { readonly name: string; readonly size: number; readonly folder: boolean; readonly mime: string; readonly modified: string; readonly downloadable: boolean } }
+  'turn-files': {
+    request: { sessionId: string; turn: number }
+    response: { readonly files: readonly { readonly name: string; readonly path: string; readonly size: number; readonly createdAt: number }[] }
+  }
+  library: {
+    request: { since?: number; limit?: number }
+    response: {
+      readonly items: readonly {
+        readonly sessionId: string
+        readonly turn: number | null
+        readonly ownerId: string | null
+        readonly name: string
+        readonly path: string
+        readonly size: number
+        readonly createdAt: number
+      }[]
+    }
+  }
+  'workspace-download': {
+    request: { path: string; sessionId?: string }
+    response: { readonly name: string; readonly mime: string; readonly size: number; readonly data: string; readonly folder?: boolean }
+  }
+  'workspace-describe': {
+    request: { path: string; sessionId?: string }
+    response: { readonly name: string; readonly size: number; readonly folder: boolean; readonly mime: string; readonly modified: string; readonly downloadable: boolean }
+  }
   'run-stats': { request: { sessionId: string }; response: RunnerStats }
   // Condense the Bot's current part in place (2026-10-29 manual-compact). A refusal
   // carries the sentence; it does not switch to a new part.
@@ -195,7 +217,10 @@ export interface BotChannelRpcMap {
   'room-progress': { request: { roomId: string }; response: readonly Record<string, unknown>[] }
 
   // Bots and groups
-  'create-bot': { request: { name: string; role?: string; instructions?: string; color?: string; brief?: string; avatar?: Record<string, unknown>; model?: string; effort?: string; workDir?: string }; response: BotView }
+  'create-bot': {
+    request: { name: string; role?: string; instructions?: string; color?: string; brief?: string; avatar?: Record<string, unknown>; model?: string; effort?: string; workDir?: string }
+    response: BotView
+  }
   'update-bot': { request: { id: string; [field: string]: unknown }; response: BotView }
   'delete-bot': { request: { id: string }; response: StateView }
   'set-main': { request: { id: string; main: boolean; primary?: boolean; replace?: string }; response: StateView }
@@ -203,15 +228,34 @@ export interface BotChannelRpcMap {
   'update-room': { request: { id: string; [field: string]: unknown }; response: { readonly room: RoomView | undefined; readonly changes: readonly string[] } }
   'delete-room': { request: { id: string }; response: StateView }
   'proactive-subscriptions': { request: { botId: string }; response: { readonly subscriptions: readonly Record<string, unknown>[] } }
-  'proactive-subscribe': { request: { botId: string; topics: string; when?: string; dailyCap?: number; quietFrom?: string | null; quietTo?: string | null; eventHook?: string | null; eventMinutes?: number }; response: { readonly subscription: Record<string, unknown> } }
+  'proactive-subscribe': {
+    request: { botId: string; topics: string; when?: string; dailyCap?: number; quietFrom?: string | null; quietTo?: string | null; eventHook?: string | null; eventMinutes?: number }
+    response: { readonly subscription: Record<string, unknown> }
+  }
   'proactive-unsubscribe': { request: { id: string }; response: { readonly removed: boolean } }
   'proactive-enable': { request: { id: string; enabled?: boolean }; response: { readonly enabled: boolean } }
   'proactive-preauth-list': { request: { botId: string }; response: { readonly rules: readonly Record<string, unknown>[] } }
-  'proactive-preauth-write': { request: { botId: string; id?: string; subscriptionId: string; purpose: string; minutes: number; tools: readonly string[]; prohibitions?: readonly string[]; dailyCap?: number; allowQuietHours?: boolean }; response: { readonly rule: Record<string, unknown> } }
+  'proactive-preauth-write': {
+    request: {
+      botId: string
+      id?: string
+      subscriptionId: string
+      purpose: string
+      minutes: number
+      tools: readonly string[]
+      prohibitions?: readonly string[]
+      dailyCap?: number
+      allowQuietHours?: boolean
+    }
+    response: { readonly rule: Record<string, unknown> }
+  }
   'proactive-preauth-revoke': { request: { id: string }; response: { readonly revoked: boolean } }
   'proactive-stats': { request: { days?: number }; response: { readonly prepared: number; readonly delivered: number; readonly rejected: number; readonly disabled: number; readonly since: number } }
   'proactive-review': { request: { botId: string }; response: Record<string, unknown> }
-  'reset-bot': { request: { id: string; memory?: boolean; conversation?: boolean; history?: boolean; identity?: boolean }; response: { readonly done: readonly string[]; readonly failed: readonly { readonly part: string; readonly reason: string }[] } }
+  'reset-bot': {
+    request: { id: string; memory?: boolean; conversation?: boolean; history?: boolean; identity?: boolean }
+    response: { readonly done: readonly string[]; readonly failed: readonly { readonly part: string; readonly reason: string }[] }
+  }
   'archive-room': { request: { id: string; archived: boolean }; response: StateView }
   folders: { request: Record<string, never>; response: { readonly team: string; readonly picker: string | null; readonly folders: readonly { readonly path: string; readonly title: string }[] } }
   'folder-pick': { request: Record<string, never>; response: string }
@@ -258,7 +302,15 @@ export interface BotChannelRpcMap {
   schedules: { request: Record<string, never>; response: SchedulesView }
   'schedule-create': { request: { target: string; title: string; prompt: string; when: Record<string, unknown> }; response: SchedulesView }
   'schedule-delete': { request: { sessionId: string; id: string }; response: SchedulesView }
-  'memory-view': { request: { botId?: string; roomId?: string; summarize?: boolean; regenerate?: boolean }; response: { readonly entries: readonly MemoryEntry[]; readonly limits: MemoryLimits; readonly sizes: Record<string, number>; readonly summary: { readonly text: string; readonly at: number } | null } }
+  'memory-view': {
+    request: { botId?: string; roomId?: string; summarize?: boolean; regenerate?: boolean }
+    response: {
+      readonly entries: readonly MemoryEntry[]
+      readonly limits: MemoryLimits
+      readonly sizes: Record<string, number>
+      readonly summary: { readonly text: string; readonly at: number } | null
+    }
+  }
   'memory-ask': { request: { botId?: string; roomId?: string; text: string }; response: Record<string, unknown> }
   'memory-forget': { request: { botId?: string; roomId?: string; entry: string }; response: Record<string, unknown> }
 

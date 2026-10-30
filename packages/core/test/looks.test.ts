@@ -58,14 +58,8 @@ test('Bot settings is the only settings entry; nothing is called Team settings',
     text('context-menu.tsx'),
     /\[t\('Edit Bot'\), GearIcon, \(\) => actions\.openSettings\('bots', bot\.id\)\]/,
   )
-  assert.match(
-    text('details-drawer.tsx'),
-    /aria-label=\{bot \? t\('Edit Bot'\) : t\('Group settings'\)\}/,
-  )
-  assert.match(
-    text('details-drawer.tsx'),
-    /title=\{bot \? t\('Edit Bot'\) : t\('Group settings'\)\}/,
-  )
+  assert.match(text('details-drawer.tsx'), /aria-label=\{bot \? t\('Edit Bot'\) : t\('Group settings'\)\}/)
+  assert.match(text('details-drawer.tsx'), /title=\{bot \? t\('Edit Bot'\) : t\('Group settings'\)\}/)
   // A group chat's entries open its own settings the same way.
   assert.match(
     text('context-menu.tsx'),

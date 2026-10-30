@@ -15,17 +15,27 @@ import type { HostRuntime, StoredBot, StoredRoom, StoredState } from './runtime.
 // outside (a request body, a tool argument, a name a model gives) go through this, so
 // "__proto__" and other inherited names read as "not there" instead of returning
 // Object.prototype.
-export const own = <T>(table: Readonly<Record<string, T>> | null | undefined, key: string): T | undefined =>
-  (table != null && Object.hasOwn(table, key) ? table[key] : undefined)
+export const own = <T>(table: Readonly<Record<string, T>> | null | undefined, key: string): T | undefined => (table != null && Object.hasOwn(table, key) ? table[key] : undefined)
 
 export function install(rt: HostRuntime): void {
   const { ctx, home, statePath } = rt
   const { warn } = rt
 
   const state: StoredState = {
-    version: 1, mainBotIds: [], bots: {}, rooms: {}, agents: {},
-    capabilities: { items: {} }, exchanges: [], exchangeTurns: {}, works: {}, questions: {}, views: {},
-    prefs: {}, switching: {}, revision: 0,
+    version: 1,
+    mainBotIds: [],
+    bots: {},
+    rooms: {},
+    agents: {},
+    capabilities: { items: {} },
+    exchanges: [],
+    exchangeTurns: {},
+    works: {},
+    questions: {},
+    views: {},
+    prefs: {},
+    switching: {},
+    revision: 0,
   }
   let loaded: Promise<void> | undefined
   let writing: Promise<unknown> = Promise.resolve()
@@ -149,7 +159,9 @@ export function install(rt: HostRuntime): void {
     }
     for (const room of writer ? Object.values(state.rooms) : []) {
       if (!Array.isArray(room.log)) continue
-      const log = room.log.map(line => (typeof line.text === 'string' && line.length === undefined && typeof line.seq === 'number' ? rt.keepGroupLine?.(room.id, line, line.text) ?? line : line))
+      const log = room.log.map(line =>
+        typeof line.text === 'string' && line.length === undefined && typeof line.seq === 'number' ? (rt.keepGroupLine?.(room.id, line, line.text) ?? line) : line,
+      )
       if (log.some((line, index) => line !== room.log?.[index])) {
         room.log = log
         migrated = true
@@ -162,24 +174,25 @@ export function install(rt: HostRuntime): void {
     return { migrated: migrated || stale.length > 0, stale }
   }
 
-  const load = (): Promise<void> => loaded ??= (async () => {
-    lock.claim()
-    const held = lock.holder()
-    if (held !== undefined) warn('moon-bot: %s', lock.readOnly())
-    const { migrated, stale } = adopt(await lock.readFileState())
-    if (held !== undefined) return
-    if (migrated && lock.stuck() === undefined) {
-      // A failed write must not poison `loaded`: the migrated state stays in
-      // memory and the next save() writes it.
-      try {
-        await save()
-      } catch (error) {
-        warn('moon-bot: saving the migrated Bot team failed: %s', error)
+  const load = (): Promise<void> =>
+    (loaded ??= (async () => {
+      lock.claim()
+      const held = lock.holder()
+      if (held !== undefined) warn('moon-bot: %s', lock.readOnly())
+      const { migrated, stale } = adopt(await lock.readFileState())
+      if (held !== undefined) return
+      if (migrated && lock.stuck() === undefined) {
+        // A failed write must not poison `loaded`: the migrated state stays in
+        // memory and the next save() writes it.
+        try {
+          await save()
+        } catch (error) {
+          warn('moon-bot: saving the migrated Bot team failed: %s', error)
+        }
       }
-    }
-    // Not awaited: renaming a session must not hold up the first roster read.
-    for (const room of stale) void rt.retitleRoom?.(room)
-  })()
+      // Not awaited: renaming a session must not hold up the first roster read.
+      for (const room of stale) void rt.retitleRoom?.(room)
+    })())
 
   // A reading host follows the file and takes over once the other host has gone.
   const refresh = async (): Promise<void> => {
@@ -268,10 +281,13 @@ export function install(rt: HostRuntime): void {
     })
   }
 
-  ctx.effect(() => () => {
-    stopped = true
-    return writing.finally(() => lock.release())
-  }, 'moon-bot: state lock')
+  ctx.effect(
+    () => () => {
+      stopped = true
+      return writing.finally(() => lock.release())
+    },
+    'moon-bot: state lock',
+  )
 
   const botOf = (id: string | undefined): StoredBot | undefined => (id === undefined ? undefined : own(state.bots, id))
   const roomOf = (id: string | undefined): StoredRoom | undefined => (id === undefined ? undefined : own(state.rooms, id))
@@ -285,8 +301,8 @@ export function install(rt: HostRuntime): void {
     state,
     botOf,
     onIndexed: () => rt.indexAgents?.(),
-    cancelApprovals: (sessionId) => rt.cancelApprovals?.(sessionId),
-    archiveSession: (sessionId) => ctx.workspaceRegistry.archiveSession(sessionId, { stopActivity: true }),
+    cancelApprovals: sessionId => rt.cancelApprovals?.(sessionId),
+    archiveSession: sessionId => ctx.workspaceRegistry.archiveSession(sessionId, { stopActivity: true }),
   })
   const { chatOwners, groupOwners, pastOwners, chatOf, selfOf, isBotSession, groupSessionsOf, dropGroupSession, retireGroupSession } = sessionIndex
 
@@ -308,9 +324,26 @@ export function install(rt: HostRuntime): void {
   const isAdminOf = (room: StoredRoom, id: string | undefined): boolean => id !== undefined && room.admin === id
 
   Object.assign(rt, {
-    state, load, save, refresh, readOnly: lock.readOnly, own,
-    botOf, roomOf, isMain, chatOf, selfOf, isBotSession,
-    chatOwners, groupOwners, pastOwners,
-    groupSessionsOf, dropGroupSession, retireGroupSession, findBot, findRooms, isAdminOf,
+    state,
+    load,
+    save,
+    refresh,
+    readOnly: lock.readOnly,
+    own,
+    botOf,
+    roomOf,
+    isMain,
+    chatOf,
+    selfOf,
+    isBotSession,
+    chatOwners,
+    groupOwners,
+    pastOwners,
+    groupSessionsOf,
+    dropGroupSession,
+    retireGroupSession,
+    findBot,
+    findRooms,
+    isAdminOf,
   })
 }

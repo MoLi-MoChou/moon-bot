@@ -4,23 +4,8 @@
 import { ToolRegistry, type ToolContext, type ToolEntry } from '../../engine/registry.ts'
 import { registerCollectedTool } from './collector.ts'
 import type { CapabilityStatus } from '../capabilities-mount.ts'
-import type {
-  Agent,
-  AgentSession,
-  AttachmentRef,
-  InboxMessage,
-  ToolExecution,
-  ToolParameter,
-} from '../host-types.js'
-import type {
-  CapabilityItem,
-  HostRuntime,
-  LiveEntry,
-  StoredBot,
-  StoredRoom,
-  StoredState,
-  TurnInfo,
-} from '../runtime.ts'
+import type { Agent, AgentSession, AttachmentRef, InboxMessage, ToolExecution, ToolParameter } from '../host-types.js'
+import type { CapabilityItem, HostRuntime, LiveEntry, StoredBot, StoredRoom, StoredState, TurnInfo } from '../runtime.ts'
 import { MESSAGE_INLINE_MAX, SOURCE_KIND } from '../constants.ts'
 import { unquote } from '../text.ts'
 import { LEAN_HIDDEN_TOOLS } from 'moon-bot-contracts'
@@ -139,11 +124,7 @@ export interface ToolsRuntime extends HostRuntime {
   capabilityStatusesView(): Readonly<Record<string, Readonly<Record<string, CapabilityStatus>>>>
   capabilitySave(body: Readonly<Record<string, unknown>>, options: { readonly botId: string | undefined }): Promise<CapabilityItem>
   capabilityDelete(name: string | undefined, options: { readonly botId: string | undefined }): Promise<boolean>
-  changeCapabilityAttachment(
-    endpoint: string,
-    body: { readonly name?: string | undefined; readonly bot?: string | undefined },
-    callerId: string | undefined,
-  ): Promise<{ readonly bot: string }>
+  changeCapabilityAttachment(endpoint: string, body: { readonly name?: string | undefined; readonly bot?: string | undefined }, callerId: string | undefined): Promise<{ readonly bot: string }>
 }
 
 export interface CalledInPosts {
@@ -151,9 +132,7 @@ export interface CalledInPosts {
   readonly calls: Map<string, string>
 }
 
-export type PickRoomResult =
-  | { readonly room: StoredRoom; readonly error?: undefined }
-  | { readonly room?: undefined; readonly error: string }
+export type PickRoomResult = { readonly room: StoredRoom; readonly error?: undefined } | { readonly room?: undefined; readonly error: string }
 
 export interface BodyOfMessage {
   readonly text: string
@@ -196,8 +175,7 @@ export interface ToolShared {
   pickRoom(ref: string | undefined, self: string | undefined): PickRoomResult
 }
 
-export const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
-  value !== null && typeof value === 'object' && !Array.isArray(value)
+export const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> => value !== null && typeof value === 'object' && !Array.isArray(value)
 
 export const errorMessage = (error: unknown): string => (error instanceof Error ? error.message : String(error))
 
@@ -212,11 +190,11 @@ export function createShared(host: HostRuntime, registry: ToolRegistry = new Too
     const roomId = rt.groupOwners.get(context.sessionId)?.roomId
     return roomId ? { fromRoomId: roomId } : {}
   }
-  const roomOfCaller = (context: ToolContext): StoredRoom | undefined =>
-    rt.roomOf(rt.groupOwners.get(context.sessionId)?.roomId)
+  const roomOfCaller = (context: ToolContext): StoredRoom | undefined => rt.roomOf(rt.groupOwners.get(context.sessionId)?.roomId)
 
   const roomLine = (room: StoredRoom, self: string | undefined): string => {
-    const members = (room.members ?? []).map(id => rt.botOf(id))
+    const members = (room.members ?? [])
+      .map(id => rt.botOf(id))
       .filter((bot): bot is StoredBot => bot !== undefined)
       .map(bot => `${bot.name}${bot.id === room.admin ? ' (admin)' : ''}${bot.id === self ? ' (you)' : ''}`)
     const parts = [
@@ -229,11 +207,9 @@ export function createShared(host: HostRuntime, registry: ToolRegistry = new Too
     return `- "${room.name}" — ${parts.join('; ')}`
   }
   // Main Bots see every group; other Bots see the groups they are in.
-  const visibleRooms = (self: string | undefined): StoredRoom[] =>
-    Object.values(state.rooms).filter(room => rt.isMain(self) || (self !== undefined && (room.members ?? []).includes(self)))
+  const visibleRooms = (self: string | undefined): StoredRoom[] => Object.values(state.rooms).filter(room => rt.isMain(self) || (self !== undefined && (room.members ?? []).includes(self)))
 
-  const liveEntry = (sessionId: string | undefined): LiveEntry | undefined =>
-    (sessionId === undefined ? undefined : rt.live.get(sessionId))
+  const liveEntry = (sessionId: string | undefined): LiveEntry | undefined => (sessionId === undefined ? undefined : rt.live.get(sessionId))
 
   const whereOf = (sessionId: string): string => {
     const room = rt.roomOf(rt.groupOwners.get(sessionId)?.roomId)
@@ -243,25 +219,19 @@ export function createShared(host: HostRuntime, registry: ToolRegistry = new Too
   // Sessions a Bot is running in right now: its own chat plus each group Session
   // with a live turn. An idle Bot reports just its own chat.
   const activeSessions = (botId: string): { readonly running: readonly string[]; readonly idle: boolean } => {
-    const running = [...new Set([rt.chatOf(botId), ...rt.groupSessionsOf(botId)])]
-      .filter(sessionId => rt.live.get(sessionId)?.turn !== undefined)
+    const running = [...new Set([rt.chatOf(botId), ...rt.groupSessionsOf(botId)])].filter(sessionId => rt.live.get(sessionId)?.turn !== undefined)
     return { running, idle: running.length === 0 }
   }
 
   // A Bot request still in the inbox: no step or turn has taken it out yet.
-  const unreadRequest = (
-    agent: Agent,
-    senderId: string,
-    toUser: boolean,
-  ): { readonly message: InboxMessage; readonly steered: boolean } | undefined => {
+  const unreadRequest = (agent: Agent, senderId: string, toUser: boolean): { readonly message: InboxMessage; readonly steered: boolean } | undefined => {
     const messages: readonly (readonly [InboxMessage, boolean])[] = [
       ...(agent.inbox?.nextStep ?? []).map((message): readonly [InboxMessage, boolean] => [message, true]),
       ...(agent.inbox?.nextTurn ?? []).map((message): readonly [InboxMessage, boolean] => [message, false]),
     ]
     for (const [message, steered] of messages) {
       const source = message.source
-      if (source?.kind === SOURCE_KIND && source.role === 'request' && source.senderSessionId === senderId
-        && (source.audience === 'user') === toUser && !source.deferred && !source.resumed) return { message, steered }
+      if (source?.kind === SOURCE_KIND && source.role === 'request' && source.senderSessionId === senderId && (source.audience === 'user') === toUser && !source.deferred && !source.resumed) return { message, steered }
     }
     return undefined
   }
@@ -276,14 +246,15 @@ export function createShared(host: HostRuntime, registry: ToolRegistry = new Too
   }
 
   // A tool that throws shows as failed in the chat, instead of as sent or stopped.
-  const refuse = (message: string): never => { throw new Error(message) }
+  const refuse = (message: string): never => {
+    throw new Error(message)
+  }
 
   // The works (handoffs.ts) the calling turn does: what it answers, and the requests
   // that joined it.
   const worksOf = (context: ToolContext): readonly string[] => {
     const turn = liveEntry(context.sessionId)
-    return [rt.workOf(turn?.info), ...(turn?.joined ?? []).map(joined => rt.workOf(joined.info))]
-      .filter((id): id is string => id !== undefined)
+    return [rt.workOf(turn?.info), ...(turn?.joined ?? []).map(joined => rt.workOf(joined.info))].filter((id): id is string => id !== undefined)
   }
   const tooLong = (text: string): string => `Not sent: the message has ${text.length} characters, more than ${MESSAGE_INLINE_MAX}, and Moon Bot cannot send it as a file. Write it to a file in your working folder and send its path instead.`
 
@@ -308,8 +279,7 @@ export function createShared(host: HostRuntime, registry: ToolRegistry = new Too
     return typeof turn === 'number' && (state.exchangeTurns[sessionId] ?? []).includes(turn)
   }
 
-  const workFrom = (workId: string | undefined): string | undefined =>
-    (workId === undefined ? undefined : state.works?.[workId]?.from)
+  const workFrom = (workId: string | undefined): string | undefined => (workId === undefined ? undefined : state.works?.[workId]?.from)
 
   // Group tools take Bot names as an array, or as one comma-separated string from
   // models that flatten it.
@@ -327,9 +297,14 @@ export function createShared(host: HostRuntime, registry: ToolRegistry = new Too
     }
     return { bots, unknown }
   }
-  const teamNames = (): string => Object.values(state.bots).map(bot => bot.name).join(', ')
+  const teamNames = (): string =>
+    Object.values(state.bots)
+      .map(bot => bot.name)
+      .join(', ')
   const groupNames = (self: string | undefined): string =>
-    visibleRooms(self).map(room => `"${room.name}"`).join(', ') || 'none'
+    visibleRooms(self)
+      .map(room => `"${room.name}"`)
+      .join(', ') || 'none'
   const pickRoom = (ref: string | undefined, self: string | undefined): PickRoomResult => {
     const matches = rt.findRooms(ref).filter(room => visibleRooms(self).includes(room))
     const room = matches[0]
@@ -339,12 +314,34 @@ export function createShared(host: HostRuntime, registry: ToolRegistry = new Too
   }
 
   return {
-    rt, state, calledInPosts: new Map<string | undefined, CalledInPosts>(),
+    rt,
+    state,
+    calledInPosts: new Map<string | undefined, CalledInPosts>(),
     register: (entry: ToolEntry): void => {
-      registry.register(entry); registerCollectedTool(ctx, entry, rt)
+      registry.register(entry)
+      registerCollectedTool(ctx, entry, rt)
     },
-    callerBot, callerRoom, roomOfCaller, roomLine, visibleRooms, activeSessions, whereOf,
-    unreadRequest, bodyOf, refuse, worksOf, tooLong, callInGroup, turnOf, hiddenTurn, workFrom, liveEntry,
-    nameList, resolveBots, teamNames, groupNames, pickRoom,
+    callerBot,
+    callerRoom,
+    roomOfCaller,
+    roomLine,
+    visibleRooms,
+    activeSessions,
+    whereOf,
+    unreadRequest,
+    bodyOf,
+    refuse,
+    worksOf,
+    tooLong,
+    callInGroup,
+    turnOf,
+    hiddenTurn,
+    workFrom,
+    liveEntry,
+    nameList,
+    resolveBots,
+    teamNames,
+    groupNames,
+    pickRoom,
   }
 }

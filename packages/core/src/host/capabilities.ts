@@ -48,8 +48,8 @@ const strings = (value: unknown): string[] => {
 }
 const stringMap = (value: unknown, label: string): Record<string, string> => {
   if (value === undefined) return {}
-  if (value === null || typeof value !== 'object' || Array.isArray(value)
-    || Object.values(value as Record<string, unknown>).some(item => typeof item !== 'string')) throw new Error(`${label} must contain text values.`)
+  if (value === null || typeof value !== 'object' || Array.isArray(value) || Object.values(value as Record<string, unknown>).some(item => typeof item !== 'string'))
+    throw new Error(`${label} must contain text values.`)
   return Object.fromEntries(Object.entries(value as Record<string, string>))
 }
 
@@ -72,11 +72,15 @@ export function install(rt: HostRuntime): void {
     if (readOnly !== undefined) throw new Error(readOnly)
   }
   const allowedToEdit = (item: CapabilityItem, botId: string | undefined): boolean => rt.isMain(botId) || item.createdBy === botId
-  const usedByOthers = (name: string, botId: string | undefined): boolean => Object.values(state.bots).some(bot => bot.id !== botId
-    && (bot.capabilities ?? []).some((attached) => {
-      const item = own(library(), attached)
-      return attached === name || (item?.kind === 'pack' && (item.items ?? []).includes(name))
-    }))
+  const usedByOthers = (name: string, botId: string | undefined): boolean =>
+    Object.values(state.bots).some(
+      bot =>
+        bot.id !== botId &&
+        (bot.capabilities ?? []).some(attached => {
+          const item = own(library(), attached)
+          return attached === name || (item?.kind === 'pack' && (item.items ?? []).includes(name))
+        }),
+    )
   // A creator that is not a Main Bot could otherwise rewrite what a Main Bot runs.
   const editCheck = (item: CapabilityItem, botId: string | undefined, verb: string): void => {
     if (!allowedToEdit(item, botId)) throw new Error(`Only ${item.createdBy ? 'its creator or a Main Bot' : 'a Main Bot'} can ${verb} ${item.name}.`)
@@ -94,7 +98,9 @@ export function install(rt: HostRuntime): void {
     const item: CapabilityItem = {
       name,
       kind,
-      description: String(body.description ?? '').trim().slice(0, 2000),
+      description: String(body.description ?? '')
+        .trim()
+        .slice(0, 2000),
       createdBy: previous?.createdBy ?? (ui ? null : botId),
       createdAt: previous?.createdAt ?? now,
       updatedAt: now,
@@ -107,15 +113,16 @@ export function install(rt: HostRuntime): void {
         if (command === '') throw new Error('Enter a command for the MCP server.')
         const args = strings(body.args)
         const env = stringMap(body.env, 'Environment variables')
-        const changed = !previous || previous.kind !== 'mcp' || previous.transport !== 'stdio'
-          || previous.command !== command || !same(previous.args ?? [], args) || !same(previous.env ?? {}, env)
+        const changed = !previous || previous.kind !== 'mcp' || previous.transport !== 'stdio' || previous.command !== command || !same(previous.args ?? [], args) || !same(previous.env ?? {}, env)
         Object.assign(item, { transport, command, args, env, approved: ui ? true : changed ? false : previous.approved === true })
       } else {
         const url = String(body.url ?? '').trim()
         try {
           const parsed = new URL(url)
           if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') throw new Error()
-        } catch { throw new Error('Enter a valid HTTP or HTTPS URL.') }
+        } catch {
+          throw new Error('Enter a valid HTTP or HTTPS URL.')
+        }
         Object.assign(item, { transport, url, headers: stringMap(body.headers, 'Headers'), approved: true })
       }
     } else if (kind === 'skill') {
@@ -160,11 +167,13 @@ export function install(rt: HostRuntime): void {
     try {
       const parsed = new URL(url)
       if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') throw new Error()
-    } catch { throw new Error('Enter a valid HTTP or HTTPS URL.') }
+    } catch {
+      throw new Error('Enter a valid HTTP or HTTPS URL.')
+    }
     Object.assign(item, { transport, url, headers: stringMap(body.headers, 'Headers') })
     return item
   }
-  const capabilityTest = async (body: Readonly<Record<string, unknown>>): Promise<{ readonly tools: readonly string[], readonly ms: number }> => {
+  const capabilityTest = async (body: Readonly<Record<string, unknown>>): Promise<{ readonly tools: readonly string[]; readonly ms: number }> => {
     await rt.load()
     await rt.loadSecrets()
     const item = itemForTest(body)
@@ -180,10 +189,20 @@ export function install(rt: HostRuntime): void {
       mounts.dispose()
     }
   }
-  const withTimeout = <T>(work: Promise<T>, ms = TEST_TIMEOUT_MS): Promise<T> => new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('The MCP server did not answer in time.')), ms)
-    void work.then(value => { clearTimeout(timer); resolve(value) }, (error: unknown) => { clearTimeout(timer); reject(error) })
-  })
+  const withTimeout = <T>(work: Promise<T>, ms = TEST_TIMEOUT_MS): Promise<T> =>
+    new Promise<T>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('The MCP server did not answer in time.')), ms)
+      void work.then(
+        value => {
+          clearTimeout(timer)
+          resolve(value)
+        },
+        (error: unknown) => {
+          clearTimeout(timer)
+          reject(error)
+        },
+      )
+    })
   const capabilityDelete = async (name: unknown, { botId, ui }: EditOptions = { botId: undefined, ui: false }): Promise<boolean> => {
     await rt.load()
     writeCheck()
@@ -197,7 +216,11 @@ export function install(rt: HostRuntime): void {
     await rt.save()
     return true
   }
-  const changeAttachment = async (endpoint: string, { name, bot: targetRef }: { readonly name?: unknown; readonly bot?: string }, callerId: string | undefined): Promise<{ bot: string; attached: boolean }> => {
+  const changeAttachment = async (
+    endpoint: string,
+    { name, bot: targetRef }: { readonly name?: unknown; readonly bot?: string },
+    callerId: string | undefined,
+  ): Promise<{ bot: string; attached: boolean }> => {
     await rt.load()
     writeCheck()
     const caller = rt.botOf(callerId)
@@ -224,19 +247,20 @@ export function install(rt: HostRuntime): void {
     return bot.capabilities
   }
 
-  const libraryView = (): Record<string, unknown>[] => Object.values(library()).map(item => ({
-    ...item,
-    ...(item.env ? { env: { ...item.env } } : {}),
-    ...(item.headers ? { headers: { ...item.headers } } : {}),
-    ...(item.items ? { items: [...item.items] } : {}),
-  }))
+  const libraryView = (): Record<string, unknown>[] =>
+    Object.values(library()).map(item => ({
+      ...item,
+      ...(item.env ? { env: { ...item.env } } : {}),
+      ...(item.headers ? { headers: { ...item.headers } } : {}),
+      ...(item.items ? { items: [...item.items] } : {}),
+    }))
 
   const mounts = createCapabilityMounts({
     ctx,
     rt,
     state,
     library,
-    expand: (names) => expandCapabilityNames(names, library()),
+    expand: names => expandCapabilityNames(names, library()),
   })
 
   async function capabilityEndpoint(endpoint: string, body: Readonly<Record<string, unknown>> = {}): Promise<unknown> {
@@ -273,7 +297,9 @@ export function install(rt: HostRuntime): void {
   }
   const previousSecretsChanged = rt.secretsChanged
   rt.secretsChanged = mounts.wrapSecretsChanged(previousSecretsChanged)
-  rt.capabilitiesStateSaved = () => { void mounts.scheduleReconcile() }
+  rt.capabilitiesStateSaved = () => {
+    void mounts.scheduleReconcile()
+  }
   // Creation waits for these listeners, so a new Agent's first request already has its
   // tools and skill catalog. agent/pre-step is too late: a step assembles its tools first.
   ctx.on<{ readonly agent: { readonly session: { readonly id: string } } & Parameters<typeof mounts.trackAgent>[0] }>('agent/created', async function prepareCapabilities({ agent }) {
@@ -288,12 +314,15 @@ export function install(rt: HostRuntime): void {
     }
   })
   ctx.effect(() => {
-    void rt.load().then(async () => {
-      for (const bot of Object.values(state.bots)) {
-        if ((bot.capabilities ?? []).length > 0) await mounts.trackBotAgents(bot)
-      }
-      await mounts.scheduleReconcile()
-    }).catch(error => rt.warn('moon-bot: capability startup failed: %s', error))
+    void rt
+      .load()
+      .then(async () => {
+        for (const bot of Object.values(state.bots)) {
+          if ((bot.capabilities ?? []).length > 0) await mounts.trackBotAgents(bot)
+        }
+        await mounts.scheduleReconcile()
+      })
+      .catch(error => rt.warn('moon-bot: capability startup failed: %s', error))
     return async () => {
       await mounts.dispose()
     }

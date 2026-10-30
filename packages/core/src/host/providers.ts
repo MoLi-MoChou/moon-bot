@@ -1,6 +1,4 @@
-import type {
-  ConfigurableProvider, CredentialsService, SettingsSection, SettingsService,
-} from './host-types.js'
+import type { ConfigurableProvider, CredentialsService, SettingsSection, SettingsService } from './host-types.js'
 import type { HostRuntime } from './runtime.js'
 import { resolveModelSpec } from 'moon-bot-contracts'
 
@@ -44,21 +42,46 @@ function checkEndpoint(value: unknown): string {
   const raw = typeof value === 'string' ? value.trim() : ''
   const text = raw.replace(/\/chat\/completions\/?$/i, '').replace(/\/+$/, '')
   let url
-  try { url = new URL(text) } catch { throw invalid('Enter the endpoint as an http or https address') }
+  try {
+    url = new URL(text)
+  } catch {
+    throw invalid('Enter the endpoint as an http or https address')
+  }
   if (url.protocol !== 'http:' && url.protocol !== 'https:') throw invalid('Enter the endpoint as an http or https address')
   return text
 }
 
 // A model as the route stores it: what discovery told about it, under pi-ai's names.
-function modelEntry(model: unknown): { readonly id: string; readonly name?: string | undefined; readonly contextWindow?: number | undefined; readonly maxTokens?: number | undefined; readonly input?: readonly string[] | undefined } {
-  const source = model as { readonly id?: unknown; readonly name?: unknown; readonly contextWindow?: unknown; readonly maxTokens?: unknown; readonly inputModalities?: readonly unknown[]; readonly input?: readonly unknown[] } | undefined
+function modelEntry(model: unknown): {
+  readonly id: string
+  readonly name?: string | undefined
+  readonly contextWindow?: number | undefined
+  readonly maxTokens?: number | undefined
+  readonly input?: readonly string[] | undefined
+} {
+  const source = model as
+    | {
+        readonly id?: unknown
+        readonly name?: unknown
+        readonly contextWindow?: unknown
+        readonly maxTokens?: unknown
+        readonly inputModalities?: readonly unknown[]
+        readonly input?: readonly unknown[]
+      }
+    | undefined
   const id = typeof model === 'string' ? model.trim() : typeof source?.id === 'string' ? source.id.trim() : ''
   if (id === '') throw invalid('Every model needs an id')
   const spec = resolveModelSpec(id)
   const whole = (value: unknown): number | undefined => (typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : undefined)
   const contextWindow = whole(source?.contextWindow) ?? spec.contextWindow
   const maxTokens = whole(source?.maxTokens) ?? spec.maxTokens
-  const rawInputs = Array.isArray(source?.inputModalities) ? source.inputModalities : Array.isArray(source?.input) ? source.input : (spec.name ? spec.inputModalities : undefined)
+  const rawInputs = Array.isArray(source?.inputModalities)
+    ? source.inputModalities
+    : Array.isArray(source?.input)
+      ? source.input
+      : spec.name
+        ? spec.inputModalities
+        : undefined
   return {
     id,
     ...(typeof source?.name === 'string' && source.name.trim() !== '' ? { name: source.name.trim() } : spec.name ? { name: spec.name } : {}),
@@ -81,10 +104,12 @@ export function install(rt: HostRuntime): void {
     if (found === undefined) throw invalid('Model providers cannot be set up here')
     return found
   }
-  const sections = (settings: SettingsService): Map<string, SettingsSection> => new Map(settings.describe({ redactSecrets: true }).map(section => [section.ns, section]))
+  const sections = (settings: SettingsService): Map<string, SettingsSection> =>
+    new Map(settings.describe({ redactSecrets: true }).map(section => [section.ns, section]))
   const profileOf = (entry: ConfigurableProvider, map: Map<string, SettingsSection>, layer: 'value' | 'user' | 'base' = 'value'): Profile | undefined =>
     entry.settingsPath.reduce<unknown>((value, key) => (value as Profile | undefined)?.[key], map.get(entry.settingsNs)?.[layer]) as Profile | undefined
-  const refOf = (profile: Profile | undefined): string | undefined => (typeof profile?.apiKeyEnv === 'string' && profile.apiKeyEnv !== '' ? profile.apiKeyEnv : undefined)
+  const refOf = (profile: Profile | undefined): string | undefined =>
+    typeof profile?.apiKeyEnv === 'string' && profile.apiKeyEnv !== '' ? profile.apiKeyEnv : undefined
   const entryOf = (provider: string): ConfigurableProvider | undefined => ctx.llm.listConfigurableProviders().find(entry => entry.provider === provider)
 
   // Per provider route, the credential its the host settings name as its API key. A
@@ -103,14 +128,24 @@ export function install(rt: HostRuntime): void {
 
   async function missingKeys(providers: readonly string[]): Promise<Set<string>> {
     let refs: Map<string, string>
-    try { refs = keyRefs() } catch { return new Set() }
+    try {
+      refs = keyRefs()
+    } catch {
+      return new Set()
+    }
     const missing = new Set<string>()
-    await Promise.all(providers.filter(id => refs.has(id)).map(async (id) => {
-      const ref = refs.get(id)
-      if (ref === undefined) return
-      const info = await seams()?.credentials.describe(ref).catch(() => undefined)
-      if (info?.configured === false) missing.add(id)
-    }))
+    await Promise.all(
+      providers
+        .filter(id => refs.has(id))
+        .map(async id => {
+          const ref = refs.get(id)
+          if (ref === undefined) return
+          const info = await seams()
+            ?.credentials.describe(ref)
+            .catch(() => undefined)
+          if (info?.configured === false) missing.add(id)
+        }),
+    )
     return missing
   }
 
@@ -131,17 +166,19 @@ export function install(rt: HostRuntime): void {
         continue
       }
       const ref = refOf(profile)
-      const models = catalog.filter(model => model.provider === entry.provider).map(model => {
-        const spec = resolveModelSpec(model.id ?? model.ref)
-        return {
-          ref: model.ref,
-          name: model.name,
-          contextWindow: model.contextWindow ?? spec.contextWindow,
-          maxTokens: model.maxTokens ?? spec.maxTokens,
-          input: model.input ?? (spec.inputModalities ? [...spec.inputModalities] : undefined),
-          reasoning: model.reasoning !== undefined ? true : spec.reasoning,
-        }
-      })
+      const models = catalog
+        .filter(model => model.provider === entry.provider)
+        .map(model => {
+          const spec = resolveModelSpec(model.id ?? model.ref)
+          return {
+            ref: model.ref,
+            name: model.name,
+            contextWindow: model.contextWindow ?? spec.contextWindow,
+            maxTokens: model.maxTokens ?? spec.maxTokens,
+            input: model.input ?? (spec.inputModalities ? [...spec.inputModalities] : undefined),
+            reasoning: model.reasoning !== undefined ? true : spec.reasoning,
+          }
+        })
       if (ref === undefined && models.length === 0 && entry.error === undefined) continue
       const info = ref === undefined ? undefined : await found.credentials.describe(ref).catch(() => undefined)
       providers.push({
@@ -162,7 +199,8 @@ export function install(rt: HostRuntime): void {
   async function writableRef(provider: string): Promise<string> {
     const ref = keyRefs().get(provider)
     if (ref === undefined) throw invalid(`${provider} takes no API key here`)
-    if ((await usable().credentials.describe(ref)).writable === false) throw invalid(`The API key for ${provider} is set outside Moon Bot and cannot be changed here`)
+    if ((await usable().credentials.describe(ref)).writable === false)
+      throw invalid(`The API key for ${provider} is set outside Moon Bot and cannot be changed here`)
     return ref
   }
 
@@ -220,13 +258,14 @@ export function install(rt: HostRuntime): void {
   async function discoverModels(body: ProviderBody): Promise<readonly Record<string, unknown>[]> {
     usable()
     const provider = typeof body.provider === 'string' && body.provider !== '' ? body.provider : undefined
-    const request = provider !== undefined && entryOf(provider)?.declared === false
-      ? { provider }
-      : {
-          baseURL: checkEndpoint(body.baseURL),
-          ...(typeof body.api === 'string' && PROTOCOLS.includes(body.api) ? { api: body.api } : {}),
-          ...(typeof body.key === 'string' && body.key.trim() !== '' ? { apiKey: checkKey(body.key) } : {}),
-        }
+    const request =
+      provider !== undefined && entryOf(provider)?.declared === false
+        ? { provider }
+        : {
+            baseURL: checkEndpoint(body.baseURL),
+            ...(typeof body.api === 'string' && PROTOCOLS.includes(body.api) ? { api: body.api } : {}),
+            ...(typeof body.key === 'string' && body.key.trim() !== '' ? { apiKey: checkKey(body.key) } : {}),
+          }
     const models = await ctx.llm.discoverModels(PI_AI, request).catch((error: unknown) => {
       throw invalid(error instanceof Error ? error.message : String(error))
     })
@@ -240,7 +279,11 @@ export function install(rt: HostRuntime): void {
         // A spec fills a field only when it recognizes the model (`name`, as the route
         // merge above rules): the heuristics must not invent modalities an endpoint
         // did not report.
-        ...(model.inputModalities ? { inputModalities: [...model.inputModalities] } : spec.name !== undefined && spec.inputModalities ? { inputModalities: [...spec.inputModalities] } : {}),
+        ...(model.inputModalities
+          ? { inputModalities: [...model.inputModalities] }
+          : spec.name !== undefined && spec.inputModalities
+            ? { inputModalities: [...spec.inputModalities] }
+            : {}),
         ...((model as { reasoning?: boolean }).reasoning ? { reasoning: true } : spec.reasoning ? { reasoning: true } : {}),
       }
     })
@@ -253,7 +296,8 @@ export function install(rt: HostRuntime): void {
     const map = sections(settings)
     const entry = entryOf(provider)
     if (entry === undefined || entry.settingsNs !== PI_AI || profileOf(entry, map) === undefined) throw invalid(`${provider} is not set up`)
-    if (profileOf(entry, map, 'user') === undefined || profileOf(entry, map, 'base') !== undefined) throw invalid(`${provider} comes with this setup and cannot be removed`)
+    if (profileOf(entry, map, 'user') === undefined || profileOf(entry, map, 'base') !== undefined)
+      throw invalid(`${provider} comes with this setup and cannot be removed`)
     const ref = refOf(profileOf(entry, map))
     const shared = [...keyRefs()].some(([other, otherRef]) => other !== provider && otherRef === ref)
     await settings.mutate(PI_AI, [{ op: 'unset', path: entry.settingsPath }], map.get(PI_AI)?.revision)

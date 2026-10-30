@@ -111,7 +111,8 @@ export function entryLine(entry: DiagnosticEntry): string {
 // The Markdown block for an issue. `facts` come from this host, `client` from the
 // browser that asked; `entries` are already cleaned.
 export function reportMarkdown({ facts, client = {}, entries = [], clientEntries = [] }: ReportInput): string {
-  const row = (label: string, value: unknown): string | null => (value === undefined || value === null || value === '' ? null : `| ${label} | ${String(value).replace(/\|/g, '\\|')} |`)
+  const row = (label: string, value: unknown): string | null =>
+    value === undefined || value === null || value === '' ? null : `| ${label} | ${String(value).replace(/\|/g, '\\|')} |`
   const lines = [
     '| | |',
     '|---|---|',
@@ -130,7 +131,8 @@ export function reportMarkdown({ facts, client = {}, entries = [], clientEntries
   out.push(recent.length === 0 ? 'No host errors recorded.' : `Recent host errors (${recent.length} of ${entries.length}, oldest first):`)
   if (recent.length > 0) out.push('```', ...recent.map(entryLine), '```')
   const stacks = recent.filter(entry => entry.stack).slice(-3)
-  for (const entry of stacks) out.push('', `<details><summary>Stack: ${entry.text.slice(0, 80).replace(/</g, '&lt;')}</summary>`, '', '```', entry.stack ?? '', '```', '</details>')
+  for (const entry of stacks)
+    out.push('', `<details><summary>Stack: ${entry.text.slice(0, 80).replace(/</g, '&lt;')}</summary>`, '', '```', entry.stack ?? '', '```', '</details>')
   if (clientEntries.length > 0) {
     out.push('', `Recent browser errors (${Math.min(clientEntries.length, 10)}):`, '```', ...clientEntries.slice(-10).map(entryLine), '```')
   }
@@ -158,48 +160,86 @@ export function install(rt: HostRuntime): void {
 
   // The log is written in the background. A stop waits for what is queued and writes
   // nothing after it, so nothing changes in `home` once the plugin has stopped.
-  ctx.effect(() => () => {
-    stopped = true
-    return writing
-  }, 'moon-bot: diagnostics log')
+  ctx.effect(
+    () => () => {
+      stopped = true
+      return writing
+    },
+    'moon-bot: diagnostics log',
+  )
 
   const clean = (text: unknown): string => cleanText(text, { redact: rt.redactSecrets })
 
   // Entries from earlier runs, read once; new ones are kept apart until then.
   const earlier = toFile
-    ? readFile(logPath, 'utf8').then(text => text.split('\n').filter(Boolean).slice(-KEEP).flatMap((line) => {
-        try {
-          const entry = JSON.parse(line)
-          return typeof entry?.time === 'number' && typeof entry.text === 'string' ? [entry] : []
-        } catch {
-          return []
-        }
-      }), () => [])
+    ? readFile(logPath, 'utf8').then(
+        text =>
+          text
+            .split('\n')
+            .filter(Boolean)
+            .slice(-KEEP)
+            .flatMap(line => {
+              try {
+                const entry = JSON.parse(line)
+                return typeof entry?.time === 'number' && typeof entry.text === 'string' ? [entry] : []
+              } catch {
+                return []
+              }
+            }),
+        () => [],
+      )
     : Promise.resolve([])
   let cleared = 0
 
   const append = (entry: DiagnosticEntry): void => {
     if (!toFile || stopped) return
-    writing = writing.then(async () => {
-      await mkdir(dirname(logPath), { recursive: true })
-      const size = await stat(logPath).then(info => info.size, () => 0)
-      if (size > LOG_MAX_BYTES) await rename(logPath, `${logPath}.1`)
-      await appendFile(logPath, `${JSON.stringify(entry)}\n`, 'utf8')
-    }).catch((error) => {
-      if (fileFailed) return
-      fileFailed = true
-      console.error('[moon-bot] diagnostics log not written:', error?.code ?? clean(error?.message ?? String(error)))
-    })
+    writing = writing
+      .then(async () => {
+        await mkdir(dirname(logPath), { recursive: true })
+        const size = await stat(logPath).then(
+          info => info.size,
+          () => 0,
+        )
+        if (size > LOG_MAX_BYTES) await rename(logPath, `${logPath}.1`)
+        await appendFile(logPath, `${JSON.stringify(entry)}\n`, 'utf8')
+      })
+      .catch(error => {
+        if (fileFailed) return
+        fileFailed = true
+        console.error('[moon-bot] diagnostics log not written:', error?.code ?? clean(error?.message ?? String(error)))
+      })
   }
 
   // `fields`: source ('host', 'turn', 'api'), level, code, status, bot, where, sessionId, stack.
-  const note = ({ level = 'error', source = 'host', text, stack, ...fields }: { readonly level?: string; readonly source?: string; readonly text: unknown; readonly stack?: string | undefined; readonly code?: string | undefined; readonly status?: number | undefined; readonly sessionId?: string | undefined; readonly [key: string]: unknown }): DiagnosticEntry => {
+  const note = ({
+    level = 'error',
+    source = 'host',
+    text,
+    stack,
+    ...fields
+  }: {
+    readonly level?: string
+    readonly source?: string
+    readonly text: unknown
+    readonly stack?: string | undefined
+    readonly code?: string | undefined
+    readonly status?: number | undefined
+    readonly sessionId?: string | undefined
+    readonly [key: string]: unknown
+  }): DiagnosticEntry => {
     const entry: DiagnosticEntry = { time: Date.now(), level, source, text: clean(text) }
     for (const [key, value] of Object.entries(fields)) {
       if (value !== undefined && value !== null && value !== '') entry[key] = typeof value === 'string' ? clean(value) : value
     }
     // Frames only: the first line repeats the message, which is already the text.
-    const frames = typeof stack === 'string' ? stack.split('\n').filter(line => /^\s+at /.test(line)).slice(0, STACK_LINES).map(line => line.trim()) : []
+    const frames =
+      typeof stack === 'string'
+        ? stack
+            .split('\n')
+            .filter(line => /^\s+at /.test(line))
+            .slice(0, STACK_LINES)
+            .map(line => line.trim())
+        : []
     if (frames.length > 0) entry.stack = clean(frames.join('\n'))
     fresh.push(entry)
     if (fresh.length > KEEP) fresh = fresh.slice(-KEEP)
@@ -210,7 +250,14 @@ export function install(rt: HostRuntime): void {
   const warn = (template: string, ...args: readonly unknown[]): void => {
     const error = args.find(arg => arg instanceof Error)
     const line = clean(format(template, ...args.map(arg => (arg instanceof Error ? errorText(arg) : arg))))
-    const frames = typeof error?.stack === 'string' ? error.stack.split('\n').filter(item => /^\s+at /.test(item)).slice(0, STACK_LINES).map(item => item.trim()) : []
+    const frames =
+      typeof error?.stack === 'string'
+        ? error.stack
+            .split('\n')
+            .filter(item => /^\s+at /.test(item))
+            .slice(0, STACK_LINES)
+            .map(item => item.trim())
+        : []
     ctx.logger.warn('%s', line)
     console.error(`[moon-bot] ${line}${frames.length > 0 ? `\n${clean(frames.join('\n'))}` : ''}`)
     note({
@@ -255,10 +302,19 @@ export function install(rt: HostRuntime): void {
       userAgent: pick(source?.userAgent, 200),
     }
   }
-  const sanitizeClientEntries = (list: unknown): DiagnosticEntry[] => (Array.isArray(list) ? list : []).slice(-20).flatMap((item) => {
-    if (typeof item?.text !== 'string' || typeof item.time !== 'number') return []
-    return [{ time: item.time, level: item.level === 'warn' ? 'warn' : 'error', source: 'browser', text: clean(item.text.slice(0, 500)), ...(typeof item.code === 'string' ? { code: clean(item.code.slice(0, 40)) } : {}) }]
-  })
+  const sanitizeClientEntries = (list: unknown): DiagnosticEntry[] =>
+    (Array.isArray(list) ? list : []).slice(-20).flatMap(item => {
+      if (typeof item?.text !== 'string' || typeof item.time !== 'number') return []
+      return [
+        {
+          time: item.time,
+          level: item.level === 'warn' ? 'warn' : 'error',
+          source: 'browser',
+          text: clean(item.text.slice(0, 500)),
+          ...(typeof item.code === 'string' ? { code: clean(item.code.slice(0, 40)) } : {}),
+        },
+      ]
+    })
 
   async function report(body: ReportBody = {}): Promise<Record<string, unknown>> {
     await rt.loadSecrets?.().catch(() => {})

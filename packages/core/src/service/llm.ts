@@ -26,21 +26,30 @@ interface KnownProvider {
 
 const DIRECTORY: readonly KnownProvider[] = [
   {
-    id: 'deepseek', name: 'DeepSeek', api: 'openai-completions', baseUrl: 'https://api.deepseek.com/v1',
+    id: 'deepseek',
+    name: 'DeepSeek',
+    api: 'openai-completions',
+    baseUrl: 'https://api.deepseek.com/v1',
     models: [
       { id: 'deepseek-chat', name: 'DeepSeek Chat', contextWindow: 128000, maxTokens: 8192, inputModalities: ['text'] },
       { id: 'deepseek-reasoner', name: 'DeepSeek Reasoner', contextWindow: 128000, maxTokens: 8192, reasoning: true, inputModalities: ['text'] },
     ],
   },
   {
-    id: 'openai', name: 'OpenAI', api: 'openai-completions', baseUrl: 'https://api.openai.com/v1',
+    id: 'openai',
+    name: 'OpenAI',
+    api: 'openai-completions',
+    baseUrl: 'https://api.openai.com/v1',
     models: [
       { id: 'gpt-4o', name: 'GPT-4o', contextWindow: 128000, maxTokens: 16384, inputModalities: ['text', 'image'] },
       { id: 'gpt-4o-mini', name: 'GPT-4o mini', contextWindow: 128000, maxTokens: 16384, inputModalities: ['text', 'image'] },
     ],
   },
   {
-    id: 'anthropic', name: 'Anthropic', api: 'anthropic-messages', baseUrl: 'https://api.anthropic.com',
+    id: 'anthropic',
+    name: 'Anthropic',
+    api: 'anthropic-messages',
+    baseUrl: 'https://api.anthropic.com',
     models: [
       { id: 'claude-3-7-sonnet', name: 'Claude 3.7 Sonnet', contextWindow: 200000, maxTokens: 64000, reasoning: true, inputModalities: ['text', 'image'] },
       { id: 'claude-3-5-sonnet', name: 'Claude 3.5 Sonnet', contextWindow: 200000, maxTokens: 8192, inputModalities: ['text', 'image'] },
@@ -49,18 +58,27 @@ const DIRECTORY: readonly KnownProvider[] = [
     ],
   },
   {
-    id: 'moonshot', name: 'Moonshot AI', api: 'openai-completions', baseUrl: 'https://api.moonshot.cn/v1',
+    id: 'moonshot',
+    name: 'Moonshot AI',
+    api: 'openai-completions',
+    baseUrl: 'https://api.moonshot.cn/v1',
     models: [
       { id: 'kimi-k2', name: 'Kimi K2', contextWindow: 128000, maxTokens: 8192, inputModalities: ['text'] },
       { id: 'moonshot-v1-128k', name: 'Moonshot v1 128k', contextWindow: 128000, maxTokens: 4096, inputModalities: ['text'] },
     ],
   },
   {
-    id: 'openrouter', name: 'OpenRouter', api: 'openai-completions', baseUrl: 'https://openrouter.ai/api/v1',
+    id: 'openrouter',
+    name: 'OpenRouter',
+    api: 'openai-completions',
+    baseUrl: 'https://openrouter.ai/api/v1',
     models: [],
   },
   {
-    id: 'groq', name: 'Groq', api: 'openai-completions', baseUrl: 'https://api.groq.com/openai/v1',
+    id: 'groq',
+    name: 'Groq',
+    api: 'openai-completions',
+    baseUrl: 'https://api.groq.com/openai/v1',
     models: [],
   },
 ]
@@ -102,7 +120,7 @@ interface DiscoveredModel {
 }
 
 export class StandaloneLlm {
-  private readonly discovered = new Map<string, { at: number, models: readonly DiscoveredModel[] }>()
+  private readonly discovered = new Map<string, { at: number; models: readonly DiscoveredModel[] }>()
   private readonly settings: FileSettings
   private readonly credentials: FileCredentials
   private readonly discoveryTtlMs: number
@@ -130,26 +148,33 @@ export class StandaloneLlm {
     const profile = this.routes().get(provider)
     if (profile === undefined) return undefined
     const known = DIRECTORY.find(entry => entry.id === provider)
-    const api = (typeof profile.api === 'string' && (profile.api === 'openai-completions' || profile.api === 'anthropic-messages')
-      ? profile.api
-      : known?.api ?? 'openai-completions')
+    const api =
+      typeof profile.api === 'string' && (profile.api === 'openai-completions' || profile.api === 'anthropic-messages')
+        ? profile.api
+        : (known?.api ?? 'openai-completions')
     const baseUrl = typeof profile.baseURL === 'string' && profile.baseURL !== '' ? profile.baseURL : known?.baseUrl
     if (baseUrl === undefined) return undefined
     const ref = typeof profile.apiKeyEnv === 'string' && profile.apiKeyEnv !== '' ? profile.apiKeyEnv : keyRefFor(provider)
     const custom = Array.isArray(profile.models)
       ? profile.models.flatMap(model => {
-        const view = model as { id?: unknown, name?: unknown, contextWindow?: unknown, maxTokens?: unknown, input?: unknown }
-        if (typeof view?.id !== 'string' || view.id === '') return []
-        const spec = resolveModelSpec(view.id)
-        return [{
-          id: view.id,
-          ...(typeof view.name === 'string' ? { name: view.name } : spec.name ? { name: spec.name } : {}),
-          ...(typeof view.contextWindow === 'number' ? { contextWindow: view.contextWindow } : spec.contextWindow ? { contextWindow: spec.contextWindow } : {}),
-          ...(typeof view.maxTokens === 'number' ? { maxTokens: view.maxTokens } : spec.maxTokens ? { maxTokens: spec.maxTokens } : {}),
-          ...(Array.isArray(view.input) ? { input: view.input as string[] } : spec.inputModalities ? { input: [...spec.inputModalities] } : {}),
-          ...(spec.reasoning ? { reasoning: true } : {}),
-        }]
-      })
+          const view = model as { id?: unknown; name?: unknown; contextWindow?: unknown; maxTokens?: unknown; input?: unknown }
+          if (typeof view?.id !== 'string' || view.id === '') return []
+          const spec = resolveModelSpec(view.id)
+          return [
+            {
+              id: view.id,
+              ...(typeof view.name === 'string' ? { name: view.name } : spec.name ? { name: spec.name } : {}),
+              ...(typeof view.contextWindow === 'number'
+                ? { contextWindow: view.contextWindow }
+                : spec.contextWindow
+                  ? { contextWindow: spec.contextWindow }
+                  : {}),
+              ...(typeof view.maxTokens === 'number' ? { maxTokens: view.maxTokens } : spec.maxTokens ? { maxTokens: spec.maxTokens } : {}),
+              ...(Array.isArray(view.input) ? { input: view.input as string[] } : spec.inputModalities ? { input: [...spec.inputModalities] } : {}),
+              ...(spec.reasoning ? { reasoning: true } : {}),
+            },
+          ]
+        })
       : []
     const defaultModels = (known?.models ?? []).map(model => {
       const spec = resolveModelSpec(model.id)
@@ -167,16 +192,21 @@ export class StandaloneLlm {
       }
     })
     return {
-      provider, api, baseUrl,
+      provider,
+      api,
+      baseUrl,
       apiKey: this.credentials.key(ref),
       models: custom.length > 0 ? custom : defaultModels,
     }
   }
 
-  listProviders(): readonly { id: string, name: string }[] {
+  listProviders(): readonly { id: string; name: string }[] {
     return [...this.routes().keys()].flatMap(id => {
       const route = this.resolveRoute(id)
-      const name = typeof this.routes().get(id)?.displayName === 'string' ? String(this.routes().get(id)?.displayName) : route && DIRECTORY.find(entry => entry.id === id)?.name
+      const name =
+        typeof this.routes().get(id)?.displayName === 'string'
+          ? String(this.routes().get(id)?.displayName)
+          : route && DIRECTORY.find(entry => entry.id === id)?.name
       return route !== undefined ? [{ id, name: name ?? id }] : []
     })
   }
@@ -187,7 +217,8 @@ export class StandaloneLlm {
     if (route.models.length > 0) {
       return route.models.map(model => {
         const spec = resolveModelSpec(model.id)
-        const isReasoning = DIRECTORY.find(entry => entry.id === provider)?.models.find(known => known.id === model.id)?.reasoning === true || spec.reasoning === true
+        const isReasoning =
+          DIRECTORY.find(entry => entry.id === provider)?.models.find(known => known.id === model.id)?.reasoning === true || spec.reasoning === true
         const contextWindow = model.contextWindow ?? spec.contextWindow
         const maxTokens = model.maxTokens ?? spec.maxTokens
         const inputModalities = model.input ?? (spec.inputModalities ? [...spec.inputModalities] : undefined)
@@ -209,7 +240,10 @@ export class StandaloneLlm {
     return models
   }
 
-  async resolveModelInfo(provider: string, model: string): Promise<{ reasoning?: { efforts: readonly { id: string, name: string }[], defaultEffort?: string } } | undefined> {
+  async resolveModelInfo(
+    provider: string,
+    model: string,
+  ): Promise<{ reasoning?: { efforts: readonly { id: string; name: string }[]; defaultEffort?: string } } | undefined> {
     const known = DIRECTORY.find(entry => entry.id === provider)?.models.find(entry => entry.id === model)
     const spec = resolveModelSpec(model)
     if (known?.reasoning === true || spec.reasoning === true) {
@@ -240,20 +274,39 @@ export class StandaloneLlm {
   }
 
   /** Asks an endpoint for its models: OpenAI's /models, or Anthropic's. */
-  async discoverModels(_adapter: string, request: { baseURL?: unknown, api?: unknown, key?: unknown, apiKey?: unknown, provider?: unknown }): Promise<readonly DiscoveredModel[]> {
+  async discoverModels(
+    _adapter: string,
+    request: { baseURL?: unknown; api?: unknown; key?: unknown; apiKey?: unknown; provider?: unknown },
+  ): Promise<readonly DiscoveredModel[]> {
     if (typeof request.provider === 'string' && request.provider !== '') {
       const route = this.resolveRoute(request.provider)
       if (route === undefined) throw new Error(`${request.provider} is not set up`)
       return this.discover(request.provider, route.baseUrl, route.api, request.key !== undefined ? String(request.key) : route.apiKey)
     }
-    const baseUrl = typeof request.baseURL === 'string' ? request.baseURL.trim().replace(/\/chat\/completions\/?$/i, '').replace(/\/+$/, '') : ''
+    const baseUrl =
+      typeof request.baseURL === 'string'
+        ? request.baseURL
+            .trim()
+            .replace(/\/chat\/completions\/?$/i, '')
+            .replace(/\/+$/, '')
+        : ''
     if (baseUrl === '') throw new Error('an endpoint address is required')
     const api = request.api === 'anthropic-messages' ? 'anthropic-messages' : 'openai-completions'
-    const key = typeof request.key === 'string' && request.key !== '' ? request.key : typeof request.apiKey === 'string' && request.apiKey !== '' ? request.apiKey : undefined
+    const key =
+      typeof request.key === 'string' && request.key !== ''
+        ? request.key
+        : typeof request.apiKey === 'string' && request.apiKey !== ''
+          ? request.apiKey
+          : undefined
     return this.discover(`${baseUrl}|${api}`, baseUrl, api, key)
   }
 
-  private async discover(_cacheId: string, baseUrl: string, api: 'openai-completions' | 'anthropic-messages', key?: string): Promise<readonly DiscoveredModel[]> {
+  private async discover(
+    _cacheId: string,
+    baseUrl: string,
+    api: 'openai-completions' | 'anthropic-messages',
+    key?: string,
+  ): Promise<readonly DiscoveredModel[]> {
     const headers: Record<string, string> = { 'content-type': 'application/json' }
     if (key !== undefined && key !== '') {
       if (api === 'anthropic-messages') {
@@ -265,25 +318,29 @@ export class StandaloneLlm {
     const response = await fetch(url, { headers, signal: AbortSignal.timeout(15_000) })
     if (!response.ok) throw new Error(`the endpoint answered HTTP ${response.status}`)
     const body = JSON.parse(await response.text()) as { data?: unknown } | { models?: unknown }
-    const rows = Array.isArray((body as { data?: unknown }).data) ? (body as { data: readonly unknown[] }).data
-      : Array.isArray((body as { models?: unknown }).models) ? (body as { models: readonly unknown[] }).models
-      : []
+    const rows = Array.isArray((body as { data?: unknown }).data)
+      ? (body as { data: readonly unknown[] }).data
+      : Array.isArray((body as { models?: unknown }).models)
+        ? (body as { models: readonly unknown[] }).models
+        : []
     return rows.flatMap(row => {
-      const view = row as { id?: unknown, display_name?: unknown, name?: unknown, context_length?: unknown, max_tokens?: unknown }
+      const view = row as { id?: unknown; display_name?: unknown; name?: unknown; context_length?: unknown; max_tokens?: unknown }
       if (typeof view?.id !== 'string' || view.id === '') return []
       const id = view.id
       const spec = resolveModelSpec(id)
       const contextWindow = typeof view.context_length === 'number' ? view.context_length : spec.contextWindow
       const maxTokens = typeof view.max_tokens === 'number' ? view.max_tokens : spec.maxTokens
       const name = typeof (view.display_name ?? view.name) === 'string' ? String(view.display_name ?? view.name) : (spec.name ?? id)
-      return [{
-        id,
-        name,
-        ...(contextWindow !== undefined ? { contextWindow } : {}),
-        ...(maxTokens !== undefined ? { maxTokens } : {}),
-        ...(spec.inputModalities ? { inputModalities: spec.inputModalities } : {}),
-        ...(spec.reasoning ? { reasoning: spec.reasoning } : {}),
-      }]
+      return [
+        {
+          id,
+          name,
+          ...(contextWindow !== undefined ? { contextWindow } : {}),
+          ...(maxTokens !== undefined ? { maxTokens } : {}),
+          ...(spec.inputModalities ? { inputModalities: spec.inputModalities } : {}),
+          ...(spec.reasoning ? { reasoning: spec.reasoning } : {}),
+        },
+      ]
     })
   }
 }

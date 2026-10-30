@@ -60,12 +60,17 @@ export interface RosterRooms {
 
 export function createRosterRooms({ ctx, rt, state, createSession, holdName, isHeld, saveForDelete }: RosterRoomsOptions): RosterRooms {
   const roomBusy = (id: string): boolean => [...rt.roomProgress.values()].some(round => round.roomId === id)
-  const autoRoomName = (members: readonly string[]): string => ['You', ...members.map(id => rt.botOf(id)?.name).filter((name): name is string => name !== undefined)].join(', ')
-  const cleanNotice = (text: unknown): string => String(text ?? '').trim().slice(0, ROOM_NOTICE_MAX)
+  const autoRoomName = (members: readonly string[]): string =>
+    ['You', ...members.map(id => rt.botOf(id)?.name).filter((name): name is string => name !== undefined)].join(', ')
+  const cleanNotice = (text: unknown): string =>
+    String(text ?? '')
+      .trim()
+      .slice(0, ROOM_NOTICE_MAX)
 
   const cleanRoomName = (text: unknown, selfId?: string): string => {
     const next = unquote(text).replace(/\s+/g, ' ').slice(0, ROOM_NAME_MAX)
-    if (next !== '' && (rt.findRooms(next).some(room => room.id !== selfId) || isHeld('room', next))) throw new Error(`Another group chat is already called "${next}"`)
+    if (next !== '' && (rt.findRooms(next).some(room => room.id !== selfId) || isHeld('room', next)))
+      throw new Error(`Another group chat is already called "${next}"`)
     return next
   }
 
@@ -97,7 +102,7 @@ export function createRosterRooms({ ctx, rt, state, createSession, holdName, isH
   // A Main Bot leads the groups it makes; a group the user makes is led by a Main Bot
   // member when it has one.
   const defaultAdmin = (members: readonly string[], createdBy: string | undefined): string | null =>
-    (createdBy !== undefined && members.includes(createdBy) ? createdBy : members.find(rt.isMain) ?? null)
+    createdBy !== undefined && members.includes(createdBy) ? createdBy : (members.find(rt.isMain) ?? null)
 
   async function createRoom({ members: memberIds = [], name: roomName, notice, mode, admin, createdBy }: CreateRoomOptions = {}): Promise<StoredRoom> {
     const members = [...new Set(memberIds)].filter(id => rt.botOf(id) !== undefined)
@@ -106,10 +111,26 @@ export function createRosterRooms({ ctx, rt, state, createSession, holdName, isH
     const adminId = admin !== undefined ? admin : defaultAdmin(members, createdBy)
     if (adminId !== null && !members.includes(adminId)) throw new Error('The admin must be a member of the group')
     if (mode !== undefined && !ROOM_MODES.includes(mode)) throw new Error(`Reply mode must be one of ${ROOM_MODES.join(', ')}`)
-    return holdName('room', custom, () => buildRoom({ members, custom, ...(notice === undefined ? {} : { notice }), ...(mode === undefined ? {} : { mode }), adminId, ...(createdBy === undefined ? {} : { createdBy }) }))
+    return holdName('room', custom, () =>
+      buildRoom({
+        members,
+        custom,
+        ...(notice === undefined ? {} : { notice }),
+        ...(mode === undefined ? {} : { mode }),
+        adminId,
+        ...(createdBy === undefined ? {} : { createdBy }),
+      }),
+    )
   }
 
-  async function buildRoom({ members, custom, notice, mode, adminId, createdBy }: {
+  async function buildRoom({
+    members,
+    custom,
+    notice,
+    mode,
+    adminId,
+    createdBy,
+  }: {
     readonly members: readonly string[]
     readonly custom: string
     readonly notice?: string
@@ -147,8 +168,7 @@ export function createRosterRooms({ ctx, rt, state, createSession, holdName, isH
       // The group's Session was already made: archive it instead of leaving an orphan.
       delete state.rooms[id]
       void rt.save().catch(() => {})
-      await ctx.workspaceRegistry.archiveSession(id)
-        .catch(archiveError => rt.warn('moon-bot: archiving the Session for %s failed: %s', title, archiveError))
+      await ctx.workspaceRegistry.archiveSession(id).catch(archiveError => rt.warn('moon-bot: archiving the Session for %s failed: %s', title, archiveError))
       throw error
     }
   }
@@ -182,7 +202,7 @@ export function createRosterRooms({ ctx, rt, state, createSession, holdName, isH
     if (patch.workDir !== undefined && byAdmin) throw new Error(`Only the user or a Main Bot can set the folder of "${room.name}"`)
     // A Bot's own permissions are the user's to set, so a group's are too.
     if (patch.permission !== undefined && actorId !== undefined) throw new Error(`Only the user can set the permissions of "${room.name}"`)
-    const permission = patch.permission === undefined ? undefined : rt.cleanRoomPermission?.(patch.permission) ?? null
+    const permission = patch.permission === undefined ? undefined : (rt.cleanRoomPermission?.(patch.permission) ?? null)
     // The second run is the last check before the change is written, so no other change
     // can take the name in between.
     const name = patch.name === undefined ? undefined : cleanRoomName(patch.name, room.id)
@@ -202,7 +222,11 @@ export function createRosterRooms({ ctx, rt, state, createSession, holdName, isH
     const { members, admin, name, notice, permission } = planRoomChange(room, patch, actorId)
 
     const changes: string[] = []
-    const names = (ids: readonly string[]): string => ids.map(member => rt.botOf(member)?.name).filter((entry): entry is string => entry !== undefined).join(', ')
+    const names = (ids: readonly string[]): string =>
+      ids
+        .map(member => rt.botOf(member)?.name)
+        .filter((entry): entry is string => entry !== undefined)
+        .join(', ')
     const added = members.filter(member => !(room.members ?? []).includes(member))
     const removed = (room.members ?? []).filter(member => !members.includes(member))
     if (added.length > 0) changes.push(`added ${names(added)}`)
@@ -241,7 +265,7 @@ export function createRosterRooms({ ctx, rt, state, createSession, holdName, isH
     }
     if (!room.named) room.name = autoRoomName(room.members ?? [])
     // The preset is written before its first await; the members' Sessions follow it.
-    if (permission !== undefined && await rt.setRoomPermission?.(room, permission)) {
+    if (permission !== undefined && (await rt.setRoomPermission?.(room, permission))) {
       changes.push(permission ? `every member now works with the ${permission} permissions here` : 'every member uses its own permissions again')
     }
     if (room.name !== before) {
@@ -276,8 +300,7 @@ export function createRosterRooms({ ctx, rt, state, createSession, holdName, isH
     const failed = await saveForDelete()
     // Armed scheduled tasks refuse a plain archive and would keep delivering into
     // the deleted group; the session-stop that stopActivity runs removes them.
-    await ctx.workspaceRegistry.archiveSession(id, { stopActivity: true })
-      .catch(error => rt.warn('moon-bot: group chat %s not archived: %s', room.name, error))
+    await ctx.workspaceRegistry.archiveSession(id, { stopActivity: true }).catch(error => rt.warn('moon-bot: group chat %s not archived: %s', room.name, error))
     if (failed !== undefined) throw failed
   }
 

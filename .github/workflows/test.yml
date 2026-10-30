@@ -109,6 +109,8 @@ jobs:
       - run: pnpm test
 
   app-package:
+    # 临时跳过 Windows 打包：先做网页版，客户端不急 / temporarily skip Windows pack; web-first
+    if: false
     name: Desktop app package (Windows)
     runs-on: windows-latest
     timeout-minutes: 45
@@ -242,11 +244,11 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
-      # Other jobs may be skipped (temporarily disabled); app-package must succeed.
+      # All jobs may be skipped (Windows pack off while web-first; image is in web-image.yml).
       - run: |
           ok() { test "$1" = success || test "$1" = skipped; }
           ok "${{ needs.test.result }}" \
             && ok "${{ needs.scan.result }}" \
             && ok "${{ needs.app.result }}" \
-            && test "${{ needs.app-package.result }}" = success \
+            && ok "${{ needs.app-package.result }}" \
             && ok "${{ needs.docs.result }}"

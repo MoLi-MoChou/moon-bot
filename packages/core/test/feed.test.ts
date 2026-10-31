@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { randomBytes } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -42,9 +43,17 @@ const botMessage = (text, time, turn = 1) => ({
   data: { turn, message: { content: [{ type: 'text', text }] } },
 })
 
-function start({ pages = {}, services = {}, sessionFor } = {}) {
+function start({ pages = {}, services = {}, sessionFor, secret } = {}) {
   const home = mkdtempSync(join(tmpdir(), 'ds-bot-feed-'))
   writeFileSync(join(home, 'state.json'), JSON.stringify(TEAM))
+  if (secret !== undefined)
+    writeFileSync(
+      join(home, 'secrets.json'),
+      JSON.stringify({
+        version: 1,
+        secrets: [{ name: 'FLOW_TOKEN', value: secret, scope: 'all', createdAt: 1, updatedAt: 1 }],
+      }),
+    )
   const ctx = fakeContext({ services })
   ctx.sessionController = {
     resolveAgent: async sessionId => ({ agent: { session: sessionFor?.(sessionId) ?? { id: sessionId, seq: 100 } } }),
@@ -167,6 +176,20 @@ test('the live feed tells a window about saves, new chat entries and the reply b
 
   abort.abort()
   assert.equal(await next(), undefined)
+})
+
+test('the live feed redacts secret values from session events', async t => {
+  const secret = `feed-${randomBytes(12).toString('hex')}`
+  const { ctx, call, stop, routes } = start({ secret })
+  t.after(stop)
+  await call('state')
+  const response = await routes['/api/bot/feed'].fetch(new Request('http://localhost/api/bot/feed'))
+  const next = reader(response)
+  await next()
+  const onEvent = ctx.listeners.get('session/event').at(-1)
+  onEvent({ id: 'm1c' }, userMessage(secret, 60))
+  const event = await next()
+  assert.equal(JSON.stringify(event).includes(secret), false)
 })
 
 test('a window that stops reading the feed is dropped', { timeout: 10_000 }, async t => {

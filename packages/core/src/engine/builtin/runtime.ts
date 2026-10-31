@@ -61,6 +61,18 @@ export class BuiltinRuntime implements AgentRuntime {
   async steer(sessionId: string, message: TurnMessage): Promise<boolean> {
     const state = this.sessions.get(sessionId)
     if (state === undefined || !state.running || state.agent === undefined) return false
+    const turn = state.turns
+    try {
+      await this.options.services.transcript.append(sessionId, {
+        role: 'user',
+        content: message.content,
+        turn,
+        ...(message.source !== undefined ? { source: message.source } : {}),
+        at: Date.now(),
+      })
+    } catch {
+      return false
+    }
     const blocks = message.content.map(block => ({
       type: 'text' as const,
       text: block.type === 'text' ? block.text : JSON.stringify(block),
@@ -91,8 +103,15 @@ export class BuiltinRuntime implements AgentRuntime {
   private async *pump(input: TurnInput): AsyncIterable<EngineEvent> {
     const state = this.stateOf(input.sessionId)
     state.running = true
-    state.turns += 1
-    const turn = state.turns
+    let turn: number
+    try {
+      const history = await this.options.services.transcript.history(input.sessionId)
+      state.turns = Math.max(state.turns, ...history.map(message => message.turn ?? 0)) + 1
+      turn = state.turns
+    } catch {
+      state.turns += 1
+      turn = state.turns
+    }
     const pending: EngineEvent[] = []
     let wake: (() => void) | undefined
     const collect = (event: EngineEvent): void => {

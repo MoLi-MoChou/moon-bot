@@ -1,7 +1,7 @@
 // Approvals. A member's group Session is hidden, so the host's approval card never shows
 // there and the turn would wait forever: DS Bot answers those requests itself, from
-// the group chat. A Bot's own chat keeps the host's card; its requests are only noted, so
-// the team view can say who is waiting.
+// the group chat. A Bot's own chat keeps the host's card too, so every request can be
+// answered from the team view.
 import { randomUUID } from 'node:crypto'
 import type { ApprovalDetail, ApprovalNote, HostRuntime } from './runtime.js'
 
@@ -9,11 +9,18 @@ const OUTCOMES: Readonly<Record<string, string>> = { allow: 'allowed-once', reje
 
 interface ApprovalRequestPayload {
   readonly agent?: { readonly id?: string; readonly session?: { readonly id?: string } }
+  readonly approvalId?: string
   readonly toolName?: string
   readonly callId?: string
   readonly reason?: string
   readonly detail?: ApprovalDetail
   readonly signal?: AbortSignal
+}
+
+type ApprovalNext = (approvalId?: string) => Promise<string>
+
+interface ApprovalAnswerer {
+  answer?(id: string, outcome: string): boolean
 }
 
 interface PendingApproval {
@@ -33,15 +40,23 @@ export function install(rt: HostRuntime): void {
   const pending = new Map<string, PendingApproval>()
 
   // Ahead of the host's own answerer, which would hold a hidden Session's request unseen.
-  ctx.on<ApprovalRequestPayload, () => Promise<string>>(
+  ctx.on<ApprovalRequestPayload, ApprovalNext>(
     'approval/request',
     (request, next) => {
       const sessionId = request.agent?.session?.id ?? request.agent?.id
       const owner = sessionId === undefined ? undefined : rt.groupOwners.get(sessionId)
       const botId =
         owner?.botId ?? (sessionId === undefined ? undefined : (rt.chatOwners.get(sessionId) ?? rt.selfOf?.(sessionId)))
-      if (botId === undefined) return next()
-      const id = randomUUID()
+      if (botId === undefined) return next(request.approvalId)
+
+      // ServiceApproval passes its id in the request and uses the same id when it opens the
+      // card. Direct ACP requests may not have one yet, so this host-side fallback still gets
+      // passed into `next` instead of creating a second, invisible waiter.
+      const id = request.approvalId ?? randomUUID()
+      let resolve!: (outcome: string) => void
+      const answered = new Promise<string>(done => {
+        resolve = done
+      })
       const entry: PendingApproval = {
         id,
         sessionId,
@@ -59,17 +74,34 @@ export function install(rt: HostRuntime): void {
         pending.delete(id)
         rt.noteApproval?.(sessionId, undefined)
       }
-      if (owner === undefined) return Promise.resolve(next()).finally(settled)
-      rt.yieldRoomTurn?.(sessionId)
-      return new Promise<string>(resolve => {
-        entry.answer = outcome => {
-          if (!pending.has(id)) return
-          settled()
-          resolve(outcome)
+      entry.answer = outcome => {
+        if (!pending.has(id)) return
+        // Own-chat cards are backed by ServiceApproval. Group cards have a local waiter;
+        // calling the optional bridge for both keeps this path safe for direct ACP events.
+        ctx.get<ApprovalAnswerer>('approval')?.answer?.(id, outcome)
+        resolve(outcome)
+        settled()
+      }
+      if (request.signal?.aborted) entry.answer('cancelled')
+      request.signal?.addEventListener('abort', () => entry.answer?.('cancelled'), { once: true })
+
+      // In the standalone service, the shared approval bridge is present and both private
+      // and group requests must open its card under this id. The host-only test/runtime has
+      // no bridge; preserve the group's local waiter there and let private chats delegate to
+      // their existing next() answerer.
+      const bridge = ctx.get<ApprovalAnswerer>('approval')
+      if (pending.has(id) && (owner === undefined || bridge !== undefined)) {
+        try {
+          void Promise.resolve(next(id)).then(
+            outcome => entry.answer?.(outcome),
+            () => entry.answer?.('cancelled'),
+          )
+        } catch {
+          entry.answer('cancelled')
         }
-        if (request.signal?.aborted) entry.answer('cancelled')
-        request.signal?.addEventListener('abort', () => entry.answer?.('cancelled'), { once: true })
-      })
+      }
+      if (owner !== undefined) rt.yieldRoomTurn?.(sessionId)
+      return answered.finally(settled)
     },
     { prepend: true },
   )
@@ -88,7 +120,8 @@ export function install(rt: HostRuntime): void {
     entry.answer(outcome)
   }
 
-  // A group Session that leaves its group has no card left to answer from.
+  // A group Session that leaves its group has no card left to answer from. Match the exact
+  // Session rather than a Bot, because one Bot can wait in its own chat and in a group.
   const cancelApprovals = (sessionId: string): void => {
     for (const entry of pending.values()) {
       if (entry.sessionId === sessionId) entry.answer?.('cancelled')

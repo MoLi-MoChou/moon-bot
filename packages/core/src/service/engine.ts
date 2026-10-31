@@ -1,10 +1,4 @@
-// The service's engine wiring (plan §阶段 3): the host runtime, the SQLite store, the
-// built-in engine and the bridge, joined. A session the host resolves becomes an
-// engine-backed agent whose events flow into the ordinary session/event route; the
-// models come from the standalone provider routes, the prompt from the sections the
-// host modules registered (the frozen memory section among them), and the transcript
-// from the store. Tool definitions resolve through the registry per turn, so a
-// capability mounted later is served without rewiring.
+// Service composition root: host runtime, store, engines, policy and transport wiring.
 import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
 import { createRuntime } from '../index.ts'
@@ -19,6 +13,7 @@ import { splitRef } from '../host/text.ts'
 import { resolveModelSpec } from 'moon-bot-contracts'
 import { openStore } from '../store/db.ts'
 import { ServiceContext } from './context.ts'
+import { sessionConfigOf } from './session-config.ts'
 import { historyPageOf } from './history-page.ts'
 import type { HostRuntime } from '../host/runtime.js'
 import { installProactive } from './proactive-wiring.ts'
@@ -48,13 +43,12 @@ export function wireService(options: WireOptions): WiredService {
   const attachments = new FileAttachments(options.home)
   // The approval bridge answers through the same ctx.get as every other service: it is
   // built with the context's emit, which exists once the constructor has run.
-  let emitRequest: (request: unknown, next: unknown) => void = () => {}
-  const approval = new ServiceApproval((request, next) => {
-    emitRequest(request, next)
-  })
+  let emitRequest: (request: unknown, next: unknown) => Promise<unknown> = async () => undefined
+  const approval = new ServiceApproval((request, next) => emitRequest(request, next))
   // The permission presets the host asks for: a Bot's or a group's own ceiling, kept per
   // Session because that is where the host puts it.
   const presets = new PermissionPresets()
+  let runtime: Runtime
   const context = new ServiceContext({
     services: {
       ...(options.services === undefined ? {} : options.services),
@@ -67,11 +61,11 @@ export function wireService(options: WireOptions): WiredService {
     // standalone one (settings + credentials + discovery) is the same instance the
     // engine's adapters resolve through.
     llm: options.llm,
+    home: options.home,
+    onAgentResolved: async (sessionId, agent) => (runtime as unknown as { restorePermission?: (id: string, resolved?: { readonly session?: unknown }) => Promise<void> }).restorePermission?.(sessionId, agent as { readonly session?: unknown }),
   })
-  emitRequest = (request, next) => {
-    context.emit('approval/request', request, next)
-  }
-  const runtime = createRuntime(context as unknown as HostContext, { home: options.home }) as unknown as Runtime
+  emitRequest = (request, next) => context.emitResult('approval/request', request, next)
+  runtime = createRuntime(context as unknown as HostContext, { home: options.home }) as unknown as Runtime
   const store = openStore(options.home)
   // The relay over the store's invites; the channel ops and the WebSocket route share
   // this one registry, so a revoke cuts the live connection the same second.
@@ -103,25 +97,32 @@ export function wireService(options: WireOptions): WiredService {
   // One approval, shaped as the gate's pending answer: the card decides, and the engine
   // holds the call until it does.
   function askApproval(sessionId: string, tool: string, reason: string): import('../engine/builtin/services.ts').GateDecision {
+    const approvalId = randomUUID()
     let settled: ((outcome: 'allow' | 'deny') => void) | undefined
     const settledPromise = new Promise<'allow' | 'deny'>(done => {
       settled = done
     })
-    void context.emit(
-      'approval/request',
-      {
-        agent: { id: sessionId, session: { id: sessionId } },
-        toolName: tool,
-        reason,
-        signal: undefined,
-      },
-      () =>
-        approval.card().then((outcome: string) => {
-          settled?.(outcome === 'allowed-once' || outcome === 'allowed' ? 'allow' : 'deny')
-          return outcome
-        }),
-    )
-    return { kind: 'pending', approvalId: randomUUID(), settled: settledPromise }
+    void context
+      .emitResult(
+        'approval/request',
+        {
+          approvalId,
+          agent: { id: sessionId, session: { id: sessionId } },
+          toolName: tool,
+          reason,
+          signal: undefined,
+        },
+        (id?: string) =>
+          approval.card(id ?? approvalId).then((outcome: string) => {
+            settled?.(outcome === 'allowed-once' || outcome === 'allowed' ? 'allow' : 'deny')
+            return outcome
+          }),
+      )
+      .then(outcome => {
+        if (typeof outcome === 'string') settled?.(outcome === 'allowed-once' || outcome === 'allowed' ? 'allow' : 'deny')
+      })
+      .catch(() => settled?.('deny'))
+    return { kind: 'pending', approvalId, settled: settledPromise }
   }
 
   // The prompt as the engine reads it: every registered section in order, the frozen
@@ -206,7 +207,9 @@ export function wireService(options: WireOptions): WiredService {
         return askApproval(sessionId, tool, decision.reason)
       },
     },
-    transcript: sqliteTranscriptOf(store.sessions as unknown as Parameters<typeof sqliteTranscriptOf>[0]),
+    transcript: sqliteTranscriptOf(store.sessions as unknown as Parameters<typeof sqliteTranscriptOf>[0], {
+      redact: text => runtime.redactSecrets?.(text) ?? text,
+    }),
     toolsFor,
     definitions: [],
   }
@@ -258,11 +261,12 @@ export function wireService(options: WireOptions): WiredService {
     builtin: engine,
     emit: emitEvent,
     relay,
+    transcript: services.transcript,
     requestPermission: async (sessionId, params) => {
       const tool = params.toolCall?.kind ?? params.toolCall?.title ?? 'command'
       const detail = detailOfPermission(params.toolCall)
       return new Promise<string>(resolve => {
-        const emitted = context.emit(
+        const emitted = context.emitResult(
           'approval/request',
           {
             agent: { id: sessionId, session: { id: sessionId } },
@@ -271,7 +275,7 @@ export function wireService(options: WireOptions): WiredService {
             reason: detail.text ?? tool,
             detail,
           },
-          () => approval.card(),
+          (approvalId?: string) => approval.card(approvalId ?? randomUUID()),
         )
         void Promise.resolve(emitted).then(
           (outcome: unknown) => resolve(typeof outcome === 'string' ? outcome : 'cancelled'),
@@ -293,13 +297,7 @@ export function wireService(options: WireOptions): WiredService {
           runtime: () => runtimeOf(sessionId),
           emitEvent,
           seqOf: () => store.sessions.countMessages(sessionId) + 1,
-          configOf: id => {
-            const botId = runtime.selfOf(id),
-              roomId = runtime.groupOwners?.get(id)?.roomId
-            const cwd = runtime.workDirOf?.({ ...(botId ? { botId } : {}), ...(roomId ? { roomId } : {}) })
-            const bot = runtime.botOf(botId)
-            return { ...(cwd ? { cwd } : {}), ...((bot?.appliedModel ?? bot?.model) ? { model: bot.appliedModel ?? bot.model } : {}) }
-          },
+          configOf: id => sessionConfigOf(runtime, id),
         })),
       )
     }

@@ -208,3 +208,63 @@ test('the sent message reads as work before the model answers', async t => {
   const done = await call('state', {})
   assert.deepEqual((done.value as { work?: { bots?: Record<string, unknown> } } | undefined)?.work?.bots, {})
 })
+
+// A group chat's own Session runs the relay, not a member's work; it matches no Bot. It used
+// to resolve no model, so the engine ended every round as NO-MODEL before the relay could
+// run, and a group never answered. The room now borrows its admin's model, or its first
+// member's. This asserts the resolution directly: it is the condition that failed, and it
+// does not wait on a running turn to observe it.
+test("a group chat's own Session resolves the model its admin uses", async t => {
+  const server = await endpoint({ reply: 'noticed.' })
+  t.after(() => void server.close())
+  const home = mkdtempSync(join(tmpdir(), 'ds-bot-room-model-'))
+  writeFileSync(
+    join(home, 'state.json'),
+    JSON.stringify({
+      ...stateFile,
+      bots: {
+        a: { id: 'a', name: 'Chief', role: 'Boss', sessionId: 'a', model: 'custom/mock-1', createdAt: 1 },
+        b: { id: 'b', name: 'Writer', role: 'Writer', sessionId: 'b', model: 'custom/mock-1', createdAt: 2 },
+      },
+      rooms: {
+        r1: {
+          id: 'r1',
+          name: 'Ops',
+          named: true,
+          members: ['a', 'b'],
+          admin: 'a',
+          mode: 'admin',
+          notice: '',
+          createdAt: 3,
+          createdBy: null,
+        },
+      },
+    }),
+  )
+  await new FileSettings(home).mutate(PI_AI_NS, [
+    {
+      op: 'set',
+      path: ['providers', 'custom'],
+      value: { api: 'openai-completions', baseURL: server.url, models: [{ id: 'mock-1' }] },
+    },
+  ])
+  const service = await startService({ home })
+  t.after(() => service.close())
+  t.after(() => rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }))
+  const call: Call = async (endpoint, payload) =>
+    (
+      await fetch(`${service.url}/api/bot`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ endpoint, payload }),
+      })
+    ).json() as Promise<Record<string, unknown>>
+
+  // The session the room runs its relay in is the room id itself. Send, and make sure the
+  // round is not ended for want of a model.
+  assert.equal((await call('send', { sessionId: 'r1', text: 'Hello team.' })).ok, true)
+  const diagnostics = await call('diagnostics', {})
+  const entries = (diagnostics.value as { entries?: { code?: string; text?: string }[] } | undefined)?.entries ?? []
+  const missing = entries.filter(entry => entry.code === 'NO-MODEL' || /no model is set/u.test(entry.text ?? ''))
+  assert.deepEqual(missing, [], 'the room Session must resolve a model, or no round can relay')
+})

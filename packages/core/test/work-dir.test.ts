@@ -326,10 +326,18 @@ test('an out-of-team folder is denied when the sandbox policy is missing', async
   const before = JSON.stringify(env.state())
   assert.equal(
     (await env.call('update-bot', { id: 'b', workDir: env.project })).error?.message,
-    `Working in ${env.project} needs a sandbox policy, so nothing changed. The user can make this change in the settings.`,
+    `Working in ${env.project} is outside the team workspace, so nothing changed.`,
   )
   assert.equal(JSON.stringify(env.state()), before)
   assert.equal(env.state().bots.b.workDir, undefined)
+})
+
+test('a team subfolder is accepted without a sandbox policy', async t => {
+  const env = await start({ services: { sandboxPolicy: undefined } })
+  t.after(env.stop)
+  const nested = join(env.team, 'nested')
+  mkdirSync(nested)
+  assert.equal((await env.call('update-bot', { id: 'b', workDir: nested })).value.workDir, nested)
 })
 
 test("a folder outside the team workspace needs the user's approval", async t => {

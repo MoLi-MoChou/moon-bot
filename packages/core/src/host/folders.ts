@@ -51,10 +51,13 @@ export const otherAppHomeOf = (value: string | undefined): string =>
 export function install(rt: HostRuntime): void {
   const { ctx, state } = rt
 
-  const teamFolder = (): string | undefined => ctx.workspaceRegistry.get?.(state.workspaceId)?.path
   // The desktop app names the folder the user chose for the Bots' files.
   const defaultTeamFolder = (): string =>
     rt.config.workspace ?? (process.env.DS_BOT_WORKSPACE?.trim() || join(rt.home, 'workspace'))
+  // A standalone team may not have registered its workspace until its first write; use the
+  // same default meanwhile so the root boundary still applies without a sandbox policy.
+  const teamFolder = (): string | undefined =>
+    ctx.workspaceRegistry.get?.(state.workspaceId)?.path ?? defaultTeamFolder()
   const workDirOf = ({
     botId,
     roomId,
@@ -151,9 +154,7 @@ export function install(rt: HostRuntime): void {
     const team = await realTeam()
     if (team !== undefined && within(path, team)) return path === team ? undefined : path
     if (ctx.get<SandboxPolicy>('sandboxPolicy') === undefined)
-      throw new Error(
-        `Working in ${path} needs a sandbox policy, so nothing changed. The user can make this change in the settings.`,
-      )
+      throw new Error(`Working in ${path} is outside the team workspace, so nothing changed.`)
     return path
   }
 
@@ -213,10 +214,7 @@ export function install(rt: HostRuntime): void {
     const team = await realTeam()
     if (path === undefined || (team !== undefined && within(path, team))) return
     const policy = ctx.get<SandboxPolicy>('sandboxPolicy')
-    if (policy === undefined)
-      throw new Error(
-        `Working in ${path} needs a sandbox policy, so nothing changed. The user can make this change in the settings.`,
-      )
+    if (policy === undefined) throw new Error(`Working in ${path} is outside the team workspace, so nothing changed.`)
     const agents = await Promise.all(sessions.map(id => rt.resolveAgent(id)))
     const modes = [policy.resolve(), ...agents.map(agent => policy.resolve({ session: agent.session }))].map(
       entry => entry.mode,

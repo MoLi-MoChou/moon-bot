@@ -25,6 +25,11 @@ export interface Runtime {
   /** Where a Bot works, as the folders module resolves it; the deliverables scan needs it. */
   workDirOf?(input: { readonly botId?: string | undefined; readonly roomId?: string | undefined }): string | undefined
   groupOwners?: Map<string, { readonly roomId?: string | undefined }>
+  /** A group chat by its own Session id, for the relay's model and folder. */
+  roomOf?(
+    roomId: string | undefined,
+  ): { readonly admin?: string | null | undefined; readonly members: readonly string[] } | undefined
+  redactSecrets?(text: string): string
 }
 
 export interface WiredService {

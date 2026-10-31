@@ -8,6 +8,7 @@ import { clearInterval, setInterval, setTimeout } from 'node:timers'
 import { ROUTE } from './constants.ts'
 import type { AgentStatusEvent, AssistantStreamEvent, SessionEvent } from './host-types.js'
 import type { HostRuntime } from './runtime.js'
+import { redactDeep } from './secrets/redact.ts'
 
 export const FEED_ROUTE = `${ROUTE}/feed`
 // A comment line now and then keeps an idle connection open.
@@ -21,6 +22,7 @@ const MAX_QUEUED = 512
 export function install(rt: HostRuntime): void {
   const { ctx, state } = rt
   const encoder = new TextEncoder()
+  const clean = <T>(value: T): T => redactDeep(value, text => rt.redactSecrets?.(text) ?? text)
   /** @type {Set<ReadableStreamDefaultController<Uint8Array>>} */
   const clients = new Set<ReadableStreamDefaultController<Uint8Array>>()
   const send = (controller: ReadableStreamDefaultController<Uint8Array>, chunk: Uint8Array): void => {
@@ -35,7 +37,7 @@ export function install(rt: HostRuntime): void {
     }
   }
   const publish = (event: string, data: unknown): void => {
-    const chunk = encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
+    const chunk = encoder.encode(`event: ${event}\ndata: ${JSON.stringify(clean(data))}\n\n`)
     for (const controller of clients) send(controller, chunk)
   }
 
@@ -65,6 +67,14 @@ export function install(rt: HostRuntime): void {
   ctx.on<{ readonly id: string }, SessionEvent>('session/event', (session, event) => {
     if (clients.size === 0) return
     const botId = rt.chatOwners.get(session.id)
+    const room = botId === undefined ? rt.roomOf(session.id) : undefined
+    if (botId === undefined && room === undefined) return
+    // A room's public transcript is state-backed. Ask clients to reload it instead of
+    // treating the hidden relay session as a Bot chat.
+    if (room !== undefined) {
+      live()
+      return
+    }
     if (botId === undefined) return
     if (event.type === 'assistant/stream') {
       const data = event as unknown as { text?: unknown }

@@ -153,9 +153,31 @@ export function createPartPager(options: PartPagerOptions): PartPager {
     return { ...(await partPage(parts, index, cursor)), startedAt: (parts[at] as SwitchPart).startedAt }
   }
 
+  // A group's public conversation is its room log, not the hidden member Sessions.
+  // Keep it on the same ChatPage shape so the web shell does not invent a second row model.
+  function roomPage(roomId: string): ChatPage {
+    const room = rt.roomOf(roomId)
+    if (room === undefined) throw Object.assign(new Error('Unknown group chat'), { code: 'bot/not-found' })
+    const items: ChatItem[] = []
+    for (const line of room.log ?? []) {
+      const time = typeof line.time === 'number' ? line.time : Date.now()
+      if (line.kind !== undefined) {
+        const botId = typeof line.botId === 'string' ? line.botId : null
+        const name = typeof line.who === 'string' ? line.who : null
+        items.push({ kind: 'event', role: line.kind, botId, name, roomId, time })
+        continue
+      }
+      const text = typeof line.text === 'string' ? line.text : ''
+      if (text === '') continue
+      items.push(line.botId === undefined ? { kind: 'user', text, time } : { kind: 'bot', text, time })
+    }
+    return { sessionId: roomId, items, cursor: null }
+  }
+
   // A Bot's whole own chat, newest page first: the current part, then the earlier
-  // ones, for a window that draws the conversation itself.
+  // ones, for a window that draws the conversation itself. A room id is handled above.
   async function chatPage(botId: string, cursor: PageCursor | undefined): Promise<ChatPage> {
+    if (rt.roomOf(botId) !== undefined) return roomPage(botId)
     const parts = partsOf(botId)
     if (parts.length === 0) throw Object.assign(new Error('Unknown Bot'), { code: 'bot/not-found' })
     const index = Number.isInteger(cursor?.part) ? (cursor?.part as number) : parts.length - 1

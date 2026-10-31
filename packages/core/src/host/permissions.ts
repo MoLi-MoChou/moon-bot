@@ -34,6 +34,8 @@ export function install(rt: HostRuntime): void {
 
   const roomOfSession = (sessionId: string): StoredRoom | undefined => rt.roomOf(rt.groupOwners.get(sessionId)?.roomId)
 
+  const restored = new Set<string>()
+
   async function setPreset(service: PermissionPresetsService, sessionId: string, name: string): Promise<void> {
     const agent = await rt.resolveAgent(sessionId)
     service.set(agent.session, name)
@@ -49,7 +51,26 @@ export function install(rt: HostRuntime): void {
     const name = room?.permission ?? bot.permission
     const service = presets()
     if (service === undefined || !name) return
-    await setPreset(service, sessionId, name)
+    restored.add(sessionId)
+    try {
+      await setPreset(service, sessionId, name)
+    } catch (error) {
+      restored.delete(sessionId)
+      throw error
+    }
+  }
+
+  async function restorePermission(sessionId: string, resolved?: { readonly session?: unknown }): Promise<void> {
+    if (restored.has(sessionId)) return
+    const bot = rt.botOf(rt.selfOf(sessionId))
+    if (bot === undefined) return
+    const room = roomOfSession(sessionId)
+    const name = room?.permission ?? bot.permission
+    const service = presets()
+    if (service === undefined || !name) return
+    const agent = resolved === undefined ? await rt.resolveAgent(sessionId) : resolved
+    service.set(agent.session, name)
+    restored.add(sessionId)
   }
 
   function checkPreset(name: unknown, whose: string): string {
@@ -99,5 +120,12 @@ export function install(rt: HostRuntime): void {
     return true
   }
 
-  Object.assign(rt, { permissionCatalog, applyPermission, setPermission, cleanRoomPermission, setRoomPermission })
+  Object.assign(rt, {
+    permissionCatalog,
+    applyPermission,
+    restorePermission,
+    setPermission,
+    cleanRoomPermission,
+    setRoomPermission,
+  })
 }

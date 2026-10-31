@@ -3,7 +3,10 @@
 // captured for the service to serve, listeners fan out for real, effects are disposed
 // on close — while services the standalone product does not ship yet stay absent, which
 // the host modules already tolerate (the whole suite runs on less than this).
-import type { Disposer } from '../host/host-types.js'
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
+import { randomUUID } from 'node:crypto'
+import { join } from 'node:path'
+import type { Disposer, Workspace } from '../host/host-types.js'
 
 /** A history page request, as the host's pagers ask it. */
 export interface PageRequest {
@@ -42,6 +45,10 @@ export interface ServiceContextOptions {
   readonly llm?: unknown | undefined
   /** The engine-backed agents, for sessionController.resolveAgent. */
   readonly resolveAgent?: (sessionId: string) => Promise<unknown> | unknown
+  /** Team home, used by the standalone workspace registry. */
+  readonly home?: string | undefined
+  /** Restores host-owned session state before a resolved agent is returned. */
+  readonly onAgentResolved?: (sessionId: string, agent: unknown) => Promise<void> | void
 }
 
 interface Listener {
@@ -66,17 +73,51 @@ export class ServiceContext {
   private readonly registeredTools = new Map<string, unknown>()
   private readonly sections = new Map<string, unknown>()
   private readonly services: Readonly<Record<string, unknown>>
+  private readonly workspaces = new Map<string, Workspace>()
+  private readonly workspaceFile: string | undefined
+  private readonly onAgentResolved: ServiceContextOptions['onAgentResolved']
   private agentOf: ServiceContextOptions['resolveAgent']
   private pageImpl: ((input: PageRequest) => Promise<PageAnswer>) | undefined
 
   constructor(options: ServiceContextOptions = {}) {
     this.services = options.services ?? {}
+    this.workspaceFile = options.home === undefined ? undefined : join(options.home, 'workspaces.json')
+    this.loadWorkspaces()
+    this.onAgentResolved = options.onAgentResolved
     this.agentOf = options.resolveAgent
     this.llm = (options.llm as LlmServiceLike | undefined) ?? {
       listProviders: (): readonly unknown[] => [],
       listModels: async (): Promise<readonly unknown[]> => [],
       resolveModelInfo: async (): Promise<Record<string, unknown>> => ({}),
     }
+  }
+
+  private loadWorkspaces(): void {
+    if (this.workspaceFile === undefined || !existsSync(this.workspaceFile)) return
+    try {
+      const source = JSON.parse(readFileSync(this.workspaceFile, 'utf8')) as unknown
+      if (source === null || typeof source !== 'object' || Array.isArray(source)) return
+      for (const [id, value] of Object.entries(source as Record<string, unknown>)) {
+        if (value === null || typeof value !== 'object' || Array.isArray(value)) continue
+        const item = value as { path?: unknown; title?: unknown }
+        if (typeof item.path !== 'string' || item.path === '') continue
+        this.workspaces.set(id, {
+          id,
+          path: item.path,
+          ...(typeof item.title === 'string' ? { title: item.title } : {}),
+        })
+      }
+    } catch {
+      // A corrupt optional registry should not prevent the team from opening.
+    }
+  }
+
+  private saveWorkspaces(): void {
+    if (this.workspaceFile === undefined) return
+    mkdirSync(join(this.workspaceFile, '..'), { recursive: true })
+    const data = Object.fromEntries(this.workspaces)
+    writeFileSync(`${this.workspaceFile}.tmp`, JSON.stringify(data) + '\n')
+    renameSync(`${this.workspaceFile}.tmp`, this.workspaceFile)
   }
 
   // Bound arrow properties: host modules extract these (const on = ctx.on), so they
@@ -104,9 +145,16 @@ export class ServiceContext {
     }
   }
 
-  /** Fans an event out in registration order; middleware (with `next`) is not used here. */
+  /** Fans an event out in registration order; ordinary events stay fire-and-forget. */
   emit = (name: string, payload: unknown, second?: unknown): void => {
     for (const listener of this.listeners.get(name) ?? []) void listener.run(payload, second)
+  }
+
+  /** Runs listeners in order and returns the last result for request/response bridges. */
+  emitResult = async (name: string, payload: unknown, second?: unknown): Promise<unknown> => {
+    let result: unknown
+    for (const listener of this.listeners.get(name) ?? []) result = await listener.run(payload, second)
+    return result
   }
 
   effect = (execute: () => void | Disposer, label?: string): void => {
@@ -186,6 +234,7 @@ export class ServiceContext {
     resolveAgent: async (sessionId: string): Promise<{ agent: unknown }> => {
       if (this.agentOf === undefined) throw Object.assign(new Error('Session unavailable'), { code: 'bot/unavailable' })
       const agent = await this.agentOf(sessionId)
+      await this.onAgentResolved?.(sessionId, agent)
       return { agent }
     },
     selectModel: async (): Promise<void> => {},
@@ -214,9 +263,22 @@ export class ServiceContext {
   readonly sessionTitle = { rename: async (): Promise<void> => {} }
   readonly sessions = { flush: async (): Promise<void> => {} }
   readonly workspaceRegistry = {
-    get: (): undefined => undefined,
-    resolveByPath: async (): Promise<undefined> => undefined,
-    create: async (path: string): Promise<{ id: string; path: string }> => ({ id: path, path }),
+    get: (id: string | undefined): Workspace | undefined => (id === undefined ? undefined : this.workspaces.get(id)),
+    list: (): readonly Workspace[] => [...this.workspaces.values()],
+    resolveByPath: async (path: string): Promise<Workspace | undefined> =>
+      [...this.workspaces.values()].find(workspace => workspace.path === path),
+    create: async (path: string, title?: string): Promise<Workspace> => {
+      const existing = [...this.workspaces.values()].find(workspace => workspace.path === path)
+      if (existing !== undefined) return existing
+      const workspace: Workspace = {
+        id: randomUUID(),
+        path,
+        ...(title === undefined ? {} : { title }),
+      }
+      this.workspaces.set(workspace.id, workspace)
+      this.saveWorkspaces()
+      return workspace
+    },
     archiveSession: async (): Promise<void> => {},
   }
 

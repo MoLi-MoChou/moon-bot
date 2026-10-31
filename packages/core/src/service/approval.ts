@@ -6,10 +6,21 @@
 import { randomUUID } from 'node:crypto'
 import type { ApprovalOutcome, ApprovalRequest, ApprovalService } from '../host/host-types.js'
 
-export type EmitApproval = (request: ApprovalRequest, next: () => Promise<string>) => void
+export interface ApprovalRequestWithId extends ApprovalRequest {
+  readonly approvalId: string
+}
 
+export type ApprovalNext = (approvalId?: string) => Promise<string>
+export type EmitApproval = (request: ApprovalRequestWithId, next: ApprovalNext) => unknown
+
+interface WaitingApproval {
+  readonly resolve: (outcome: string) => void
+  readonly promise: Promise<string>
+}
+
+/** The service-side half of the one pending approval registry. */
 export class ServiceApproval implements ApprovalService {
-  private readonly waiting = new Map<string, (outcome: string) => void>()
+  private readonly waiting = new Map<string, WaitingApproval>()
 
   private readonly emitEvent: EmitApproval
 
@@ -17,36 +28,71 @@ export class ServiceApproval implements ApprovalService {
     this.emitEvent = emitEvent
   }
 
-  /** Opens a card-backed promise: the approvals module's pending entry answers it. */
-  card(): Promise<string> {
-    return new Promise(resolve => {
-      const id = randomUUID()
-      this.waiting.set(id, outcome => {
-        this.waiting.delete(id)
-        resolve(outcome)
-      })
+  /** Opens the card promise under the id already shown by the host. */
+  card(id: string): Promise<string> {
+    const existing = this.waiting.get(id)
+    if (existing !== undefined) return existing.promise
+    let resolve!: (outcome: string) => void
+    const promise = new Promise<string>(done => {
+      resolve = done
     })
+    this.waiting.set(id, { resolve, promise })
+    return promise
   }
 
   /** Answers an open card by id — the shape the channel's approval flow can drive. */
   answer(id: string, outcome: string): boolean {
-    const settle = this.waiting.get(id)
-    if (settle === undefined) return false
-    settle(outcome)
+    const waiting = this.waiting.get(id)
+    if (waiting === undefined) return false
+    this.waiting.delete(id)
+    waiting.resolve(outcome)
     return true
   }
 
   async request(request: ApprovalRequest): Promise<ApprovalOutcome> {
+    const approvalId = randomUUID()
     const outcome = await new Promise<string>(resolve => {
-      this.emitEvent(request, () => {
-        const card = this.card()
-        // A card nobody answers would hang the request; the request's own signal ends it.
-        request.signal?.addEventListener('abort', () => resolve('cancelled'), { once: true })
+      let settled = false
+      const settle = (value: string): void => {
+        if (settled) return
+        settled = true
+        this.waiting.delete(approvalId)
+        resolve(value)
+      }
+      const next: ApprovalNext = () => {
+        const card = this.card(approvalId)
+        void card.then(settle, () => settle('cancelled'))
         return card
-      })
+      }
+      if (request.signal?.aborted) {
+        settle('cancelled')
+        return
+      }
+      request.signal?.addEventListener(
+        'abort',
+        () => {
+          this.answer(approvalId, 'cancelled')
+          settle('cancelled')
+        },
+        { once: true },
+      )
+      try {
+        const emitted = this.emitEvent({ ...request, approvalId }, next)
+        void Promise.resolve(emitted).then(
+          value => {
+            if (typeof value === 'string') settle(value)
+          },
+          () => settle('cancelled'),
+        )
+      } catch {
+        settle('cancelled')
+      }
     })
     if (outcome === 'allowed-once' || outcome === 'allowed') return 'allowed-once'
     if (outcome === 'rejected') return 'rejected'
     return 'cancelled'
   }
 }
+
+// Keep the service's callback shape available to host wiring without exposing its map.
+export type ApprovalResponder = Pick<ServiceApproval, 'answer'>

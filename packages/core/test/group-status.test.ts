@@ -199,20 +199,11 @@ test("a group Session's approval waits in the team view, frees the round, and th
 test("an own chat's approval stays with DSH and is listed while it waits", async t => {
   const host = await start()
   t.after(host.stop)
-  let release
-  const outcome = host.askApproval(
-    'a',
-    {},
-    () =>
-      new Promise(resolve => {
-        release = resolve
-      }),
-  )
+  const outcome = host.askApproval('a', {}, () => new Promise(() => {}))
   const [approval] = (await host.call('state', {})).value.work.approvals
-  assert.deepEqual([approval.botId, approval.roomId, approval.answerable], ['a', undefined, false])
-  assert.equal((await host.call('approval-answer', { id: approval.id, choice: 'allow' })).error.code, 'bot/stale')
-  release('rejected')
-  assert.equal(await outcome, 'rejected')
+  assert.deepEqual([approval.botId, approval.roomId, approval.answerable], ['a', undefined, true])
+  assert.equal((await host.call('approval-answer', { id: approval.id, choice: 'allow' })).ok, true)
+  assert.equal(await outcome, 'allowed-once')
   assert.deepEqual((await host.call('state', {})).value.work.approvals, [])
   // Sessions off the team are not DS Bot's to answer.
   assert.equal(await host.askApproval('elsewhere'), 'from-dsh')

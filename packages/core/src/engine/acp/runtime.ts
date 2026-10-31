@@ -1,29 +1,42 @@
-// The ACP adapter (plan §阶段 5): an AgentRuntime whose turns run in an external agent
-// — Claude Agent, Gemini CLI, opencode — over the ACP wire. This is the second
-// implementation of the seam, which is itself the plan's proof that AgentRuntime is
-// replaceable: the host's roster, groups and deliveries treat an ACP Bot exactly like a
-// built-in one. What the protocol does not cover (the plan's degradation matrix) simply
-// does not happen here: no frozen-memory injection beyond the prompt text we send, no
-// gating of calls the agent makes on its own. The wire itself is a transport (2026-10-27
-// remote-agents): a spawned child's stdio, or a relay connection to another machine.
+// ACP adapter: runs an AgentRuntime over a local or relay ACP transport.
 import { randomUUID } from 'node:crypto'
-import type { EngineContentBlock, EngineEvent } from '../events.ts'
+import type { EngineEvent } from '../events.ts'
 import type { AgentRuntime, CancelReason, TurnInput, TurnMessage } from '../runtime.ts'
 import { callFailureOf } from '../failure.ts'
 import { matchPermissionOutcome, type PermissionRequestParams } from './permission.ts'
 import { LineProtocol, UPDATE_OF, type Inbound, type JsonRpcNotification, type JsonRpcRequest } from './protocol.ts'
-import type { AcpAgentOptions, Waiter, AgentSession } from './runtime-types.ts'
-export type { AcpAgentOptions, Waiter, AgentSession } from './runtime-types.ts'
-
-/** One live ACP session: its id, the turn running on it, and the events it made. */
+import {
+  eventsOfUpdate,
+  type AcpAgentOptions,
+  type Waiter,
+  type AgentSession,
+  type PendingPermission,
+} from './runtime-types.ts'
+export { eventsOfUpdate } from './runtime-types.ts'
+export type { AcpAgentOptions, AcpStoredMessage, Waiter, AgentSession } from './runtime-types.ts'
 
 export class AcpRuntime implements AgentRuntime {
   private nextId = 1
   private readonly pending = new Map<number, Waiter>()
-  private readonly pendingPermissions = new Map<number | string, (decision: string) => void>()
+  private readonly pendingPermissions = new Map<number | string, PendingPermission>()
+  private async appendTranscript(
+    sessionId: string,
+    message: import('./runtime-types.ts').AcpStoredMessage,
+  ): Promise<void> {
+    await this.options.transcript?.append(sessionId, message)
+  }
+
+  private appendOrdered(
+    session: AgentSession,
+    sessionId: string,
+    message: import('./runtime-types.ts').AcpStoredMessage,
+  ): Promise<void> {
+    const next = (session.transcriptTail ?? Promise.resolve()).then(() => this.appendTranscript(sessionId, message))
+    session.transcriptTail = next.catch(() => undefined)
+    return next
+  }
   private readonly sessions = new Map<string, AgentSession>()
   private started: Promise<void> | undefined
-
   private readonly options: AcpAgentOptions
 
   constructor(options: AcpAgentOptions) {
@@ -52,22 +65,16 @@ export class AcpRuntime implements AgentRuntime {
   async start(): Promise<void> {
     if (this.started === undefined) {
       this.started = (async () => {
-        // The transport hands over complete lines; the protocol's own framing is
-        // newline-terminated chunks, so the terminator goes back on here.
         this.options.transport.onLine(line => {
           this.protocol.feed(`${line}\n`)
         })
         this.options.transport.onClosed(() => {
           const error = new Error('the agent connection closed')
-          for (const waiter of [...this.pending.values()]) waiter.reject(error)
+          for (const waiter of this.pending.values()) waiter.reject(error)
           this.pending.clear()
-          for (const settle of this.pendingPermissions.values()) settle('cancelled')
+          for (const pending of this.pendingPermissions.values()) pending.resolve('cancelled')
           this.pendingPermissions.clear()
-          // The agent on the other end is gone; its session ids died with it. A
-          // reconnected agent gets fresh sessions on the next turn.
           this.sessions.clear()
-          // The next agent (a respawned child, a new relay connection) has not seen
-          // initialize, and a torn line of the old one must not prefix its first line.
           this.started = undefined
           this.wire = undefined
         })
@@ -80,8 +87,6 @@ export class AcpRuntime implements AgentRuntime {
         void result
         await this.notify('initialized', {})
       })()
-      // A start that failed (the agent was offline) must not poison every later
-      // turn: the next turn tries the wire again.
       this.started.catch(() => {
         this.started = undefined
       })
@@ -92,19 +97,33 @@ export class AcpRuntime implements AgentRuntime {
   async stop(): Promise<void> {
     for (const session of this.sessions.values()) session.stop?.()
     this.sessions.clear()
-    for (const settle of this.pendingPermissions.values()) settle('cancelled')
+    for (const pending of this.pendingPermissions.values()) pending.resolve('cancelled')
     this.pendingPermissions.clear()
     this.options.transport.dispose()
   }
 
   async *runTurn(input: TurnInput): AsyncIterable<EngineEvent> {
-    // A turn that cannot reach the agent still ends through the fanout: the router
-    // listens there, not on this generator.
-    const refused = (message: string): readonly EngineEvent[] => {
+    const history = (await this.options.transcript?.history(input.sessionId)) ?? []
+    const nextTurn = Math.max(0, ...history.map(message => message.turn ?? 0)) + 1
+    const refused = async (message: string): Promise<readonly EngineEvent[]> => {
       const events: readonly EngineEvent[] = [
-        { type: 'turn/start', turn: 1 },
-        { type: 'turn/end', turn: 1, reason: { kind: 'error', error: callFailureOf(message) } },
+        { type: 'turn/start', turn: nextTurn },
+        { type: 'turn/end', turn: nextTurn, reason: { kind: 'error', error: callFailureOf(message) } },
       ]
+      await this.appendTranscript(input.sessionId, {
+        role: 'user',
+        content: input.message.content,
+        turn: nextTurn,
+        ...(input.message.source !== undefined ? { source: input.message.source } : {}),
+        at: Date.now(),
+      })
+      await this.appendTranscript(input.sessionId, {
+        role: 'system',
+        content: message === '' ? [] : [{ type: 'text', text: message }],
+        turn: nextTurn,
+        source: { kind: 'turn-error' },
+        at: Date.now(),
+      })
       for (const event of events) this.options.emit(input.sessionId, event)
       return events
     }
@@ -113,23 +132,37 @@ export class AcpRuntime implements AgentRuntime {
       await this.start()
       acpId = await this.openSession(input)
     } catch (error) {
-      yield* refused(error instanceof Error ? error.message : String(error))
+      yield* await refused(error instanceof Error ? error.message : String(error))
       return
     }
     const session = this.sessions.get(input.sessionId)
     if (session === undefined) {
-      yield* refused('the ACP session is gone')
+      yield* await refused('the ACP session is gone')
       return
     }
+    session.turns = Math.max(session.turns, nextTurn - 1)
     session.turns += 1
     const turn = session.turns
-    // The pump drains what arrived, waits for the prompt to settle, and ends the
-    // turn. setImmediate polling instead of wake callbacks: a notification and the
-    // response can land in one chunk, and a lost wakeup would end the turn early.
     const queue: EngineEvent[] = []
     session.updates = event => {
       queue.push(event)
       this.options.emit(input.sessionId, event)
+      if (event.type === 'assistant/message') {
+        void this.appendOrdered(session, input.sessionId, {
+          role: 'assistant',
+          content: event.message.content,
+          turn,
+          at: Date.now(),
+        }).catch(() => undefined)
+      } else if (event.type === 'user/message') {
+        void this.appendOrdered(session, input.sessionId, {
+          role: 'user',
+          content: event.content,
+          turn,
+          ...(event.source !== undefined ? { source: event.source } : {}),
+          at: Date.now(),
+        }).catch(() => undefined)
+      }
     }
     for (const event of [
       { type: 'turn/start', turn },
@@ -165,8 +198,6 @@ export class AcpRuntime implements AgentRuntime {
     }
     session.updates = undefined
     if (!queue.some(event => event.type === 'turn/end')) {
-      // The end flows to the fanout like every other event — the feed and the
-      // router both listen there, not only on this generator.
       const end: EngineEvent =
         failure !== undefined
           ? { type: 'turn/end', turn, reason: { kind: 'error', error: callFailureOf(failure) } }
@@ -174,6 +205,17 @@ export class AcpRuntime implements AgentRuntime {
       queue.push(end)
       this.options.emit(input.sessionId, end)
     }
+    const reason = failure === undefined ? undefined : callFailureOf(failure)
+    await this.appendOrdered(session, input.sessionId, {
+      role: 'system',
+      content: reason?.message === undefined ? [] : [{ type: 'text', text: reason.message }],
+      turn,
+      source: {
+        kind: 'turn-end',
+        ...(reason?.code !== undefined ? { code: reason.code } : {}),
+      },
+      at: Date.now(),
+    }).catch(() => undefined)
     while (queue.length > 0) yield queue.shift() as EngineEvent
   }
 
@@ -181,26 +223,40 @@ export class AcpRuntime implements AgentRuntime {
     const session = this.sessions.get(sessionId)
     if (session === undefined) return false
     // ACP has no mid-prompt injection; the message queues as the next turn's prompt.
-    session.updates?.({ type: 'user/message', content: message.content, source: message.source })
-    await this.request('session/update', { sessionId: session.acpId, update: { sessionUpdate: 'user_message' } }).catch(
-      () => undefined,
-    )
+    const update = { type: 'user/message', content: message.content, source: message.source } as const
+    if (session.updates === undefined) return false
+    try {
+      await this.appendOrdered(session, sessionId, {
+        role: 'user',
+        content: message.content,
+        turn: session.turns,
+        ...(message.source !== undefined ? { source: message.source } : {}),
+        at: Date.now(),
+      })
+      await this.request('session/update', {
+        sessionId: session.acpId,
+        update: { sessionUpdate: 'user_message', content: message.content },
+      })
+    } catch {
+      return false
+    }
+    session.updates(update)
     return true
   }
 
-  // The protocol carries no reason: cancel is cancel, and the interface's reason is a
-  // hint the host uses, not something to send.
   async cancelTurn(sessionId: string, reason: CancelReason = 'user'): Promise<void> {
     void reason
     const session = this.sessions.get(sessionId)
     if (session === undefined) return
-    for (const settle of this.pendingPermissions.values()) settle('cancelled')
-    this.pendingPermissions.clear()
+    for (const [id, pending] of this.pendingPermissions) {
+      if (pending.sessionId === sessionId) {
+        pending.resolve('cancelled')
+        this.pendingPermissions.delete(id)
+      }
+    }
     await this.notify('session/cancel', { sessionId: session.acpId }).catch(() => undefined)
     session.stop?.()
   }
-
-  // The wire -----------------------------------------------------------------
 
   private async openSession(input: TurnInput): Promise<string> {
     const existing = this.sessions.get(input.sessionId)
@@ -268,15 +324,16 @@ export class AcpRuntime implements AgentRuntime {
           break
         }
       }
-      if (targetSessionId === '' && this.sessions.size > 0) {
-        targetSessionId = this.sessions.keys().next().value ?? ''
+      if (targetSessionId === '') {
+        this.protocol.send({ jsonrpc: '2.0', id: request.id, error: { code: -32001, message: 'Unknown ACP session' } })
+        return
       }
       const decisionPromise = new Promise<string>(resolve => {
-        this.pendingPermissions.set(request.id, resolve)
+        this.pendingPermissions.set(request.id, { sessionId: targetSessionId, resolve })
       })
       void Promise.resolve(this.options.requestPermission?.(targetSessionId, params))
-        .then(res => this.pendingPermissions.get(request.id)?.(res ?? 'cancelled'))
-        .catch(() => this.pendingPermissions.get(request.id)?.('cancelled'))
+        .then(res => this.pendingPermissions.get(request.id)?.resolve(res ?? 'cancelled'))
+        .catch(() => this.pendingPermissions.get(request.id)?.resolve('cancelled'))
 
       const decision = await decisionPromise
       this.pendingPermissions.delete(request.id)
@@ -290,58 +347,4 @@ export class AcpRuntime implements AgentRuntime {
       error: { code: -32601, message: `Method '${request.method}' not supported` },
     })
   }
-}
-
-/** One session/update as engine events, in the router's vocabulary. */
-export function eventsOfUpdate(update: Readonly<Record<string, unknown>>): readonly EngineEvent[] {
-  const kind = update.sessionUpdate
-  const content = update.content as Readonly<Record<string, unknown>> | readonly unknown[] | undefined
-  const blocks = (Array.isArray(content) ? content : content === undefined ? [] : [content]) as readonly unknown[]
-  const textOf = (block: unknown): string => {
-    const view = block as { text?: unknown } | undefined
-    return typeof view?.text === 'string' ? view.text : ''
-  }
-  if (kind === 'agent_message_chunk' || kind === 'agent_thought_chunk') {
-    const text = blocks.map(textOf).join('')
-    return text === '' ? [] : [{ type: 'assistant/stream', text }]
-  }
-  if (kind === 'agent_message') {
-    return [
-      {
-        type: 'assistant/message',
-        message: {
-          content: blocks.flatMap((block): readonly EngineContentBlock[] => {
-            const view = block as { type?: unknown } | undefined
-            const text = textOf(block)
-            if (text === '') return []
-            if (view?.type === 'thinking' || view?.type === 'thought') return [{ type: 'thinking', text }]
-            return [{ type: 'text', text }]
-          }),
-        },
-      },
-    ]
-  }
-  if (kind === 'tool_call') {
-    const id = typeof update.toolCallId === 'string' ? update.toolCallId : randomUUID()
-    const name =
-      typeof update.title === 'string' ? update.title : typeof update.kind === 'string' ? update.kind : 'tool'
-    return [{ type: 'tool/call', callId: id, name, arguments: JSON.stringify(update.rawInput ?? update.input ?? {}) }]
-  }
-  if (kind === 'tool_call_update') {
-    const id = typeof update.toolCallId === 'string' ? update.toolCallId : ''
-    if (id === '') return []
-    const isError = update.status === 'failed' || update.isError === true
-    return [{ type: 'tool/result', callId: id, ...(isError ? { isError: true } : {}) }]
-  }
-  if (kind === 'plan') {
-    const entries = Array.isArray(update.entries) ? update.entries : []
-    if (entries.length > 0) {
-      const planText = entries
-        .map((e: { title?: string; status?: string }) => '[' + (e.status ?? 'pending') + '] ' + (e.title ?? ''))
-        .join('\n')
-      return [{ type: 'assistant/stream', text: '\n\n📋 **Plan:**\n' + planText + '\n\n' }]
-    }
-    return []
-  }
-  return []
 }

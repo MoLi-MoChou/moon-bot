@@ -1,5 +1,4 @@
-// The wiring for secrets: the card a Bot opens, the settings endpoints, redaction of
-// tool results and model requests, and the shell environment a saved key is offered in.
+// Secret cards, redaction middleware and authorized shell variables.
 import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
 import type { ToolContext } from '../../engine/registry.ts'
@@ -47,6 +46,9 @@ export function install(rt: HostRuntime): void {
   const { ctx } = rt
   let redact: Redact = text => text
   let refreshEnv: () => void = () => {}
+  let loaded: Promise<void> | undefined
+  let loadedReady = false
+  const ensureLoaded = (): Promise<void> => (loaded ??= store.load().then(() => void (loadedReady = true)))
 
   const changed = (): void => {
     redact = redactor([...store.secrets.values()])
@@ -231,10 +233,8 @@ export function install(rt: HostRuntime): void {
     },
   })
 
-  // Tool results lose the values before the registry renders and saves them: a fresh
-  // result object is re-rendered from its value, so the model content, the saved
-  // `tool/result`, and the tool card's presentation all come from the redacted value.
   ctx.on<unknown, () => Promise<unknown>>('tools/execute', async (_exec, next) => {
+    await ensureLoaded()
     const result = await next()
     if (store.secrets.size === 0 || result === null || typeof result !== 'object') return result
     const record = result as ToolResult & Record<string, unknown>
@@ -249,14 +249,16 @@ export function install(rt: HostRuntime): void {
     if (value === record.value) return result
     return { isError: false, value, ...(record.additionalContexts !== undefined ? { additionalContexts: record.additionalContexts } : {}) }
   })
-
-  // Anything that still carries a value (the user pasted it, an earlier part kept it)
-  // is replaced before the request leaves. `next` cannot take new options, so the
-  // request starts over; it then carries no value and passes through here.
-  // A value that is part of its own label would be replaced again on every pass, so a
-  // request this listener rewrote passes straight through.
   const rewritten = new WeakSet<readonly unknown[]>()
   ctx.on<LlmStreamOptions, () => AsyncIterable<unknown>>('llm/stream', (options, next) => {
+    if (loadedReady || store.secrets.size > 0) return rewriteStream(options, next)
+    return (async function* (): AsyncIterable<unknown> {
+      await ensureLoaded()
+      yield* rewriteStream(options, next)
+    })()
+  })
+
+  const rewriteStream = (options: LlmStreamOptions, next: () => AsyncIterable<unknown>): AsyncIterable<unknown> => {
     if (store.secrets.size === 0 || rewritten.has(options.messages)) return next()
     const messages = redactDeep(options.messages, redact)
     const system = redactDeep(options.system, redact)
@@ -265,8 +267,7 @@ export function install(rt: HostRuntime): void {
     rewritten.add(fresh)
     rt.carryUsageTag(options.messages, fresh)
     return ctx.llm.stream({ ...options, messages: fresh, ...(system !== undefined ? { system } : {}) })
-  })
-
+  }
   function resolveEnv(execution: ShellExecution): Record<string, string> {
     const botId = rt.selfOf(execution?.agent?.session?.header?.id ?? execution?.agent?.id)
     if (rt.botOf(botId) === undefined) return {}
@@ -286,8 +287,7 @@ export function install(rt: HostRuntime): void {
     return values
   }
 
-  // Keys must be declared up front, so the contribution is registered again whenever
-  // the set of names (or a purpose, which describes the key) changes.
+  // Re-register the shell contribution when names or purposes change.
   function attachShellEnv(sub: ShellEnvHost): void {
     let unregister: Disposer | null = null
     let declared = ''

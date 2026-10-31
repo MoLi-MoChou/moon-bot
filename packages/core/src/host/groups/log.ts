@@ -38,6 +38,7 @@ const unseenLines = (room: ReadyRoom, memberId: string): RoomLine[] => {
 
 export function installRoomLog(rt: GroupRuntime): RoomLogApi {
   const { ctx } = rt
+  const clean = (text: string): string => rt.redactSecrets?.(text) ?? text
 
   // A long line keeps its start in state.json, which is written whole on every save,
   // and what a member reads of it (GROUP_LINE_READ) in a file of its own: written once,
@@ -103,6 +104,7 @@ export function installRoomLog(rt: GroupRuntime): RoomLogApi {
     }
 
   const appendRoom = (room: ReadyRoom, line: RoomLineInput): void => {
+    line = { ...line, text: clean(line.text ?? '') }
     room.seq += 1
     const log = [...room.log, keepGroupLine(room.id, { ...line, text: line.text ?? '', seq: room.seq }, line.text ?? '')]
     for (const gone of log.slice(0, -ROOM_LOG_MAX)) dropGroupLine(room.id, gone)
@@ -194,6 +196,7 @@ export function installRoomLog(rt: GroupRuntime): RoomLogApi {
   // A member's message in the round: in the log, for the members after it, and in the
   // round's replies, for the user.
   const postInRound = (room: ReadyRoom, round: GroupRound, member: StoredBot, text: string, duration?: number): void => {
+    text = clean(text)
     appendRoom(room, { who: member.name, botId: member.id, text })
     round.replies.push({ botId: member.id, name: member.name, color: member.color, text, time: Date.now(), ...(duration === undefined ? {} : { duration }) })
     void rt.save().catch(() => {})

@@ -412,7 +412,7 @@ test('tool results and model requests lose the values', async t => {
       { role: 'tool', content: [{ type: 'text', text: value }] },
     ],
   }
-  stream(options, next)
+  await stream(options, next)
   assert.equal(passed.length, 0)
   const sent = bench.streamed.at(-1)
   assert.equal(sent.system, 'sys [secret:DEMO_TOKEN]')
@@ -420,8 +420,8 @@ test('tool results and model requests lose the values', async t => {
   assert.ok(!JSON.stringify(sent).includes(value))
   assert.ok(JSON.stringify(options).includes(value))
   // The rewritten request passes through, even when a value sits inside its own label.
-  stream(sent, next)
+  await stream(sent, next)
   assert.equal(passed.length, 1)
-  stream({ ...options, system: 'clean', messages: [] }, next)
+  await stream({ ...options, system: 'clean', messages: [] }, next)
   assert.equal(passed.length, 2)
 })

@@ -4,6 +4,7 @@
 import type { AgentRuntime } from './runtime.ts'
 import { AcpRuntime } from './acp/runtime.ts'
 import type { PermissionRequestParams } from './acp/permission.ts'
+import type { AcpTranscriptStore } from './acp/runtime-types.ts'
 import { canLaunch } from './health.ts'
 import { localEngineCatalog, type EngineCatalog, type LocalAgent } from './acp/discovery.ts'
 import { StdioTransport, RelayTransport, type RelayPort } from './acp/transport.ts'
@@ -20,6 +21,7 @@ export interface RunnerOptions {
   /** The relay's live connections; an `acp-remote` Bot turns to one of these. */
   readonly relay?: RelayPort | undefined
   readonly requestPermission?: ((sessionId: string, params: PermissionRequestParams) => Promise<string>) | undefined
+  readonly transcript?: AcpTranscriptStore | undefined
 }
 
 export interface ExecutionRunner {
@@ -56,6 +58,7 @@ export class LocalRunner implements ExecutionRunner {
           remote = new AcpRuntime({
             transport: new RelayTransport(this.options.relay, agentId),
             emit: this.options.emit,
+            ...(this.options.transcript !== undefined ? { transcript: this.options.transcript } : {}),
             ...(this.options.requestPermission !== undefined
               ? { requestPermission: this.options.requestPermission }
               : {}),
@@ -83,6 +86,7 @@ export class LocalRunner implements ExecutionRunner {
       runtime = new AcpRuntime({
         transport: new StdioTransport(command, Array.isArray(spec?.args) ? spec.args : []),
         emit: this.options.emit,
+        ...(this.options.transcript !== undefined ? { transcript: this.options.transcript } : {}),
         ...(this.options.requestPermission !== undefined ? { requestPermission: this.options.requestPermission } : {}),
       })
       this.acp.set(key, runtime)

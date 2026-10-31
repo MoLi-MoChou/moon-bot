@@ -8,6 +8,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { startService, type StandaloneService } from '../src/service/server.ts'
+import { ServiceContext } from '../src/service/context.ts'
 
 const seed = () => ({
   version: 1,
@@ -142,6 +143,19 @@ test('the built UI is served beside the channel when a directory is given', asyn
   const js = await fetch(`${service.url}/assets/app.js`)
   assert.equal(js.status, 200)
   assert.equal(await js.text(), 'window.booted = true')
+})
+
+test('the standalone workspace registry restores paths after a restart', async t => {
+  const home = mkdtempSync(join(tmpdir(), 'ds-bot-workspaces-'))
+  t.after(() => rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 }))
+  const first = new ServiceContext({ home })
+  const path = join(home, 'project')
+  const created = await first.workspaceRegistry.create(path, 'Project')
+  await first.dispose()
+  const second = new ServiceContext({ home })
+  t.after(() => second.dispose())
+  assert.deepEqual(second.workspaceRegistry.get(created.id), created)
+  assert.deepEqual(await second.workspaceRegistry.resolveByPath(path), created)
 })
 
 test('a non-loopback bind without a password refuses to start', async () => {

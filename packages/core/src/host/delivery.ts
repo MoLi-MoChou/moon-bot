@@ -34,6 +34,7 @@ import { headOf, textOf } from './text.ts'
 
 export function install(rt: HostRuntime): void {
   const { ctx, state } = rt
+  const clean = (text: string): string => rt.redactSecrets?.(text) ?? text
 
   const resolveAgent = async (sessionId: string) => {
     const resolved = await ctx.sessionController.resolveAgent(sessionId)
@@ -114,6 +115,7 @@ export function install(rt: HostRuntime): void {
     length,
     work,
   }: DeliveryInput): Promise<string> {
+    text = clean(text)
     const from = rt.botOf(fromId)
     const to = rt.botOf(toId)
     if (to === undefined) throw new Error(`Unknown Bot ${toId}`)
@@ -212,6 +214,7 @@ export function install(rt: HostRuntime): void {
   // not in every Session it reaches, and the model reads it with its file tools when it
   // needs it. Undefined when the host cannot store files.
   async function attachLong(text: string, name: string): Promise<AttachResult | undefined> {
+    text = clean(text)
     if (text.length <= MESSAGE_INLINE_MAX) return { text, files: [] }
     try {
       const file = await ctx

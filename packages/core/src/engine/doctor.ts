@@ -15,6 +15,10 @@ export interface DoctorReport {
   readonly id: string
   readonly ok: boolean
   readonly steps: readonly DoctorStep[]
+  /** The methods the agent advertised at handshake, for the capability report. */
+  readonly methods?: readonly string[] | undefined
+  /** The engine kind the report was made for, so a reader knows what was expected. */
+  readonly kind?: string | undefined
 }
 
 export interface DoctorSubject {
@@ -68,9 +72,20 @@ const skipFrom = (from: DoctorStepName, detail: string): DoctorStep[] => {
   return ORDER.slice(start).map(name => ({ name, status: 'skipped' as const, detail }))
 }
 
-const report = (id: string, steps: readonly DoctorStep[], passed?: boolean): DoctorReport => {
+const report = (
+  id: string,
+  steps: readonly DoctorStep[],
+  passed?: boolean,
+  extra: { methods?: readonly string[] | undefined; kind?: string | undefined } = {},
+): DoctorReport => {
   const filled = ORDER.map(name => steps.find(step => step.name === name) ?? { name, status: 'skipped' as const })
-  return { id, ok: passed ?? filled.every(step => step.status === 'ok'), steps: filled }
+  return {
+    id,
+    ok: passed ?? filled.every(step => step.status === 'ok'),
+    steps: filled,
+    ...(extra.methods === undefined ? {} : { methods: extra.methods }),
+    ...(extra.kind === undefined ? {} : { kind: extra.kind }),
+  }
 }
 
 const versionStep = (version: string, failure?: string): DoctorStep =>
@@ -92,35 +107,50 @@ export async function examine(
         ...skipFrom('version', 'not an external process'),
       ],
       true,
+      { kind: subject.kind },
     )
   }
   if (subject.onDemand === true) {
     const version = subject.version?.trim() ?? ''
-    return report(subject.id, [
-      { name: 'executable', status: 'ok', detail: 'on-demand package' },
-      versionStep(version, 'package name unknown'),
-      ...skipFrom('handshake', 'doctor does not download packages'),
-    ])
+    return report(
+      subject.id,
+      [
+        { name: 'executable', status: 'ok', detail: 'on-demand package' },
+        versionStep(version, 'package name unknown'),
+        ...skipFrom('handshake', 'doctor does not download packages'),
+      ],
+      undefined,
+      { kind: subject.kind },
+    )
   }
   if (subject.kind === 'acp-remote') {
-    return report(subject.id, [
-      { name: 'executable', status: 'fail', detail: 'remote agents are not launched here' },
-      ...skipFrom('version', 'remote agents are not launched here'),
-    ])
+    return report(
+      subject.id,
+      [
+        { name: 'executable', status: 'fail', detail: 'remote agents are not launched here' },
+        ...skipFrom('version', 'remote agents are not launched here'),
+      ],
+      undefined,
+      { kind: subject.kind },
+    )
   }
   if (subject.kind !== 'acp') {
     const detail = subject.reason?.trim() || 'not an ACP agent'
-    return report(subject.id, [
-      { name: 'executable', status: 'fail', detail },
-      ...skipFrom('version', 'not an ACP agent'),
-    ])
+    return report(
+      subject.id,
+      [{ name: 'executable', status: 'fail', detail }, ...skipFrom('version', 'not an ACP agent')],
+      undefined,
+      { kind: subject.kind },
+    )
   }
   const path = subject.path?.trim() ?? ''
   if (path === '') {
-    return report(subject.id, [
-      { name: 'executable', status: 'fail', detail: 'not installed' },
-      ...skipFrom('version', 'not installed'),
-    ])
+    return report(
+      subject.id,
+      [{ name: 'executable', status: 'fail', detail: 'not installed' }, ...skipFrom('version', 'not installed')],
+      undefined,
+      { kind: subject.kind },
+    )
   }
   const steps: DoctorStep[] = [{ name: 'executable', status: 'ok', detail: path }]
   const known = subject.version?.trim() ?? ''
@@ -132,6 +162,7 @@ export async function examine(
       steps.push(versionStep('', clip(error)))
     }
   }
+  let methods: readonly string[] | undefined
   try {
     const facts = await probe.handshake(
       subject.command?.trim() || path,
@@ -139,6 +170,9 @@ export async function examine(
       options.cwd,
       options.timeoutMs ?? TIMEOUT_MS,
     )
+    // The methods the agent advertises are what the capability report reads; without them a
+    // reader could only guess which features work.
+    methods = facts.methods
     steps.push({ name: 'handshake', status: 'ok', detail: facts.agent?.trim() || 'initialized' })
     if (facts.methods.includes('session/prompt'))
       steps.push({ name: 'session', status: 'fail', detail: 'doctor must not send a prompt' })
@@ -155,7 +189,10 @@ export async function examine(
       steps.push({ name: 'session', status: 'skipped', detail: 'not reached' })
     }
   }
-  return report(subject.id, steps)
+  return report(subject.id, steps, undefined, {
+    ...(methods === undefined ? {} : { methods }),
+    kind: subject.kind,
+  })
 }
 
 /** One tab-separated line per check, in walk order. */

@@ -34,8 +34,18 @@ interface OnDemandCandidate {
 // The ACP adapter covers these external agents. Local CLIs that are not ACP adapters
 // are marked unsupported so they are not launched with the wrong wire protocol.
 const CANDIDATES: readonly Candidate[] = [
+  // Only an adapter speaks ACP. `claude` and `codex` are the vendors' own CLIs and answer a
+  // different protocol; listing them as ACP made a listing look like working support while
+  // every handshake failed. They stay discoverable, marked unsupported, with the reason and
+  // the adapter that would make them work.
   { id: 'claude-acp', label: 'Claude (ACP)', command: 'claude-agent-acp', kind: 'acp' },
-  { id: 'claude', label: 'Claude', command: 'claude', kind: 'acp' },
+  {
+    id: 'claude',
+    label: 'Claude',
+    command: 'claude',
+    kind: 'unsupported',
+    reason: 'Native CLI, not an ACP agent · 原生 CLI，不是 ACP；需 claude-agent-acp 适配器',
+  },
   { id: 'codex-acp', label: 'Codex (ACP)', command: 'codex-acp', kind: 'acp' },
   { id: 'opencode', label: 'OpenCode', command: 'opencode', kind: 'acp' },
   { id: 'gemini', label: 'Gemini', command: 'gemini', kind: 'acp' },
@@ -44,7 +54,7 @@ const CANDIDATES: readonly Candidate[] = [
     label: 'Codex',
     command: 'codex',
     kind: 'unsupported',
-    reason: 'Non-ACP CLI · 原生 CLI 暂无 ACP 适配器',
+    reason: 'Native CLI, not an ACP agent · 原生 CLI，不是 ACP；需 codex-acp 适配器',
   },
   {
     id: 'cursor-agent',

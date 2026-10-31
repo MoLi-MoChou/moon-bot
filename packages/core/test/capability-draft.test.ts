@@ -11,7 +11,9 @@ import {
 } from '../src/client/capability-draft.ts'
 import { ZH } from '../src/client/i18n/zh.ts'
 
-const draft = (overrides = {}) => ({ ...blankCapability(), ...overrides })
+// `blankCapability()` now starts on a skill, since a connection is created in Connectors.
+// These cases are about the MCP form, so the fixture names that kind itself.
+const draft = (overrides = {}) => ({ ...blankCapability(), kind: 'mcp', ...overrides })
 
 test('the form starts blank and round-trips a saved item', () => {
   const saved = {

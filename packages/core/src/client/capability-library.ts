@@ -142,6 +142,28 @@ export function groupCapabilities(items: readonly Capability[]): CapabilityGroup
   return groups
 }
 
+/**
+ * Which page owns an item. A connection (an MCP server, from the market or typed by hand) is
+ * configured once in Connectors — address, credentials, protocol, tools, health. The library
+ * page only decides which Bots may use it. A skill and a pack have no connection of their own,
+ * so they are created and edited here.
+ */
+export type CapabilityOwner = 'connectors' | 'library'
+
+export function ownerOf(item: Capability): CapabilityOwner {
+  return kindOf(item) === 'mcp' ? 'connectors' : 'library'
+}
+
+/** The items the library page creates and edits itself. */
+export function libraryItems(items: readonly Capability[]): Capability[] {
+  return items.filter(item => ownerOf(item) === 'library')
+}
+
+/** The items whose connection is managed on the Connectors page. */
+export function connectionItems(items: readonly Capability[]): Capability[] {
+  return items.filter(item => ownerOf(item) === 'connectors')
+}
+
 export function countsByKind(items: readonly Capability[]): Record<CapabilityFilterKind, number> {
   const counts: Record<CapabilityFilterKind, number> = { all: items.length, mcp: 0, skill: 0, pack: 0 }
   for (const item of items) counts[kindOf(item)] += 1

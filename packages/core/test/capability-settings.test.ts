@@ -178,15 +178,51 @@ test('the empty library says what to do next and both actions navigate', () => {
     run: async () => true,
   }
   const tree = render(CapabilitiesPage, props)
-  assert.match(textOf(tree), /No capabilities yet/)
-  assert.match(textOf(tree), /Install one from the connector market/)
+  assert.match(textOf(tree), /No skills or packs yet/)
+  assert.match(textOf(tree), /MCP servers are added under Connectors/)
   const buttons = nodes(tree, node => node.type === 'button')
-  const browse = buttons.find(node => textOf(node) === 'Browse connector market')
-  const add = buttons.find(node => textOf(node) === 'Add capability')
-  assert.ok(browse, 'the empty state offers the market')
+  const open = buttons.find(node => textOf(node) === 'Open Connectors')
+  const add = buttons.find(node => textOf(node) === 'Add skill or pack')
+  assert.ok(open, 'the empty state points at where connections are made')
   assert.ok(add, 'the empty state offers the add form')
-  ;(browse?.props.onClick as () => void)()
+  ;(open?.props.onClick as () => void)()
   assert.deepEqual(opened, ['connectors'])
+})
+
+test('a connection is not created or edited on the library page, only reached from it', () => {
+  reset()
+  const opened: string[] = []
+  let tree = render(CapabilitiesPage, {
+    roster: { capabilities: [postgres, guide], bots, secrets: [] },
+    actions: { ...actions(), openSettings: (page: string) => opened.push(page) },
+    run: async () => true,
+  })
+  // The library lists skills, and shows the connection for access only.
+  assert.match(textOf(tree), /Skills/)
+  assert.match(textOf(tree), /Connections/)
+  assert.match(textOf(tree), /Configured on the Connectors page/)
+  // No MCP tab, and no way to add one here.
+  const labels = nodes(tree, node => node.type === 'button').map(textOf)
+  assert.equal(
+    labels.some(label => /^MCP servers/.test(label)),
+    false,
+  )
+  assert.equal(labels.includes('Add capability'), false)
+  const toConnectors = nodes(tree, node => node.type === 'button').find(node => textOf(node) === 'Open in Connectors')
+  assert.ok(toConnectors, 'the connection links back to its own page')
+  ;(toConnectors?.props.onClick as () => void)()
+  assert.deepEqual(opened, ['connectors'])
+  tree = render(CapabilitiesPage, {
+    roster: { capabilities: [guide], bots, secrets: [] },
+    actions: actions(),
+    run: async () => true,
+  })
+  const onlySkill = textOf(tree)
+  assert.equal(
+    /Connections\s*\d/.test(onlySkill),
+    false,
+    `no connection section when there is none: ${onlySkill.slice(0, 400)}`,
+  )
 })
 
 test('the library groups by type, shows key readiness and the live state per Bot', () => {
@@ -202,11 +238,11 @@ test('the library groups by type, shows key readiness and the live state per Bot
     actions: actions(),
     run: async () => true,
   })
-  assert.match(textOf(tree), /MCP servers/)
   assert.match(textOf(tree), /Skills/)
   assert.match(textOf(tree), /Packs/)
-  assert.match(textOf(tree), /Missing POSTGRES_URL/)
-  assert.match(textOf(tree), /Ready for Chief/)
+  // The connection is listed for access, with who uses it, but its keys live with it.
+  assert.match(textOf(tree), /Connections/)
+  assert.match(textOf(tree), /Used by 1 Bot/)
   const guideSummary = nodes(tree, node => node.props.className === 'bt-cap-summary').find(node =>
     textOf(node).includes('guide'),
   )
@@ -237,9 +273,9 @@ test('search narrows the rows and a miss clears the filters', () => {
   let tree = render(CapabilitiesPage, props)
   const input = find(tree, node => node.props.className === 'bt-market-search-input')
   assert.ok(input)
-  ;(input?.props.onChange as (event: unknown) => void)({ target: { value: 'schemas' } })
+  ;(input?.props.onChange as (event: unknown) => void)({ target: { value: 'write' } })
   tree = rerender(CapabilitiesPage, props)
-  assert.match(textOf(tree), /Showing 1 of 3/)
+  assert.match(textOf(tree), /Showing 1 of 2/)
   ;(find(tree, node => node.props.className === 'bt-market-search-input')?.props.onChange as (event: unknown) => void)({
     target: { value: 'nothing-matches' },
   })
@@ -249,18 +285,20 @@ test('search narrows the rows and a miss clears the filters', () => {
   assert.ok(clear)
   ;(clear?.props.onClick as () => void)()
   tree = rerender(CapabilitiesPage, props)
-  assert.match(textOf(tree), /MCP servers/)
+  assert.match(textOf(tree), /Skills/)
 })
 
 test('a row opens into description, tools and usage, and delete asks first with its consequences', () => {
   reset()
   const deleted: string[] = []
+  // A pack is a library item, so it is edited and deleted on this page; its members' tools
+  // are what the row reports.
   const props = {
     roster: {
-      capabilities: [postgres],
+      capabilities: [team, guide],
       bots,
-      secrets: [{ name: 'POSTGRES_URL' }],
-      capabilityStatuses: { chief: { postgres: { state: 'error', error: 'ECONNREFUSED' } } },
+      secrets: [],
+      capabilityStatuses: { chief: { team: { state: 'error', error: 'ECONNREFUSED' } } },
       capabilityTools: { postgres: ['mcp__postgres__query', 'mcp__postgres__list'] },
     },
     actions: {
@@ -273,7 +311,9 @@ test('a row opens into description, tools and usage, and delete asks first with 
     run: async () => true,
   }
   let tree = render(CapabilitiesPage, props)
-  const summary = find(tree, node => node.props.className === 'bt-cap-summary')
+  const summary = nodes(tree, node => node.props.className === 'bt-cap-summary').find(node =>
+    textOf(node).includes('team'),
+  )
   assert.ok(summary)
   ;(summary?.props.onClick as () => void)()
   tree = rerender(CapabilitiesPage, props)
@@ -285,12 +325,12 @@ test('a row opens into description, tools and usage, and delete asks first with 
   assert.ok(firstDelete)
   ;(firstDelete?.props.onClick as () => void)()
   tree = rerender(CapabilitiesPage, props)
-  assert.match(textOf(tree), /Delete postgres\? Bots using it lose its tools/)
+  assert.match(textOf(tree), /Delete team\? Bots using it lose its tools/)
   assert.match(textOf(tree), /saved keys stay/)
   assert.deepEqual(deleted, [], 'the first click only asks')
   const confirm = nodes(tree, node => node.type === 'button').find(node => textOf(node) === 'Delete')
   ;(confirm?.props.onClick as () => void)()
-  assert.deepEqual(deleted, ['postgres'])
+  assert.deepEqual(deleted, ['team'])
 })
 
 test('approving a local command is optimistic and rolls back when the host refuses', async () => {

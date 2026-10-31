@@ -4,12 +4,15 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
   botsUsing,
+  connectionItems,
   countsByKind,
   filterCapabilities,
   groupCapabilities,
   healthOf,
   keyReadiness,
   kindOf,
+  libraryItems,
+  ownerOf,
   secretNamesOf,
   sourceOf,
   toolsOf,
@@ -118,4 +121,28 @@ test('the page groups by type, market items first, and searches text plus tool n
     ['guide'],
   )
   assert.deepEqual(countsByKind(items), { all: 4, mcp: 2, skill: 1, pack: 1 })
+})
+
+test('a connection is owned by the Connectors page, a skill or pack by the library', () => {
+  const mcp = item('postgres')
+  const marketMcp = item('github')
+  const skill = item('guide', { kind: 'skill' })
+  const pack = item('team', { kind: 'pack', items: ['postgres'] })
+
+  assert.equal(ownerOf(mcp), 'connectors')
+  assert.equal(ownerOf(marketMcp), 'connectors')
+  assert.equal(ownerOf(skill), 'library')
+  assert.equal(ownerOf(pack), 'library')
+
+  const items = [mcp, marketMcp, skill, pack]
+  assert.deepEqual(
+    connectionItems(items).map(entry => entry.name),
+    ['postgres', 'github'],
+  )
+  assert.deepEqual(
+    libraryItems(items).map(entry => entry.name),
+    ['guide', 'team'],
+  )
+  // The two views partition the list: nothing is hidden and nothing is shown twice.
+  assert.equal(connectionItems(items).length + libraryItems(items).length, items.length)
 })

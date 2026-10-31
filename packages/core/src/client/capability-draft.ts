@@ -27,9 +27,10 @@ export interface DraftErrors {
 export const CAPABILITY_NAME = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/
 export type CapabilityTransport = 'stdio' | 'streamable-http' | 'sse'
 
-export const blankCapability = (): CapabilityDraft => ({
+/** A new item on the library page: a skill, since a connection is made in Connectors. */
+export const blankCapability = (kind: 'skill' | 'pack' = 'skill'): CapabilityDraft => ({
   name: '',
-  kind: 'mcp',
+  kind,
   description: '',
   transport: 'stdio',
   command: '',

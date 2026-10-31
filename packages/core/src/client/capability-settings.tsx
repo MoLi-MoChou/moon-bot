@@ -5,14 +5,17 @@ import { blankCapability, draftFromCapability, type CapabilityDraft } from './ca
 import { CapabilityForm } from './capability-form.tsx'
 import { CapabilityRow } from './capability-row.tsx'
 import {
+  connectionItems,
   countsByKind,
   filterCapabilities,
   groupCapabilities,
   healthOf,
+  libraryItems,
   keyReadiness,
   toolsOf,
   type CapabilityFilterKind,
 } from './capability-library.ts'
+import { CapabilityConnections } from './capability-connections.tsx'
 import type { Capability, CapabilityActions, CapabilityBot, CapabilityStatus, RunWork } from './capability-types.ts'
 
 export type { Capability, CapabilityActions, RunWork } from './capability-types.ts'
@@ -26,9 +29,10 @@ interface CapabilityRoster {
   capabilityTools?: Readonly<Record<string, readonly string[]>>
 }
 
+// The library holds skills and packs only; an MCP server is a connection and has its own
+// page, so no tab here would ever select one.
 const KIND_TABS: readonly (readonly [CapabilityFilterKind, () => string])[] = [
   ['all', () => t('All')],
-  ['mcp', () => t('MCP servers')],
   ['skill', () => t('Skills')],
   ['pack', () => t('Packs')],
 ]
@@ -47,7 +51,12 @@ export function CapabilitiesPage({
   actions: CapabilityActions
   run: RunWork
 }) {
-  const items = [...(roster.capabilities ?? [])]
+  const all = [...(roster.capabilities ?? [])]
+  // A connection belongs to the Connectors page; this page owns skills and packs, and
+  // shows the connections only so a Bot's access to them can be chosen.
+  const library = libraryItems(all)
+  const connections = connectionItems(all)
+  const items = [...library, ...connections]
   const bots = roster.bots ?? []
   const statuses = roster.capabilityStatuses
   const tools = roster.capabilityTools
@@ -58,8 +67,8 @@ export function CapabilitiesPage({
   const [confirming, setConfirming] = useState('')
   const [busy, setBusy] = useState('')
   const [approved, setApproved] = useState<Record<string, boolean>>({})
-  const counts = countsByKind(items)
-  const shown = filterCapabilities(items, { query, kind, tools, textOf: item => t(item.description ?? '') })
+  const counts = countsByKind(library)
+  const shown = filterCapabilities(library, { query, kind, tools, textOf: item => t(item.description ?? '') })
   const groups = groupCapabilities(shown)
   const filtered = query.trim() !== '' || kind !== 'all'
   const openSettings = (page: string): void => {
@@ -102,19 +111,21 @@ export function CapabilitiesPage({
   return (
     <section className='bt-set-section'>
       <div className='bt-cap-head'>
-        <h3>{t('Shared capabilities')}</h3>
+        <h3>{t('Skills and packs')}</h3>
         <div className='bt-cap-head-actions'>
           <button type='button' className='bt-soft bt-soft-sm' onClick={() => openSettings('connectors')}>
-            {t('Browse connector market')}
+            {t('Manage connections')}
           </button>
           <button type='button' className='bt-soft bt-soft-sm' onClick={() => setDraft(blankCapability())}>
             <PlusIcon />
-            {t('Add capability')}
+            {t('Add skill or pack')}
           </button>
         </div>
       </div>
       <p className='bt-set-hint'>
-        {t('Save a capability once here, then turn it on for each Bot in the Bot’s settings.')}
+        {t(
+          'A skill adds instructions and a pack groups tools. Connections live on the Connectors page; turn one on for a Bot from its settings.',
+        )}
       </p>
       {draft ? (
         <CapabilityForm
@@ -125,26 +136,26 @@ export function CapabilitiesPage({
           onClose={() => setDraft(null)}
         />
       ) : null}
-      {items.length === 0 ? (
+      {library.length === 0 ? (
         <div className='bt-cap-empty'>
           <span className='bt-cap-empty-icon'>
             <PlugIcon />
           </span>
-          <span className='bt-cap-empty-title'>{t('No capabilities yet')}</span>
+          <span className='bt-cap-empty-title'>{t('No skills or packs yet')}</span>
           <span className='bt-set-hint'>
-            {t('Install one from the connector market, or save an MCP server, a skill, or a pack of them yourself.')}
+            {t('A skill adds instructions; a pack groups tools. MCP servers are added under Connectors.')}
           </span>
           <div className='bt-connector-form-row'>
             <button type='button' className='bt-soft bt-soft-sm' onClick={() => openSettings('connectors')}>
-              {t('Browse connector market')}
+              {t('Open Connectors')}
             </button>
             <button type='button' className='bt-soft bt-soft-sm' onClick={() => setDraft(blankCapability())}>
-              {t('Add capability')}
+              {t('Add skill or pack')}
             </button>
           </div>
         </div>
       ) : null}
-      {items.length > 0 ? (
+      {library.length > 0 ? (
         <div className='bt-cap-toolbar'>
           <div className='bt-market-search'>
             <span className='bt-market-search-icon'>
@@ -182,7 +193,7 @@ export function CapabilitiesPage({
           </div>
         </div>
       ) : null}
-      {items.length > 0 && groups.length === 0 ? (
+      {library.length > 0 && groups.length === 0 ? (
         <div className='bt-cap-empty'>
           <span className='bt-cap-empty-title'>{t('No capabilities match “{query}”', { query })}</span>
           <div className='bt-connector-form-row'>
@@ -232,9 +243,15 @@ export function CapabilitiesPage({
       ))}
       {filtered && shown.length > 0 ? (
         <div className='bt-set-hint'>
-          {t('Showing {count} of {total}.', { count: shown.length, total: items.length })}
+          {t('Showing {count} of {total}.', { count: shown.length, total: library.length })}
         </div>
       ) : null}
+      <CapabilityConnections
+        connections={connections}
+        bots={bots}
+        statuses={statuses}
+        openConnectors={() => openSettings('connectors')}
+      />
     </section>
   )
 }

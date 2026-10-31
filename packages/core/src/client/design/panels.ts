@@ -59,6 +59,7 @@ html[data-windows-titlebar]:not([data-fullscreen]) :is(.bt-pane,.bt-panel)::befo
 .bt-panel-grip:hover,.bt-panel[data-dragging] .bt-panel-grip{background:linear-gradient(to right,transparent 4px,var(--bt-line-2) 4px,var(--bt-line-2) 6px,transparent 6px)}
 .bt-drag-shield{position:fixed;inset:0;z-index:45;cursor:col-resize}
 .bt-panel-view{flex:1;min-height:0;display:flex;flex-direction:column}
+.bt-panel-error{flex:none;margin:10px 16px 0;padding:8px 10px;border:1px solid color-mix(in srgb,var(--bt-danger) 35%,transparent);border-radius:10px;background:color-mix(in srgb,var(--bt-danger) 8%,var(--bt-main));color:var(--bt-ink);font-size:12px;line-height:17px;overflow-wrap:anywhere}
 .bt-drawer-top{display:flex;justify-content:flex-end;gap:8px;padding:12px 17px 6px 12px}
 .bt-drawer-id{display:flex;flex-direction:column;align-items:center;padding:14px 16px 0}
 .bt-drawer-id>.bt-mark,.bt-drawer-id>.bt-cluster,.bt-drawer-id>.bt-pile{margin-bottom:16px}
@@ -212,6 +213,9 @@ button.bt-set-row:hover{background:var(--bt-hover)}
 .bt-connector-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .bt-connector-name{font-size:14px;line-height:20px;font-weight:500}
 .bt-connector-status{font-size:12px;line-height:16px;color:var(--bt-ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bt-connector-meta{font-size:11.5px;line-height:16px;color:var(--bt-ink-3);overflow-wrap:anywhere}
+.bt-connector[data-state=needs-auth] .bt-connector-status,.bt-connector[data-state=needs-approval] .bt-connector-status{color:var(--bt-warn);white-space:normal}
+.bt-connector[data-state=unavailable] .bt-connector-status{color:var(--bt-ink-2);white-space:normal}
 .bt-connector[data-state=ready] .bt-connector-status{color:var(--bt-ink-2)}
 .bt-connector[data-state=error] .bt-connector-status{color:var(--bt-danger);white-space:normal}
 .bt-connector-actions{flex:none;display:flex;gap:6px}

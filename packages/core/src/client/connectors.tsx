@@ -3,6 +3,14 @@ import type { ReactElement } from 'react'
 import { useMorph } from './motion.tsx'
 import { MaskedInput } from './secret-card.tsx'
 import { t } from './i18n.ts'
+import { connectorErrorText } from './connector-error.ts'
+import {
+  connectorActionOf,
+  connectorMetaText,
+  connectorStateText,
+  type ConnectorHealthView,
+  type ConnectorState,
+} from './connector-state.ts'
 import { ConnectorCatalog, type MarketActions } from './connector-market.tsx'
 import { CustomConnectorForm, CustomConnectorList, type CustomConnectorActions } from './connector-custom.tsx'
 import { blankCustomConnector, draftFromConnector, type CustomConnectorDraft } from './connector-custom.ts'
@@ -16,6 +24,10 @@ export interface Connector {
   state: string
   account?: string
   error?: string
+  lastErrorAt?: number
+  lastOkAt?: number
+  retryAt?: number
+  fingerprint?: string
 }
 export interface ConnectorActions extends CustomConnectorActions {
   connectorConnect: (id: string, token: string) => Promise<unknown>
@@ -30,13 +42,12 @@ export const GitHubMark = () => (
 )
 const MARKS: Record<string, () => ReactElement> = { github: GitHubMark }
 const ABOUT: Record<string, () => string> = { github: () => t('Repositories, issues, and pull requests') }
-function statusText(connector: Connector): string {
-  if (connector.state === 'connecting') return t('Connecting…')
-  if (connector.state === 'error') return t('Could not connect: {error}', { error: connector.error ?? '' })
-  if (connector.state === 'ready')
-    return connector.account ? t('Connected as {account}', { account: connector.account }) : t('Connected')
-  return t('Not connected. {about}', { about: ABOUT[connector.id]?.() ?? '' })
-}
+const asHealth = (connector: Connector): ConnectorHealthView => ({
+  ...connector,
+  state: connector.state as ConnectorState,
+  about: ABOUT[connector.id]?.() ?? '',
+})
+const statusText = (connector: Connector): string => connectorStateText(asHealth(connector))
 function ConnectorRow({ connector, actions }: { connector: Connector; actions: ConnectorActions }) {
   const [form, setForm] = useState(false)
   const [token, setToken] = useState('')
@@ -50,7 +61,7 @@ function ConnectorRow({ connector, actions }: { connector: Connector; actions: C
         () => {
           after?.()
         },
-        failure => setError(failure?.message ?? String(failure)),
+        failure => setError(connectorErrorText(failure)),
       )
       .finally(() => setBusy(false))
   }
@@ -61,7 +72,12 @@ function ConnectorRow({ connector, actions }: { connector: Connector; actions: C
       setForm(false)
     })
   }
+  const health = asHealth(connector)
+  const action = connectorActionOf(health)
   const on = connector.state !== 'off'
+  const meta = connectorMetaText(health, Date.now(), time =>
+    new Date(time).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }),
+  )
   const Mark = MARKS[connector.id]
   const row = useRef<HTMLDivElement | null>(null)
   useMorph(row, `${form}:${error !== null}:${connector.state}`)
@@ -72,9 +88,10 @@ function ConnectorRow({ connector, actions }: { connector: Connector; actions: C
         <span className='bt-connector-text'>
           <span className='bt-connector-name'>{connector.name}</span>
           <span className='bt-connector-status'>{statusText(connector)}</span>
+          {meta === null ? null : <span className='bt-connector-meta'>{meta}</span>}
         </span>
         <span className='bt-connector-actions'>
-          {connector.state === 'error' ? (
+          {action.kind === 'retry' ? (
             <button
               type='button'
               className='bt-soft bt-soft-sm'
@@ -83,15 +100,16 @@ function ConnectorRow({ connector, actions }: { connector: Connector; actions: C
               {t('Try again')}
             </button>
           ) : null}
-          {on ? (
+          {action.kind === 'replace-token' ? (
             <button type='button' className='bt-soft bt-soft-sm' disabled={busy || form} onClick={() => setForm(true)}>
               {t('Replace token')}
             </button>
-          ) : form ? null : (
+          ) : null}
+          {action.kind === 'connect' && !form ? (
             <button type='button' className='bt-soft bt-soft-sm' onClick={() => setForm(true)}>
               {t('Connect')}
             </button>
-          )}
+          ) : null}
           {on ? (
             <button
               type='button'
@@ -178,7 +196,7 @@ export function ConnectorsPage({
         () => {
           after?.()
         },
-        failure => setError(failure?.message ?? String(failure)),
+        failure => setError(connectorErrorText(failure)),
       )
       .finally(() => setBusy(''))
   }

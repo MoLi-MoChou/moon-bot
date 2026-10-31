@@ -1612,6 +1612,35 @@ const HOST_ZH: Record<string, string> = {
   Mentions: '提及',
   'Mention Bot': '提及 Bot',
   'Quick Commands': '快捷指令',
+  Transparency: '透明度',
+  'Layer transparency': '浮层透明度',
+  'How much shows through floating bars and tips, on this device only.':
+    '浮动栏和提示框能透出多少背景，只影响这台设备。',
+  Off: '关闭',
+  Light: '轻度',
+  Standard: '标准',
+  Strong: '强度',
+  'Needs a new token. {error}': '需要换一个新 token。{error}',
+  'Waiting for your approval before it can connect.': '等你批准后才能连接。',
+  'Not available in this build. {error}': '这个版本里不可用。{error}',
+  'Last connected {when}': '上次连接：{when}',
+  'Trying again on its own in a moment.': '稍后会自动再试一次。',
+  'Failed {when}': '失败时间：{when}',
+  'Skills and packs': '技能与能力包',
+  'Manage connections': '管理连接',
+  'Add skill or pack': '添加技能或能力包',
+  'A skill adds instructions and a pack groups tools. Connections live on the Connectors page; turn one on for a Bot from its settings.':
+    '技能用来加说明，能力包用来组合工具。连接在「连接器」页管理；要某个 Bot 用上，就到那个 Bot 的设置里打开。',
+  'No skills or packs yet': '还没有技能或能力包',
+  'A skill adds instructions; a pack groups tools. MCP servers are added under Connectors.':
+    '技能用来加说明，能力包用来组合工具。MCP 服务在「连接器」里添加。',
+  'Open Connectors': '打开连接器',
+  Connections: '连接',
+  'Configured on the Connectors page. Turning one on for a Bot happens in that Bot’s settings.':
+    '在「连接器」页配置。要为某个 Bot 打开，请到那个 Bot 的设置里操作。',
+  'Used by 1 Bot': '1 个 Bot 在用',
+  'Used by {count} Bots': '{count} 个 Bot 在用',
+  'Open in Connectors': '在连接器中打开',
 }
 
 // The host's own messages join the table the locale service receives.

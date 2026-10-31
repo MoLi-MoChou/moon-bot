@@ -1,14 +1,17 @@
 import type { HostRuntime } from './runtime.js'
 import { createStandaloneMounts } from './capabilities-standalone.ts'
-
-type ConnectorStatus =
-  | { readonly state: 'off' }
-  | { readonly state: 'connecting' }
-  | { readonly state: 'ready' }
-  | { readonly state: 'error'; readonly error: string }
+import {
+  backoffFor,
+  classifyFailure,
+  fingerprintOf,
+  retryableByItself,
+  type ConnectorHealth,
+  type ConnectorState,
+} from './connector-health.ts'
 
 interface ConnectorMount {
   readonly token: string | undefined
+  readonly fingerprint: string
 }
 
 interface SignInOptions {
@@ -76,12 +79,30 @@ export function install(rt: HostRuntime): void {
   const insecure = options !== null && [options.url, options.api].some(address => !/^https:\/\//i.test(String(address)))
   // `token` is what the current mount was made with, so a changed secret mounts again.
   let mount: ConnectorMount | null = null
-  let status: ConnectorStatus = { state: 'off' }
-  const setStatus = (next: ConnectorStatus): void => {
-    const sameError = status.state === 'error' && next.state === 'error' && status.error === next.error
-    const sameNonError = status.state !== 'error' && next.state === status.state
-    if (sameError || sameNonError) return
-    status = next
+  // A connector starts off, with no failure to explain; the fingerprint arrives with the
+  // first reconcile and must not itself count as a change the window has to redraw.
+  let health: ConnectorHealth = { state: 'off' }
+  let failures = 0
+  let retryTimer: ReturnType<typeof setTimeout> | undefined
+  const setHealth = (next: ConnectorHealth): void => {
+    // Every field the view shows takes part in "unchanged"; a retry time or an error time
+    // that moved is a change even when the state name stayed the same.
+    const same = (Object.keys(next) as (keyof ConnectorHealth)[]).every(key => health[key] === next[key])
+    if (same) return
+    health = { ...health, ...next }
+    rt.liveChanged?.()
+  }
+  // Nothing is left to explain when a connector is off, so the failure fields go with it.
+  // It still counts as a change only when something actually differed.
+  const offHealth = (fingerprint: string | undefined): void => {
+    const wasOff = health.state === 'off' && health.lastError === undefined
+    // A connector that is already off, with nothing to explain, only learns its fingerprint
+    // here; that is bookkeeping, not a state the window has to redraw.
+    if (wasOff) {
+      health = { state: 'off', ...(fingerprint === undefined ? {} : { fingerprint }) }
+      return
+    }
+    health = { state: 'off', ...(fingerprint === undefined ? {} : { fingerprint }) }
     rt.liveChanged?.()
   }
   let queue: Promise<unknown> = Promise.resolve()
@@ -94,33 +115,62 @@ export function install(rt: HostRuntime): void {
     mount = null
   }
 
-  // The MCP client wraps the server's answer (a 401, say) as the cause.
-  const reason = (error: unknown): string => {
-    const text = [error, (error as { readonly cause?: unknown } | undefined)?.cause]
-      .filter(Boolean)
-      .map(part => String((part as { readonly message?: unknown } | undefined)?.message ?? part))
-      .join(': ')
-    return rt.redactSecrets(text || 'error').slice(0, 300)
+  function clearRetry(): void {
+    if (retryTimer !== undefined) clearTimeout(retryTimer)
+    retryTimer = undefined
+  }
+
+  // A transport failure may clear on its own; a rejected token may not. Only the first gets
+  // a retry time, and the timer never runs after the connector was stopped or the token
+  // changed.
+  function retryAtFor(failure: ReturnType<typeof classifyFailure>): number | undefined {
+    if (stopped || !retryableByItself(failure)) {
+      failures = 0
+      return undefined
+    }
+    failures += 1
+    return backoffFor(failures, Date.now())
+  }
+
+  function scheduleRetry(at: number | undefined): void {
+    clearRetry()
+    if (at === undefined) return
+    retryTimer = setTimeout(
+      () => {
+        retryTimer = undefined
+        void sync(true)
+      },
+      Math.max(0, at - Date.now()),
+    )
+    // A retry timer must not hold the service open on its own.
+    retryTimer.unref?.()
   }
 
   async function reconcile(force: boolean): Promise<void> {
     const token = options !== null && !stopped ? rt.secretValue(GITHUB_SECRET) : undefined
-    if (!force && mount !== null && mount.token === token) return
+    const fingerprint = fingerprintOf({ id: GITHUB, transport: 'streamable-http', url: options?.url, secret: 'set' })
+    // The same token and the same configuration means the mount is still the right one.
+    if (!force && mount !== null && mount.token === token && mount.fingerprint === fingerprint) return
+    clearRetry()
     await unmount()
     if (token === undefined) {
-      setStatus({ state: 'off' })
+      // Off means nothing is left to explain: a disconnect must not keep the previous
+      // failure's text, times or retry promise on screen.
+      failures = 0
+      offHealth(fingerprint)
       return
     }
     if (options === null) {
-      setStatus({ state: 'off' })
+      failures = 0
+      offHealth(fingerprint)
       return
     }
     if (insecure) {
-      mount = { token }
-      setStatus({ state: 'error', error: INSECURE })
+      mount = { token, fingerprint }
+      setHealth({ state: 'error', lastError: INSECURE, lastErrorAt: Date.now(), fingerprint })
       return
     }
-    setStatus({ state: 'connecting' })
+    setHealth({ state: 'connecting', fingerprint })
     // GitHub's MCP server becomes one of our connectors: its tools join the tool
     // registry like every connector's, and the policy sees them L3. The token rides
     // the request headers only — never a file, never a Bot's shell.
@@ -131,16 +181,28 @@ export function install(rt: HostRuntime): void {
         url: options.url,
         headers: { Authorization: `Bearer ${token}`, 'X-MCP-Toolsets': options.toolsets },
       })
-      mount = { token }
+      mount = { token, fingerprint }
       githubUnmount = unmountGithub
-      setStatus({ state: 'ready' })
+      failures = 0
+      setHealth({ state: 'ready', lastOkAt: Date.now(), fingerprint })
     } catch (error) {
       githubUnmount?.()
       githubUnmount = undefined
-      mount = { token }
-      const message = reason(error)
-      setStatus({ state: 'error', error: message })
+      mount = { token, fingerprint }
+      const failure = classifyFailure(error)
+      const message = rt.redactSecrets(failure.message).slice(0, 300)
+      // The retry time is part of the same change as the failure, so the window is told
+      // once: a second notification for the same failure would read as a second failure.
+      const retry = retryAtFor(failure)
+      setHealth({
+        state: failure.state as ConnectorState,
+        lastError: message,
+        lastErrorAt: Date.now(),
+        fingerprint,
+        ...(retry === undefined ? {} : { retryAt: retry }),
+      })
       rt.warn('moon-bot: GitHub connector failed: %s', message)
+      scheduleRetry(retry)
     }
   }
 
@@ -149,7 +211,7 @@ export function install(rt: HostRuntime): void {
     queue = queue
       .then(() => reconcile(force))
       .catch((error: unknown) => {
-        rt.warn('moon-bot: connectors: %s', reason(error))
+        rt.warn('moon-bot: connectors: %s', rt.redactSecrets(classifyFailure(error).message).slice(0, 300))
       })
     return queue
   }
@@ -161,8 +223,12 @@ export function install(rt: HostRuntime): void {
           {
             id: GITHUB,
             name: 'GitHub',
-            state: status.state,
-            ...(status.state === 'error' ? { error: status.error } : {}),
+            state: health.state,
+            ...(health.lastError !== undefined ? { error: health.lastError } : {}),
+            ...(health.lastErrorAt !== undefined ? { lastErrorAt: health.lastErrorAt } : {}),
+            ...(health.lastOkAt !== undefined ? { lastOkAt: health.lastOkAt } : {}),
+            ...(health.retryAt !== undefined ? { retryAt: health.retryAt } : {}),
+            ...(health.fingerprint !== undefined ? { fingerprint: health.fingerprint } : {}),
             account: rt.secretValue(GITHUB_SECRET) !== undefined ? (state.connectors?.[GITHUB]?.login ?? null) : null,
           },
         ]
@@ -223,6 +289,7 @@ export function install(rt: HostRuntime): void {
     void rt.loadSecrets().then(() => sync())
     return () => {
       stopped = true
+      clearRetry()
       void unmount()
     }
   }, 'moon-bot: connectors')

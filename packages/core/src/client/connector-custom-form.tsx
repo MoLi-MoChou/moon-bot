@@ -1,5 +1,6 @@
 import { createElement as h, Fragment, useState } from 'react'
 import { t } from './i18n.ts'
+import { connectorErrorText } from './connector-error.ts'
 import { CheckIcon } from './icons.tsx'
 import { DefaultConnectorLogo } from './connector-logos.tsx'
 import { Field } from 'moon-bot-ui'
@@ -70,7 +71,7 @@ export function CustomConnectorForm({
     } catch (failure) {
       setTest({
         ok: false,
-        text: (failure as { message?: string } | null)?.message ?? String(failure),
+        text: connectorErrorText(failure),
         tools: [],
         signature,
       })
@@ -88,7 +89,7 @@ export function CustomConnectorForm({
       await market.saveCapability(customCapabilityOf(draft))
       onClose()
     } catch (failure) {
-      setServerError((failure as { message?: string } | null)?.message ?? String(failure))
+      setServerError(connectorErrorText(failure))
     } finally {
       setBusy(false)
     }

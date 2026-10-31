@@ -114,7 +114,14 @@ test('connecting saves the token, kept out of every Bot shell, and an unreachabl
   const token = fresh()
 
   const before = await call(ctx, 'state', {})
-  assert.deepEqual(before.value.connectors, [{ id: 'github', name: 'GitHub', state: 'off', account: null }])
+  const [beforeView] = before.value.connectors
+  // The view now carries a configuration fingerprint, so a settings row can tell whether the
+  // health it shows was measured for the configuration on screen.
+  assert.equal(beforeView.id, 'github')
+  assert.equal(beforeView.name, 'GitHub')
+  assert.equal(beforeView.state, 'off')
+  assert.equal(beforeView.account, null)
+  assert.match(String(beforeView.fingerprint), /^[0-9a-f]{8}$/)
 
   const connected = await call(ctx, 'connector-connect', { id: 'github', token: ` ${token} ` })
   assert.equal(connected.ok, true, JSON.stringify(connected))
@@ -122,6 +129,10 @@ test('connecting saves the token, kept out of every Bot shell, and an unreachabl
   assert.equal(github.state, 'error')
   assert.equal(github.account, 'octo')
   assert.match(github.error, /127\.0\.0\.1:9|fetch failed|ECONNREFUSED/i)
+  // A transport failure is one worth retrying on its own, so the view says when.
+  assert.equal(typeof github.lastErrorAt, 'number')
+  assert.equal(typeof github.retryAt, 'number')
+  assert.equal(github.fingerprint, beforeView.fingerprint)
   assert.ok(dialled > 0, 'the connector dialled the streamable HTTP endpoint')
   assert.deepEqual(
     rt.toolRegistry.names().filter(name => name.startsWith('mcp__github__')),
@@ -136,7 +147,13 @@ test('connecting saves the token, kept out of every Bot shell, and an unreachabl
   assert.ok(!readFileSync(join(home, 'state.json'), 'utf8').includes(token))
 
   const off = await call(ctx, 'connector-disconnect', { id: 'github' })
-  assert.deepEqual(off.value, [{ id: 'github', name: 'GitHub', state: 'off', account: null }])
+  const [afterOff] = off.value
+  assert.equal(afterOff.state, 'off')
+  assert.equal(afterOff.account, null)
+  // A disconnect leaves nothing to explain: no failure text, no retry promise.
+  assert.equal(afterOff.error, undefined)
+  assert.equal(afterOff.lastErrorAt, undefined)
+  assert.equal(afterOff.retryAt, undefined)
   assert.deepEqual((await call(ctx, 'state', {})).value.secrets, [])
 })
 

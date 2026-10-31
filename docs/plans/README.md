@@ -63,3 +63,9 @@
 | [相关测试](2026-10-29-related-tests.md) | `test:related` 按反向导入闭包只跑碰得到的测试。是迭代快捷方式，不是门禁；完成定义仍是全量三件套 |
 | [主动式消息](2026-10-29-proactive-messages.md) | 从「你问它答」到「它也会来找你」：触发、后台准备、筛选去重、节流与投递五块；先做被动回顾，验证有用后才允许主动推 |
 | [失败码：额度与过载](2026-10-29-failure-codes.md) | `QUOTA` 要人处理，`OVERLOADED` 可以再试。不因此自动重试或换模型 |
+| [主聊天、模型与运行时、设置与组件](2026-10-30-chat-runtime-and-ui.md) | 长任务离开主聊天；选中的内置服务商模型交给 ACP；设置行可搜；建 Bot 给角色建议；气泡和设置行收进 `packages/ui` |
+| [连接器 Registry 重构（默认 Full Auto 已否决）](2026-10-31-full-auto-and-connectors.md) | 默认全自动已决定不做，审批保持默认开启；文件保留连接器 Registry、健康状态、作用域与工具目录的重构方向 |
+| [错误提示、就近反馈与文字布局](2026-10-31-error-feedback-and-layout.md) | 错误分级、就近提示、连接重试、文案规则和文字位置验收清单 |
+| [产品补全、连接器重构与全功能验收](2026-10-31-product-hardening-and-qa.md) | 连接器与 Capabilities 取舍、ACP 真实可用性与 fallback、毛玻璃设置、指定模型回归、全功能和视觉排版验收 |
+
+测试报告： [产品加固与 QA 基线](../reports/2026-10-31-product-hardening-baseline.md)

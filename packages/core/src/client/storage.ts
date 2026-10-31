@@ -11,6 +11,7 @@ export const STORAGE = {
   browserWidth: 'moon-bot:browser-width',
   browsers: 'moon-bot.browser.v2',
   sidebarOrder: 'moon-bot:sidebar-order',
+  glass: 'moon-bot:glass',
 } as const
 
 export type StorageKey = (typeof STORAGE)[keyof typeof STORAGE]

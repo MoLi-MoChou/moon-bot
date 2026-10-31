@@ -74,7 +74,7 @@ export const USAGE_CSS = `
 .bt-us-ticks{display:flex;margin-left:40px;font-size:11px;line-height:14px;color:var(--bt-ink-3);font-variant-numeric:tabular-nums}
 .bt-us-ticks span{flex:1 1 0;min-width:0;text-align:center;white-space:nowrap}
 .bt-us-ticks span[data-now]{color:var(--bt-ink);font-weight:500}
-.bt-us-tip{position:absolute;top:6px;z-index:3;min-width:160px;max-width:240px;padding:10px 12px;border-radius:12px;border:.5px solid var(--bt-line-2);background:color-mix(in srgb,var(--bt-card) 90%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:0 14px 34px -12px rgba(0,0,0,.28);font-size:12px;line-height:16px;pointer-events:none;animation:bt-us-pop .16s var(--bt-us-ease)}
+.bt-us-tip{position:absolute;top:6px;z-index:3;min-width:160px;max-width:240px;padding:10px 12px;border-radius:12px;border:.5px solid var(--bt-line-2);background:color-mix(in srgb,var(--bt-card) var(--bt-glass-tint),transparent);-webkit-backdrop-filter:var(--bt-glass-filter);backdrop-filter:var(--bt-glass-filter);box-shadow:0 14px 34px -12px rgba(0,0,0,.28);font-size:12px;line-height:16px;pointer-events:none;animation:bt-us-pop .16s var(--bt-us-ease)}
 .bt-us-tip-title{color:var(--bt-ink-3)}
 .bt-us-tip-total{margin:2px 0 8px;font-size:15px;line-height:20px;font-weight:600;font-variant-numeric:tabular-nums}
 .bt-us-tip-total:last-child{margin-bottom:0}

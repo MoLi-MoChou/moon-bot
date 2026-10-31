@@ -3,6 +3,9 @@
 // (drawer, composer, safe areas) belongs to the host and lives in app/ui/src/app.css.
 export const MOBILE_CSS = `
 @media (max-width:640px){
+/* Phone framing: the header pill and the composer own the top and bottom strips, so the
+   status notice and the failure toast move out of their way instead of covering them. */
+body{--bt-notice-top:calc(env(safe-area-inset-top) + 64px);--bt-toast-bottom:calc(env(safe-area-inset-bottom) + 96px)}
 /* The details panel and the new-chat sheet take the whole width, over the conversation,
    clear of the phone's status bar. */
 .bt-panel{width:100vw!important;border-left:0;padding-top:env(safe-area-inset-top);box-sizing:border-box}

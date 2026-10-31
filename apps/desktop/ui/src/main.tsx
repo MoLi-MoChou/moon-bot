@@ -3,6 +3,7 @@
 import { createElement as h } from 'react'
 import { createRoot } from 'react-dom/client'
 import { installLocale } from '../../../../packages/core/src/client/i18n.ts'
+import { applyGlass, readGlass } from '../../../../packages/core/src/client/glass.ts'
 import { App } from './app.tsx'
 import { createLocale } from './locale.ts'
 import { installSheets } from './sheets.ts'
@@ -19,6 +20,7 @@ if (/mac/iu.test(platform)) document.documentElement.dataset.mac = ''
 installSheets()
 // Moon until the team's own preference arrives; App repaints when it does.
 applyTheme(undefined)
+applyGlass(readGlass())
 followSystemAppearance()
 
 const root = document.getElementById('root')

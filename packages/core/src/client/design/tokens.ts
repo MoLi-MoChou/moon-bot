@@ -11,7 +11,23 @@ ${Object.entries(INKS)
   .join('')}
 ${Object.entries(INKS)
   .map(([name, [, dark]]) => `body[data-bt-dark]{--bt-ink-${name}:${dark}}`)
-  .join('')}`
+  .join('')}
+
+/* Transparency: floating layers tint their background from --bt-glass-tint and add
+   --bt-glass-filter only where the engine can blur. A browser without
+   backdrop-filter keeps the tint at full strength, so its text stays readable.
+   off is fully opaque; standard is what the design shipped with. */
+body{--bt-notice-top:12px;--bt-toast-bottom:28px}
+body{--bt-glass-tint:82%;--bt-glass-blur:14px;--bt-glass-filter:saturate(1.4) blur(var(--bt-glass-blur))}
+body[data-bt-glass=off]{--bt-glass-tint:100%;--bt-glass-blur:0px;--bt-glass-filter:none}
+body[data-bt-glass=light]{--bt-glass-tint:88%;--bt-glass-blur:8px}
+body[data-bt-glass=strong]{--bt-glass-tint:72%;--bt-glass-blur:22px}
+@supports not (backdrop-filter:blur(1px)){
+body{--bt-glass-tint:100%;--bt-glass-filter:none}
+}
+@media (prefers-reduced-transparency:reduce){
+body{--bt-glass-tint:100%;--bt-glass-filter:none}
+}`
 
 // -------------------------------------------------------------------------
 

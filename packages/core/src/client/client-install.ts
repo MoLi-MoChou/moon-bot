@@ -6,6 +6,7 @@ import type { BotHub, BotTask, ClientContext, Disposer } from './client-ctx.js'
 import type { ClientState } from './client-types.ts'
 import { installStyles } from './design/index.ts'
 import { noteClientError } from './diagnostics.ts'
+import { applyGlass, readGlass } from './glass.ts'
 import { isHex, inkText, paintCss } from './inks.ts'
 import { STORAGE } from './storage.ts'
 import { MENTION_ORIGIN } from './text.ts'
@@ -64,6 +65,7 @@ export function installTheme({ ctx, client }: { ctx: ClientContext; client: Clie
     const id = resolveThemeId(themes, String(prefs.theme ?? ''))
     const accent = isHex(prefs.accent) ? prefs.accent : undefined
     document.body.dataset.btTheme = id
+    applyGlass(readGlass())
     const motion = prefs.motion === 'quiet' || prefs.motion === 'lively' ? prefs.motion : 'normal'
     document.body.dataset.btMotion = motion
     const next = `${id}|${accent ?? ''}|${motion}|${registry.getSnapshot()}`

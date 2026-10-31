@@ -187,8 +187,8 @@ export const CONVERSATION_CELLS_CSS = `
 [class*="_header"]:has(.bt-head){border-bottom-color:transparent!important;box-shadow:none!important}
 /* The transcript runs under a floating header pill. */
 header[class*="_header"]:has(.bt-head){position:absolute!important;top:0;left:0;right:0;z-index:8;display:flex!important;padding:10px 0 0!important;background:transparent!important;pointer-events:none;justify-content:center}
-header[class*="_header"]:has(.bt-head)::before{content:"";position:absolute;inset:0 0 auto;height:52px;background:color-mix(in srgb,var(--bt-main) 82%,transparent);-webkit-backdrop-filter:saturate(1.4) blur(14px);backdrop-filter:saturate(1.4) blur(14px);box-shadow:0 .5px 0 var(--bt-line);pointer-events:none;z-index:-1}
-header[class*="_header"]:has(.bt-head)::after{content:"";position:absolute;inset:52px 0 auto;height:18px;background:linear-gradient(to bottom,color-mix(in srgb,var(--bt-main) 70%,transparent),transparent);pointer-events:none;z-index:-1}
+header[class*="_header"]:has(.bt-head)::before{content:"";position:absolute;inset:0 0 auto;height:52px;background:color-mix(in srgb,var(--bt-main) var(--bt-glass-tint),transparent);-webkit-backdrop-filter:var(--bt-glass-filter);backdrop-filter:var(--bt-glass-filter);box-shadow:0 .5px 0 var(--bt-line);pointer-events:none;z-index:-1}
+header[class*="_header"]:has(.bt-head)::after{content:"";position:absolute;inset:52px 0 auto;height:18px;background:linear-gradient(to bottom,color-mix(in srgb,var(--bt-main) calc(var(--bt-glass-tint) - 12%),transparent),transparent);pointer-events:none;z-index:-1}
 header[class*="_header"]:has(.bt-head)>[class*="_headerLeading"]{position:absolute;left:12px;top:10px;pointer-events:auto}
 header[class*="_header"] .bt-head{flex:1 1 auto;width:100%}
 [class*="_body"]:has(> [class*="_scrollBody"]){--bt-chat-content-width:min(960px,100%)}

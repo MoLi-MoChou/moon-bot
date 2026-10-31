@@ -4,14 +4,45 @@ import { LEAN } from './lean.ts'
 import { ACCENT_INKS, INKS } from './inks.ts'
 import { allThemes, resolveThemeId } from './themes.ts'
 import { FolderMenu } from './folder-menu.tsx'
+import { Segmented } from './motion.tsx'
 import { t } from './i18n.ts'
 import type { RunWork, SettingsActions, SettingsPrefs, SettingsRoster } from './settings-types.ts'
 import { SetSection, SetRow, ThemePicker, capitalize } from './settings-chrome.tsx'
+import { GLASS_LABELS, GLASS_LEVELS, applyGlass, readGlass, setGlass, type GlassLevel } from './glass.ts'
 
 interface GeneralPageProps {
   roster: SettingsRoster
   actions: SettingsActions
   run: RunWork
+}
+// The transparency row saves on this device only, so it never goes through `run`: a
+// failed save here must not look like a team change that did not happen.
+function GlassSection() {
+  const [level, setLevel] = useState<GlassLevel>(() => readGlass())
+  return (
+    <SetSection key='glass' title={t('Transparency')}>
+      <SetRow
+        label={t('Layer transparency')}
+        hint={t('How much shows through floating bars and tips, on this device only.')}>
+        <Segmented label={t('Layer transparency')} value={level}>
+          {GLASS_LEVELS.map(id => (
+            <button
+              key={id}
+              type='button'
+              aria-pressed={level === id}
+              onClick={() => {
+                if (level === id) return
+                applyGlass(id)
+                setLevel(id)
+                setGlass(id)
+              }}>
+              {t(GLASS_LABELS[id])}
+            </button>
+          ))}
+        </Segmented>
+      </SetRow>
+    </SetSection>
+  )
 }
 export function GeneralPage({ roster, actions, run }: GeneralPageProps) {
   const prefs: SettingsPrefs = roster.prefs ?? {}
@@ -70,6 +101,7 @@ export function GeneralPage({ roster, actions, run }: GeneralPageProps) {
         </div>
       </SetRow>
     </SetSection>,
+    <GlassSection key='glass' />,
     LEAN.classicMode && actions.setSurface ? (
       <SetSection key='mode' title={t('Mode')}>
         <SetRow label={t('Classic Agent mode')}>

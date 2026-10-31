@@ -13,7 +13,8 @@ import {
 import { call } from '../../../../packages/core/src/client/api.ts'
 import { Bubbles, ChatRows, Shimmer } from '../../../../packages/core/src/client/cells.ts'
 import { ComposerPlus, ComposerVoice } from '../../../../packages/core/src/client/composer.tsx'
-import { t } from '../../../../packages/core/src/client/i18n.ts'
+import { errorCopy, t } from '../../../../packages/core/src/client/i18n.ts'
+import { noteClientError } from '../../../../packages/core/src/client/diagnostics.ts'
 import { ArrowUpIcon } from '../../../../packages/core/src/client/icons.tsx'
 import { ModelChoiceDock } from '../../../../packages/core/src/client/model-menu.tsx'
 import { PendingQuestion } from '../../../../packages/core/src/client/questions.tsx'
@@ -85,7 +86,7 @@ const insertionOf = (value: unknown): Insertion | undefined => {
   return typeof at.start === 'number' && typeof at.end === 'number' ? { start: at.start, end: at.end } : undefined
 }
 
-export function useChat(botId: string | undefined, part: string, feed: Team['chat']) {
+export function useChat(botId: string | undefined, part: string, feed: Team['chat'], isRoom = false) {
   const [view, setView] = useState<ChatView>({
     sessionId: null,
     items: [],
@@ -172,6 +173,10 @@ export function useChat(botId: string | undefined, part: string, feed: Team['cha
           if (ready.current) void load(undefined)
           return
         }
+        if (isRoom && event === 'live') {
+          void load(undefined)
+          return
+        }
         if (botId === undefined || data.botId !== botId) return
         if (event === 'message') {
           const item = data.item as ChatItem
@@ -201,7 +206,7 @@ export function useChat(botId: string | undefined, part: string, feed: Team['cha
             )
         }
       }),
-    [feed, botId, load],
+    [feed, botId, isRoom, load],
   )
 
   // Shown at once: the message can come back on the feed before the request returns.
@@ -326,7 +331,9 @@ function Composer({
       await onSend(value)
     } catch (failure) {
       setText(current => (current === '' ? value : current))
-      setError(failure instanceof Error ? failure.message : String(failure))
+      noteClientError('send', failure)
+      const message = failure as { message?: string; code?: string }
+      setError(errorCopy(message.code, message.message))
     }
   }
   return (
@@ -467,7 +474,9 @@ export function Chat({ sessionId, team }: { readonly sessionId: string; readonly
   const roster = hooks.useRoster(value => value)
   const bot = (roster.byId as Record<string, { id: string; name?: string; waiting?: boolean } | undefined>)[sessionId]
   const name = bot?.name ?? (roster.roomsById as Record<string, { name?: string } | undefined>)[sessionId]?.name ?? ''
-  const { view, stream, pending, load, send, keep } = useChat(bot?.id, sessionId, feed)
+  const chatTarget = bot?.id ?? sessionId
+  const isRoom = roster.roomsById[sessionId] !== undefined
+  const { view, stream, pending, load, send, keep } = useChat(chatTarget, sessionId, feed, isRoom)
   const scroller = useRef<HTMLDivElement>(null)
   const follow = useRef(true)
   const question = (roster.questions as Record<string, { id: string } | undefined> | undefined)?.[sessionId]

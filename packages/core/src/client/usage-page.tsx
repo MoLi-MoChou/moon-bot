@@ -187,7 +187,7 @@ export function UsagePage({ roster, actions, focusId }: UsagePageProps): ReactEl
   }, [focusId])
   if (!view) {
     return error ? (
-      <div className='bt-error' role='alert' style={{ padding: 0 }}>
+      <div className='bt-panel-error' role='alert'>
         {error}
       </div>
     ) : (
@@ -338,7 +338,7 @@ export function UsagePage({ roster, actions, focusId }: UsagePageProps): ReactEl
         ) : null}
       </div>
       {error ? (
-        <div className='bt-error' role='alert' style={{ padding: 0 }}>
+        <div className='bt-panel-error' role='alert'>
           {error}
         </div>
       ) : null}

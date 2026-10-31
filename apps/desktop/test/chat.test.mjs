@@ -23,7 +23,10 @@ const STUBS = new Map([
     /\/core\/src\/client\/composer\.tsx$/,
     'export const ComposerPlus = () => null; export const ComposerVoice = () => null',
   ],
-  [/\/core\/src\/client\/i18n\.ts$/, 'export const t = key => key; export const language = () => "en"'],
+  [
+    /\/core\/src\/client\/i18n\.ts$/,
+    'export const t = key => key; export const errorCopy = (_code, message) => message ?? "Something went wrong. Try again."; export const language = () => "en"',
+  ],
   [/\/core\/src\/client\/model-menu\.tsx$/, 'export const ModelChoiceDock = () => null'],
   [/\/core\/src\/client\/questions\.tsx$/, 'export const PendingQuestion = () => null'],
   [/\/core\/src\/client\/characters\.ts$/, 'export const lookOf = () => ({ color: "" })'],

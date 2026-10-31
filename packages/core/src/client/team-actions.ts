@@ -1,12 +1,12 @@
 import { countCards, heldCardKey } from './sources.ts'
+import { errorCopy } from './i18n.ts'
 import { noteClientError } from './diagnostics.ts'
 
 // The actions every window that draws the Bot views shares: dialogs and panels (the `ui`
 // source), requests to the host, and the notes the transcript keeps. The shell around the
 // views adds navigation and its own panels. `after` reads the team again once a request
 // is done; `partFor` maps a Bot id, or any part of its chat, to its current part.
-// The windows' shared UI state: the overlays a view can open, and the toast a failed
-// action away from a form shows.
+// Shared UI state for overlays and action-failure feedback.
 export interface UiState {
   newChat?: string | null | undefined
   palette?: { token: number; query?: string } | null | undefined
@@ -286,9 +286,10 @@ export function teamActions({ call, after, partFor, roster, ui, live, cards, hel
     diagnosticsClear: () => call('diagnostics-clear'),
     repoStars: () => call('repo-stars'),
     // A failed action away from any form (a menu, the palette) shows as a toast.
-    reportError: (error: { message?: string } | null | undefined, where = 'action') => {
+    reportError: (error: { message?: string; code?: string } | null | undefined, where = 'action') => {
       noteClientError(where, error)
-      ui.set(state => ({ ...state, toast: { text: error?.message ?? String(error), token: Date.now() } }))
+      const text = errorCopy(error?.code, error?.message)
+      ui.set(state => ({ ...state, toast: { text, token: Date.now() } }))
     },
     dismissToast: (token?: number) =>
       ui.set(state =>

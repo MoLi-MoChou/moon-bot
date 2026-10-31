@@ -130,7 +130,7 @@ export function SettingsDialog({ page, id, roster, actions, useUpdate, leaving =
   const [usageOpened, setUsageOpened] = useState(shown === 'usage')
   if (shown === 'usage' && !usageOpened) setUsageOpened(true)
   const errorLine = error ? (
-    <div className='bt-error' role='alert' style={{ padding: 0 }}>
+    <div className='bt-panel-error' role='alert'>
       {error}
     </div>
   ) : null
@@ -145,6 +145,7 @@ export function SettingsDialog({ page, id, roster, actions, useUpdate, leaving =
               key={key}
               type='button'
               className='bt-settings-item'
+              data-page={key}
               aria-current={shown === key ? 'page' : undefined}
               onClick={() => actions.openSettings(key)}>
               {h(PAGE_ICONS[key] ?? InfoIcon)}
@@ -180,7 +181,11 @@ export function SettingsDialog({ page, id, roster, actions, useUpdate, leaving =
             <h2 key={bot?.id ?? room?.id ?? shown}>{bot?.name ?? room?.name ?? label}</h2>
           </div>
           {shown === 'usage' ? null : (
-            <div key={pageKey} className='bt-settings-scroll bt-settings-page' data-move={last.current.move}>
+            <div
+              key={pageKey}
+              className='bt-settings-scroll bt-settings-page'
+              data-page={shown}
+              data-move={last.current.move}>
               {errorLine}
               {shown === 'tasks' ? <TasksPage taskActions={actions as never} /> : null}
               {shown === 'general' ? h(GeneralPage, { roster, actions, run }) : null}

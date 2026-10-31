@@ -324,10 +324,15 @@ body[data-bt-room] [data-composer-card]:has(.mb-send:disabled) .bt-mic:not([aria
   color: var(--bt-accent-ink, #fff);
 }
 .mb-composer-error {
-  margin: 0 0 6px 4px;
+  margin: 0 0 6px;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--bt-danger) 35%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--bt-danger) 8%, var(--bt-main));
+  color: var(--bt-ink);
   font-size: 12px;
-  line-height: 16px;
-  color: var(--bt-danger);
+  line-height: 17px;
+  overflow-wrap: anywhere;
 }
 
 /* A phone-width window has no sidebar column: the menu button in the conversation opens

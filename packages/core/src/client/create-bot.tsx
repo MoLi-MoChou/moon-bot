@@ -194,7 +194,7 @@ export function CreateBot({
         </span>
       </div>
       {error ? (
-        <div className='bt-error' role='alert' style={{ padding: 0 }}>
+        <div className='bt-panel-error' role='alert'>
           {error}
         </div>
       ) : null}

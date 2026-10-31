@@ -43,3 +43,36 @@ test('the notice speaks the interface language, and writes no DOM outside a brow
   assert.doesNotThrow(() => showReconnectNotice('Reconnecting…'))
   assert.doesNotThrow(() => showReconnectNotice(null))
 })
+
+test('retry callback is optional and the browser notice can expose it', () => {
+  const listeners = new Map()
+  const previous = globalThis.document
+  globalThis.document = {
+    body: { appendChild: node => listeners.set(node.id, node) },
+    getElementById: id => listeners.get(id) ?? null,
+    createElement: tag => ({
+      tag,
+      children: [],
+      setAttribute() {},
+      addEventListener(_name, listener) {
+        this.listener = listener
+      },
+      replaceChildren(...children) {
+        this.children = children
+      },
+      append(...children) {
+        this.children.push(...children)
+      },
+    }),
+    createTextNode: text => ({ text }),
+  }
+  let attempts = 0
+  try {
+    showReconnectNotice('Reconnecting…', () => attempts++)
+    const button = listeners.get('bt-reconnect').children.at(-1)
+    button.listener()
+    assert.equal(attempts, 1)
+  } finally {
+    globalThis.document = previous
+  }
+})

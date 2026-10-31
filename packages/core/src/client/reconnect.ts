@@ -7,6 +7,7 @@ import { t } from './i18n.ts'
 // is really down, and only then is the user told.
 export const RETRY_AFTER = 2
 const NOTICE_ID = 'bt-reconnect'
+const RETRY_ID = 'bt-reconnect-retry'
 
 // What the top notice says after `failures` failed polls in a row, or null when there is
 // nothing worth telling.
@@ -17,22 +18,27 @@ export function retryNotice(failures: number): string | null {
 
 // Shows `text` in the notice, or removes the notice when `text` is null. Rendering nothing
 // outside a browser keeps the poll usable from a test or a headless run.
-export function showReconnectNotice(text: string | null): void {
+export function showReconnectNotice(text: string | null, retry?: (() => void) | undefined): void {
   if (typeof document === 'undefined') return
   const existing = document.getElementById(NOTICE_ID)
   if (text === null) {
     existing?.remove()
     return
   }
-  if (existing !== null) {
-    if (existing.textContent !== text) existing.textContent = text
-    return
-  }
-  const notice = document.createElement('div')
+  const notice = existing ?? document.createElement('div')
   notice.id = NOTICE_ID
   notice.className = 'bt-reconnect'
   notice.setAttribute('role', 'status')
   notice.setAttribute('aria-live', 'polite')
-  notice.textContent = text
-  document.body.appendChild(notice)
+  notice.replaceChildren(document.createTextNode(text))
+  if (retry !== undefined) {
+    const button = document.createElement('button')
+    button.id = RETRY_ID
+    button.type = 'button'
+    button.className = 'bt-reconnect-retry'
+    button.textContent = t('Try again')
+    button.addEventListener('click', retry)
+    notice.append(' ', button)
+  }
+  if (existing === null) document.body.appendChild(notice)
 }

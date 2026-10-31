@@ -430,7 +430,7 @@ export function createTeam() {
       const recovered = feedFailures > 0
       if (event === 'lost') {
         feedFailures += 1
-        showReconnectNotice(retryNotice(feedFailures))
+        showReconnectNotice(retryNotice(feedFailures), () => read(true))
       } else if (recovered) {
         feedFailures = 0
         // A lost feed leaves the page stale: the first read after it asks for the whole

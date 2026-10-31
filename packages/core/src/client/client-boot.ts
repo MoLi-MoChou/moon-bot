@@ -192,7 +192,10 @@ export function createClientState(ctx: ClientContext): ClientState {
       } catch (error) {
         if (!stopped) console.warn('[moon-bot] state', error)
         failures += 1
-        showReconnectNotice(retryNotice(failures))
+        showReconnectNotice(retryNotice(failures), () => {
+          force = true
+          void loop()
+        })
         if (failures >= RETRY_AFTER) force = true
       } finally {
         running = false
